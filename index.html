@@ -1428,6 +1428,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
               <button class="btn ghost" id="openWorkflowBtn" style="padding:4px 10px;font-size:11.5px;border-color:rgba(162,90,31,.4);color:var(--acc)" title="현재 상태(프롬프트+캐릭터+파라미터)를 통째로 저장하고 나중에 1클릭으로 복원">💾 워크플로우 <span class="en" style="opacity:.6">Snap</span></button>
               <button class="btn ghost" id="lockPromptBtn" style="padding:4px 10px;font-size:11.5px" title="수정 잠금 (다시 누르면 해제)">🔓 잠금</button>
               <button class="btn ghost" id="dedupePromptBtn" style="padding:4px 10px;font-size:11.5px" title="콤마로 구분된 중복 태그를 한 번에 정리합니다">🧹 중복 정리</button>
+              <button class="btn ghost" id="cleanWeightsBtn" style="padding:4px 10px;font-size:11.5px;border-color:rgba(184,136,32,.4);color:var(--yellow)" title="X.Y::tag:: 가중치 문법을 정리 (V4-5에서 잘못 동작하면 사용). 0.5~1.5 범위로 클램프, 닫는 :: 없는 항목 자동 마감, 극단값 1.5+로 캡">🔧 가중치 정리</button>
               <button class="btn ghost" id="clearPromptBtn" style="padding:4px 10px;font-size:11.5px">비우기</button>
             </div>
           </div>
@@ -3322,20 +3323,21 @@ function buildGenBody(opts){
     model = INPAINT_MODELS[opts.model] || opts.model;
   }
   const body = { input: opts.prompt || '', model, action, parameters: params };
-  // 🐛 디버그 로그 — 생성 직전 실제 전송 데이터 확인용
+  // 🐛 디버그 — 요약 + 전체 body를 함께 로그
   try {
-    console.log('[NAI request]', {
+    console.log('[NAI request:summary]', {
       model, action,
       input_len: (body.input || '').length,
-      input_head: (body.input || '').slice(0, 120),
       neg_len: (params.negative_prompt || '').length,
-      neg_head: (params.negative_prompt || '').slice(0, 120),
-      v4_base: params.v4_prompt?.caption?.base_caption?.slice(0, 120),
-      v4_chars: (params.v4_prompt?.caption?.char_captions || []).map(c => (c.char_caption||'').slice(0, 80)),
       width: params.width, height: params.height,
       seed: params.seed, steps: params.steps, cfg: params.scale,
+      cfg_rescale: params.cfg_rescale,
       sampler: params.sampler, schedule: params.noise_schedule,
+      ucPreset: params.ucPreset,
+      v4_legacy_uc: params.v4_negative_prompt?.legacy_uc,
+      n_chars: params.v4_prompt?.caption?.char_captions?.length || 0,
     });
+    console.log('[NAI request:body]', JSON.parse(JSON.stringify(body)));
   } catch(_){}
   return body;
 }
