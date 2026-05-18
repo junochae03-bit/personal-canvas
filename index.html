@@ -916,21 +916,28 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   /* 갤러리/프리셋/태그 상단 검색바도 하단 네비 가리지 않게 sticky */
   .gallery-bar,.preset-bar,.tag-bar{position:sticky;top:0;z-index:5}
 
-  /* 스와이프/탭 전환 시 살짝 페이드+슬라이드 인 — 전환됐다는 시각 피드백 */
+  /* 스와이프/탭 전환 — 진입 시 살짝 페이드+슬라이드 (시각 피드백) */
   body[data-mview="edit"] .sidebar,
   body[data-mview="preview"] .main-area,
   body[data-mview="gallery"] .main-area,
   body[data-mview="presets"] .main-area,
   body[data-mview="tags"] .main-area,
   body[data-mview="settings"] .main-area{
-    animation:mvSlideIn .22s ease;
+    animation:mvSlideIn .15s ease-out;
   }
   @keyframes mvSlideIn{
-    from{opacity:.55;transform:translateY(4px)}
-    to{opacity:1;transform:translateY(0)}
+    from{opacity:.6;transform:translateX(0)}
+    to{opacity:1;transform:translateX(0)}
   }
-  /* 메인 페인 내부에서 preview→gallery 등 같은 영역 안 전환도 부드럽게 */
-  .main-pane.act{animation:mvSlideIn .18s ease}
+  .main-pane.act{animation:mvSlideIn .12s ease-out}
+
+  /* 라이브 드래그 최적화 */
+  .sidebar,.main-area{will-change:transform}
+  /* 세로 스크롤 영역엔 pan-y만 — 가로 제스처는 JS가 받음 (browser 미간섭) */
+  .side-body,.main-body,.gallery-grid,.preset-grid,.tag-body,.settings-body,.preview-area,.queue-list{touch-action:pan-y}
+  /* 드래그 중에는 진입 애니메이션 무효 — 손가락을 그대로 따라가야 함 */
+  body.mv-dragging .sidebar,
+  body.mv-dragging .main-area{animation:none !important}
 }
 
 /* 좁은 폰(≤600px) — 추가 컴팩트 + 상단바 정리 */
@@ -7113,13 +7120,26 @@ async function init(){
 }
 
 // ═══════════════════════════════════════════════════════════
-// 📱 MOBILE SWIPE — 좌우 스와이프로 메인 페인 전환
-// 가로 스크롤 요소/입력/캔버스/모달 위에서는 동작하지 않음
+// 📱 MOBILE SWIPE — 좌우 스와이프로 메인 페인 전환 (라이브 드래그)
+// · 손가락이 움직이는 만큼 현재 페인이 따라 이동(translateX)
+// · 양 끝에서는 고무줄(rubber-band)로 저항
+// · 떼면 임계치 또는 속도 기반으로 스냅 or 복귀
+// · 가로 스크롤 요소/입력/캔버스/모달 위에서는 동작하지 않음
 // ═══════════════════════════════════════════════════════════
 function setupMobileSwipe(){
   const ORDER = ['edit','preview','gallery','presets','tags','settings'];
   const BLOCK_SEL = 'textarea,input,select,canvas,#lightbox,.modal,.modal-bg,#posGrid,.mobile-nav,.side-foot,.slider-row,#inpaintCanvasWrap';
-  let sx=0, sy=0, st=0, active=false;
+  let sx=0, sy=0, st=0;
+  let active=false;    // 터치 시작이 유효한지
+  let dragging=false;  // 가로 드래그로 확정됐는지
+  let currentEl=null;  // translate 적용 대상
+
+  function getCurrentEl(){
+    const cur = document.body.dataset.mview || 'edit';
+    return cur === 'edit'
+      ? document.querySelector('.sidebar')
+      : document.querySelector('.main-area');
+  }
 
   function hasHorizScrollableAncestor(el){
     let p = el;
@@ -7133,6 +7153,16 @@ function setupMobileSwipe(){
     return false;
   }
 
+  function resetTransform(){
+    if(!currentEl) return;
+    currentEl.style.transition = 'transform .18s cubic-bezier(.22,.61,.36,1)';
+    currentEl.style.transform = '';
+    const el = currentEl;
+    setTimeout(() => {
+      if(el && el.style.transition){ el.style.transition = ''; }
+    }, 200);
+  }
+
   document.addEventListener('touchstart', e => {
     if(window.innerWidth > 880) { active = false; return; }
     if(e.touches.length !== 1) { active = false; return; }
@@ -7142,29 +7172,83 @@ function setupMobileSwipe(){
     sy = e.touches[0].clientY;
     st = Date.now();
     active = true;
+    dragging = false;
+    currentEl = getCurrentEl();
+  }, {passive:true});
+
+  document.addEventListener('touchmove', e => {
+    if(!active || !currentEl) return;
+    const dx = e.touches[0].clientX - sx;
+    const dy = e.touches[0].clientY - sy;
+
+    // 첫 8px 안에 방향 결정 — 세로 우세면 스크롤로 양보
+    if(!dragging){
+      if(Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      if(Math.abs(dy) > Math.abs(dx)){ active = false; return; }
+      dragging = true;
+      currentEl.style.transition = 'none';
+      document.body.classList.add('mv-dragging');
+    }
+
+    // 양 끝에서는 고무줄 (3배 둔감)
+    const cur = document.body.dataset.mview || 'edit';
+    const idx = ORDER.indexOf(cur);
+    let visualDx = dx;
+    if((idx <= 0 && dx > 0) || (idx >= ORDER.length-1 && dx < 0)){
+      visualDx = dx / 3;
+    }
+    currentEl.style.transform = `translate3d(${visualDx}px,0,0)`;
   }, {passive:true});
 
   document.addEventListener('touchend', e => {
     if(!active) return;
+    const wasDragging = dragging;
+    const localEl = currentEl;
     active = false;
-    if(window.innerWidth > 880) return;
+    dragging = false;
+    document.body.classList.remove('mv-dragging');
+    if(!wasDragging){ if(localEl) localEl.style.transform=''; return; }
+
     const t = e.changedTouches[0];
     const dx = t.clientX - sx;
-    const dy = t.clientY - sy;
     const dt = Date.now() - st;
-    if(Math.abs(dx) < 55) return;             // 너무 짧은 스와이프 무시
-    if(Math.abs(dy) > Math.abs(dx) * 0.7) return;  // 세로 우세면 스크롤로 간주
-    if(dt > 650) return;                      // 너무 느리면 무시(우발적 드래그 방지)
+    const W = window.innerWidth;
+    const velocity = Math.abs(dx) / Math.max(1, dt);  // px/ms
+
+    // 거리 13% 이상 OR 속도 0.35px/ms 이상이면서 20px 이상 → 스냅
+    const distOK = Math.abs(dx) > W * 0.13;
+    const flickOK = velocity > 0.35 && Math.abs(dx) > 20;
+
     const cur = document.body.dataset.mview || 'edit';
     let idx = ORDER.indexOf(cur);
     if(idx < 0) idx = 0;
     const next = dx < 0 ? idx + 1 : idx - 1;
-    if(next < 0 || next >= ORDER.length) return;  // 끝에서는 정지(순환 안 함)
-    setMainPane(ORDER[next]);
+    const canMove = next >= 0 && next < ORDER.length;
+
+    if((distOK || flickOK) && canMove){
+      // 손가락이 끝난 방향으로 마저 슬라이드 후 페이지 교체
+      if(localEl){
+        localEl.style.transition = 'transform .14s ease-out';
+        localEl.style.transform = `translate3d(${dx < 0 ? -W * 0.18 : W * 0.18}px,0,0)`;
+        setTimeout(() => {
+          if(localEl){ localEl.style.transition=''; localEl.style.transform=''; }
+          setMainPane(ORDER[next]);
+        }, 110);
+      } else {
+        setMainPane(ORDER[next]);
+      }
+    } else {
+      // 임계치 미달 → 원위치 복귀(스프링)
+      resetTransform();
+    }
   }, {passive:true});
 
-  // 스와이프 후 살짝 페이드 인 — 전환됐다는 시각 피드백
-  // (display:none → flex 변할 때 자동으로 애니메이션 트리거됨)
+  // 터치 취소(전화 등) 시 원위치
+  document.addEventListener('touchcancel', () => {
+    if(currentEl){ resetTransform(); }
+    active = false; dragging = false;
+    document.body.classList.remove('mv-dragging');
+  }, {passive:true});
 }
 
 document.addEventListener('DOMContentLoaded', init);
