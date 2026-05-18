@@ -4023,7 +4023,8 @@ function renderCharacters(){
         <textarea class="ta tiny" data-act="neg" data-idx="${i}" placeholder="예: bad anatomy, bad hands">${esc(c.neg||'')}</textarea>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
   // 드롭다운 옵션 채우기 (도감·프리셋 동적 통합)
   refreshCharTagSelects();
 }
