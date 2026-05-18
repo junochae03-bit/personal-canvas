@@ -900,20 +900,53 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   }
   .mn-btn{
     position:relative;
-    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
     background:transparent;border:none;
-    padding:6px 4px;
+    padding:7px 4px 6px;
     color:var(--t3);
     font-family:inherit;font-size:10px;font-weight:600;letter-spacing:0;
     cursor:pointer;
-    transition:color .12s,transform .08s;
-    min-height:48px;
+    transition:color .15s,background .18s;
+    min-height:50px;
+    overflow:hidden;
     -webkit-tap-highlight-color:transparent;
   }
-  .mn-btn .mn-ico{font-size:19px;line-height:1;filter:grayscale(.2);transition:filter .12s,transform .12s}
-  .mn-btn:active{transform:scale(.95)}
-  .mn-btn.act{color:var(--acc)}
-  .mn-btn.act .mn-ico{filter:none;transform:translateY(-1px)}
+  /* 🔝 상단 인디케이터 바 — 활성 탭에만 슬라이드 인 */
+  .mn-btn::before{
+    content:'';
+    position:absolute;
+    top:0;left:50%;
+    width:34px;height:3px;
+    background:var(--acc);
+    border-radius:0 0 4px 4px;
+    transform:translateX(-50%) scaleY(0);
+    transform-origin:top;
+    transition:transform .25s cubic-bezier(.22,.61,.36,1),width .2s;
+    pointer-events:none;
+    box-shadow:0 1px 4px color-mix(in oklab,var(--acc) 45%,transparent);
+  }
+  .mn-btn.act::before{transform:translateX(-50%) scaleY(1);width:44px}
+  .mn-btn .mn-ico{
+    font-size:20px;line-height:1;
+    filter:grayscale(.3);opacity:.78;
+    transition:filter .18s,transform .22s cubic-bezier(.22,.61,.36,1),opacity .15s,text-shadow .18s;
+  }
+  .mn-btn .mn-lbl{transition:font-weight .12s,letter-spacing .12s}
+  .mn-btn:active{transform:scale(.92)}
+  .mn-btn.act{
+    color:var(--acc);
+    background:color-mix(in oklab,var(--acc) 9%,transparent);
+  }
+  .mn-btn.act .mn-ico{
+    filter:none;
+    opacity:1;
+    transform:translateY(-2px) scale(1.2);
+    text-shadow:0 2px 10px color-mix(in oklab,var(--acc) 50%,transparent);
+  }
+  .mn-btn.act .mn-lbl{
+    font-weight:800;
+    letter-spacing:.02em;
+  }
   .mn-btn .mn-badge{
     position:absolute;top:2px;left:50%;margin-left:6px;
     background:var(--acc);color:#fff8ec;
