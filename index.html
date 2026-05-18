@@ -632,13 +632,24 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 #lightbox{position:fixed;inset:0;z-index:9000;background:rgba(20,14,4,.94);display:none;align-items:center;justify-content:center;padding:max(36px, env(safe-area-inset-top, 0px)) 36px max(36px, env(safe-area-inset-bottom, 0px))}
 #lightbox.open{display:flex}
 #lightbox .lb-img{max-width:90%;max-height:90%;object-fit:contain;cursor:zoom-out;border-radius:4px;box-shadow:0 12px 48px rgba(0,0,0,.5);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;transform-origin:center center;will-change:transform}
-#lightbox .lb-meta{position:absolute;left:24px;top:24px;background:var(--panel);border:1.5px solid var(--b2);border-radius:8px;padding:16px 18px;max-width:360px;max-height:80vh;overflow-y:auto;font-size:12.5px;color:var(--t2);line-height:1.7;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+/* ℹ 상세정보 패널 — 기본 숨김, .info-open 토글되면 노출 */
+#lightbox .lb-meta{position:absolute;left:24px;top:24px;background:var(--panel);border:1.5px solid var(--b2);border-radius:8px;padding:16px 18px;max-width:360px;max-height:80vh;overflow-y:auto;font-size:12.5px;color:var(--t2);line-height:1.7;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none;animation:fadeIn .15s ease-out}
+#lightbox.info-open .lb-meta{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+#lbInfoBtn.act,#lbInfoBtn[aria-pressed="true"]{background:rgba(162,90,31,.18);border-color:var(--acc);color:var(--acc)}
 #lightbox .lb-actions{position:absolute;right:24px;top:24px;display:flex;flex-direction:column;gap:8px}
-.lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(20,14,4,.55);color:#fff8ec;border:1.5px solid rgba(255,255,255,.15);width:54px;height:90px;font-size:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:all .15s;font-weight:300;z-index:5;user-select:none}
-.lb-nav:hover{background:rgba(20,14,4,.85);border-color:rgba(255,255,255,.35);transform:translateY(-50%) scale(1.05)}
-.lb-nav.disabled{opacity:.25;pointer-events:none}
-.lb-nav-prev{left:18px}
-.lb-nav-next{right:18px}
+/* ⟨⟩ 내비게이션 — 작고 반투명해서 이미지·UI를 가리지 않게 */
+.lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(20,14,4,.32);color:#fff8ec;border:1px solid rgba(255,255,255,.10);width:36px;height:54px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:all .15s;font-weight:300;z-index:5;user-select:none;opacity:.35;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.lb-nav:hover{background:rgba(20,14,4,.78);border-color:rgba(255,255,255,.35);opacity:1;transform:translateY(-50%) scale(1.08)}
+.lb-nav.disabled{opacity:.12;pointer-events:none}
+.lb-nav-prev{left:8px}
+.lb-nav-next{right:8px}
+/* 모바일에선 더 안쪽으로 + 더 작게 */
+@media (max-width:880px){
+  .lb-nav{width:30px;height:46px;font-size:17px;opacity:.4}
+  .lb-nav-prev{left:4px}
+  .lb-nav-next{right:4px}
+}
 .lb-counter{position:absolute;top:24px;left:50%;transform:translateX(-50%);background:rgba(20,14,4,.55);color:#fff8ec;padding:7px 14px;border-radius:18px;font-size:12.5px;font-family:var(--mono);font-weight:600;border:1.5px solid rgba(255,255,255,.15);user-select:none;display:none}
 .lb-counter.show{display:block}
 @media (max-width:720px){
@@ -1794,6 +1805,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   <div class="lb-actions">
     <button class="iconbtn" id="lbDownload" title="다운로드 (Download)">⬇</button>
     <button class="iconbtn" id="lbReuse" title="모든 파라미터 복원 (Reuse all)">↻</button>
+    <button class="iconbtn" id="lbExifApply" title="📁 EXIF 복원 — 이 이미지의 메타로 폼 채우기" style="border-color:rgba(58,99,152,.4);color:var(--blue)">📁</button>
     <button class="iconbtn" id="lbSeedOnly" title="🌱 시드만 가져오기 (Seed only)">🌱</button>
     <div style="height:1px;background:var(--b1);margin:2px 0"></div>
     <button class="iconbtn" id="lbEnhance" title="✨ Enhance — 디테일업 (img2img, 약한 강도)">✨</button>
@@ -1803,6 +1815,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <button class="iconbtn" id="lbVibe" title="→ Vibe 참조로 사용 (Send to Vibe)">→V</button>
     <button class="iconbtn" id="lbExtractTags" title="📋 이 이미지의 태그를 도감에 추출">📋</button>
     <div style="height:1px;background:var(--b1);margin:2px 0"></div>
+    <button class="iconbtn" id="lbInfoBtn" title="ℹ 상세정보 펼치기/접기 (메타·프롬프트)" aria-pressed="false">ℹ</button>
     <button class="iconbtn" id="lbDelete" title="삭제 (Delete)" style="color:var(--red);border-color:rgba(181,67,56,.3)">🗑</button>
     <button class="iconbtn" id="lbClose" title="닫기 (Close)">✕</button>
   </div>
@@ -7649,7 +7662,11 @@ async function showLightboxAt(idx){
     lines.push(`<div class="lb-prompt"><b>제외 (Negative)</b><br>${esc(m.neg)}</div>`);
   }
   $('lbMeta').innerHTML = lines.join('<br>') || '메타 정보 없음 (No metadata)';
-  $('lbMeta').classList.remove('expanded');  // 모바일에서 매번 접힌 상태로 시작
+  // 매번 정보 패널 접힌 상태로 시작 (ℹ 버튼 토글 동기)
+  $('lbMeta').classList.remove('expanded');
+  $('lightbox').classList.remove('info-open');
+  const infoBtn = $('lbInfoBtn');
+  if(infoBtn){ infoBtn.classList.remove('act'); infoBtn.setAttribute('aria-pressed','false'); }
   if(window._lbResetZoom) window._lbResetZoom();  // 이미지 전환 시 줌도 리셋
   // 카운터·내비 버튼 상태
   const counter = $('lbCounter');
@@ -10039,10 +10056,44 @@ async function init(){
   // Storage info
   $('refreshStorageBtn')?.click?.();
 
-  // 📱 모바일 — 라이트박스 메타 탭 토글(접고 펼치기)
+  // ℹ 상세정보 토글 — 메타 패널 펼치기/접기 (데스크탑·모바일 공통)
+  $('lbInfoBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    const lb = $('lightbox');
+    const on = lb.classList.toggle('info-open');
+    e.currentTarget.classList.toggle('act', on);
+    e.currentTarget.setAttribute('aria-pressed', String(on));
+    // 모바일 호환 — .expanded 클래스도 동기
+    $('lbMeta').classList.toggle('expanded', on);
+  });
+  // 메타 패널 자체 탭하면 닫기 — 배경 탭 → close 핸들러로 안 가게 stopPropagation
   $('lbMeta').addEventListener('click', e => {
-    e.stopPropagation();  // 배경 탭으로 라이트박스 닫히는 핸들러로 전파 방지
-    $('lbMeta').classList.toggle('expanded');
+    e.stopPropagation();
+  });
+  // 📁 EXIF 복원 — 라이트박스에서 즉시 폼 적용
+  $('lbExifApply').addEventListener('click', async () => {
+    if(!_lbCurrent) return;
+    try {
+      let meta = _lbCurrent.meta;
+      if(!meta || Object.keys(meta).length === 0){
+        const raw = await readPngMetadata(_lbCurrent.blob);
+        meta = raw?.parsed || raw;
+      }
+      if(!meta){ toast('이 이미지에 NAI 메타가 없습니다', 'warning'); return; }
+      const restored = applyParsedMetaToForm({parsed: meta});
+      if(restored.length){
+        toast(`📁 EXIF 복원: ${restored.join(' · ')}`, 'success');
+        // 모바일이면 편집 뷰로 자동 전환 + 라이트박스 닫기
+        if(window.matchMedia('(max-width:880px)').matches){
+          closeLightbox();
+          setMainPane('edit');
+        }
+      } else {
+        toast('복원 가능한 항목이 없습니다', 'warning');
+      }
+    } catch(e){
+      toast(`EXIF 복원 실패: ${e?.message || e}`, 'error');
+    }
   });
 
   // 📱 모바일 — 좌우 스와이프로 탭 전환 (편집 ↔ 미리보기 ↔ 갤러리 ↔ 프리셋 ↔ 도감 ↔ 설정)
