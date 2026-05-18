@@ -14,7 +14,7 @@
 <!-- PWA / 모바일 앱 메타 -->
 <meta name="application-name" content="NAI Studio">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="NAI Studio">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="format-detection" content="telephone=no">
@@ -1173,6 +1173,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   <div class="tb-group">
     <span id="anlasPill" class="pill pill-off">오프라인 (Offline)</span>
     <button class="iconbtn" id="refreshAnlas" title="잔량 새로고침 (Refresh Anlas)">⟳</button>
+    <button class="iconbtn" id="fullscreenBtn" title="전체화면 켜기·끄기 (Fullscreen)">⛶</button>
   </div>
   <div class="tb-grow"></div>
 </div>
@@ -1948,6 +1949,36 @@ window.addEventListener('appinstalled', () => {
 
 // 📱 모바일 화면 강제 미리보기 (데스크탑 테스트용)
 let _mobilePreviewOn = false;
+// ⛶ 전체화면 토글 (Fullscreen API)
+// 안드로이드 Chrome/Samsung Internet: 시스템 네비·상태바 모두 숨김
+// iOS Safari: standalone 모드일 때만 의미 있음 (Fullscreen API 제한적)
+function toggleFullscreen(){
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if(isFs){
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  } else {
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if(!req){
+      toast('이 브라우저는 전체화면을 지원하지 않습니다 (PWA 설치 후 재시도)', 'warning');
+      return;
+    }
+    try {
+      req.call(el, {navigationUI: 'hide'});  // 옵션은 브라우저가 무시할 수도 있음
+    } catch(e){
+      try { req.call(el); } catch(_) { toast('전체화면 진입 실패: ' + (e.message||e), 'error'); }
+    }
+  }
+}
+function updateFullscreenBtn(){
+  const btn = document.getElementById('fullscreenBtn');
+  if(!btn) return;
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  btn.textContent = isFs ? '⛶' : '⛶';   // 동일 아이콘 유지 (혼동 줄임)
+  btn.classList.toggle('act', isFs);
+  btn.title = isFs ? '전체화면 끄기 (Esc)' : '전체화면 켜기 (Fullscreen)';
+}
+
 function toggleMobilePreview(){
   _mobilePreviewOn = !_mobilePreviewOn;
   const meta = document.querySelector('meta[name="viewport"]');
@@ -2107,7 +2138,8 @@ function showInstallInstructions(){
     description: 'NovelAI 이미지 생성 스튜디오 — 단일 HTML',
     start_url: '.',
     scope: '.',
-    display: 'standalone',
+    display: 'fullscreen',  // 시스템 네비게이션 바·상태바까지 숨김 (Android)
+    display_override: ['fullscreen', 'standalone', 'minimal-ui'],
     orientation: 'any',
     background_color: '#ebe2cd',
     theme_color: '#a25a1f',
@@ -7424,6 +7456,10 @@ function wireEvents(){
     const i = $('apiKey'); i.classList.toggle('pw');
   });
   $('refreshAnlas').addEventListener('click', refreshAnlas);
+  // ⛶ 전체화면 토글 — 시스템 네비/상태바 숨김 (브라우저 모두 + 비-설치 환경 호환)
+  $('fullscreenBtn').addEventListener('click', toggleFullscreen);
+  document.addEventListener('fullscreenchange', updateFullscreenBtn);
+  document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
 
   // Mode bar
   $$('.mode-btn').forEach(b => b.onclick = () => setMode(b.dataset.mode));
