@@ -2407,7 +2407,7 @@ const DB = {
         const tx = this.tx(this.SET, 'readwrite');
         tx.objectStore(this.SET).put({key, value});
         tx.oncomplete = res;
-        tx.onerror = () => res();
+        tx.onerror = (e) => { console.warn('[DB] tx error', e?.target?.error || e); res(); };
       } catch(e) { res(); }
     });
   },
@@ -2429,7 +2429,7 @@ const DB = {
         const tx = this.tx(this.APP, 'readwrite');
         tx.objectStore(this.APP).put({key:'main', data});
         tx.oncomplete = res;
-        tx.onerror = () => res();
+        tx.onerror = (e) => { console.warn('[DB] tx error', e?.target?.error || e); res(); };
       } catch(e) { res(); }
     });
   },
@@ -2461,7 +2461,7 @@ const DB = {
       const tx = this.tx(this.PRE, 'readwrite');
       tx.objectStore(this.PRE).delete(`${type}:${name}`);
       tx.oncomplete = res;
-      tx.onerror = () => res();
+      tx.onerror = (e) => { console.warn('[DB] tx error', e?.target?.error || e); res(); };
     });
   },
   async presetGetAll(type){
@@ -2576,7 +2576,7 @@ const DB = {
       imgs.forEach(i => imgStore.delete(i.id));
       tx.objectStore(this.SES).delete(sid);
       tx.oncomplete = () => res();
-      tx.onerror = () => res();
+      tx.onerror = (e) => { console.warn('[DB] tx error', e?.target?.error || e); res(); };
     });
   },
   async clearAll(){
@@ -2586,7 +2586,7 @@ const DB = {
       tx.objectStore(this.IMG).clear();
       tx.objectStore(this.SES).clear();
       tx.oncomplete = () => { this.currentSessionId = null; res(); };
-      tx.onerror = () => res();
+      tx.onerror = (e) => { console.warn('[DB] tx error', e?.target?.error || e); res(); };
     });
   },
   async size(){
@@ -2939,29 +2939,60 @@ async function readPngMetadata(blob){
   try {
     const buf = await blob.arrayBuffer();
     const u8 = new Uint8Array(buf);
-    if(u8[0] !== 0x89 || u8[1] !== 0x50) return null;
+    if(u8[0] !== 0x89 || u8[1] !== 0x50) return null;  // PNG 시그니처
     let off = 8;
     const meta = {};
-    while(off < u8.length - 8){
+    const dec = new TextDecoder();
+    let guard = 0;  // 손상된 PNG에서 무한 루프 방지
+    while(off + 8 <= u8.length && guard++ < 200){
       const len = (u8[off]<<24) | (u8[off+1]<<16) | (u8[off+2]<<8) | u8[off+3];
       const type = String.fromCharCode(u8[off+4], u8[off+5], u8[off+6], u8[off+7]);
+      // 청크 길이 sanity (>32MB거나 파일 경계 초과)
+      if(len < 0 || len > 33554432 || off + 8 + len + 4 > u8.length) break;
       if(type === 'IEND') break;
       if(type === 'tEXt'){
         const data = u8.slice(off+8, off+8+len);
-        let nullIdx = data.indexOf(0);
+        const nullIdx = data.indexOf(0);
         if(nullIdx > 0){
-          const key = new TextDecoder().decode(data.slice(0, nullIdx));
-          const value = new TextDecoder().decode(data.slice(nullIdx+1));
+          const key = dec.decode(data.slice(0, nullIdx));
+          const value = dec.decode(data.slice(nullIdx+1));
           meta[key] = value;
         }
+      } else if(type === 'iTXt'){
+        // iTXt: keyword\0 compressionFlag compressionMethod languageTag\0 translatedKeyword\0 text
+        const data = u8.slice(off+8, off+8+len);
+        const k1 = data.indexOf(0);
+        if(k1 > 0 && k1 + 4 < data.length){
+          const key = dec.decode(data.slice(0, k1));
+          const compressed = data[k1+1] === 1;
+          // languageTag 끝
+          let p = k1 + 3;
+          while(p < data.length && data[p] !== 0) p++;
+          const k2 = p + 1;
+          // translatedKeyword 끝
+          p = k2;
+          while(p < data.length && data[p] !== 0) p++;
+          const textStart = p + 1;
+          if(!compressed && textStart < data.length){
+            meta[key] = dec.decode(data.slice(textStart));
+          }
+          // compressed iTXt는 zlib 디플레이트 필요 — 외부 라이브러리 없이는 스킵
+        }
       }
-      off += 8 + len + 4;
+      off += 8 + len + 4;  // 길이(4) + 타입(4) + 데이터 + CRC(4)
     }
     if(meta.Comment){
       try { meta.parsed = JSON.parse(meta.Comment); } catch(e){}
     }
+    // 폴백: parameters (A1111/SD WebUI 스타일) — 단순 텍스트 프롬프트로 사용 가능
+    if(!meta.parsed && meta.parameters){
+      meta.parsed = { prompt: meta.parameters };
+    }
     return meta;
-  } catch(e){ return null; }
+  } catch(e){
+    console.warn('[PNG meta] parse failed:', e);
+    return null;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3252,7 +3283,7 @@ function renderCpStatus(){
     clearBtn.disabled = true;
     return;
   }
-  const tags = action.split(/\s*,\s*/).filter(Boolean);
+  const tags = splitActionTags(action);
   tagsEl.className = 'cp-status-tags';
   tagsEl.innerHTML = tags.map((t, i) =>
     `<span class="cp-chip" data-idx="${i}"><span class="cp-chip-txt">${esc(t)}</span><button class="cp-chip-x" data-act="remove" data-idx="${i}" title="이 태그 제거" aria-label="제거">×</button></span>`
@@ -3294,11 +3325,34 @@ function clearCharActionFromModal(){
 }
 
 // 단일 칩 × 제거
+// 괄호 안 콤마(예: "1.3::(item, broken)::")는 분할하지 않는 안전 스플리터
+function splitActionTags(text){
+  if(!text) return [];
+  const out = [];
+  let buf = '';
+  let depth = 0;
+  for(let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if(ch === '(' || ch === '[' || ch === '{') depth++;
+    else if(ch === ')' || ch === ']' || ch === '}') depth = Math.max(0, depth - 1);
+    if(ch === ',' && depth === 0){
+      const t = buf.trim();
+      if(t) out.push(t);
+      buf = '';
+    } else {
+      buf += ch;
+    }
+  }
+  const t = buf.trim();
+  if(t) out.push(t);
+  return out;
+}
+
 function removeCharActionTagAt(tagIdx){
   if(_charPickIdx < 0) return;
   const c = state.characters[_charPickIdx];
   if(!c) return;
-  const tags = (c.action || '').split(/\s*,\s*/).filter(Boolean);
+  const tags = splitActionTags(c.action || '');
   if(tagIdx < 0 || tagIdx >= tags.length) return;
   const removed = tags.splice(tagIdx, 1)[0];
   c.action = tags.join(', ');
@@ -5385,9 +5439,13 @@ function renderGalleryItemHtml(img, sesId){
 
 async function loadGallery(){
   const grid = $('galleryGrid');
-  // 이전 ObjectURL 해제 — 메모리 누수 방지
+  // 이전 ObjectURL 해제 — 메모리 누수 방지 (g-item 썸네일 + 앨범 헤더 썸네일)
   grid.querySelectorAll('.g-item').forEach(el => {
     const u = el.dataset.url;
+    if(u && u.startsWith('blob:')) URL.revokeObjectURL(u);
+  });
+  grid.querySelectorAll('.ah-thumb[data-blob]').forEach(el => {
+    const u = el.dataset.blob;
     if(u && u.startsWith('blob:')) URL.revokeObjectURL(u);
   });
   const sessions = await DB.getSessions();
@@ -5426,11 +5484,15 @@ async function loadGallery(){
     // 1) 사용자 앨범 — 항상 표시 (비어있어도)
     for(const ua of state.userAlbums){
       const list = allImages.filter(item => (state.albumMembership[item.img.id]||[]).includes(ua.id));
-      // 썸네일: 첫 이미지가 있으면 그걸로
+      // 썸네일: 첫 이미지가 있으면 그걸로 (blob URL은 다음 loadGallery에서 정리됨)
       const firstImg = list[0]?.img;
-      const thumbHtml = firstImg
-        ? `<div class="ah-thumb" style="background-image:url('${URL.createObjectURL(firstImg.blob)}')"></div>`
-        : `<div class="ah-ico" style="background:var(--b3)">📁</div>`;
+      let thumbHtml;
+      if(firstImg){
+        const aUrl = URL.createObjectURL(firstImg.blob);
+        thumbHtml = `<div class="ah-thumb" data-blob="${aUrl}" style="background-image:url('${aUrl}')"></div>`;
+      } else {
+        thumbHtml = `<div class="ah-ico" style="background:var(--b3)">📁</div>`;
+      }
       parts.push(`<div class="album-header">${thumbHtml}<div class="ah-info">
         <div class="ah-name">${esc(ua.name)} <span class="en">User Album</span></div>
         <div class="ah-stats">${list.length.toLocaleString()}장 · 사용자 앨범</div>
@@ -5510,7 +5572,12 @@ async function loadGallery(){
   // 삭제된 ID는 자동 정리
   const existingIds = new Set([...grid.querySelectorAll('.g-item')].map(el => parseInt(el.dataset.id)));
   for(const id of [..._gallerySel]){ if(!existingIds.has(id)) _gallerySel.delete(id); }
-  refreshGalSelToolbar();
+  // 갤러리에 아무 카드도 없으면 선택 모드 자동 해제 → UI 상태 일관성
+  if(existingIds.size === 0 && _selectionMode){
+    setSelectionMode(false);
+  } else {
+    refreshGalSelToolbar();
+  }
 }
 
 async function refreshGallerySize(){
@@ -5941,7 +6008,13 @@ function setupLightboxZoomPan(){
   // 외부에서 줌 여부 조회 / 리셋 호출 가능하게
   // 핀치 끝난 직후 250ms 동안은 zoomed로 간주 → 기존 핸들러가 잘못 처리하는 것 방지
   window._lbIsZoomed = () => scale > 1.05 || (Date.now() - gestureEndAt < 250);
-  window._lbResetZoom = () => { reset(false); gestureEndAt = 0; };
+  window._lbResetZoom = () => {
+    // 진행 중일 수 있는 모든 제스처 상태도 함께 정리 — prev/next 전환 시 stale 방지
+    pinching = false; panning = false; gestureActive = false;
+    pStartDist = 0;
+    gestureEndAt = 0;
+    reset(false);
+  };
 
   img.style.touchAction = 'none';   // 브라우저 기본 핀치/스크롤 차단 — 우리가 처리
   img.style.transformOrigin = 'center center';
@@ -7858,12 +7931,14 @@ function setupMobileSwipe(){
   }
 
   function resetTransform(){
-    if(!currentEl) return;
-    currentEl.style.transition = 'transform .18s cubic-bezier(.22,.61,.36,1)';
-    currentEl.style.transform = '';
+    if(!currentEl || !currentEl.isConnected) return;
+    try {
+      currentEl.style.transition = 'transform .18s cubic-bezier(.22,.61,.36,1)';
+      currentEl.style.transform = '';
+    } catch(_){ return; }
     const el = currentEl;
     setTimeout(() => {
-      if(el && el.style.transition){ el.style.transition = ''; }
+      try { if(el && el.isConnected && el.style.transition){ el.style.transition = ''; } } catch(_){}
     }, 200);
   }
 
@@ -7932,7 +8007,10 @@ function setupMobileSwipe(){
     if((distOK || flickOK) && canMove){
       // 끊김 없이 즉시 페이지 교체 — 방향 정보는 body[data-mventer]에 기록
       // → 새 페인이 손가락이 향한 방향에서 슬라이드 인 됨
-      if(localEl){ localEl.style.transition=''; localEl.style.transform=''; }
+      // localEl이 DOM에서 분리됐을 수 있으므로(가령 loadGallery 중) try/null 가드
+      try {
+        if(localEl && localEl.isConnected){ localEl.style.transition=''; localEl.style.transform=''; }
+      } catch(_){}
       document.body.dataset.mventer = dx < 0 ? 'right' : 'left';
       setMainPane(ORDER[next]);
       // 애니메이션 끝난 뒤 데이터 속성 정리
@@ -7941,6 +8019,7 @@ function setupMobileSwipe(){
       // 임계치 미달 → 원위치 복귀(스프링)
       resetTransform();
     }
+    currentEl = null;  // 외부 이벤트 사이에 stale 참조 안 남게
   }, {passive:true});
 
   // 터치 취소(전화 등) 시 원위치
