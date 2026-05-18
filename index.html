@@ -949,6 +949,38 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .ac-item.act .ac-en{color:var(--acc)}
 .ac-item .ac-ko{font-size:11.5px;color:var(--t3);margin-left:auto;white-space:nowrap}
 
+/* 🎬 백그라운드 미리보기 진행 위젯 — 모달 닫혔을 때만 보임 */
+.bg-progress{
+  position:fixed;
+  z-index:9300;
+  right:14px;
+  bottom:calc(140px + env(safe-area-inset-bottom));  /* 하단 네비·생성바 위로 */
+  display:none;align-items:center;gap:8px;
+  background:var(--panel);color:var(--t1);
+  border:1.5px solid var(--acc);
+  padding:8px 13px;border-radius:24px;
+  box-shadow:0 6px 20px rgba(74,52,20,.25);
+  font-size:12.5px;font-weight:600;font-family:inherit;
+  cursor:pointer;
+  transition:transform .12s,box-shadow .12s;
+  -webkit-tap-highlight-color:transparent;
+}
+.bg-progress:not([hidden]){display:inline-flex}
+.bg-progress:hover{transform:translateY(-1px);box-shadow:0 10px 26px rgba(74,52,20,.32)}
+.bg-progress:active{transform:scale(.96)}
+.bg-progress .bg-pulse{
+  width:10px;height:10px;border-radius:50%;
+  background:var(--acc);flex-shrink:0;
+  animation:bgPulse 1.1s ease-in-out infinite;
+}
+.bg-progress .bg-label{font-weight:700;color:var(--acc)}
+.bg-progress .bg-count{font-family:var(--mono);font-size:11.5px;color:var(--t2)}
+@keyframes bgPulse{0%,100%{opacity:.4;transform:scale(.85)}50%{opacity:1;transform:scale(1.1)}}
+/* 데스크탑 — 우상단으로 */
+@media (min-width:881px){
+  .bg-progress{bottom:auto;top:64px;right:18px}
+}
+
 /* 🎴 캐릭터 브라우저 모달 — 썸네일 그리드 + 단일/풀 모드 */
 #charBrowseModal .modal{max-width:900px}
 .cb-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:9px;flex-wrap:wrap}
@@ -2005,7 +2037,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn ghost" id="pgCancel">취소 <span class="en">Cancel</span></button>
+      <button class="btn ghost" id="pgCancel" title="모달만 닫음 (생성은 백그라운드에서 계속). 멈추려면 ⏹ 중지">📲 백그라운드로 <span class="en">Close</span></button>
       <button class="btn primary" id="pgStart">▶ 시작 <span class="en">Start</span></button>
       <button class="btn danger" id="pgStop" style="display:none">⏹ 중지 <span class="en">Stop</span></button>
     </div>
@@ -2088,6 +2120,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <!-- TOAST -->
 <div id="toastBox"></div>
+
+<!-- 🎬 백그라운드 미리보기 생성 진행 위젯 — 모달 닫아도 떠 있음 -->
+<button id="bgProgress" class="bg-progress" type="button" hidden aria-live="polite" title="진행 중인 미리보기 생성 — 탭하면 모달 다시 열기">
+  <span class="bg-pulse"></span>
+  <span class="bg-label">🎬 미리보기</span>
+  <span class="bg-count">0/0</span>
+</button>
 
 <!-- HIDDEN FILE INPUT + CHARACTER PRESET DATALIST -->
 <input type="file" id="hiddenFile" accept="*" style="display:none">
@@ -6372,6 +6411,29 @@ function advanceCharPoolsBeforeGenerate(){
 // 🎬 PREVIEW BATCH GENERATOR — 액션 고정·캐릭터별 순차 생성
 // ═══════════════════════════════════════════════════════════
 let _pgRunning = false;
+
+// 백그라운드 진행 위젯 — 모달이 닫혀 있을 때만 노출
+function updateBgProgress(label, force){
+  const el = $('bgProgress');
+  if(!el) return;
+  const isModalOpen = $('previewGenModal')?.classList.contains('open');
+  if(_pgRunning && !isModalOpen){
+    el.hidden = false;
+    const lbl = el.querySelector('.bg-label');
+    const cnt = el.querySelector('.bg-count');
+    if(label && cnt){
+      // label은 "🎬 N/M · name" 같은 형식
+      const parts = label.split('·');
+      const main = parts[0]?.trim() || '🎬 미리보기';
+      const sub = parts.slice(1).join('·').trim();
+      const m = /(\d+)\s*\/\s*(\d+)/.exec(main);
+      if(m){ cnt.textContent = `${m[1]}/${m[2]}`; }
+      if(lbl) lbl.textContent = sub ? `🎬 ${sub}` : '🎬 미리보기';
+    }
+  } else {
+    el.hidden = true;
+  }
+}
 let _pgAbort = null;
 
 function pgAllScenes(){
@@ -6482,14 +6544,17 @@ async function pgStart(){
   for(const c of picked){
     if(!_pgRunning) break;
     $('pgProgLabel').textContent = `생성 중: ${c.name||'(이름 없음)'}`;
+    updateBgProgress(`🎬 ${done+1}/${total} · ${c.name||''}`);
     try {
       const baseOpts = currentPromptOpts();
-      // 캐릭터 외형 + 시나리오 결합 (캐릭터를 v4_prompt에 직접 넣어 단일 캐릭터로)
+      // 그림체·품질 보존 — 사용자 현재 프롬프트가 메인이고, 시나리오는 뒤에 결합
+      const userBase = (baseOpts.prompt || '').trim();
+      const combinedBase = [userBase, sceneText].filter(Boolean).join(', ');
       const charPrompt = (c.text || '').trim();
       const opts = {
         ...baseOpts,
         seed: Math.floor(Math.random() * 0xffffffff),
-        prompt: sceneText || charPrompt,  // 시나리오가 메인, 없으면 캐릭터가 베이스
+        prompt: combinedBase,  // 사용자 스타일 유지 + 시나리오 추가
         characters: charPrompt
           ? [{
               enabled: true,
@@ -6549,6 +6614,7 @@ async function pgStart(){
   $('pgStart').style.display = '';
   $('pgStop').style.display = 'none';
   $('pgProgLabel').textContent = errors ? `완료 (성공 ${done}, 실패 ${errors})` : `✅ 완료 ${done}장`;
+  updateBgProgress(null);   // 위젯 숨김 (안 떠있던 경우엔 no-op)
   if(done){
     pgRenderCharList();   // 썸네일 표시 갱신
     if($('mainPane') ? state.mainPane === 'gallery' : false){
@@ -8919,8 +8985,18 @@ function wireEvents(){
   $('previewGenBtn').addEventListener('click', openPreviewGenModal);
   setupPresetPinch();
   // 🎬 미리보기 일괄 생성 모달 액션
-  $('pgCancel').addEventListener('click', () => { if(_pgRunning) pgStop(); $('previewGenModal').classList.remove('open'); });
-  $('previewGenModal').addEventListener('click', e => { if(e.target === $('previewGenModal')){ if(_pgRunning) pgStop(); e.currentTarget.classList.remove('open'); } });
+  // 닫기 = 모달만 닫음, 생성은 백그라운드에서 계속 (실행 중이면 위젯 노출)
+  const pgCloseModal = () => {
+    $('previewGenModal').classList.remove('open');
+    if(_pgRunning) updateBgProgress(null);
+  };
+  $('pgCancel').addEventListener('click', pgCloseModal);
+  $('previewGenModal').addEventListener('click', e => { if(e.target === $('previewGenModal')) pgCloseModal(); });
+  // 백그라운드 위젯 — 탭하면 모달 다시 열기
+  $('bgProgress').addEventListener('click', () => {
+    $('previewGenModal').classList.add('open');
+    updateBgProgress(null);
+  });
   $('pgStart').addEventListener('click', pgStart);
   $('pgStop').addEventListener('click', pgStop);
   $('pgSelectAll').addEventListener('click', () => { document.querySelectorAll('#pgCharList input[data-act="pick"]').forEach(c => c.checked = true); pgRefreshCost(); });
