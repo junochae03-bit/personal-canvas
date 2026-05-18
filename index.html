@@ -578,6 +578,12 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 /* (옛 .pinned-sec 제거됨 — 메인 프롬프트로 통합) */
 .preset-grid{--pre-cell:220px;flex:1;padding:16px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--pre-cell),1fr));gap:12px;align-content:start;background:var(--bg);grid-auto-rows:min-content;touch-action:pan-y pinch-zoom}
+/* 📚 작품/시리즈 그룹 헤더 — 캐릭터 카테고리 자동 그룹핑 */
+.p-group-hdr{grid-column:1/-1;display:flex;align-items:center;gap:9px;padding:8px 12px;margin:6px 0 2px;background:rgba(162,90,31,.08);border:1.5px solid rgba(162,90,31,.25);border-radius:6px;font-size:13.5px;font-weight:700;color:var(--acc);cursor:pointer;user-select:none;transition:background .12s}
+.p-group-hdr:hover{background:rgba(162,90,31,.15)}
+.p-group-hdr .p-group-mark{font-size:11px;color:var(--acc);width:14px;text-align:center;font-weight:700}
+.p-group-hdr .p-group-name{flex:1;font-family:inherit}
+.p-group-hdr .p-group-count{font-family:var(--mono);font-size:11.5px;font-weight:700;background:var(--card2);color:var(--t2);padding:2px 9px;border-radius:11px}
 .p-item{background:var(--card);border:1.5px solid var(--b1);border-radius:8px;overflow:hidden;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s;display:flex;flex-direction:column}
 .p-item:hover{border-color:var(--acc);box-shadow:0 6px 16px rgba(74,52,20,.15)}
 .p-item .p-thumb{max-height:0;overflow:hidden;transition:max-height .25s ease;position:relative}
@@ -1017,6 +1023,11 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .cb-mode-btn.act{background:var(--acc);color:#fff8ec;box-shadow:0 1px 4px rgba(162,90,31,.3)}
 .cb-actions{display:flex;gap:6px;align-items:center;margin-bottom:9px;padding:6px 8px;background:rgba(58,99,152,.06);border-radius:5px;border:1.5px dashed rgba(58,99,152,.25)}
 .cb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:58vh;overflow-y:auto;padding:3px;background:var(--card);border:1.5px solid var(--b1);border-radius:6px;padding:8px}
+.cb-grid .cb-group-hdr{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:7px 11px;margin:4px 0 2px;background:rgba(162,90,31,.10);border:1.5px solid rgba(162,90,31,.28);border-radius:6px;font-size:12.5px;font-weight:700;color:var(--acc);cursor:pointer;user-select:none;transition:background .12s}
+.cb-grid .cb-group-hdr:hover{background:rgba(162,90,31,.18)}
+.cb-grid .cb-group-hdr .cb-group-mark{font-size:10px;width:12px;text-align:center}
+.cb-grid .cb-group-hdr .cb-group-name{flex:1}
+.cb-grid .cb-group-hdr .cb-group-count{font-family:var(--mono);font-size:11px;background:var(--card2);color:var(--t2);padding:2px 8px;border-radius:11px}
 .cb-card{background:var(--panel);border:2px solid var(--b1);border-radius:7px;overflow:hidden;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;position:relative;-webkit-tap-highlight-color:transparent}
 .cb-card:hover{border-color:var(--acc);transform:translateY(-2px);box-shadow:0 6px 14px rgba(74,52,20,.18)}
 .cb-card.picked{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in oklab,var(--acc) 25%,transparent)}
@@ -4315,6 +4326,46 @@ function renderPresetTabs(){
   }).join('');
 }
 
+/**
+ * 캐릭터 이름에서 작품/시리즈 그룹을 추출.
+ * 우선순위: [XXX] 대괄호 prefix → 첫 _ 앞 토큰 → '기타'
+ * 예) "[원신] 푸리나" → "원신"
+ *     "붕스_삼칠_존호"  → "붕스"
+ *     "LWA_앗코"      → "LWA"
+ *     "캐릭터1"        → "기타"
+ */
+function getCharGroup(name){
+  if(!name) return '기타';
+  const trimmed = String(name).trim();
+  const bracket = /^\[([^\]]+)\]/.exec(trimmed);
+  if(bracket) return bracket[1].trim();
+  const us = trimmed.indexOf('_');
+  if(us > 0 && us < trimmed.length - 1) return trimmed.slice(0, us).trim();
+  return '기타';
+}
+
+// 그룹별로 묶고, 그룹은 항목수 내림차순(기타는 항상 마지막)으로 정렬
+function groupCharsByWork(list){
+  const map = new Map();
+  for(const p of list){
+    const g = getCharGroup(p.name);
+    if(!map.has(g)) map.set(g, []);
+    map.get(g).push(p);
+  }
+  const arr = [...map.entries()].map(([group, items]) => ({group, items}));
+  arr.sort((a, b) => {
+    if(a.group === '기타') return 1;
+    if(b.group === '기타') return -1;
+    return b.items.length - a.items.length || a.group.localeCompare(b.group, 'ko');
+  });
+  // 그룹 내부도 이름순 정렬
+  for(const g of arr){ g.items.sort((a,b) => (a.name||'').localeCompare(b.name||'', 'ko')); }
+  return arr;
+}
+
+// 접힌 그룹 상태 (사용자 토글)
+const _collapsedPresetGroups = new Set();
+
 function renderPresets(){
   const type = state.presetType;
   const search = ($('presetSearch').value||'').toLowerCase().trim();
@@ -4324,9 +4375,9 @@ function renderPresets(){
   const grid = $('presetGrid');
   const def = PRESET_TYPES.find(t => t.id === type) || {ico:'⚙'};
   const ico = def.ico;
-  grid.innerHTML = list.map((p) => {
+
+  const renderItem = (p) => {
     const cleanText = (p.text || '').replace(/\s+/g,' ').trim();
-    // 가중치 :: 문법에서 핵심 태그만 추출
     const tags = cleanText.split(/::|,/).map(s => s.trim()).filter(s => s && !/^[\d.]+$/.test(s));
     const subText = tags.slice(0, 8).join(', ');
     const subEmpty = subText ? '' : ' empty';
@@ -4334,7 +4385,6 @@ function renderPresets(){
     const key = `${type}:${p.name||''}`;
     const expanded = _expandedPresets.has(key);
     const hasThumb = !!p.thumb;
-    // 미리보기 내용: 썸네일 이미지 > 텍스트 > 아이콘
     let previewBody;
     if(hasThumb){
       previewBody = `<img src="${esc(p.thumb)}" alt="${esc(p.name||'')}" loading="lazy" decoding="async" onerror="this.parentElement.innerHTML='<div class=ph-icon>${ico}</div>'">`;
@@ -4362,7 +4412,27 @@ function renderPresets(){
           <button data-act="del" class="danger" title="삭제">✕</button>
         </div>
       </div>`;
-  }).join('');
+  };
+
+  // 캐릭터 카테고리는 작품(시리즈)별로 자동 그룹핑
+  if(type === 'character' && list.length > 0){
+    const groups = groupCharsByWork(list);
+    grid.innerHTML = groups.map(g => {
+      const gKey = `g:${type}:${g.group}`;
+      const collapsed = _collapsedPresetGroups.has(gKey);
+      const itemsHtml = collapsed ? '' : g.items.map(renderItem).join('');
+      return `
+        <div class="p-group-hdr" data-gkey="${esc(gKey)}" data-act="toggle-group">
+          <span class="p-group-mark">${collapsed ? '▶' : '▼'}</span>
+          <span class="p-group-name">📚 ${esc(g.group)}</span>
+          <span class="p-group-count">${g.items.length}</span>
+        </div>
+        ${itemsHtml}`;
+    }).join('');
+    return;
+  }
+
+  grid.innerHTML = list.map(renderItem).join('');
 }
 
 function showImportProgress(msg){
@@ -6527,6 +6597,8 @@ function renderCbMode(){
   $('cbPickedCount').textContent = `${_cbPicks.size}명 선택`;
 }
 
+const _collapsedCbGroups = new Set();
+
 function renderCbGrid(){
   const chars = state.presets.character || [];
   const q = ($('cbSearch').value || '').toLowerCase().trim();
@@ -6536,7 +6608,7 @@ function renderCbGrid(){
     grid.innerHTML = `<div class="cb-empty-state">${chars.length === 0 ? '캐릭터 프리셋이 없습니다 — 프리셋 탭에서 먼저 추가하세요' : `"${esc(q)}" 검색 결과 없음`}</div>`;
     return;
   }
-  grid.innerHTML = filtered.map(c => {
+  const renderCard = (c) => {
     const picked = _cbPicks.has(c.name);
     const thumbHtml = c.thumb
       ? `<div class="cb-thumb" style="background-image:url('${esc(c.thumb)}')"></div>`
@@ -6545,6 +6617,23 @@ function renderCbGrid(){
       ${thumbHtml}
       <div class="cb-name" title="${esc(c.name)}">${esc(c.name)}</div>
     </div>`;
+  };
+  // 검색 중에는 그룹 표시 없이 평탄
+  if(q){
+    grid.innerHTML = filtered.map(renderCard).join('');
+    return;
+  }
+  // 📚 작품/시리즈별 자동 그룹핑
+  const groups = groupCharsByWork(filtered);
+  grid.innerHTML = groups.map(g => {
+    const gKey = `cb:${g.group}`;
+    const collapsed = _collapsedCbGroups.has(gKey);
+    const cards = collapsed ? '' : g.items.map(renderCard).join('');
+    return `<div class="cb-group-hdr" data-gkey="${esc(gKey)}">
+      <span class="cb-group-mark">${collapsed ? '▶' : '▼'}</span>
+      <span class="cb-group-name">📚 ${esc(g.group)}</span>
+      <span class="cb-group-count">${g.items.length}</span>
+    </div>${cards}`;
   }).join('');
 }
 
@@ -8996,6 +9085,14 @@ function wireEvents(){
     renderCbMode(); renderCbGrid();
   });
   $('cbGrid').addEventListener('click', e => {
+    const gHdr = e.target.closest('.cb-group-hdr');
+    if(gHdr){
+      const k = gHdr.dataset.gkey;
+      if(_collapsedCbGroups.has(k)) _collapsedCbGroups.delete(k);
+      else _collapsedCbGroups.add(k);
+      renderCbGrid();
+      return;
+    }
     const card = e.target.closest('.cb-card');
     if(card) toggleCbPick(card.dataset.name);
   });
@@ -9205,6 +9302,15 @@ function wireEvents(){
   // (옛 상단바 import/export 버튼 이벤트는 제거됨 — 모든 백업은 설정 탭에서 처리)
 
   $('presetGrid').addEventListener('click', e => {
+    // 📚 그룹 헤더 토글 (접고 펼치기)
+    const groupHdr = e.target.closest('.p-group-hdr');
+    if(groupHdr){
+      const gKey = groupHdr.dataset.gkey;
+      if(_collapsedPresetGroups.has(gKey)) _collapsedPresetGroups.delete(gKey);
+      else _collapsedPresetGroups.add(gKey);
+      renderPresets();
+      return;
+    }
     const item = e.target.closest('.p-item');
     if(!item) return;
     const name = item.dataset.name;
