@@ -3374,17 +3374,34 @@ async function naiGenerate(apiKey, body, signal){
   const buf = await resp.arrayBuffer();
   console.log('[NAI] response', {ct, bytes: buf.byteLength, model: body.model});
 
-  // V4 모델은 msgpack 응답이 기본 — 서버가 content-type을 generic 'binary/octet-stream'으로 보내도 시도
-  // 첫 바이트 0x80~0x8f / 0xde~0xdf 는 msgpack의 map 헤더 (휴리스틱)
+  // 응답 매직 바이트로 형식 판단 (NAI는 v3/v4 모두 보통 ZIP 응답 — content-type은 무시)
+  // ZIP: 50 4B 03 04 ("PK\x03\x04")
+  // msgpack fixmap: 0x80-0x8f, map16/32: 0xde/0xdf
   const u8 = new Uint8Array(buf);
-  const firstByte = u8[0];
-  const looksMsgpack = firstByte != null && (
-    (firstByte >= 0x80 && firstByte <= 0x8f) ||  // fixmap
-    firstByte === 0xde || firstByte === 0xdf      // map16/map32
+  const isZip = u8[0] === 0x50 && u8[1] === 0x4b;
+  const fb = u8[0];
+  const isMsgpack = !isZip && (
+    (fb >= 0x80 && fb <= 0x8f) || fb === 0xde || fb === 0xdf
   );
-  const tryMsgpack = isV4 || ct.includes('msgpack') || looksMsgpack;
 
-  if(tryMsgpack && window.MessagePack && window.MessagePack.decodeMulti){
+  // 1) ZIP 우선 (NAI 기본 응답)
+  if(isZip){
+    try {
+      const zip = await JSZip.loadAsync(buf);
+      const files = Object.keys(zip.files);
+      const pngName = files.find(f => f.endsWith('.png')) || files[0];
+      if(pngName){
+        const blob = await zip.files[pngName].async('blob');
+        console.log('[NAI] ZIP 디코드 OK', files.length, 'files, picked', pngName);
+        return blob;
+      }
+    } catch(e){
+      console.warn('[NAI] ZIP 디코드 실패:', e?.message || e);
+    }
+  }
+
+  // 2) msgpack 시도 (v4 새 포맷)
+  if((isMsgpack || isV4 || ct.includes('msgpack')) && window.MessagePack && window.MessagePack.decodeMulti){
     try {
       let lastImage = null;
       for(const ev of window.MessagePack.decodeMulti(u8)){
@@ -3404,24 +3421,23 @@ async function naiGenerate(apiKey, body, signal){
         console.log('[NAI] msgpack 디코드 OK', lastImage.byteLength, 'bytes');
         return new Blob([lastImage], {type:'image/png'});
       }
-      // 빈 스트림 — ZIP 폴백으로 진행
     } catch(e){
-      console.warn('[NAI] msgpack 디코드 실패, ZIP 폴백 시도:', e?.message || e);
+      console.warn('[NAI] msgpack 디코드 실패:', e?.message || e);
     }
   }
 
-  // ZIP fallback (V3 또는 msgpack 실패 시)
-  try {
-    const zip = await JSZip.loadAsync(buf);
-    const files = Object.keys(zip.files);
-    const pngName = files.find(f => f.endsWith('.png')) || files[0];
-    if(pngName){
-      const blob = await zip.files[pngName].async('blob');
-      console.log('[NAI] ZIP 디코드 OK', files.length, 'files, picked', pngName);
-      return blob;
-    }
-  } catch(e){
-    console.warn('[NAI] ZIP 디코드 실패:', e?.message || e);
+  // 3) 마지막 안전망 — ZIP 한 번 더 (매직 안 맞아도 시도)
+  if(!isZip){
+    try {
+      const zip = await JSZip.loadAsync(buf);
+      const files = Object.keys(zip.files);
+      const pngName = files.find(f => f.endsWith('.png')) || files[0];
+      if(pngName){
+        const blob = await zip.files[pngName].async('blob');
+        console.log('[NAI] ZIP 디코드 OK (재시도)', files.length, 'files, picked', pngName);
+        return blob;
+      }
+    } catch(_){}
   }
 
   // 둘 다 실패 — 헤드 바이트와 함께 명확한 에러
