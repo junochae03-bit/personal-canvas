@@ -230,7 +230,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .cp-mode-btn.act .en{opacity:.85}
 .cp-mode-hint{font-size:11.5px;color:var(--t3);flex:1;min-width:120px;line-height:1.45}
 
-.cp-search-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cp-search-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;position:sticky;top:-1px;background:var(--panel);padding:4px 0;z-index:3;box-shadow:0 4px 12px -8px rgba(74,52,20,.18)}
 .cp-search-row .inp{flex:1;min-width:200px;font-size:14px;padding:9px 12px}
 .cp-cats{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
 .cp-cat{background:var(--card);border:1.5px solid var(--b1);color:var(--t2);padding:7px 12px;font-size:12px;font-weight:600;border-radius:5px;cursor:pointer;line-height:1.2;display:inline-flex;align-items:center;gap:5px;font-family:inherit;white-space:nowrap}
@@ -817,9 +817,20 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   .tag-chip .t-en{font-size:11px}
   .tag-chip .t-ko{font-size:10px}
 
-  /* MODAL — 모바일에서도 화면 중앙 배치 (양옆 여백 확보) */
-  .modal-bg{padding:14px;align-items:center;justify-content:center}
-  .modal{max-width:calc(100vw - 28px);width:100%;max-height:88vh;border-radius:10px}
+  /* MODAL — 모바일에서 화면 상단 가까이 배치 (키보드 뜨면 안 가려지게) */
+  .modal-bg{
+    padding:14px;
+    align-items:flex-start;       /* 상단 정렬 */
+    justify-content:center;
+    padding-top:calc(env(safe-area-inset-top, 0px) + 14px);
+  }
+  /* visualViewport 기반 키보드 보정 — JS가 --vv-h 갱신 */
+  .modal{
+    max-width:calc(100vw - 28px);
+    width:100%;
+    max-height:min(88vh, calc(var(--vv-h, 100vh) - 32px));
+    border-radius:10px;
+  }
   .modal h3{font-size:14px;padding:12px 14px}
   .modal-body{padding:12px 14px}
   .modal-foot{padding:10px 12px;flex-wrap:wrap;gap:5px}
@@ -2176,6 +2187,29 @@ function showInstallInstructions(){
         });
       })
       .catch(err => console.warn('[SW] register failed:', err));
+  });
+})();
+
+// 🎹 모바일 키보드 감지 — visualViewport API로 모달 가림 방지
+// 키보드가 올라오면 visualViewport.height가 줄어듬 → --vv-h 변수에 실제 가시 영역 반영
+// CSS의 .modal max-height: min(88vh, calc(var(--vv-h) - 32px))가 자동으로 줄어듦
+(function trackVisualViewport(){
+  if(!window.visualViewport) return;
+  const vv = window.visualViewport;
+  const update = () => {
+    document.documentElement.style.setProperty('--vv-h', `${vv.height}px`);
+  };
+  vv.addEventListener('resize', update);
+  vv.addEventListener('scroll', update);
+  update();
+  // 입력 포커스 시 모달 내부 input을 스크롤로 가운데로 끌어올림 (보조)
+  document.addEventListener('focusin', e => {
+    const inp = e.target;
+    if(!inp || !inp.matches || !inp.matches('input,textarea,select')) return;
+    if(!inp.closest('.modal')) return;
+    setTimeout(() => {
+      try { inp.scrollIntoView({block:'nearest', behavior:'smooth'}); } catch(_){}
+    }, 250);  // 키보드 펼침 애니메이션 끝난 뒤
   });
 })();
 
