@@ -3321,7 +3321,23 @@ function buildGenBody(opts){
     params.add_original_image = opts.addOrig !== false;
     model = INPAINT_MODELS[opts.model] || opts.model;
   }
-  return { input: opts.prompt || '', model, action, parameters: params };
+  const body = { input: opts.prompt || '', model, action, parameters: params };
+  // 🐛 디버그 로그 — 생성 직전 실제 전송 데이터 확인용
+  try {
+    console.log('[NAI request]', {
+      model, action,
+      input_len: (body.input || '').length,
+      input_head: (body.input || '').slice(0, 120),
+      neg_len: (params.negative_prompt || '').length,
+      neg_head: (params.negative_prompt || '').slice(0, 120),
+      v4_base: params.v4_prompt?.caption?.base_caption?.slice(0, 120),
+      v4_chars: (params.v4_prompt?.caption?.char_captions || []).map(c => (c.char_caption||'').slice(0, 80)),
+      width: params.width, height: params.height,
+      seed: params.seed, steps: params.steps, cfg: params.scale,
+      sampler: params.sampler, schedule: params.noise_schedule,
+    });
+  } catch(_){}
+  return body;
 }
 
 async function naiGenerate(apiKey, body, signal){
@@ -6718,14 +6734,16 @@ async function pgStart(){
     updateBgProgress(`🎯 ${done+1}/${total} · ${c.name||''}`);
     try {
       const baseOpts = currentPromptOpts();
-      // 그림체·품질 보존 — 사용자 현재 프롬프트가 메인이고, 시나리오는 뒤에 결합
+      // 그림체·품질 보존 — 사용자 현재 프롬프트 + 시나리오 + (필요 시 캐릭터 외형도 base에 포함)
       const userBase = (baseOpts.prompt || '').trim();
-      const combinedBase = [userBase, sceneText].filter(Boolean).join(', ');
       const charPrompt = (c.text || '').trim();
+      // 안전한 fallback: 사용자 프롬프트 비었으면 캐릭터 외형이라도 base에 들어가게
+      const parts = [userBase, sceneText, !userBase && !sceneText ? charPrompt : ''].filter(Boolean);
+      const combinedBase = parts.join(', ');
       const opts = {
         ...baseOpts,
         seed: Math.floor(Math.random() * 0xffffffff),
-        prompt: combinedBase,  // 사용자 스타일 유지 + 시나리오 추가
+        prompt: combinedBase || charPrompt,  // 최종 안전망
         characters: charPrompt
           ? [{
               enabled: true,
@@ -6736,6 +6754,7 @@ async function pgStart(){
           : [],
         useCoords: false,
       };
+      console.log('[pg-batch]', {char: c.name, userBase_len: userBase.length, sceneText_len: sceneText.length, charPrompt_len: charPrompt.length, finalBase_head: opts.prompt.slice(0,100)});
       const body = buildGenBody({...opts, action: 'generate'});
       const blob = await naiGenerate(apiKey, body, _pgAbort.signal);
       // 저장
