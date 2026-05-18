@@ -179,6 +179,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .char-body.open{display:block}
 .char-body .ta{min-height:66px;margin-bottom:5px}
 .char-section-label{font-size:11px;color:var(--t2);font-weight:700;margin:8px 0 3px;display:flex;align-items:center;gap:5px;letter-spacing:0}
+.char-tagcodex-btn{background:transparent;border:1.25px solid rgba(58,99,152,.4);color:var(--blue);padding:3px 8px;font-size:10.5px;font-weight:700;border-radius:4px;cursor:pointer;margin-left:auto;font-family:inherit;transition:all .12s}
+.char-tagcodex-btn:hover{background:rgba(58,99,152,.1);border-color:var(--blue)}
 .char-section-label:first-child{margin-top:2px}
 .char-section-label .en{color:var(--t3);font-weight:500;font-size:.85em}
 /* 검색 가능한 빠른추가 콤보박스 */
@@ -1423,6 +1425,15 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
             <option value="3">사용 안 함 (None)</option>
           </select>
           <textarea id="negPrompt" class="ta" placeholder="배제할 요소를 영어 태그로  예) lowres, bad anatomy, text, watermark ..."></textarea>
+          <div class="row" style="margin-top:7px;justify-content:space-between;flex-wrap:wrap;gap:6px">
+            <span class="lbl" id="negTokens">0 글자</span>
+            <div class="row" style="gap:6px;flex-wrap:wrap">
+              <button class="btn ghost" id="openWorkflowBtnNeg" style="padding:4px 10px;font-size:11.5px;border-color:rgba(162,90,31,.4);color:var(--acc)" title="현재 상태(프롬프트+캐릭터+파라미터) 저장·복원">💾 워크플로우 <span class="en" style="opacity:.6">Snap</span></button>
+              <button class="btn ghost" id="lockNegBtn" style="padding:4px 10px;font-size:11.5px" title="네거티브 수정 잠금 (다시 누르면 해제)" aria-pressed="false">🔓 잠금</button>
+              <button class="btn ghost" id="dedupeNegBtn" style="padding:4px 10px;font-size:11.5px" title="콤마 구분 중복 태그 정리">🧹 중복 정리</button>
+              <button class="btn ghost" id="clearNegBtn" style="padding:4px 10px;font-size:11.5px">비우기</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1643,6 +1654,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <button class="btn" id="galSelAlbum" title="선택한 이미지를 앨범에 추가">📁 앨범에</button>
           <button class="btn" id="galSelClear" title="선택 해제하고 선택 모드 종료">✕ 닫기</button>
           <div style="flex:1"></div>
+          <button class="btn" id="galSelDownload" title="선택한 이미지를 ZIP으로 다운로드" style="background:rgba(58,99,152,.18);border-color:rgba(255,255,255,.45)">⬇ 다운로드</button>
           <button class="btn danger" id="galSelDelete" title="선택한 이미지 모두 삭제 (되돌릴 수 없음)">🗑 선택 삭제</button>
         </div>
         <div class="gallery-grid" id="galleryGrid"></div>
@@ -1688,34 +1700,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <!-- SETTINGS PANE — 설정 -->
       <div class="main-pane" data-pane="settings">
         <div class="settings-body">
-          <div class="install-card">
-            <div class="head">📱 모바일 앱으로 설치 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Install as App</span></div>
-            <div class="desc" id="installStatusDesc">홈 화면에 추가하면 풀스크린 앱처럼 사용할 수 있습니다 (PWA).</div>
-            <div class="row" style="gap:6px;flex-wrap:wrap">
-              <button class="btn primary" id="installPwaBtn">📲 앱으로 설치 / 안내</button>
-              <button class="btn ghost" id="mobilePreviewBtn" title="데스크탑에서 모바일 화면을 미리 봅니다 (viewport 강제)">📱 모바일 화면 미리보기</button>
-              <button class="btn ghost" id="diagnoseInstallBtn" title="설치 가능 여부 진단">🔍 진단</button>
-            </div>
-          </div>
-
-          <div class="set-card">
-            <h3>외관 <span class="en">Appearance</span></h3>
-            <div class="set-row">
-              <div class="label">테마 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Theme</span><div class="desc">눈에 편한 색상을 선택하세요</div></div>
-              <div class="theme-swatches" id="themeSwatches"></div>
-            </div>
-            <div class="set-row">
-              <div class="label">UI 크기 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Scale</span><div class="desc">버튼으로 즉시 적용 — 흔들림 없음</div></div>
-              <div class="row" style="gap:4px;flex-wrap:wrap;justify-content:flex-end" id="uiScaleBtns">
-                <button class="btn ghost ui-scale-btn" data-scale="80">작게 80%</button>
-                <button class="btn ghost ui-scale-btn" data-scale="90">90%</button>
-                <button class="btn ghost ui-scale-btn act" data-scale="100">기본 100%</button>
-                <button class="btn ghost ui-scale-btn" data-scale="110">110%</button>
-                <button class="btn ghost ui-scale-btn" data-scale="125">크게 125%</button>
-              </div>
-              <input type="hidden" id="uiScale" value="100">
-            </div>
-          </div>
+          <!-- 외관 카드 — 베이지 테마 + 80% UI 크기 고정 (옛 멀티 테마/스케일 옵션 제거됨) -->
+          <input type="hidden" id="uiScale" value="80">
 
           <div class="set-card">
             <h3>저장소 <span class="en">Storage</span></h3>
@@ -1978,6 +1964,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <div class="modal-body">
       <div class="cb-toolbar">
         <input id="cbSearch" class="inp" placeholder="🔍 이름 검색…" style="flex:1;min-width:140px" autocomplete="off">
+        <button class="btn ghost" id="cbRandom" title="캐릭터 프리셋 중 랜덤으로 한 명 즉시 적용" style="padding:6px 11px;font-size:12px;border-color:rgba(58,99,152,.4);color:var(--blue);flex-shrink:0">🎲 랜덤</button>
         <div class="cb-mode">
           <button class="cb-mode-btn act" data-mode="single" type="button">🎯 단일 선택</button>
           <button class="cb-mode-btn" data-mode="pool" type="button" title="여러 명 골라서 풀로 만들면 생성할 때마다 자동 교체">🔄 후보 풀</button>
@@ -4058,7 +4045,9 @@ function renderCharacters(){
         <textarea class="ta tiny" data-act="action" data-idx="${i}" placeholder="예: school uniform, sitting, smile, source#hug">${esc(c.action||'')}</textarea>
         <button class="char-quick-btn" data-act="quickadd" data-idx="${i}">🪄 빠른 추가 — 액션·프리셋 찾기 <span class="en" style="opacity:.6">Quick Add</span></button>
 
-        <div class="char-section-label">🚫 네거티브 <span class="en">Negative</span></div>
+        <div class="char-section-label">🚫 네거티브 <span class="en">Negative</span>
+          <button class="char-tagcodex-btn" data-act="open-char-tagcodex" data-idx="${i}" title="태그 도감에서 이 캐릭터 네거티브로 추가" type="button">📖 도감에서 추가</button>
+        </div>
         <textarea class="ta tiny" data-act="neg" data-idx="${i}" placeholder="예: bad anatomy, bad hands">${esc(c.neg||'')}</textarea>
       </div>
     </div>
@@ -4410,6 +4399,103 @@ function downloadJSON(obj, fname){
   const a = document.createElement('a');
   a.href = url; a.download = fname; a.click();
   setTimeout(()=>URL.revokeObjectURL(url), 1500);
+}
+
+// 📦 이미지 다수를 ZIP으로 다운로드 (앨범·세션 일괄)
+async function downloadImagesAsZip(images, zipName, onProgress){
+  if(!Array.isArray(images) || !images.length){ toast('다운로드할 이미지가 없습니다', 'warning'); return false; }
+  if(typeof JSZip === 'undefined'){ toast('ZIP 라이브러리 로드 실패', 'error'); return false; }
+  const zip = new JSZip();
+  const usedNames = new Set();
+  let idx = 0;
+  for(const img of images){
+    idx++;
+    if(onProgress) onProgress(idx, images.length);
+    // 파일명 안전화 + 중복 방지
+    let base = (img.fname || img.label || `image_${img.id || idx}`).toString();
+    base = base.replace(/[^\w가-힣ㄱ-ㅎㅏ-ㅣ.\- ]/g, '_').slice(0, 80);
+    if(!/\.png$/i.test(base)) base += '.png';
+    let safe = base;
+    let n = 2;
+    while(usedNames.has(safe)){
+      safe = base.replace(/(\.[^.]+)$/, (_, ext) => `_${n}${ext}`);
+      n++;
+    }
+    usedNames.add(safe);
+    try {
+      zip.file(safe, img.blob);
+    } catch(e){
+      console.warn('[zip] skip', img.id, e);
+    }
+  }
+  toast(`📦 ZIP 생성 중… (${images.length}장)`, 'info');
+  try {
+    const blob = await zip.generateAsync({type:'blob', compression:'STORE'}, (meta) => {
+      if(onProgress && meta && meta.percent != null) onProgress(meta.percent, 100, 'zipping');
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (zipName || 'images') + '.zip';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    toast(`✅ ${images.length}장 ZIP 다운로드`, 'success');
+    return true;
+  } catch(e){
+    console.error('[zip]', e);
+    toast('ZIP 생성 실패: ' + (e.message || e), 'error');
+    return false;
+  }
+}
+
+// 세션 전체 다운로드
+async function downloadSessionAsZip(sesId){
+  const ses = (state.gallerySessions || []).find(s => s.id === sesId);
+  const imgs = await DB.getSessionImages(sesId);
+  if(!imgs.length){ toast('이 세션에 이미지가 없습니다', 'warning'); return; }
+  const name = (ses?.label || `session_${sesId}`).replace(/[^\w가-힣 -]/g, '_');
+  await downloadImagesAsZip(imgs, name);
+}
+
+// 선택 이미지 다운로드 (체크된 _gallerySel 기준)
+async function downloadSelectedAsZip(){
+  const ids = [..._gallerySel];
+  if(!ids.length){ toast('선택된 이미지가 없습니다', 'warning'); return; }
+  // DB에서 모두 가져오기 (세션 가로지를 수 있어 전 세션 스캔)
+  const sessions = await DB.getSessions();
+  const picked = [];
+  for(const s of sessions){
+    const imgs = await DB.getSessionImages(s.id);
+    for(const im of imgs){
+      if(_gallerySel.has(im.id)) picked.push(im);
+      if(picked.length === ids.length) break;
+    }
+    if(picked.length === ids.length) break;
+  }
+  if(!picked.length){ toast('선택한 이미지를 찾지 못했습니다', 'error'); return; }
+  const stamp = new Date().toISOString().slice(0,10);
+  await downloadImagesAsZip(picked, `selected_${picked.length}장_${stamp}`);
+}
+
+// 사용자 앨범 전체 다운로드
+async function downloadAlbumAsZip(albumId){
+  const a = (state.userAlbums || []).find(x => x.id === albumId);
+  if(!a){ toast('앨범을 찾을 수 없습니다', 'error'); return; }
+  const memberIds = new Set();
+  for(const [imgId, arr] of Object.entries(state.albumMembership || {})){
+    if(arr.includes(albumId)) memberIds.add(parseInt(imgId, 10));
+  }
+  if(!memberIds.size){ toast(`"${a.name}" 앨범이 비어있습니다`, 'warning'); return; }
+  const sessions = await DB.getSessions();
+  const picked = [];
+  for(const s of sessions){
+    const imgs = await DB.getSessionImages(s.id);
+    for(const im of imgs){
+      if(memberIds.has(im.id)) picked.push(im);
+    }
+  }
+  const safe = (a.name || 'album').replace(/[^\w가-힣 -]/g, '_');
+  await downloadImagesAsZip(picked, `앨범_${safe}`);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -6250,6 +6336,26 @@ let _cbSlotIdx = -1;
 let _cbMode = 'single';   // 'single' | 'pool'
 let _cbPicks = new Set(); // 선택된 캐릭터 name 집합
 
+// 🎲 캐릭터 슬롯에 랜덤 프리셋 즉시 적용
+function applyRandomCharacter(slotIdx, opts){
+  const chars = (state.presets.character || []);
+  if(!chars.length){ toast('캐릭터 프리셋이 없습니다 — 프리셋 탭에서 먼저 추가하세요', 'warning'); return; }
+  const c = state.characters[slotIdx];
+  if(!c) return;
+  // 같은 캐릭터 다시 뽑지 않도록 직전 이름 제외 (가능하면)
+  const pool = chars.filter(p => p.name && p.name !== c.name);
+  const list = pool.length ? pool : chars;
+  const pick = list[Math.floor(Math.random() * list.length)];
+  if(!pick) return;
+  // 풀이 있던 슬롯이면 풀은 유지하고 현재 캐릭터만 교체
+  applyCharPresetToSlot(c, pick);
+  renderCharacters();
+  saveSettingsDebounced();
+  refreshCost();
+  if(!opts?.silent) toast(`🎲 랜덤 적용: ${pick.name}`, 'success');
+  return pick;
+}
+
 function openCharBrowser(slotIdx){
   _cbSlotIdx = slotIdx;
   // 이 슬롯의 현재 풀/이름을 기본 선택으로
@@ -6900,7 +7006,8 @@ async function loadGallery(){
         <div class="ah-name">${esc(ua.name)} <span class="en">User Album</span></div>
         <div class="ah-stats">${list.length.toLocaleString()}장 · 사용자 앨범</div>
       </div>
-      <div style="display:flex;gap:5px">
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        <button class="btn ghost" data-act="download-album" data-aid="${esc(ua.id)}" style="padding:5px 10px;font-size:11.5px;border-color:rgba(58,99,152,.4);color:var(--blue)" title="이 앨범의 모든 이미지를 ZIP으로 다운로드">⬇ 일괄 다운로드</button>
         <button class="btn ghost" data-act="rename-user-album" data-aid="${esc(ua.id)}" style="padding:5px 10px;font-size:11.5px">✏ 이름변경</button>
         <button class="btn ghost" data-act="del-user-album" data-aid="${esc(ua.id)}" style="padding:5px 10px;font-size:11.5px;color:var(--red);border-color:rgba(181,67,56,.4)">🗑 삭제</button>
       </div></div>`);
@@ -6962,6 +7069,7 @@ async function loadGallery(){
         const allExp = sessionImgIds.length > 0 && sessionImgIds.every(id => _expandedGallery.has(id));
         tokens.push(`<div class="session-sep"><span class="ses-dot"></span><span>${esc(ses.label)}</span><span class="ses-meta">${countInSession}장</span><span class="ses-line"></span>
           <button class="btn ghost" data-act="ses-toggle" data-sid="${item.sesId}" style="padding:4px 10px;font-size:11.5px" title="이 세션의 모든 이미지를 펼치거나 접습니다">${allExp?'⤡ 세션 접기':'⤢ 세션 펼침'} <span class="en">${allExp?'Collapse':'Expand'}</span></button>
+          <button class="btn ghost" data-act="download-ses" data-sid="${item.sesId}" style="padding:4px 10px;font-size:11.5px;border-color:rgba(58,99,152,.4);color:var(--blue)" title="이 세션의 모든 이미지를 ZIP으로 다운로드">⬇ 일괄 <span class="en">DL</span></button>
           <button class="btn ghost" data-act="del-ses" data-sid="${item.sesId}" style="padding:4px 10px;font-size:11.5px">세션 삭제 <span class="en">Delete</span></button></div>`);
       }
       tokens.push(renderGalleryItemHtml(item.img, item.sesId));
@@ -7760,9 +7868,8 @@ function setMode(mode){
  * @param {'preview'|'gallery'|'presets'|'tags'|'settings'|'edit'} pane
  */
 function setMainPane(pane){
+  const prev = state.mainPane;
   state.mainPane = pane;
-  // 모바일 풀스크린 토글 — body[data-mview]에 따라 사이드바/메인 표시 전환
-  // 'edit'은 모바일 전용 가상 페인 — 사이드바(프롬프트·옵션)를 보여줌
   document.body.dataset.mview = pane;
   $$('.main-tab-btn').forEach(b => b.classList.toggle('act', b.dataset.pane === pane));
   $$('.mn-btn').forEach(b => b.classList.toggle('act', b.dataset.mview === pane));
@@ -7770,6 +7877,8 @@ function setMainPane(pane){
   if(pane === 'gallery') loadGallery();
   else if(pane === 'presets'){ renderPresetTabs(); renderPresets(); }
   else if(pane === 'tags'){ renderTagCats(); renderTagBody(); }
+  // 페인 변경 이벤트 발행 — 캐릭터 네거티브 모드 등이 자동 해제 가능
+  if(prev !== pane) document.dispatchEvent(new CustomEvent('mview-change', {detail:{prev, next:pane}}));
 }
 
 function setPresetType(t){
@@ -7862,8 +7971,29 @@ function renderTagBody(){
   wrap.innerHTML = parts.join('');
 }
 
+// 캐릭터 슬롯 네거티브로 보내는 모드 (-1이면 비활성)
+let _tagTargetCharIdx = -1;
+
 function insertTag(tag, category){
-  // 단순화: 네거티브 모드 또는 negative 카테고리 → negPrompt, 나머지 → prompt
+  // 우선순위:
+  //   1) 캐릭터 네거티브 모드 활성 → 그 캐릭터의 neg에 추가
+  //   2) tagToNeg 체크 / negative 카테고리 → 메인 negPrompt
+  //   3) 그 외 → 메인 prompt
+  if(_tagTargetCharIdx >= 0){
+    const c = state.characters[_tagTargetCharIdx];
+    if(c){
+      const cur = (c.neg || '').trim();
+      c.neg = cur ? `${cur}, ${tag}` : tag;
+      // DOM 동기
+      const ta = $('charList').querySelector(`textarea[data-act="neg"][data-idx="${_tagTargetCharIdx}"]`);
+      if(ta) ta.value = c.neg;
+      const chip = $('tagBody').querySelector(`[data-tag="${CSS.escape(tag)}"]`);
+      if(chip){ chip.classList.add('added'); setTimeout(()=> chip.classList.remove('added'), 700); }
+      saveSettingsDebounced();
+      toast(`#${_tagTargetCharIdx+1} 네거티브에 추가: ${tag}`, 'success');
+      return;
+    }
+  }
   const toNeg = $('tagToNeg').checked || category === 'negative';
   const targetId = toNeg ? 'negPrompt' : 'prompt';
   if($(targetId).readOnly){
@@ -7871,7 +8001,6 @@ function insertTag(tag, category){
     return;
   }
   appendToTextarea(targetId, tag);
-  // Flash chip green briefly
   const chip = $('tagBody').querySelector(`[data-tag="${CSS.escape(tag)}"]`);
   if(chip){
     chip.classList.add('added');
@@ -7880,9 +8009,26 @@ function insertTag(tag, category){
   saveSettingsDebounced();
 }
 
+// 캐릭터 네거티브 모드로 도감 열기
+function openTagCodexForCharNeg(slotIdx){
+  _tagTargetCharIdx = slotIdx;
+  setMainPane('tags');
+  // 도감 진입 후 안내 토스트
+  toast(`📖 도감 — 클릭하면 #${slotIdx+1} 네거티브로 추가됨. 다른 곳 탭하면 해제`, 'info');
+  // 페인을 다시 떠나면 모드 자동 해제
+  const release = () => {
+    _tagTargetCharIdx = -1;
+    document.removeEventListener('mview-change', release);
+  };
+  document.addEventListener('mview-change', release, {once:true});
+}
+
 function refreshPromptStats(){
   const n = $('prompt').value.length;
   $('promptTokens').textContent = `${n.toLocaleString()} 글자 (chars)`;
+  const nNeg = ($('negPrompt')?.value || '').length;
+  const negT = $('negTokens');
+  if(negT) negT.textContent = `${nNeg.toLocaleString()} 글자`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -8200,19 +8346,10 @@ async function loadSettings(){
   apply('inpAddOrig', s.inpAddOrig ?? true);
   apply('i2iStrength', s.i2iStrength);
   apply('i2iNoise', s.i2iNoise);
-  // UI 스케일 — 사용자 저장값 있으면 그대로, 없으면 화면 폭에 따라 모바일 80% / 데스크탑 100%
-  const isMobileViewport = window.matchMedia('(max-width:880px)').matches;
-  const defaultScale = isMobileViewport ? 80 : 100;
-  const savedScale = s.uiScale ? (parseInt(s.uiScale) || defaultScale) : defaultScale;
-  {
-    const v = savedScale;
-    $('uiScale').value = v;
-    applyUiScale(v);
-    const presets = [80,90,100,110,125];
-    const nearest = presets.reduce((a,b) => Math.abs(b-v) < Math.abs(a-v) ? b : a, 100);
-    setTimeout(() => $$('#uiScaleBtns .ui-scale-btn').forEach(x => x.classList.toggle('act', parseInt(x.dataset.scale)===nearest)), 0);
-  }
-  if(s.theme) setTheme(s.theme);
+  // UI 스케일 80% / 테마 베이지(default) 고정 — 옛 옵션 UI 제거됨
+  $('uiScale').value = 80;
+  applyUiScale(80);
+  setTheme('default');
   if(Array.isArray(s.seedHistory)) state.seedHistory = s.seedHistory;
   if(s.characters){
     // 마이그레이션: 옛 c.prompt만 있고 appearance/action이 비어있으면 → appearance로 이동
@@ -8362,7 +8499,7 @@ function wireEvents(){
     el.addEventListener('input', () => {
       if(id === 'model') refreshSamplerListByModel();
       if(['model','resPreset','resAspect','customW','customH','steps','smeaCheck','smeaDynCheck'].includes(id)) refreshResInfo();
-      if(id === 'prompt') refreshPromptStats();
+      if(id === 'prompt' || id === 'negPrompt') refreshPromptStats();
       saveSettingsDebounced();
     });
   });
@@ -8510,6 +8647,46 @@ function wireEvents(){
     saveSettingsDebounced();
   });
 
+  // 🚫 네거티브 — 잠금 / 중복 정리 / 비우기 / 워크플로우 (프롬프트와 동일 패턴)
+  $('clearNegBtn').addEventListener('click', () => {
+    if($('negPrompt').readOnly){ toast('잠금 해제 후 비울 수 있습니다', 'warning'); return; }
+    const prev = $('negPrompt').value;
+    if(!prev.trim()) return;
+    $('negPrompt').value = ''; refreshPromptStats(); saveSettingsDebounced();
+    toastUndo('네거티브를 비웠습니다', () => {
+      $('negPrompt').value = prev; refreshPromptStats(); saveSettingsDebounced();
+    });
+  });
+  $('dedupeNegBtn').addEventListener('click', () => {
+    if($('negPrompt').readOnly){ toast('잠금 해제 후 다시 시도', 'warning'); return; }
+    const before = $('negPrompt').value;
+    const cleaned = dedupePromptTags(before);
+    if(cleaned === before){ toast('중복 없음', 'info'); return; }
+    $('negPrompt').value = cleaned;
+    refreshPromptStats();
+    saveSettingsDebounced();
+    toast('🧹 네거티브 중복 정리됨', 'success');
+  });
+  $('lockNegBtn').addEventListener('click', () => {
+    const ta = $('negPrompt');
+    const btn = $('lockNegBtn');
+    if(ta.readOnly){
+      ta.readOnly = false;
+      ta.classList.remove('locked');
+      btn.classList.remove('act');
+      btn.setAttribute('aria-pressed', 'false');
+      btn.innerHTML = '🔓 잠금';
+    } else {
+      ta.readOnly = true;
+      ta.classList.add('locked');
+      btn.classList.add('act');
+      btn.setAttribute('aria-pressed', 'true');
+      btn.innerHTML = '🔒 잠김';
+    }
+    saveSettingsDebounced();
+  });
+  $('openWorkflowBtnNeg').addEventListener('click', openWorkflowModal);
+
   // (옛 구역별 입력 / 품질·레이팅 / 가중치 이벤트는 모두 제거됨 — 자유 입력만 사용)
 
   // Character section
@@ -8527,6 +8704,7 @@ function wireEvents(){
     else if(act === 'pool-prev'){ rotateCharPool(idx, -1); }
     else if(act === 'pool-next'){ rotateCharPool(idx, +1); }
     else if(act === 'pool-clear'){ clearCharPool(idx); }
+    else if(act === 'open-char-tagcodex'){ openTagCodexForCharNeg(idx); }
     else if(act === 'thumb'){
       // 썸네일 탭 = 캐릭터 브라우저 열기 (단일 선택 또는 후보 풀)
       openCharBrowser(idx);
@@ -8643,6 +8821,11 @@ function wireEvents(){
   // 🎴 캐릭터 브라우저
   $('cbCancel').addEventListener('click', () => $('charBrowseModal').classList.remove('open'));
   $('cbApply').addEventListener('click', applyCbSelection);
+  $('cbRandom').addEventListener('click', () => {
+    if(_cbSlotIdx < 0) return;
+    applyRandomCharacter(_cbSlotIdx);
+    $('charBrowseModal').classList.remove('open');
+  });
   $('charBrowseModal').addEventListener('click', e => { if(e.target === $('charBrowseModal')) e.currentTarget.classList.remove('open'); });
   $('cbSearch').addEventListener('input', debounce(renderCbGrid, 80));
   $$('#charBrowseModal .cb-mode-btn').forEach(b => b.addEventListener('click', () => setCbMode(b.dataset.mode)));
@@ -9018,6 +9201,7 @@ function wireEvents(){
   });
   // 일괄 작업 — 선택 해제 / 삭제 / 앨범 추가
   $('galSelClear').addEventListener('click', clearGallerySelection);
+  $('galSelDownload').addEventListener('click', downloadSelectedAsZip);
   $('galSelDelete').addEventListener('click', () => {
     const ids = [..._gallerySel];
     if(!ids.length) return;
@@ -9087,6 +9271,20 @@ function wireEvents(){
   });
   $('purgeGalBtn').addEventListener('click', () => $('clearGalBtn').click());
   $('galleryGrid').addEventListener('click', async e => {
+    const dlSesBtn = e.target.closest('[data-act="download-ses"]');
+    if(dlSesBtn){
+      const sid = parseInt(dlSesBtn.dataset.sid);
+      downloadSessionAsZip(sid);
+      e.stopPropagation();
+      return;
+    }
+    const dlAlbBtn = e.target.closest('[data-act="download-album"]');
+    if(dlAlbBtn){
+      const aid = dlAlbBtn.dataset.aid;
+      downloadAlbumAsZip(aid);
+      e.stopPropagation();
+      return;
+    }
     const delBtn = e.target.closest('[data-act="del-ses"]');
     if(delBtn){
       const sid = parseInt(delBtn.dataset.sid);
@@ -9461,24 +9659,7 @@ function wireEvents(){
     _inpaintCtx.drawImage(tmp, 0, 0);
   });
 
-  // Themes — 테마 스와치 (툴팁에 한글/영문 표시)
-  const sw = $('themeSwatches');
-  sw.innerHTML = THEMES.map(t => `<div class="theme-swatch" data-theme="${t.id}" style="background:${t.color}" title="${t.label}"></div>`).join('');
-  sw.addEventListener('click', e => {
-    const t = e.target.closest('.theme-swatch');
-    if(!t) return;
-    setTheme(t.dataset.theme);
-    saveSettingsDebounced();
-  });
-  $('uiScaleBtns').addEventListener('click', e => {
-    const b = e.target.closest('.ui-scale-btn');
-    if(!b) return;
-    const v = parseInt(b.dataset.scale) || 100;
-    $$('#uiScaleBtns .ui-scale-btn').forEach(x => x.classList.toggle('act', x === b));
-    $('uiScale').value = v;
-    applyUiScale(v);
-    saveSettingsDebounced();
-  });
+  // (옛 테마 스와치·UI 스케일 버튼 UI는 제거됨 — 베이지 + 80% 고정)
 
   // Storage
   $('refreshStorageBtn').addEventListener('click', async () => {
@@ -9522,21 +9703,7 @@ function wireEvents(){
 
   $('exportAllBtn').addEventListener('click', openBackupModal);
   $('importAllBtn').addEventListener('click', openRestoreModal);
-  $('installPwaBtn').addEventListener('click', triggerPwaInstall);
-  $('mobilePreviewBtn').addEventListener('click', toggleMobilePreview);
-  $('diagnoseInstallBtn').addEventListener('click', diagnoseInstallability);
-  // 환경 즉시 안내 — file:// 사용자에게 호스팅 필요 알림
-  setTimeout(() => {
-    const desc = $('installStatusDesc');
-    if(!desc) return;
-    if(location.protocol === 'file:'){
-      desc.innerHTML = '⚠ 현재 <code style="font-family:var(--mono);background:var(--card);padding:1px 5px;border-radius:3px">file://</code>로 열려있어 PWA 설치 프롬프트가 뜨지 않습니다. <b>🔍 진단</b>을 눌러 해결 방법을 확인하세요.';
-    } else if(_deferredInstallPrompt){
-      desc.innerHTML = '✅ 설치 가능 — <b>📲 앱으로 설치</b> 버튼을 누르세요.';
-    } else {
-      desc.innerHTML = '홈 화면에 추가하면 풀스크린 앱처럼 사용할 수 있습니다 (PWA). <b>🔍 진단</b>으로 설치 가능 여부 확인.';
-    }
-  }, 500);
+  // (옛 PWA 설치 안내 카드 제거됨 — 브라우저 ⋮ 메뉴의 "앱 설치"로 직접 설치)
   $('backupCancel').addEventListener('click', () => $('backupModal').classList.remove('open'));
   $('backupGo').addEventListener('click', doSelectiveBackup);
   $('restoreCancel').addEventListener('click', () => $('restoreModal').classList.remove('open'));
