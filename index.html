@@ -2119,12 +2119,21 @@ function showInstallInstructions(){
   } else if(isAndroid){
     html = `
       <div style="font-size:13.5px;line-height:1.7">
-        <p><b>📱 Android Chrome/Edge에서:</b></p>
+        <p><b>📱 Android Chrome/Edge에서 (권장):</b></p>
         <ol style="padding-left:20px;margin:10px 0">
           <li>우상단 <b>⋮ 메뉴</b> 탭</li>
-          <li><b>"앱 설치"</b> 또는 <b>"홈 화면에 추가"</b> 선택</li>
+          <li><b>"앱 설치"</b> 또는 <b>"홈 화면에 추가"</b> 선택
+            <div style="font-size:11.5px;color:var(--t3);margin-top:4px">
+              ⚠ <b>"앱 설치"</b>가 진짜 앱처럼 설치됩니다(앱 서랍에 추가, 푸시 가능).<br>
+              <b>"홈 화면에 추가"</b>는 단순 바로가기일 수 있습니다.
+            </div>
+          </li>
           <li>이름 확인 후 <b>"설치"</b> 탭</li>
         </ol>
+        <div style="margin-top:14px;padding:10px 12px;background:rgba(58,99,152,.08);border-left:3px solid var(--blue);border-radius:0 5px 5px 0;font-size:12px;line-height:1.65">
+          📦 <b>진짜 APK로 만들고 싶다면</b> (Play Store 배포 가능 / 시스템 통합):<br>
+          <a href="https://www.pwabuilder.com/" target="_blank" rel="noopener" style="color:var(--blue);font-weight:700">PWA Builder</a>에 이 페이지 URL 넣으면 클릭 몇 번에 서명된 APK·AAB 다운로드 가능 (TWA 기반).
+        </div>
       </div>`;
   } else {
     html = `
@@ -2157,31 +2166,60 @@ function showInstallInstructions(){
 // ═══════════════════════════════════════════════════════════
 // PWA — 매니페스트·아이콘 동적 주입 (단일 HTML 파일 호환)
 // ═══════════════════════════════════════════════════════════
-(function setupPWA(){
+(async function setupPWA(){
   const makeIconSVG = size => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 192 192"><rect width="192" height="192" rx="38" fill="#ebe2cd"/><rect x="14" y="14" width="164" height="164" rx="26" fill="none" stroke="#a25a1f" stroke-width="3"/><text x="50%" y="46%" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="46" font-weight="900" fill="#a25a1f" letter-spacing="2">NAI</text><text x="50%" y="68%" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="20" font-weight="600" fill="#564328" letter-spacing="3">STUDIO</text><circle cx="96" cy="148" r="5" fill="#a25a1f"/></svg>`;
-  const icon192 = 'data:image/svg+xml;base64,' + btoa(makeIconSVG(192));
-  const icon512 = 'data:image/svg+xml;base64,' + btoa(makeIconSVG(512));
+  // PNG 변환 — Chrome 설치 프롬프트는 SVG 데이터 URL 거부할 때가 있음 → PNG로 보강
+  const svgToPng = (svg, size) => new Promise(res => {
+    const img = new Image();
+    const url = 'data:image/svg+xml;base64,' + btoa(svg);
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = size; c.height = size;
+        c.getContext('2d').drawImage(img, 0, 0, size, size);
+        res(c.toDataURL('image/png'));
+      } catch(e){ res(url); }
+    };
+    img.onerror = () => res(url);
+    img.src = url;
+  });
+  const svg192 = makeIconSVG(192);
+  const svg512 = makeIconSVG(512);
+  const svgURL192 = 'data:image/svg+xml;base64,' + btoa(svg192);
+  // PNG는 비동기 — 폴백을 SVG로 두고 가능한 빨리 PNG로 교체
+  let png192 = svgURL192, png512 = 'data:image/svg+xml;base64,' + btoa(svg512);
+  try {
+    [png192, png512] = await Promise.all([svgToPng(svg192, 192), svgToPng(svg512, 512)]);
+  } catch(_){}
   const manifest = {
+    id: '/?source=pwa',
     name: 'NAI Studio',
     short_name: 'NAI',
-    description: 'NovelAI 이미지 생성 스튜디오 — 단일 HTML',
+    description: 'NovelAI 이미지 생성 스튜디오 — 모바일 친화 PWA',
     start_url: '.',
     scope: '.',
-    display: 'fullscreen',  // 시스템 네비게이션 바·상태바까지 숨김 (Android)
+    display: 'fullscreen',
     display_override: ['fullscreen', 'standalone', 'minimal-ui'],
     orientation: 'any',
     background_color: '#ebe2cd',
     theme_color: '#a25a1f',
     lang: 'ko',
+    dir: 'ltr',
+    categories: ['art', 'productivity', 'graphics'],
     icons: [
-      {src: icon192, sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable'},
-      {src: icon512, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable'}
+      // PNG 우선 — Chrome/Edge가 install 프롬프트 띄울 때 선호
+      {src: png192, sizes: '192x192', type: 'image/png', purpose: 'any'},
+      {src: png512, sizes: '512x512', type: 'image/png', purpose: 'any'},
+      {src: png192, sizes: '192x192', type: 'image/png', purpose: 'maskable'},
+      {src: png512, sizes: '512x512', type: 'image/png', purpose: 'maskable'},
+      // SVG 폴백 — 고해상도 지원
+      {src: svgURL192, sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable'},
     ]
   };
   const manifestURL = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
   document.getElementById('manifestLink').href = manifestURL;
-  document.getElementById('appleTouchIcon').href = icon192;
-  document.getElementById('favicon').href = icon192;
+  document.getElementById('appleTouchIcon').href = png192;
+  document.getElementById('favicon').href = png192;
 })();
 
 // 🛠 SERVICE WORKER — 캐시 + 오프라인 + 빠른 재로딩 (https/localhost 에서만 등록)
