@@ -99,7 +99,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .pill-err{background:rgba(181,67,56,.18);color:var(--red)}
 .iconbtn{background:var(--panel);border:1.5px solid var(--b1);color:var(--t2);width:38px;height:38px;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;font-size:16px}
 .iconbtn:hover{border-color:var(--acc);color:var(--acc);background:var(--card)}
-.iconbtn.act{border-color:var(--acc);color:var(--acc);background:rgba(162,90,31,.1)}
+.iconbtn.act,.iconbtn[aria-pressed="true"]{border-color:var(--acc);color:var(--acc);background:rgba(162,90,31,.1)}
+/* ♿ 키보드 포커스 표시 — focus-visible로 마우스 클릭 시엔 안 보이게 */
+.iconbtn:focus-visible,.btn:focus-visible,.mn-btn:focus-visible,.mode-btn:focus-visible,.main-tab-btn:focus-visible,.cp-mode-btn:focus-visible,.cp-cat:focus-visible,.cp-mode-btn:focus-visible,.gv-toggle button:focus-visible,.toast-act:focus-visible{outline:2.5px solid var(--acc);outline-offset:2px;box-shadow:0 0 0 4px color-mix(in oklab,var(--acc) 22%,transparent)}
 .btn{background:var(--panel);border:1.5px solid var(--b1);color:var(--t1);padding:8px 14px;font-size:13px;font-weight:600;border-radius:5px;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px;letter-spacing:0}
 .btn:hover{background:var(--card);border-color:var(--b2)}
 .btn.primary{background:var(--acc);border-color:var(--acc);color:#fff8ec}
@@ -214,7 +216,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .cp-status-tags.empty{display:block;font-size:12px;color:var(--t3);font-style:italic;padding:4px 2px}
 .cp-chip{display:inline-flex;align-items:center;gap:4px;background:rgba(162,90,31,.10);color:var(--acc);padding:3px 4px 3px 9px;border-radius:11px;font-size:11.5px;font-family:var(--mono);font-weight:600;border:1px solid rgba(162,90,31,.25);line-height:1.3;animation:cpChipIn .18s ease-out}
 @keyframes cpChipIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
-.cp-chip-x{background:transparent;border:none;color:var(--acc);opacity:.55;cursor:pointer;font-size:14px;line-height:1;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;padding:0;font-family:inherit;transition:all .12s;margin-left:1px}
+.cp-chip-x{background:transparent;border:none;color:var(--acc);opacity:.55;cursor:pointer;font-size:14px;line-height:1;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;padding:0;font-family:inherit;transition:all .12s;margin-left:1px;-webkit-tap-highlight-color:transparent}
+@media (hover:none){.cp-chip-x{width:32px;height:32px;font-size:18px;opacity:.7}}
 .cp-chip-x:hover{opacity:1;background:rgba(181,67,56,.18);color:var(--red);transform:scale(1.1)}
 
 /* 🔀 병합/변경 모드 토글 */
@@ -376,6 +379,16 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .g-thumb .open-lb:active{transform:scale(.92)}
 .g-item.expanded:hover .g-thumb .g-album-btn,
 .g-item.expanded:hover .g-thumb .open-lb{opacity:1}
+/* 데스크탑에서도 hover 진입 가능성 힌트 — 우상단·우하단에 옅은 그라데이션 */
+@media (hover:hover){
+  .g-item.expanded .g-thumb::after{
+    content:'';position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(135deg,transparent 50%,rgba(20,14,4,.18) 100%),
+               linear-gradient(225deg,transparent 50%,rgba(20,14,4,.18) 100%);
+    opacity:0;transition:opacity .2s;z-index:1;
+  }
+  .g-item.expanded:hover .g-thumb::after{opacity:1}
+}
 /* 모바일은 hover 없음 — 펼쳐졌을 때 항상 살짝 보이게 */
 @media (hover:none){
   .g-item.expanded .g-thumb .g-album-btn,
@@ -597,7 +610,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .theme-swatch::after{content:'';position:absolute;inset:3px;border-radius:50%}
 
 /* LIGHTBOX — 확대 뷰 */
-#lightbox{position:fixed;inset:0;z-index:9000;background:rgba(20,14,4,.94);display:none;align-items:center;justify-content:center;padding:36px}
+#lightbox{position:fixed;inset:0;z-index:9000;background:rgba(20,14,4,.94);display:none;align-items:center;justify-content:center;padding:max(36px, env(safe-area-inset-top, 0px)) 36px max(36px, env(safe-area-inset-bottom, 0px))}
 #lightbox.open{display:flex}
 #lightbox .lb-img{max-width:90%;max-height:90%;object-fit:contain;cursor:zoom-out;border-radius:4px;box-shadow:0 12px 48px rgba(0,0,0,.5);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;transform-origin:center center;will-change:transform}
 #lightbox .lb-meta{position:absolute;left:24px;top:24px;background:var(--panel);border:1.5px solid var(--b2);border-radius:8px;padding:16px 18px;max-width:360px;max-height:80vh;overflow-y:auto;font-size:12.5px;color:var(--t2);line-height:1.7;box-shadow:0 8px 24px rgba(0,0,0,.4)}
@@ -711,7 +724,11 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   .logo .sub{display:none}
   #apiKey{width:70px;font-size:11px;padding:5px 7px;min-height:0}
   .pill{padding:2px 7px;font-size:10px;border-radius:10px}
-  .iconbtn{width:30px;height:30px;font-size:12px;border-radius:4px}
+  /* 모바일 터치 타깃 — 44px 가이드 충족 */
+  .iconbtn{width:42px;height:42px;font-size:14px;border-radius:5px;min-width:42px}
+  .gal-zoom .iconbtn{width:38px;height:38px;font-size:16px;min-width:38px}
+  .gal-zoom{padding:3px}
+  .weight-row .w-btn{width:36px;height:36px;font-size:15px;min-width:36px}
   .tb-group{gap:4px}
 
   /* MODE BAR — 한 줄 5탭, 작고 컴팩트 */
@@ -1686,7 +1703,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 </div>
 
 <!-- CONFIRM MODAL — 확인 창 -->
-<div class="modal-bg" id="confirmModal">
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" id="confirmModal">
   <div class="modal">
     <h3 id="confirmTitle">확인 <span class="en">Confirm</span></h3>
     <div class="modal-body" id="confirmBody"></div>
@@ -1698,7 +1715,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 </div>
 
 <!-- PRESET EDIT MODAL — 프리셋 편집 -->
-<div class="modal-bg" id="presetModal">
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="presetModalTitle" id="presetModal">
   <div class="modal">
     <h3 id="presetModalTitle">프리셋 <span class="en">Preset</span></h3>
     <div class="modal-body">
@@ -1731,7 +1748,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 </div>
 
 <!-- 🪄 CHARACTER QUICK ADD MODAL — 액션·프리셋 검색 -->
-<div class="modal-bg" id="charPickModal">
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="charPickTitle" id="charPickModal">
   <div class="modal">
     <h3 id="charPickTitle">🪄 빠른 추가 <span class="en">Quick Add</span></h3>
     <div class="modal-body">
@@ -1770,9 +1787,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 </div>
 
 <!-- 🧪 XYZ COMPARISON GRID — 파라미터 변화 비교 -->
-<div class="modal-bg" id="xyzModal">
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="xyzModalTitle" id="xyzModal">
   <div class="modal" style="max-width:680px;width:100%">
-    <h3>🧪 XYZ 비교 그리드 <span class="en">XYZ Plot</span></h3>
+    <h3 id="xyzModalTitle">🧪 XYZ 비교 그리드 <span class="en">XYZ Plot</span></h3>
     <div class="modal-body">
       <div style="font-size:13px;color:var(--t2);margin-bottom:14px;line-height:1.6">
         현재 프롬프트·캐릭터·해상도를 그대로 두고, 선택한 축의 값만 변화시켜 비교 이미지를 생성합니다. 결과는 새 세션에 저장돼서 갤러리에서 한눈에 비교 가능.
@@ -1812,9 +1829,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 </div>
 
 <!-- BACKUP EXPORT MODAL — 항목별 내보내기 -->
-<div class="modal-bg" id="backupModal">
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="backupModalTitle" id="backupModal">
   <div class="modal" style="max-width:560px;width:100%">
-    <h3>📤 백업 내보내기 <span class="en">Selective Export</span></h3>
+    <h3 id="backupModalTitle">📤 백업 내보내기 <span class="en">Selective Export</span></h3>
     <div class="modal-body" id="backupModalBody"></div>
     <div class="modal-foot">
       <button class="btn ghost" id="backupCancel">취소 <span class="en">Cancel</span></button>
@@ -1824,9 +1841,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 </div>
 
 <!-- BACKUP RESTORE MODAL — 항목별 복원 -->
-<div class="modal-bg" id="restoreModal">
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="restoreModalTitle" id="restoreModal">
   <div class="modal" style="max-width:560px;width:100%">
-    <h3>📥 백업 복원 <span class="en">Selective Restore</span></h3>
+    <h3 id="restoreModalTitle">📥 백업 복원 <span class="en">Selective Restore</span></h3>
     <div class="modal-body" id="restoreModalBody"></div>
     <div class="modal-foot">
       <button class="btn ghost" id="restoreCancel">취소 <span class="en">Cancel</span></button>
@@ -1836,9 +1853,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 </div>
 
 <!-- PROMPT EXPAND MODAL — 프롬프트 큰 창 편집 -->
-<div class="modal-bg" id="promptExpandModal">
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="promptExpandTitle" id="promptExpandModal">
   <div class="modal" style="max-width:90vw;width:1000px;max-height:90vh">
-    <h3>⛶ 프롬프트 확대 편집 <span class="en">Expanded Editor</span></h3>
+    <h3 id="promptExpandTitle">⛶ 프롬프트 확대 편집 <span class="en">Expanded Editor</span></h3>
     <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
       <div>
         <div class="lbl" style="margin-bottom:5px">프롬프트 <span class="en">Prompt</span></div>
@@ -1857,9 +1874,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 </div>
 
 <!-- 💾 WORKFLOW MODAL — 워크플로우 스냅샷 저장/적용 -->
-<div class="modal-bg" id="workflowModal">
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="workflowModalTitle" id="workflowModal">
   <div class="modal" style="max-width:680px">
-    <h3>💾 워크플로우 <span class="en">Workflows</span></h3>
+    <h3 id="workflowModalTitle">💾 워크플로우 <span class="en">Workflows</span></h3>
     <div class="modal-body">
       <div style="display:flex;gap:8px;margin-bottom:12px;align-items:stretch">
         <input class="inp" id="wfSaveName" placeholder="이 워크플로우의 이름… (예: 황혼 풍경, 1girl 기본)" style="flex:1">
@@ -1878,14 +1895,14 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 </div>
 
 <!-- ⏱ SEED HISTORY MODAL — 시드 히스토리·즐겨찾기 -->
-<div class="modal-bg" id="seedHistModal">
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="seedHistModalTitle" id="seedHistModal">
   <div class="modal" style="max-width:520px">
-    <h3>⏱ 시드 히스토리 <span class="en">Seed History</span></h3>
+    <h3 id="seedHistModalTitle">⏱ 시드 히스토리 <span class="en">Seed History</span></h3>
     <div class="modal-body">
       <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
         <input class="inp" id="seedHistFilter" placeholder="🔍 시드 번호 또는 메모로 검색…" style="flex:1;min-width:160px;font-size:13px">
-        <button class="btn ghost" id="seedHistFavOnly" title="즐겨찾기만 보기" data-act="on">⭐ 즐겨만</button>
-        <button class="btn ghost" id="seedHistClear" title="즐겨찾기 제외 전체 삭제" style="border-color:rgba(181,67,56,.35);color:var(--red)">🗑 일반 비우기</button>
+        <button class="btn ghost" id="seedHistFavOnly" title="즐겨찾기만 보기" data-act="on">⭐ 즐겨찾기만</button>
+        <button class="btn ghost" id="seedHistClear" title="즐겨찾기 제외하고 전체 삭제" style="border-color:rgba(181,67,56,.35);color:var(--red)">🗑 일반 기록 삭제</button>
       </div>
       <div id="seedHistList" style="max-height:55vh;overflow-y:auto;border:1.5px solid var(--b1);border-radius:6px;background:var(--card);min-height:120px"></div>
       <div style="font-size:11.5px;color:var(--t3);margin-top:8px;line-height:1.5">
@@ -1899,9 +1916,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 </div>
 
 <!-- GUIDE MODAL — NAI 4.5 가이드 -->
-<div class="modal-bg" id="guideModal">
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="guideModalTitle" id="guideModal">
   <div class="modal" style="max-width:780px;width:100%">
-    <h3>📘 NAI Diffusion 4.5 사용 가이드 <span class="en">Guide</span></h3>
+    <h3 id="guideModalTitle">📘 NAI Diffusion 4.5 사용 가이드 <span class="en">Guide</span></h3>
     <div class="modal-body" id="guideBody"></div>
     <div class="modal-foot">
       <button class="btn primary" id="guideClose">닫기 <span class="en">Close</span></button>
@@ -1910,9 +1927,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 </div>
 
 <!-- INPAINT MASK MODAL — 마스크 편집 -->
-<div class="modal-bg" id="inpaintModal">
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="inpaintModalTitle" id="inpaintModal">
   <div class="modal">
-    <h3>마스크 그리기 <span class="en">Draw Mask</span></h3>
+    <h3 id="inpaintModalTitle">마스크 그리기 <span class="en">Draw Mask</span></h3>
     <div class="modal-body">
       <div class="inp-tools">
         <label class="chk">크기 <span class="en">Size</span> <input type="range" id="brushSize" min="5" max="120" value="40" style="width:140px;accent-color:var(--acc)"></label>
@@ -1987,6 +2004,7 @@ function updateFullscreenBtn(){
   const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
   btn.textContent = isFs ? '⛶' : '⛶';   // 동일 아이콘 유지 (혼동 줄임)
   btn.classList.toggle('act', isFs);
+  btn.setAttribute('aria-pressed', String(isFs));
   btn.title = isFs ? '전체화면 끄기 (Esc)' : '전체화면 켜기 (Fullscreen)';
 }
 
@@ -3141,22 +3159,23 @@ async function naiGenerate(apiKey, body, signal){
 }
 
 function errMsgFor(status){
+  // 메시지 + 행동 가이드 한 줄
   return ({
-    400:'잘못된 요청 — 프롬프트/파라미터 확인',
-    401:'인증 실패 — API 키 확인',
-    402:'Anlas 부족 또는 구독 만료',
-    403:'권한 없음 — 계정/Tier 확인',
-    404:'엔드포인트/모델 없음',
-    406:'응답 포맷 거부',
-    408:'요청 시간 초과',
-    409:'충돌 — 잠시 후 재시도',
-    413:'요청 데이터 너무 큼',
-    429:'요청 제한 초과 — 잠시 후 재시도',
-    500:'NAI 서버 오류',
-    502:'NAI 게이트웨이 오류',
-    503:'NAI 점검/과부하',
-    504:'NAI 게이트웨이 타임아웃'
-  })[status] || ('HTTP ' + status);
+    400:'잘못된 요청 — 프롬프트/해상도/캐릭터 좌표를 확인하세요',
+    401:'인증 실패 — 상단바 API 키(pst-...)가 올바른지 다시 확인',
+    402:'Anlas 부족 — 잔량을 확인하거나 Opus 구독을 갱신하세요',
+    403:'권한 없음 — 계정 Tier/모델 사용권 확인',
+    404:'엔드포인트/모델 없음 — 모델 드롭다운에서 다른 모델 선택',
+    406:'응답 포맷 거부 — 페이지 새로고침 후 재시도',
+    408:'요청 시간 초과 — 네트워크 확인 후 재시도',
+    409:'충돌 — 10초 뒤 다시 시도해보세요',
+    413:'요청 데이터 너무 큼 — 해상도/스텝/캐릭터 수 줄여서 재시도',
+    429:'요청 제한 초과 — 1~2분 기다린 후 재시도',
+    500:'NAI 서버 오류 — 잠시 후 재시도, 지속되면 NovelAI 상태 페이지 확인',
+    502:'NAI 게이트웨이 오류 — 잠시 후 재시도',
+    503:'NAI 점검/과부하 — 잠시 후 재시도 (점검 중일 수 있음)',
+    504:'NAI 게이트웨이 타임아웃 — 잠시 후 재시도'
+  })[status] || ('HTTP ' + status + ' — 잠시 후 재시도');
 }
 
 async function naiUpscale(apiKey, opts){
@@ -7599,8 +7618,10 @@ function wireEvents(){
     state.seedLocked = !state.seedLocked;
     $('lockSeedBtn').textContent = state.seedLocked ? '🔒' : '🔓';
     $('lockSeedBtn').classList.toggle('act', state.seedLocked);
+    $('lockSeedBtn').setAttribute('aria-pressed', String(state.seedLocked));
     if(state.seedLocked && state.lastSeed) $('seed').value = state.lastSeed;
   });
+  $('lockSeedBtn').setAttribute('aria-pressed', 'false');
   // 💾 워크플로우 스냅샷
   $('openWorkflowBtn').addEventListener('click', openWorkflowModal);
   $('wfClose').addEventListener('click', () => $('workflowModal').classList.remove('open'));
