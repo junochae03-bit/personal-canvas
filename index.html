@@ -4393,13 +4393,25 @@ function getCharGroup(name){
 }
 
 // 그룹별로 묶고, 그룹은 항목수 내림차순(기타는 항상 마지막)으로 정렬
+// 3명 미만 그룹은 "기타"로 통합 — 의미있는 작품 묶음만 별도 표시
 function groupCharsByWork(list){
+  const MIN_GROUP_SIZE = 3;
   const map = new Map();
   for(const p of list){
     const g = getCharGroup(p.name);
     if(!map.has(g)) map.set(g, []);
     map.get(g).push(p);
   }
+  // 3명 미만 그룹은 기타로 흡수
+  const misc = map.get('기타') || [];
+  for(const [g, items] of [...map.entries()]){
+    if(g === '기타') continue;
+    if(items.length < MIN_GROUP_SIZE){
+      misc.push(...items);
+      map.delete(g);
+    }
+  }
+  if(misc.length) map.set('기타', misc);
   const arr = [...map.entries()].map(([group, items]) => ({group, items}));
   arr.sort((a, b) => {
     if(a.group === '기타') return 1;
