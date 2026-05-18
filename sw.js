@@ -6,10 +6,11 @@
 //   4. NovelAI API 등 동적 요청 = 캐시 우회
 //   5. file:// 환경에선 SW 자체가 등록되지 않으므로 영향 없음
 
-const CACHE_NAME = 'nai-studio-v2';
+const CACHE_NAME = 'nai-studio-v3';
 const CORE = [
   './',
   './index.html',
+  './tags-danbooru.json',
 ];
 const CDN_PATTERNS = [
   'cdnjs.cloudflare.com',

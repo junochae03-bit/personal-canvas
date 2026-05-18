@@ -2750,6 +2750,50 @@ const TAG_CATEGORIES = [
   ]},
 ];
 
+// 📚 단부루 태그 데이터 — 별도 파일에서 지연 로드 (사용자가 도감 페인 진입 시 1회)
+// 21 카테고리 · 약 2100 태그. SW가 캐시하므로 첫 로드 이후 즉시 사용.
+let _danbooruLoadPromise = null;
+let _danbooruLoaded = false;
+async function loadDanbooruTags(){
+  if(_danbooruLoaded) return;
+  if(_danbooruLoadPromise) return _danbooruLoadPromise;
+  _danbooruLoadPromise = (async () => {
+    try {
+      const resp = await fetch('./tags-danbooru.json');
+      if(!resp.ok) throw new Error('HTTP ' + resp.status);
+      const arr = await resp.json();
+      if(!Array.isArray(arr) || !arr.length) return;
+      // 같은 id가 이미 있으면 스킵 (중복 방지)
+      const existing = new Set(TAG_CATEGORIES.map(c => c.id));
+      for(const c of arr){
+        if(!c || !c.id || existing.has(c.id)) continue;
+        TAG_CATEGORIES.push(c);
+        existing.add(c.id);
+      }
+      _danbooruLoaded = true;
+      // 카테고리 활성 셋도 새 카테고리 포함하도록 확장 (이미 "전체 표시" 상태였을 때)
+      if(typeof _tagActiveCats !== 'undefined'){
+        for(const c of arr) if(c && c.id) _tagActiveCats.add(c.id);
+      }
+      // 사전이 풍부해졌으므로 사용자 태그 인덱스 재구축 (한글 라벨 자동 매칭 ↑)
+      if(typeof buildUserTagIndex === 'function') buildUserTagIndex();
+      // 도감이 이미 열려있으면 즉시 다시 렌더
+      if(state.mainPane === 'tags'){
+        if(typeof renderTagCats === 'function') renderTagCats();
+        if(typeof renderTagBody === 'function') renderTagBody();
+      }
+      // 자동완성·태그→슬롯 분류 캐시 무효화 → 다음 사용 시 새 인덱스 빌드
+      if(typeof _acIndex !== 'undefined') _acIndex = null;
+      if(typeof _tagCatLookup !== 'undefined') _tagCatLookup = null;
+      console.log('[danbooru] 태그 로드 완료:', arr.length, '카테고리');
+    } catch(e){
+      console.warn('[danbooru] 로드 실패:', e?.message || e);
+      _danbooruLoadPromise = null;  // 재시도 가능하게
+    }
+  })();
+  return _danbooruLoadPromise;
+}
+
 // ═══════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════
@@ -8209,7 +8253,7 @@ function setMainPane(pane){
   $$('.main-pane').forEach(p => p.classList.toggle('act', p.dataset.pane === pane));
   if(pane === 'gallery') loadGallery();
   else if(pane === 'presets'){ renderPresetTabs(); renderPresets(); }
-  else if(pane === 'tags'){ renderTagCats(); renderTagBody(); }
+  else if(pane === 'tags'){ loadDanbooruTags(); renderTagCats(); renderTagBody(); }
   // 페인 변경 이벤트 발행 — 캐릭터 네거티브 모드 등이 자동 해제 가능
   if(prev !== pane) document.dispatchEvent(new CustomEvent('mview-change', {detail:{prev, next:pane}}));
 }
@@ -8490,8 +8534,7 @@ function applyAcItem(idx){
   saveSettingsDebounced();
 }
 
-function setupPromptAutocomplete(){
-  const ta = $('prompt');
+function attachAcToTextarea(ta){
   if(!ta || ta._acInit) return;
   ta._acInit = true;
   ta.addEventListener('input', () => updateAutocomplete(ta));
@@ -8503,8 +8546,20 @@ function setupPromptAutocomplete(){
     else if(e.key === 'Escape'){ hideAcBox(); }
   });
   ta.addEventListener('blur', () => setTimeout(hideAcBox, 150));
-  // 스크롤·리사이즈 시 위치 재계산
-  window.addEventListener('scroll', () => { if(_acTarget) showAcBox(_acTarget); }, {passive:true});
+}
+
+function setupPromptAutocomplete(){
+  // 메인 프롬프트
+  attachAcToTextarea($('prompt'));
+  // 네거티브 프롬프트
+  attachAcToTextarea($('negPrompt'));
+  // 프리셋 편집 본문 — 단부루 태그 자동완성으로 빠른 작성
+  attachAcToTextarea($('presetText'));
+  // 스크롤·리사이즈 시 위치 재계산 (1회 등록)
+  if(!window._acScrollWired){
+    window._acScrollWired = true;
+    window.addEventListener('scroll', () => { if(_acTarget) showAcBox(_acTarget); }, {passive:true});
+  }
 }
 
 function refreshSamplerListByModel(){
@@ -10258,6 +10313,8 @@ async function init(){
   wireEvents();
   setupPromptAutocomplete();
   await loadPresetsFromDB();
+  // 📚 단부루 태그 사전 — 백그라운드 로드 (init 차단하지 않음, 끝나면 인덱스 갱신)
+  loadDanbooruTags();
   await loadAlbums();
   await loadGalleryTagIndex();
   await loadWorkflows();
