@@ -921,6 +921,22 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .sh-row:hover{background:rgba(162,90,31,.06)}
 #seedHistFavOnly.act{background:rgba(184,136,32,.18);border-color:var(--yellow);color:var(--yellow)}
 
+/* 💾 워크플로우 슬롯 */
+.wf-row{display:flex;align-items:center;gap:11px;padding:11px 13px;border-bottom:1px solid var(--b1);transition:background .12s}
+.wf-row:last-child{border-bottom:none}
+.wf-row:hover{background:rgba(162,90,31,.05)}
+.wf-thumb{width:56px;height:56px;flex-shrink:0;border-radius:6px;background:var(--card2) center/cover no-repeat;border:1.5px solid var(--b1)}
+.wf-thumb-empty{display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--t3);opacity:.6}
+.wf-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.wf-name{font-size:13.5px;font-weight:700;color:var(--t1);cursor:pointer;line-height:1.3;word-break:break-word}
+.wf-name:hover{color:var(--acc)}
+.wf-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-family:var(--mono);font-size:10.5px;color:var(--t3)}
+.wf-meta .wf-mode{padding:1px 6px;background:rgba(162,90,31,.10);color:var(--acc);border-radius:9px;font-weight:600}
+.wf-meta .wf-chars{padding:1px 6px;background:rgba(93,138,48,.14);color:var(--green);border-radius:9px;font-weight:600;font-family:var(--font)}
+.wf-prompt{font-size:11.5px;color:var(--t2);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono)}
+.wf-actions{display:flex;gap:5px;flex-shrink:0}
+.wf-actions .btn{padding:6px 11px;font-size:11.5px;min-height:32px;font-weight:600}
+
 /* iOS standalone 모드 — 상단 safe-area */
 @supports(padding:max(0px)){
   body{padding-top:max(0px,env(safe-area-inset-top));padding-bottom:max(0px,env(safe-area-inset-bottom))}
@@ -1262,6 +1278,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
             <span class="lbl" id="promptTokens">0 글자</span>
             <div class="row" style="gap:6px;flex-wrap:wrap">
               <button class="btn ghost" id="importExifBtn" style="padding:4px 10px;font-size:11.5px;border-color:rgba(58,99,152,.4);color:var(--blue)" title="NAI로 만든 PNG 파일을 올리면 그 안에 박힌 프롬프트·시드·모델 등 파라미터를 자동 복원합니다">📁 EXIF 복원 <span class="en" style="opacity:.6">Import</span></button>
+              <button class="btn ghost" id="openWorkflowBtn" style="padding:4px 10px;font-size:11.5px;border-color:rgba(162,90,31,.4);color:var(--acc)" title="현재 상태(프롬프트+캐릭터+파라미터)를 통째로 저장하고 나중에 1클릭으로 복원">💾 워크플로우 <span class="en" style="opacity:.6">Snap</span></button>
               <input type="file" id="exifFile" accept="image/png,image/*" style="display:none">
               <button class="btn ghost" id="lockPromptBtn" style="padding:4px 10px;font-size:11.5px" title="수정 잠금 (다시 누르면 해제)">🔓 잠금</button>
               <button class="btn ghost" id="dedupePromptBtn" style="padding:4px 10px;font-size:11.5px" title="콤마로 구분된 중복 태그를 한 번에 정리합니다">🧹 중복 정리</button>
@@ -1827,6 +1844,27 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   </div>
 </div>
 
+<!-- 💾 WORKFLOW MODAL — 워크플로우 스냅샷 저장/적용 -->
+<div class="modal-bg" id="workflowModal">
+  <div class="modal" style="max-width:680px">
+    <h3>💾 워크플로우 <span class="en">Workflows</span></h3>
+    <div class="modal-body">
+      <div style="display:flex;gap:8px;margin-bottom:12px;align-items:stretch">
+        <input class="inp" id="wfSaveName" placeholder="이 워크플로우의 이름… (예: 황혼 풍경, 1girl 기본)" style="flex:1">
+        <button class="btn primary" id="wfSaveBtn">💾 현재 상태 저장</button>
+      </div>
+      <div style="font-size:11.5px;color:var(--t3);margin-bottom:10px;line-height:1.55">
+        저장 항목: 모드·모델·해상도·샘플러·스텝·CFG·프롬프트·네거티브·캐릭터·시퀀스 입력 등 폼 상태 전부.<br>
+        제외: 베이스 이미지, Vibe 참조 이미지, 마스크 (현재 모드에 그대로 남아 있어요).
+      </div>
+      <div id="wfList" style="max-height:55vh;overflow-y:auto;border:1.5px solid var(--b1);border-radius:6px;background:var(--card);min-height:160px"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn primary" id="wfClose">닫기 <span class="en">Close</span></button>
+    </div>
+  </div>
+</div>
+
 <!-- ⏱ SEED HISTORY MODAL — 시드 히스토리·즐겨찾기 -->
 <div class="modal-bg" id="seedHistModal">
   <div class="modal" style="max-width:520px">
@@ -2083,6 +2121,30 @@ function showInstallInstructions(){
   document.getElementById('manifestLink').href = manifestURL;
   document.getElementById('appleTouchIcon').href = icon192;
   document.getElementById('favicon').href = icon192;
+})();
+
+// 🛠 SERVICE WORKER — 캐시 + 오프라인 + 빠른 재로딩 (https/localhost 에서만 등록)
+(function registerSW(){
+  if(!('serviceWorker' in navigator)) return;
+  // file://에선 SW 등록 불가 → 자동 스킵
+  if(location.protocol === 'file:') return;
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', {scope: './'})
+      .then(reg => {
+        console.log('[SW] registered, scope:', reg.scope);
+        // 업데이트 감지 — 새 워커가 설치되면 다음 새로고침에 활성화
+        reg.addEventListener('updatefound', () => {
+          const nw = reg.installing;
+          if(!nw) return;
+          nw.addEventListener('statechange', () => {
+            if(nw.state === 'installed' && navigator.serviceWorker.controller){
+              console.log('[SW] update available — 다음 새로고침에 적용됨');
+            }
+          });
+        });
+      })
+      .catch(err => console.warn('[SW] register failed:', err));
+  });
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -2351,6 +2413,78 @@ const TAG_CATEGORIES = [
 // ═══════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════
+/**
+ * @typedef {Object} Character
+ * @property {string} [name] — 이름(프리셋 자동 로드 키)
+ * @property {string} [appearance] — 외형(영문 태그)
+ * @property {string} [action] — 액션·의상·자세
+ * @property {string} [neg] — 캐릭터별 네거티브
+ * @property {boolean} [enabled] — 활성 여부
+ * @property {{x:number, y:number}} [pos] — 좌표(0~1)
+ * @property {string} [thumb] — data URL 썸네일
+ */
+
+/**
+ * @typedef {Object} GalImage
+ * @property {number} id
+ * @property {number} sessionId
+ * @property {Blob} blob
+ * @property {string} [fname]
+ * @property {string} [label]
+ * @property {string} [prompt]
+ * @property {number} ts
+ * @property {Object} [meta] — NAI 메타 (prompt, seed, model, steps, cfg, sampler, schedule, w, h, characters)
+ */
+
+/**
+ * @typedef {Object} Preset
+ * @property {string} name
+ * @property {string} text
+ * @property {string} [thumb] — data URL
+ * @property {string} [type] — character | outfit | pose | ...
+ */
+
+/**
+ * @typedef {Object} SeedEntry
+ * @property {number} seed
+ * @property {number} ts
+ * @property {boolean} fav
+ * @property {string} [note]
+ */
+
+/**
+ * @typedef {Object} WorkflowSnapshot
+ * @property {string} id
+ * @property {string} name
+ * @property {number} ts
+ * @property {string|null} [thumb]
+ * @property {Object} data — captureWorkflowState() 반환값
+ */
+
+/**
+ * @typedef {Object} AppState
+ * @property {string} apiKey — NovelAI Persistent Token (pst-…)
+ * @property {'t2i'|'i2i'|'inpaint'|'vibe'|'director'} mode
+ * @property {string} mainPane — preview | gallery | presets | tags | settings | edit
+ * @property {string} presetType — 현재 활성 프리셋 카테고리
+ * @property {Character[]} characters
+ * @property {Object[]} queue
+ * @property {boolean} running
+ * @property {boolean} paused
+ * @property {AbortController|null} abortCtrl
+ * @property {number|null} lastSeed
+ * @property {boolean} seedLocked
+ * @property {number|null} anlas
+ * @property {Object} presets — 카테고리별 Preset[]
+ * @property {Object[]} userAlbums
+ * @property {Object<number, string[]>} albumMembership
+ * @property {FileSystemDirectoryHandle|null} outputDirHandle
+ * @property {string} outputDirName
+ * @property {SeedEntry[]} seedHistory
+ * @property {WorkflowSnapshot[]} workflows
+ */
+
+/** @type {AppState} */
 const state = {
   apiKey: '',
   mode: 't2i',           // t2i | i2i | inpaint | vibe | director
@@ -2378,6 +2512,7 @@ const state = {
   outputDirHandle: null,  // 📂 File System Access API 핸들 (Chrome/Edge)
   outputDirName: '',      // 표시용 폴더명
   seedHistory: [],        // ⏱ [{seed, ts, fav, note}] — 최근 시드 + 즐겨찾기 (최대 100)
+  workflows: [],          // 💾 [{id, name, ts, thumb, data}] — 워크플로우 스냅샷 슬롯
   gallerySessions: [],
   galleryImages: {},     // sessionId -> [{id, blob, thumbURL, prompt, ts, label, fname, meta}]
   selectedSessionId: null,
@@ -2986,6 +3121,13 @@ async function naiAugment(apiKey, opts){
 // ═══════════════════════════════════════════════════════════
 // PNG METADATA (extract NAI comment/description)
 // ═══════════════════════════════════════════════════════════
+/**
+ * PNG의 tEXt/zTXt/iTXt 청크에서 메타데이터 추출.
+ * `meta.Comment`(JSON 문자열)가 있으면 `meta.parsed`에 객체로 펼침.
+ * A1111 `parameters` tEXt도 폴백으로 인식.
+ * @param {Blob|File} blob
+ * @returns {Promise<Object|null>}
+ */
 async function readPngMetadata(blob){
   try {
     const buf = await blob.arrayBuffer();
@@ -3399,6 +3541,7 @@ function clearCharActionFromModal(){
 
 // 단일 칩 × 제거
 // 괄호 안 콤마(예: "1.3::(item, broken)::")는 분할하지 않는 안전 스플리터
+/** 콤마로 태그를 분리하되 괄호 안 콤마는 보존. @param {string} text @returns {string[]} */
 function splitActionTags(text){
   if(!text) return [];
   const out = [];
@@ -5425,6 +5568,7 @@ async function runOne(q, apiKey){
 }
 
 // ⏱ 시드 히스토리 — 생성 시 자동 기록
+/** 시드 1개를 기록(중복은 상단으로 이동, 100 한도, 즐겨찾기는 무한). @param {number} seed */
 function recordSeedHistory(seed){
   if(seed == null || seed === -1) return;
   if(!Array.isArray(state.seedHistory)) state.seedHistory = [];
@@ -5518,6 +5662,204 @@ function clearSeedHistoryNonFav(){
   saveSettingsDebounced();
   renderSeedHistory();
   toast('즐겨찾기 외 시드 기록 삭제됨', 'info');
+}
+
+// ═══════════════════════════════════════════════════════════
+// 💾 WORKFLOW SNAPSHOTS — 현재 작업 상태(프롬프트+캐릭터+파라미터)를 슬롯에 저장/복원
+// 이미지 blob(베이스/Vibe)은 직렬화 비대상 — 폼 상태만 캡처 (안전한 범위)
+// 영속화: DB.setFlag('workflows', state.workflows)
+// ═══════════════════════════════════════════════════════════
+
+/** @returns {object} 직렬화 가능한 현재 폼 상태 스냅샷 */
+/** 직렬화 가능한 폼 상태 스냅샷을 만든다. 미디어(blob)는 제외. @returns {Object} */
+function captureWorkflowState(){
+  // saveSettings와 동일한 폼 필드를 캡처 — 미디어/스로틀링/일회성 마이그레이션 키는 제외
+  const f = id => { const el = $(id); return el ? (el.type === 'checkbox' ? el.checked : el.value) : undefined; };
+  return {
+    v: 1,
+    mode: state.mode,
+    model: f('model'),
+    resPreset: f('resPreset'),
+    resAspect: f('resAspect'),
+    customW: f('customW'),
+    customH: f('customH'),
+    steps: f('steps'),
+    cfgScale: f('cfgScale'),
+    cfgRescale: f('cfgRescale'),
+    sampler: f('sampler'),
+    noiseSchedule: f('noiseSchedule'),
+    ucPreset: f('ucPreset'),
+    varietyCheck: f('varietyCheck'),
+    decrisperCheck: f('decrisperCheck'),
+    smeaCheck: f('smeaCheck'),
+    smeaDynCheck: f('smeaDynCheck'),
+    useCoords: f('useCoords'),
+    genCount: f('genCount'),
+    genDelay: f('genDelay'),
+    continueOnError: f('continueOnError'),
+    prompt: f('prompt'),
+    negPrompt: f('negPrompt'),
+    seqInput: f('seqInput'),
+    seqLabelFname: f('seqLabelFname'),
+    inpAddOrig: f('inpAddOrig'),
+    i2iStrength: f('i2iStrength'),
+    i2iNoise: f('i2iNoise'),
+    // 캐릭터 카드 — 외형/액션/네거티브/이름/썸네일은 data URL이라 JSON 가능
+    characters: JSON.parse(JSON.stringify(state.characters || [])),
+  };
+}
+
+/** 워크플로우 스냅샷을 폼에 적용. 미디어(베이스 이미지 등)는 건드리지 않음 */
+function applyWorkflowState(d){
+  if(!d || typeof d !== 'object') return false;
+  const apply = (id, val) => {
+    const el = $(id);
+    if(!el || val === undefined) return;
+    if(el.type === 'checkbox') el.checked = !!val;
+    else el.value = val;
+  };
+  // 1) 모델·옵션부터 (sampler 옵션 채우기 위해 model 먼저 설정 후 refresh)
+  if(d.model){
+    const opt = [...$('model').options].find(o => o.value === d.model);
+    if(opt){ $('model').value = d.model; refreshSamplerListByModel(); }
+  }
+  apply('resPreset', d.resPreset);
+  apply('resAspect', d.resAspect);
+  apply('customW', d.customW);
+  apply('customH', d.customH);
+  if(d.resAspect === 'custom'){ const r = $('customResRow'); if(r) r.style.display = ''; }
+  apply('steps', d.steps);
+  apply('cfgScale', d.cfgScale);
+  apply('cfgRescale', d.cfgRescale);
+  // sampler/schedule은 모델별 옵션 다르므로 존재 시에만
+  if(d.sampler && [...$('sampler').options].some(o => o.value === d.sampler)) $('sampler').value = d.sampler;
+  if(d.noiseSchedule && [...$('noiseSchedule').options].some(o => o.value === d.noiseSchedule)) $('noiseSchedule').value = d.noiseSchedule;
+  apply('ucPreset', d.ucPreset);
+  apply('varietyCheck', d.varietyCheck);
+  apply('decrisperCheck', d.decrisperCheck);
+  apply('smeaCheck', d.smeaCheck);
+  apply('smeaDynCheck', d.smeaDynCheck);
+  apply('useCoords', d.useCoords);
+  apply('genCount', d.genCount);
+  apply('genDelay', d.genDelay);
+  apply('continueOnError', d.continueOnError);
+  apply('prompt', d.prompt);
+  apply('negPrompt', d.negPrompt);
+  apply('seqInput', d.seqInput);
+  apply('seqLabelFname', d.seqLabelFname);
+  apply('inpAddOrig', d.inpAddOrig);
+  apply('i2iStrength', d.i2iStrength);
+  apply('i2iNoise', d.i2iNoise);
+  // 캐릭터 카드 — 깊은 복사로 적용
+  if(Array.isArray(d.characters)){
+    state.characters = JSON.parse(JSON.stringify(d.characters));
+    renderCharacters();
+  }
+  // 모드는 마지막에 — 가시성 토글 발생
+  if(d.mode) setMode(d.mode);
+  refreshResInfo();
+  refreshPromptStats();
+  refreshCost();
+  saveSettingsDebounced();
+  return true;
+}
+
+async function loadWorkflows(){
+  const saved = await DB.getFlag('workflows');
+  state.workflows = Array.isArray(saved) ? saved : [];
+}
+async function saveWorkflows(){
+  await DB.setFlag('workflows', state.workflows);
+}
+
+async function _wfThumb(){
+  // 현재 미리보기 이미지를 작은 data URL로 — 없으면 null
+  if(!state.lastImage?.blob) return null;
+  try {
+    return await blobToCompressedThumb(state.lastImage.blob, 120);
+  } catch(_){ return null; }
+}
+
+async function workflowSave(name){
+  const trimmed = String(name||'').trim();
+  if(!trimmed) return false;
+  const thumb = await _wfThumb();
+  const wf = {
+    id: 'wf_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+    name: trimmed,
+    ts: Date.now(),
+    thumb,
+    data: captureWorkflowState(),
+  };
+  state.workflows.unshift(wf);
+  // 최대 50개 — 가장 오래된 것부터 잘라냄
+  if(state.workflows.length > 50) state.workflows.length = 50;
+  await saveWorkflows();
+  return wf;
+}
+
+async function workflowDelete(id){
+  const i = state.workflows.findIndex(w => w.id === id);
+  if(i < 0) return false;
+  state.workflows.splice(i, 1);
+  await saveWorkflows();
+  return true;
+}
+
+async function workflowApply(id){
+  const wf = state.workflows.find(w => w.id === id);
+  if(!wf) return false;
+  return applyWorkflowState(wf.data);
+}
+
+async function workflowRename(id, newName){
+  const wf = state.workflows.find(w => w.id === id);
+  const n = String(newName||'').trim();
+  if(!wf || !n) return false;
+  wf.name = n;
+  await saveWorkflows();
+  return true;
+}
+
+function openWorkflowModal(){
+  renderWorkflowList();
+  $('wfSaveName').value = '';
+  $('workflowModal').classList.add('open');
+  setTimeout(() => $('wfSaveName').focus(), 60);
+}
+
+function renderWorkflowList(){
+  const list = $('wfList');
+  if(!list) return;
+  if(!state.workflows.length){
+    list.innerHTML = '<div style="padding:30px;text-align:center;color:var(--t3);font-size:12.5px;font-style:italic">저장된 워크플로우 없음 — 위 입력칸에 이름 적고 💾 저장</div>';
+    return;
+  }
+  list.innerHTML = state.workflows.map(wf => {
+    const dt = new Date(wf.ts);
+    const dateStr = `${dt.getFullYear()}.${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    const thumbHtml = wf.thumb
+      ? `<div class="wf-thumb" style="background-image:url('${esc(wf.thumb)}')"></div>`
+      : `<div class="wf-thumb wf-thumb-empty">💾</div>`;
+    const charCount = (wf.data?.characters || []).length;
+    const promptPreview = (wf.data?.prompt || '').slice(0, 80).replace(/\s+/g,' ');
+    return `<div class="wf-row" data-id="${esc(wf.id)}">
+      ${thumbHtml}
+      <div class="wf-info">
+        <div class="wf-name" data-act="rename" title="더블클릭으로 이름 변경">${esc(wf.name)}</div>
+        <div class="wf-meta">
+          <span class="wf-date">${dateStr}</span>
+          <span class="wf-mode">${esc(wf.data?.mode || '?')}</span>
+          ${charCount ? `<span class="wf-chars">👥 ${charCount}</span>` : ''}
+        </div>
+        <div class="wf-prompt" title="${esc(wf.data?.prompt || '')}">${esc(promptPreview || '(빈 프롬프트)')}</div>
+      </div>
+      <div class="wf-actions">
+        <button class="btn primary" data-act="apply" data-id="${esc(wf.id)}" title="이 워크플로우를 현재 폼에 적용">↻ 적용</button>
+        <button class="btn ghost" data-act="del" data-id="${esc(wf.id)}" title="삭제" style="color:var(--red);border-color:rgba(181,67,56,.35)">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 async function runDirector(apiKey){
@@ -6548,6 +6890,10 @@ function setMode(mode){
   refreshCost();
 }
 
+/**
+ * 메인 페인 전환. body[data-mview]와 .main-pane.act, .mn-btn/.main-tab-btn 활성화를 동기.
+ * @param {'preview'|'gallery'|'presets'|'tags'|'settings'|'edit'} pane
+ */
 function setMainPane(pane){
   state.mainPane = pane;
   // 모바일 풀스크린 토글 — body[data-mview]에 따라 사이드바/메인 표시 전환
@@ -7131,6 +7477,63 @@ function wireEvents(){
     $('lockSeedBtn').classList.toggle('act', state.seedLocked);
     if(state.seedLocked && state.lastSeed) $('seed').value = state.lastSeed;
   });
+  // 💾 워크플로우 스냅샷
+  $('openWorkflowBtn').addEventListener('click', openWorkflowModal);
+  $('wfClose').addEventListener('click', () => $('workflowModal').classList.remove('open'));
+  $('workflowModal').addEventListener('click', e => { if(e.target === $('workflowModal')) $('workflowModal').classList.remove('open'); });
+  $('wfSaveBtn').addEventListener('click', async () => {
+    const name = $('wfSaveName').value.trim();
+    if(!name){ toast('워크플로우 이름을 입력하세요', 'warning'); $('wfSaveName').focus(); return; }
+    const wf = await workflowSave(name);
+    if(wf){
+      $('wfSaveName').value = '';
+      renderWorkflowList();
+      toast(`💾 저장됨: ${wf.name}`, 'success');
+    }
+  });
+  $('wfSaveName').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); $('wfSaveBtn').click(); } });
+  $('wfList').addEventListener('click', async e => {
+    const btn = e.target.closest('button[data-act]');
+    if(btn){
+      const id = btn.dataset.id;
+      if(btn.dataset.act === 'apply'){
+        const wf = state.workflows.find(w => w.id === id);
+        confirmDialog(
+          `이 워크플로우를 적용할까요?\n\n"${wf?.name || ''}"\n\n현재 프롬프트·캐릭터·파라미터가 모두 교체됩니다(베이스 이미지/Vibe는 유지).`,
+          async () => {
+            const ok = await workflowApply(id);
+            if(ok){
+              $('workflowModal').classList.remove('open');
+              toast(`↻ 적용됨: ${wf?.name}`, 'success');
+            }
+          },
+          '워크플로우 적용'
+        );
+      } else if(btn.dataset.act === 'del'){
+        const wf = state.workflows.find(w => w.id === id);
+        confirmDialog(`"${wf?.name || ''}" 삭제할까요?`, async () => {
+          await workflowDelete(id);
+          renderWorkflowList();
+          toast('삭제됨', 'info');
+        }, '워크플로우 삭제');
+      }
+      return;
+    }
+    // 이름 더블클릭으로 변경
+    const nameEl = e.target.closest('.wf-name[data-act="rename"]');
+    if(nameEl){
+      const row = nameEl.closest('.wf-row');
+      const id = row?.dataset.id;
+      const wf = state.workflows.find(w => w.id === id);
+      if(!wf) return;
+      const nn = prompt('새 이름:', wf.name);
+      if(nn && nn.trim() && nn.trim() !== wf.name){
+        await workflowRename(id, nn.trim());
+        renderWorkflowList();
+      }
+    }
+  });
+
   // ⏱ 시드 히스토리
   $('seedHistBtn').addEventListener('click', openSeedHistory);
   $('seedHistClose').addEventListener('click', () => $('seedHistModal').classList.remove('open'));
@@ -8279,6 +8682,7 @@ async function init(){
   await loadPresetsFromDB();
   await loadAlbums();
   await loadGalleryTagIndex();
+  await loadWorkflows();
   // 📁 갤러리 저장 위치 드롭다운 초기 채움
   state.gallerySessions = await DB.getSessions();
   refreshTargetSessionDropdown();
