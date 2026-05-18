@@ -787,6 +787,140 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 @supports(padding:max(0px)){
   body{padding-top:max(0px,env(safe-area-inset-top));padding-bottom:max(0px,env(safe-area-inset-bottom))}
 }
+
+/* ═══════════════════════════════════════════════════════════
+   📱 MOBILE NAIM-STYLE LAYOUT — 하단 네비 + 하단 생성바 + 풀스크린 토글
+   PC(>=881px) 영향 없음
+   ═══════════════════════════════════════════════════════════ */
+.mobile-nav{display:none}
+
+@media (max-width:880px){
+  /* ━━━ Workspace를 풀스크린 토글로 ━━━ */
+  .workspace{position:relative;flex-direction:column;overflow:hidden}
+  .sidebar,.main-area{
+    width:100%;max-width:none;min-width:0;
+    height:100%;max-height:none;
+    border-right:none;border-bottom:none;
+    flex:1 1 auto;
+  }
+  /* 모바일 뷰 전환 — body[data-mview]에 따라 사이드바 또는 메인영역만 표시 */
+  body[data-mview="edit"] .main-area{display:none}
+  body[data-mview="edit"] .sidebar{display:flex}
+  body[data-mview="preview"] .sidebar,
+  body[data-mview="gallery"] .sidebar,
+  body[data-mview="presets"] .sidebar,
+  body[data-mview="tags"] .sidebar,
+  body[data-mview="settings"] .sidebar{display:none}
+  body[data-mview="preview"] .main-area,
+  body[data-mview="gallery"] .main-area,
+  body[data-mview="presets"] .main-area,
+  body[data-mview="tags"] .main-area,
+  body[data-mview="settings"] .main-area{display:flex}
+
+  /* 기존 상단 메인 탭(미리보기/갤러리/...)은 모바일에선 숨김 → 하단 네비로 대체 */
+  .main-tabs{display:none}
+
+  /* ━━━ 하단 고정 네비(NAIM 스타일) ━━━ */
+  .mobile-nav{
+    display:flex;
+    position:fixed;left:0;right:0;bottom:0;
+    z-index:60;
+    background:var(--panel);
+    border-top:1.5px solid var(--b1);
+    padding:4px 0 max(4px,env(safe-area-inset-bottom));
+    box-shadow:0 -2px 14px rgba(74,52,20,.10);
+  }
+  .mn-btn{
+    position:relative;
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    background:transparent;border:none;
+    padding:6px 4px;
+    color:var(--t3);
+    font-family:inherit;font-size:10px;font-weight:600;letter-spacing:0;
+    cursor:pointer;
+    transition:color .12s,transform .08s;
+    min-height:48px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .mn-btn .mn-ico{font-size:19px;line-height:1;filter:grayscale(.2);transition:filter .12s,transform .12s}
+  .mn-btn:active{transform:scale(.95)}
+  .mn-btn.act{color:var(--acc)}
+  .mn-btn.act .mn-ico{filter:none;transform:translateY(-1px)}
+  .mn-btn .mn-badge{
+    position:absolute;top:2px;left:50%;margin-left:6px;
+    background:var(--acc);color:#fff8ec;
+    font-family:var(--mono);font-size:9px;font-weight:700;
+    min-width:15px;height:15px;padding:0 4px;border-radius:8px;
+    display:none;align-items:center;justify-content:center;line-height:1;
+    box-shadow:0 1px 3px rgba(74,52,20,.25);
+  }
+  .mn-btn .mn-badge.show{display:inline-flex}
+
+  /* ━━━ 하단 생성 바(고정) ━━━ 편집 뷰일 때만 노출 */
+  .side-foot{
+    position:fixed;left:0;right:0;
+    bottom:calc(56px + env(safe-area-inset-bottom));
+    z-index:55;
+    flex-direction:row;align-items:center;gap:9px;
+    padding:8px 11px;
+    background:var(--card);
+    border-top:1.5px solid var(--b1);
+    box-shadow:0 -2px 10px rgba(74,52,20,.07);
+  }
+  body:not([data-mview="edit"]) .side-foot{display:none}
+  .side-foot .gen-info{
+    order:0;flex:0 0 auto;
+    flex-direction:column;align-items:flex-start;
+    font-size:10.5px;line-height:1.25;gap:1px;
+    min-width:0;color:var(--t3);
+  }
+  .side-foot .gen-info span{white-space:nowrap}
+  .side-foot .gen-btn{
+    flex:1;padding:12px 14px;min-height:46px;font-size:14.5px;
+    margin:0;letter-spacing:.04em;
+    box-shadow:0 2px 8px rgba(162,90,31,.25);
+  }
+
+  /* 사이드바·메인영역 콘텐츠가 하단 고정 요소에 가리지 않도록 패딩 확보 */
+  .sidebar{padding-bottom:0}
+  .side-body{padding-bottom:calc(110px + env(safe-area-inset-bottom))}
+  .main-body{padding-bottom:calc(56px + env(safe-area-inset-bottom))}
+
+  /* ━━━ 모드 바(글→그림/그림→그림/...) 가로 스크롤 ━━━ */
+  .mode-bar{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:5px 6px 0}
+  .mode-bar::-webkit-scrollbar{display:none}
+  .mode-btn{flex:0 0 auto;min-width:72px}
+
+  /* "전체 접기" 풀폭 바는 공간 낭비 → 모바일 숨김(섹션 제목 탭으로 대체) */
+  .sec-toggle-row{display:none}
+
+  /* 갤러리/프리셋/태그 상단 검색바도 하단 네비 가리지 않게 sticky */
+  .gallery-bar,.preset-bar,.tag-bar{position:sticky;top:0;z-index:5}
+}
+
+/* 좁은 폰(≤600px) — 추가 컴팩트 + 상단바 정리 */
+@media (max-width:600px){
+  /* 상단바 — API키만 시원하게, 나머지는 정리 */
+  .topbar{padding:0 9px;gap:6px}
+  .topbar .lbl{display:none}                    /* "키 API" 라벨 숨김 */
+  .topbar #toggleKey{display:none}              /* 눈(👁) 토글 숨김 — 보안상 항상 마스킹 유지 */
+  .topbar .tb-group:first-of-type{flex:1;min-width:0}
+  #apiKey{flex:1;width:auto;min-width:0;max-width:none;font-size:12px;padding:6px 9px}
+  #anlasPill{font-size:10px;padding:3px 8px;white-space:nowrap}
+  .topbar .tb-grow{display:none}                /* 모바일에서는 빈 공간 필요 없음 */
+
+  /* 프롬프트 모노 폰트 다이어트 — 거대했던 입력창 정리 */
+  #prompt,#negPrompt{font-size:13px !important;line-height:1.55;min-height:130px;padding:10px 11px}
+  #prompt{min-height:140px}
+  #negPrompt{min-height:90px}
+
+  /* 모드 버튼 약간 더 컴팩트 */
+  .mode-btn{padding:7px 6px;font-size:11.5px;min-height:36px;min-width:68px}
+
+  /* 갤러리 바 등 검색바 한 줄 정리 */
+  .gallery-bar .inp{flex:1 1 100%;width:100%}
+  .preset-bar .inp,.tag-bar .inp{flex:1 1 60%}
+}
 </style>
 </head>
 <body>
@@ -1239,6 +1373,26 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   </section>
 </div>
 
+<!-- 📱 MOBILE BOTTOM NAV — 모바일 전용 하단 네비게이션 (PC에서는 숨김) -->
+<nav class="mobile-nav" id="mobileNav" aria-label="모바일 네비">
+  <button class="mn-btn" data-mview="edit" type="button" aria-label="편집">
+    <span class="mn-ico">✏️</span><span class="mn-lbl">편집</span>
+  </button>
+  <button class="mn-btn" data-mview="preview" type="button" aria-label="미리보기">
+    <span class="mn-ico">🖼️</span><span class="mn-lbl">미리보기</span>
+  </button>
+  <button class="mn-btn" data-mview="gallery" type="button" aria-label="갤러리">
+    <span class="mn-ico">📁</span><span class="mn-lbl">갤러리</span>
+    <span class="mn-badge" id="mnGalleryBadge">0</span>
+  </button>
+  <button class="mn-btn" data-mview="presets" type="button" aria-label="프리셋">
+    <span class="mn-ico">📚</span><span class="mn-lbl">프리셋</span>
+  </button>
+  <button class="mn-btn" data-mview="settings" type="button" aria-label="설정">
+    <span class="mn-ico">⚙️</span><span class="mn-lbl">설정</span>
+  </button>
+</nav>
+
 <!-- POSITION GRID POPUP — 캐릭터 위치 -->
 <div id="posGrid">
   <div class="pos-title">캐릭터 위치 <span style="color:var(--t3);font-weight:400">(Character Position)</span></div>
@@ -1526,7 +1680,7 @@ function diagnoseInstallability(){
     ? `🛠 <b>해결 방법</b><br>
        1. 터미널/PowerShell에서 HTML 파일 폴더로 이동<br>
        2. <code style="font-family:var(--mono);background:var(--card);padding:2px 6px;border-radius:3px">python -m http.server 8000</code> 실행<br>
-       3. 브라우저에서 <code style="font-family:var(--mono);background:var(--card);padding:2px 6px;border-radius:3px">http://localhost:8000/NAI_Studio.html</code> 접속<br>
+       3. 브라우저에서 <code style="font-family:var(--mono);background:var(--card);padding:2px 6px;border-radius:3px">http://localhost:8000/index.html</code> 접속<br>
        4. 그러면 Chrome/Edge 주소창에 설치 아이콘이 나타남`
     : isIOS
     ? `🛠 <b>해결 방법</b><br>Safari로 페이지 열기 → 하단 공유 ⬆ → "홈 화면에 추가"`
@@ -1616,7 +1770,7 @@ function showInstallInstructions(){
         ⚠ 현재 <code style="font-family:var(--mono);background:var(--card);padding:1px 5px;border-radius:3px">file://</code>로 열려있어 일부 PWA 기능이 제한될 수 있습니다.<br>
         <b>완전한 앱 설치</b>를 원하면 로컬 서버로 호스팅하세요:<br>
         <code style="font-family:var(--mono);background:var(--card);padding:3px 6px;border-radius:3px;display:inline-block;margin-top:5px">python -m http.server 8000</code><br>
-        → <code style="font-family:var(--mono);background:var(--card);padding:1px 5px;border-radius:3px">http://localhost:8000/NAI_Studio.html</code> 접속
+        → <code style="font-family:var(--mono);background:var(--card);padding:1px 5px;border-radius:3px">http://localhost:8000/index.html</code> 접속
       </div>`;
   }
   $('confirmTitle').innerHTML = '📱 앱으로 설치 안내 <span class="en">Install</span>';
@@ -4994,6 +5148,9 @@ async function refreshGallerySize(){
   let total = 0;
   for(const s of sessions) total += s.count || 0;
   $('gallerySize').textContent = total;
+  // 모바일 하단 네비 갤러리 배지 동기화
+  const mb = $('mnGalleryBadge');
+  if(mb){ mb.textContent = total; mb.classList.toggle('show', total > 0); }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -5378,7 +5535,11 @@ function setMode(mode){
 
 function setMainPane(pane){
   state.mainPane = pane;
+  // 모바일 풀스크린 토글 — body[data-mview]에 따라 사이드바/메인 표시 전환
+  // 'edit'은 모바일 전용 가상 페인 — 사이드바(프롬프트·옵션)를 보여줌
+  document.body.dataset.mview = pane;
   $$('.main-tab-btn').forEach(b => b.classList.toggle('act', b.dataset.pane === pane));
+  $$('.mn-btn').forEach(b => b.classList.toggle('act', b.dataset.mview === pane));
   $$('.main-pane').forEach(p => p.classList.toggle('act', p.dataset.pane === pane));
   if(pane === 'gallery') loadGallery();
   else if(pane === 'presets'){ renderPresetTabs(); renderPresets(); }
@@ -5760,8 +5921,9 @@ function wireEvents(){
 
   // Mode bar
   $$('.mode-btn').forEach(b => b.onclick = () => setMode(b.dataset.mode));
-  // Main tabs
+  // Main tabs (데스크탑 상단 + 모바일 하단 네비 양쪽 모두)
   $$('.main-tab-btn').forEach(b => b.onclick = () => setMainPane(b.dataset.pane));
+  $$('.mn-btn').forEach(b => b.onclick = () => setMainPane(b.dataset.mview));
   // Section collapse
   document.addEventListener('click', e => {
     const t = e.target.closest('.sec-title');
@@ -6869,6 +7031,9 @@ async function init(){
   renderCharacters();
   initPosGrid();
   setMode(state.mode || 't2i');
+  // 모바일 초기 진입 뷰는 NAIM처럼 "편집"(프롬프트 입력)으로 시작 — 데스크탑에서는 mview가 시각에 영향 없음
+  document.body.dataset.mview = 'edit';
+  $$('.mn-btn').forEach(b => b.classList.toggle('act', b.dataset.mview === 'edit'));
   wireEvents();
   await loadPresetsFromDB();
   await loadAlbums();
