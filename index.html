@@ -3372,33 +3372,61 @@ async function naiGenerate(apiKey, body, signal){
   extractAnlasFromHeaders(resp.headers);
   const ct = (resp.headers.get('Content-Type')||'').toLowerCase();
   const buf = await resp.arrayBuffer();
-  if(ct.includes('msgpack')){
-    if(!window.MessagePack || !window.MessagePack.decodeMulti){
-      throw new Error('msgpack 디코더 로드 실패 — 네트워크 확인');
-    }
-    let lastImage = null;
-    for(const ev of window.MessagePack.decodeMulti(new Uint8Array(buf))){
-      if(!ev || typeof ev !== 'object') continue;
-      const img = ev.image;
-      if(!img) continue;
-      if(img instanceof Uint8Array) lastImage = img;
-      else if(typeof img === 'string'){
-        const bin = atob(img); const arr = new Uint8Array(bin.length);
-        for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
-        lastImage = arr;
-      } else if(img.buffer instanceof ArrayBuffer){
-        lastImage = new Uint8Array(img.buffer, img.byteOffset||0, img.byteLength);
+  console.log('[NAI] response', {ct, bytes: buf.byteLength, model: body.model});
+
+  // V4 모델은 msgpack 응답이 기본 — 서버가 content-type을 generic 'binary/octet-stream'으로 보내도 시도
+  // 첫 바이트 0x80~0x8f / 0xde~0xdf 는 msgpack의 map 헤더 (휴리스틱)
+  const u8 = new Uint8Array(buf);
+  const firstByte = u8[0];
+  const looksMsgpack = firstByte != null && (
+    (firstByte >= 0x80 && firstByte <= 0x8f) ||  // fixmap
+    firstByte === 0xde || firstByte === 0xdf      // map16/map32
+  );
+  const tryMsgpack = isV4 || ct.includes('msgpack') || looksMsgpack;
+
+  if(tryMsgpack && window.MessagePack && window.MessagePack.decodeMulti){
+    try {
+      let lastImage = null;
+      for(const ev of window.MessagePack.decodeMulti(u8)){
+        if(!ev || typeof ev !== 'object') continue;
+        const img = ev.image;
+        if(!img) continue;
+        if(img instanceof Uint8Array) lastImage = img;
+        else if(typeof img === 'string'){
+          const bin = atob(img); const arr = new Uint8Array(bin.length);
+          for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+          lastImage = arr;
+        } else if(img.buffer instanceof ArrayBuffer){
+          lastImage = new Uint8Array(img.buffer, img.byteOffset||0, img.byteLength);
+        }
       }
+      if(lastImage){
+        console.log('[NAI] msgpack 디코드 OK', lastImage.byteLength, 'bytes');
+        return new Blob([lastImage], {type:'image/png'});
+      }
+      // 빈 스트림 — ZIP 폴백으로 진행
+    } catch(e){
+      console.warn('[NAI] msgpack 디코드 실패, ZIP 폴백 시도:', e?.message || e);
     }
-    if(!lastImage) throw new Error('msgpack 스트림에 이미지 없음');
-    return new Blob([lastImage], {type:'image/png'});
   }
-  // ZIP fallback
-  const zip = await JSZip.loadAsync(buf);
-  const files = Object.keys(zip.files);
-  const pngName = files.find(f => f.endsWith('.png')) || files[0];
-  if(!pngName) throw new Error('ZIP에 이미지 없음');
-  return await zip.files[pngName].async('blob');
+
+  // ZIP fallback (V3 또는 msgpack 실패 시)
+  try {
+    const zip = await JSZip.loadAsync(buf);
+    const files = Object.keys(zip.files);
+    const pngName = files.find(f => f.endsWith('.png')) || files[0];
+    if(pngName){
+      const blob = await zip.files[pngName].async('blob');
+      console.log('[NAI] ZIP 디코드 OK', files.length, 'files, picked', pngName);
+      return blob;
+    }
+  } catch(e){
+    console.warn('[NAI] ZIP 디코드 실패:', e?.message || e);
+  }
+
+  // 둘 다 실패 — 헤드 바이트와 함께 명확한 에러
+  const head = Array.from(u8.slice(0, 16)).map(b => b.toString(16).padStart(2,'0')).join(' ');
+  throw new Error(`응답 디코드 실패 — content-type=${ct}, ${buf.byteLength}바이트, 헤드=${head}`);
 }
 
 function errMsgFor(status){
