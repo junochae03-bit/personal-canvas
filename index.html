@@ -23,6 +23,7 @@
 <link rel="icon" id="favicon">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://unpkg.com/@msgpack/msgpack" crossorigin></script>
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
@@ -893,6 +894,33 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .install-card .desc{font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:8px}
 #installPwaBtn{font-size:13px;padding:9px 16px;font-weight:700}
 
+/* 💡 PROMPT AUTOCOMPLETE — 태그 도감 기반 */
+.ac-box{
+  position:absolute;z-index:9500;
+  background:var(--panel);
+  border:1.5px solid var(--b2);
+  border-radius:7px;
+  box-shadow:0 12px 36px rgba(74,52,20,.25);
+  display:none;
+  max-height:200px;overflow-y:auto;
+  font-size:13px;
+}
+.ac-item{
+  padding:7px 12px;cursor:pointer;
+  display:flex;align-items:baseline;gap:9px;
+  border-bottom:1px solid var(--b1);
+  transition:background .1s;
+}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover,.ac-item.act{background:rgba(162,90,31,.10);color:var(--acc)}
+.ac-item .ac-en{font-family:var(--mono);font-weight:600;color:var(--t1);font-size:13px}
+.ac-item.act .ac-en{color:var(--acc)}
+.ac-item .ac-ko{font-size:11.5px;color:var(--t3);margin-left:auto;white-space:nowrap}
+
+/* ⏱ 시드 히스토리 모달 — 호버/액티브 행 강조 */
+.sh-row:hover{background:rgba(162,90,31,.06)}
+#seedHistFavOnly.act{background:rgba(184,136,32,.18);border-color:var(--yellow);color:var(--yellow)}
+
 /* iOS standalone 모드 — 상단 safe-area */
 @supports(padding:max(0px)){
   body{padding-top:max(0px,env(safe-area-inset-top));padding-bottom:max(0px,env(safe-area-inset-bottom))}
@@ -1309,6 +1337,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
               <input type="number" id="seed" class="inp" placeholder="비우면 랜덤 (-1 = random)"></div>
             <button class="iconbtn" id="randSeedBtn" title="랜덤 시드 (Random)" style="margin-top:21px">🎲</button>
             <button class="iconbtn" id="lockSeedBtn" title="마지막 시드 고정 (Lock)" style="margin-top:21px">🔓</button>
+            <button class="iconbtn" id="seedHistBtn" title="시드 히스토리·즐겨찾기 (Seed history)" style="margin-top:21px">⏱</button>
           </div>
           <div class="row" style="gap:14px;flex-wrap:wrap;margin-top:4px">
             <label class="chk"><input type="checkbox" id="varietyCheck">다양성+ <span class="en">Variety+</span></label>
@@ -1794,6 +1823,27 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <div class="modal-foot">
       <button class="btn ghost" id="expandPromptCancel">취소 <span class="en">Cancel</span></button>
       <button class="btn primary" id="expandPromptSave">적용 <span class="en">Apply</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ⏱ SEED HISTORY MODAL — 시드 히스토리·즐겨찾기 -->
+<div class="modal-bg" id="seedHistModal">
+  <div class="modal" style="max-width:520px">
+    <h3>⏱ 시드 히스토리 <span class="en">Seed History</span></h3>
+    <div class="modal-body">
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
+        <input class="inp" id="seedHistFilter" placeholder="🔍 시드 번호 또는 메모로 검색…" style="flex:1;min-width:160px;font-size:13px">
+        <button class="btn ghost" id="seedHistFavOnly" title="즐겨찾기만 보기" data-act="on">⭐ 즐겨만</button>
+        <button class="btn ghost" id="seedHistClear" title="즐겨찾기 제외 전체 삭제" style="border-color:rgba(181,67,56,.35);color:var(--red)">🗑 일반 비우기</button>
+      </div>
+      <div id="seedHistList" style="max-height:55vh;overflow-y:auto;border:1.5px solid var(--b1);border-radius:6px;background:var(--card);min-height:120px"></div>
+      <div style="font-size:11.5px;color:var(--t3);margin-top:8px;line-height:1.5">
+        💡 생성될 때마다 자동 기록됨 (최대 100개). 별 표시한 시드는 일반 비우기에서도 보존됩니다.
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn primary" id="seedHistClose">닫기 <span class="en">Close</span></button>
     </div>
   </div>
 </div>
@@ -2327,6 +2377,7 @@ const state = {
   galleryTagIndex: [],    // [{tag, count}] — 📋 갤러리 이미지에서 추출한 태그
   outputDirHandle: null,  // 📂 File System Access API 핸들 (Chrome/Edge)
   outputDirName: '',      // 표시용 폴더명
+  seedHistory: [],        // ⏱ [{seed, ts, fav, note}] — 최근 시드 + 즐겨찾기 (최대 100)
   gallerySessions: [],
   galleryImages: {},     // sessionId -> [{id, blob, thumbURL, prompt, ts, label, fname, meta}]
   selectedSessionId: null,
@@ -2958,8 +3009,22 @@ async function readPngMetadata(blob){
           const value = dec.decode(data.slice(nullIdx+1));
           meta[key] = value;
         }
+      } else if(type === 'zTXt'){
+        // zTXt: keyword\0 compressionMethod(1B) compressedData
+        const data = u8.slice(off+8, off+8+len);
+        const nullIdx = data.indexOf(0);
+        if(nullIdx > 0 && nullIdx + 2 < data.length){
+          const key = dec.decode(data.slice(0, nullIdx));
+          const compressed = data.slice(nullIdx + 2);  // compressionMethod 1B 건너뛰기
+          try {
+            if(typeof pako !== 'undefined' && pako?.inflate){
+              const text = dec.decode(pako.inflate(compressed));
+              meta[key] = text;
+            }
+          } catch(_){}
+        }
       } else if(type === 'iTXt'){
-        // iTXt: keyword\0 compressionFlag compressionMethod languageTag\0 translatedKeyword\0 text
+        // iTXt: keyword\0 compressionFlag(1B) compressionMethod(1B) languageTag\0 translatedKeyword\0 text
         const data = u8.slice(off+8, off+8+len);
         const k1 = data.indexOf(0);
         if(k1 > 0 && k1 + 4 < data.length){
@@ -2973,10 +3038,18 @@ async function readPngMetadata(blob){
           p = k2;
           while(p < data.length && data[p] !== 0) p++;
           const textStart = p + 1;
-          if(!compressed && textStart < data.length){
-            meta[key] = dec.decode(data.slice(textStart));
+          if(textStart < data.length){
+            if(!compressed){
+              meta[key] = dec.decode(data.slice(textStart));
+            } else {
+              // 압축 iTXt — pako로 디플레이트
+              try {
+                if(typeof pako !== 'undefined' && pako?.inflate){
+                  meta[key] = dec.decode(pako.inflate(data.slice(textStart)));
+                }
+              } catch(_){}
+            }
           }
-          // compressed iTXt는 zlib 디플레이트 필요 — 외부 라이브러리 없이는 스킵
         }
       }
       off += 8 + len + 4;  // 길이(4) + 타입(4) + 데이터 + CRC(4)
@@ -3623,7 +3696,7 @@ function renderPresets(){
     // 미리보기 내용: 썸네일 이미지 > 텍스트 > 아이콘
     let previewBody;
     if(hasThumb){
-      previewBody = `<img src="${esc(p.thumb)}" alt="${esc(p.name||'')}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=ph-icon>${ico}</div>'">`;
+      previewBody = `<img src="${esc(p.thumb)}" alt="${esc(p.name||'')}" loading="lazy" decoding="async" onerror="this.parentElement.innerHTML='<div class=ph-icon>${ico}</div>'">`;
     } else if(cleanText){
       previewBody = `<div class="ph-text">${esc(cleanText)}</div>`;
     } else {
@@ -4292,14 +4365,38 @@ function updateOutputDirUI(){
   el.title = state.outputDirName ? `폴더: ${state.outputDirName}` : '기본 다운로드 폴더';
 }
 
+// 폴더 권한 보장 — 만료/거부 시 한 번 더 요청, 그래도 안 되면 명확한 안내
+async function ensureOutputDirPermission(){
+  if(!state.outputDirHandle) return 'no-handle';
+  try {
+    let perm = await state.outputDirHandle.queryPermission({mode: 'readwrite'});
+    if(perm === 'granted') return 'granted';
+    // 사용자 제스처 컨텍스트 안에서 호출되어야 함 (대부분 생성 버튼 흐름에서 호출됨)
+    perm = await state.outputDirHandle.requestPermission({mode: 'readwrite'});
+    return perm;
+  } catch(e){
+    console.warn('[OutputDir perm]', e);
+    return 'error';
+  }
+}
+
 async function writeImageToOutputDir(blob, filename){
   if(!state.outputDirHandle) return false;
   try {
-    let perm = await state.outputDirHandle.queryPermission({mode: 'readwrite'});
+    const perm = await ensureOutputDirPermission();
     if(perm !== 'granted'){
-      perm = await state.outputDirHandle.requestPermission({mode: 'readwrite'});
+      // 권한 거부 시 한 세션에 한 번만 명확한 안내 (반복 토스트 폭격 방지)
+      if(!state._outputDirWarned){
+        state._outputDirWarned = true;
+        const reason = perm === 'denied' ? '권한 거부됨'
+          : perm === 'prompt' ? '권한 미부여(브라우저 차단 가능)'
+          : '권한 만료';
+        toast(`📂 폴더 저장 비활성화 — ${reason}. 설정에서 폴더를 다시 선택하면 복구됩니다 (갤러리 DB엔 정상 저장)`, 'warning');
+      }
+      return false;
     }
-    if(perm !== 'granted') throw new Error('폴더 권한 거부됨');
+    // 권한 복구된 경우 경고 플래그도 리셋 → 향후 다시 끊기면 알릴 수 있게
+    state._outputDirWarned = false;
     // 파일명 중복 처리: 같은 이름 있으면 _2, _3 ... 자동 부여
     let safeName = filename;
     let n = 1;
@@ -5137,6 +5234,7 @@ function parseSeqInput(text){
   return items.map(it => ({label: it.label, prompt: it.prompt.trim()})).filter(it => it.prompt);
 }
 
+let _qSeq = 1;
 function buildQueue(){
   const items = [];
   const count = parseInt($('genCount').value) || 1;
@@ -5146,13 +5244,13 @@ function buildQueue(){
     // Sequential mode
     for(let r = 0; r < count; r++){
       for(const s of seqItems){
-        items.push({id: items.length, status:'wait', label: s.label, promptOverride: s.prompt});
+        items.push({id: _qSeq++, status:'wait', label: s.label, promptOverride: s.prompt});
       }
     }
   } else {
     // Simple batch
     for(let i = 0; i < count; i++){
-      items.push({id: i, status:'wait', label: String(i+1)});
+      items.push({id: _qSeq++, status:'wait', label: String(i+1)});
     }
   }
   return items;
@@ -5322,7 +5420,104 @@ async function runOne(q, apiKey){
     characters: charNames,
   };
   state.lastSeed = q.seed;
+  recordSeedHistory(q.seed);
   return await naiGenerate(apiKey, body, state.abortCtrl.signal);
+}
+
+// ⏱ 시드 히스토리 — 생성 시 자동 기록
+function recordSeedHistory(seed){
+  if(seed == null || seed === -1) return;
+  if(!Array.isArray(state.seedHistory)) state.seedHistory = [];
+  // 중복 — 이미 있으면 최상단으로 이동(즐겨찾기 상태 유지)
+  const idx = state.seedHistory.findIndex(s => s.seed === seed);
+  let entry;
+  if(idx >= 0){
+    entry = state.seedHistory.splice(idx, 1)[0];
+    entry.ts = Date.now();
+  } else {
+    entry = {seed, ts: Date.now(), fav: false, note: ''};
+  }
+  state.seedHistory.unshift(entry);
+  // 100개 한도 — 단, 즐겨찾기는 항상 보존
+  if(state.seedHistory.length > 100){
+    const favs = state.seedHistory.filter(s => s.fav);
+    const recent = state.seedHistory.filter(s => !s.fav).slice(0, Math.max(0, 100 - favs.length));
+    state.seedHistory = [...recent, ...favs];
+  }
+  saveSettingsDebounced();
+}
+
+let _seedHistFavOnly = false;
+function openSeedHistory(){
+  $('seedHistFilter').value = '';
+  _seedHistFavOnly = false;
+  $('seedHistFavOnly').classList.remove('act');
+  renderSeedHistory();
+  $('seedHistModal').classList.add('open');
+  setTimeout(() => $('seedHistFilter').focus(), 60);
+}
+
+function renderSeedHistory(){
+  const list = $('seedHistList');
+  const q = ($('seedHistFilter').value || '').toLowerCase().trim();
+  let items = (state.seedHistory || []).slice();
+  if(_seedHistFavOnly) items = items.filter(s => s.fav);
+  if(q) items = items.filter(s => String(s.seed).includes(q) || (s.note||'').toLowerCase().includes(q));
+  if(!items.length){
+    list.innerHTML = `<div style="padding:30px;text-align:center;color:var(--t3);font-size:12.5px;font-style:italic">${(state.seedHistory||[]).length ? '검색 결과 없음' : '아직 기록된 시드가 없습니다 (생성하면 자동 기록)'}</div>`;
+    return;
+  }
+  list.innerHTML = items.map(s => {
+    const dt = new Date(s.ts);
+    const dateStr = `${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    return `<div class="sh-row" data-seed="${s.seed}" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--b1);cursor:pointer;transition:background .12s">
+      <button class="sh-fav iconbtn" data-act="fav" data-seed="${s.seed}" title="${s.fav?'즐겨찾기 해제':'즐겨찾기'}" style="width:30px;height:30px;font-size:14px;background:transparent;border:none;color:${s.fav?'var(--yellow)':'var(--t3)'}">${s.fav?'⭐':'☆'}</button>
+      <span style="font-family:var(--mono);font-weight:700;color:var(--t1);min-width:110px">${s.seed}</span>
+      <input class="inp tiny sh-note" data-act="note" data-seed="${s.seed}" value="${esc(s.note||'')}" placeholder="메모 (선택)" style="flex:1;min-width:80px;font-size:11.5px;padding:4px 8px">
+      <span style="font-family:var(--mono);font-size:10.5px;color:var(--t3);min-width:60px;text-align:right">${dateStr}</span>
+      <button class="btn ghost" data-act="use" data-seed="${s.seed}" style="padding:4px 9px;font-size:11px">↻ 사용</button>
+      <button class="btn ghost" data-act="del" data-seed="${s.seed}" style="padding:4px 8px;font-size:11px;color:var(--red);border-color:rgba(181,67,56,.35)" title="삭제">×</button>
+    </div>`;
+  }).join('');
+}
+
+function useSeedFromHistory(seed){
+  $('seed').value = seed;
+  state.lastSeed = parseInt(seed, 10);
+  saveSettingsDebounced();
+  $('seedHistModal').classList.remove('open');
+  toast(`🌱 시드 적용: ${seed}`, 'success');
+}
+
+function toggleSeedFav(seed){
+  const e = (state.seedHistory||[]).find(s => s.seed === parseInt(seed, 10));
+  if(!e) return;
+  e.fav = !e.fav;
+  saveSettingsDebounced();
+  renderSeedHistory();
+}
+
+function deleteSeedFromHistory(seed){
+  const i = (state.seedHistory||[]).findIndex(s => s.seed === parseInt(seed, 10));
+  if(i >= 0){
+    state.seedHistory.splice(i, 1);
+    saveSettingsDebounced();
+    renderSeedHistory();
+  }
+}
+
+function updateSeedNote(seed, note){
+  const e = (state.seedHistory||[]).find(s => s.seed === parseInt(seed, 10));
+  if(!e) return;
+  e.note = note;
+  saveSettingsDebounced();
+}
+
+function clearSeedHistoryNonFav(){
+  state.seedHistory = (state.seedHistory||[]).filter(s => s.fav);
+  saveSettingsDebounced();
+  renderSeedHistory();
+  toast('즐겨찾기 외 시드 기록 삭제됨', 'info');
 }
 
 async function runDirector(apiKey){
@@ -5414,6 +5609,62 @@ async function afterImage(blob, q){
 // ═══════════════════════════════════════════════════════════
 // GALLERY
 // ═══════════════════════════════════════════════════════════
+// 📦 가상 스크롤 — 큰 갤러리에서 한꺼번에 렌더하지 않고 청크 단위로
+let _galObserver = null;
+const GAL_CHUNK = 80;
+function renderGalleryTokens(grid, tokens){
+  // 이전 observer 정리
+  if(_galObserver){ _galObserver.disconnect(); _galObserver = null; }
+  if(!tokens.length){
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--t3);padding:40px">검색 결과 없음</div>';
+    applySelStyles();
+    return;
+  }
+  let rendered = 0;
+  const renderNext = () => {
+    if(rendered >= tokens.length){ cleanupSentinel(); return; }
+    const end = Math.min(rendered + GAL_CHUNK, tokens.length);
+    // 첫 청크는 innerHTML로 전체 교체(이전 잔류 제거), 이후는 insertAdjacentHTML로 추가
+    const html = tokens.slice(rendered, end).join('');
+    if(rendered === 0){
+      grid.innerHTML = html;
+    } else {
+      // 센티넬 앞에 삽입
+      const s = grid.querySelector('.gal-sentinel');
+      if(s) s.insertAdjacentHTML('beforebegin', html);
+      else grid.insertAdjacentHTML('beforeend', html);
+    }
+    rendered = end;
+    applySelStyles();
+    if(rendered < tokens.length){ placeSentinel(); }
+    else { cleanupSentinel(); }
+  };
+  const cleanupSentinel = () => {
+    grid.querySelector('.gal-sentinel')?.remove();
+    if(_galObserver){ _galObserver.disconnect(); _galObserver = null; }
+  };
+  const placeSentinel = () => {
+    let s = grid.querySelector('.gal-sentinel');
+    if(!s){
+      s = document.createElement('div');
+      s.className = 'gal-sentinel';
+      s.style.cssText = 'grid-column:1/-1;text-align:center;padding:18px 10px;color:var(--t3);font-size:11.5px;font-family:var(--mono)';
+      s.innerHTML = `<span style="opacity:.7">⋯ 더 불러오는 중 (${rendered}/${tokens.length}) ⋯</span>`;
+      grid.appendChild(s);
+    } else {
+      s.innerHTML = `<span style="opacity:.7">⋯ 더 불러오는 중 (${rendered}/${tokens.length}) ⋯</span>`;
+      // 항상 마지막에 배치
+      grid.appendChild(s);
+    }
+    if(_galObserver){ _galObserver.disconnect(); }
+    _galObserver = new IntersectionObserver(entries => {
+      if(entries.some(e => e.isIntersecting)) renderNext();
+    }, {root: grid, rootMargin: '600px 0px'});
+    _galObserver.observe(s);
+  };
+  renderNext();
+}
+
 function renderGalleryItemHtml(img, sesId){
   const url = URL.createObjectURL(img.blob);
   const m = img.meta || {};
@@ -5426,7 +5677,7 @@ function renderGalleryItemHtml(img, sesId){
   // 자세한 메타는 lightbox(🔍)에서만 — 카드는 깨끗하게
   return `<div class="g-item${expanded?' expanded':''}" data-id="${img.id}" data-sid="${sesId}" data-url="${url}">
     <div class="g-thumb">
-      <img src="${url}" loading="lazy" alt="">
+      <img src="${url}" loading="lazy" decoding="async" alt="">
       <button class="g-album-btn" data-act="album" title="앨범에 추가/제거">📁</button>
       <button class="open-lb" data-act="lb" title="크게 보기 (Lightbox)">🔍</button>
     </div>
@@ -5479,12 +5730,12 @@ async function loadGallery(){
       allImages.push({img, sesId:ses.id, sesLabel:ses.label, ts:img.ts||ses.ts});
     }
   }
-  let parts = [];
+  // tokens: 개별 HTML 조각 배열 — 가상 스크롤을 위해 청크 렌더링 가능
+  let tokens = [];
   if(viewMode === 'album'){
     // 1) 사용자 앨범 — 항상 표시 (비어있어도)
     for(const ua of state.userAlbums){
       const list = allImages.filter(item => (state.albumMembership[item.img.id]||[]).includes(ua.id));
-      // 썸네일: 첫 이미지가 있으면 그걸로 (blob URL은 다음 loadGallery에서 정리됨)
       const firstImg = list[0]?.img;
       let thumbHtml;
       if(firstImg){
@@ -5493,7 +5744,7 @@ async function loadGallery(){
       } else {
         thumbHtml = `<div class="ah-ico" style="background:var(--b3)">📁</div>`;
       }
-      parts.push(`<div class="album-header">${thumbHtml}<div class="ah-info">
+      tokens.push(`<div class="album-header">${thumbHtml}<div class="ah-info">
         <div class="ah-name">${esc(ua.name)} <span class="en">User Album</span></div>
         <div class="ah-stats">${list.length.toLocaleString()}장 · 사용자 앨범</div>
       </div>
@@ -5502,9 +5753,9 @@ async function loadGallery(){
         <button class="btn ghost" data-act="del-user-album" data-aid="${esc(ua.id)}" style="padding:5px 10px;font-size:11.5px;color:var(--red);border-color:rgba(181,67,56,.4)">🗑 삭제</button>
       </div></div>`);
       if(list.length){
-        parts.push(list.map(it => renderGalleryItemHtml(it.img, it.sesId)).join(''));
+        for(const it of list) tokens.push(renderGalleryItemHtml(it.img, it.sesId));
       } else {
-        parts.push(`<div style="grid-column:1/-1;text-align:center;padding:14px;color:var(--t3);font-size:12px;background:var(--card);border:1.5px dashed var(--b1);border-radius:6px">이 앨범은 비어있습니다 — 이미지의 📁 버튼으로 추가하세요</div>`);
+        tokens.push(`<div style="grid-column:1/-1;text-align:center;padding:14px;color:var(--t3);font-size:12px;background:var(--card);border:1.5px dashed var(--b1);border-radius:6px">이 앨범은 비어있습니다 — 이미지의 📁 버튼으로 추가하세요</div>`);
       }
     }
     // 2) 캐릭터 자동 앨범
@@ -5526,7 +5777,7 @@ async function loadGallery(){
     const findThumb = name => charPresets.find(p => p.name === name)?.thumb;
     const sortedNames = [...albums.keys()].sort((a,b)=> albums.get(b).length - albums.get(a).length);
     if(sortedNames.length){
-      parts.push(`<div style="grid-column:1/-1;padding:20px 4px 6px;color:var(--t1);font-size:14px;font-weight:700">👥 캐릭터별 자동 앨범 <span style="color:var(--t3);font-weight:400;font-size:12px">— 생성 시 사용한 캐릭터 이름 기준</span></div>`);
+      tokens.push(`<div style="grid-column:1/-1;padding:20px 4px 6px;color:var(--t1);font-size:14px;font-weight:700">👥 캐릭터별 자동 앨범 <span style="color:var(--t3);font-weight:400;font-size:12px">— 생성 시 사용한 캐릭터 이름 기준</span></div>`);
     }
     for(const name of sortedNames){
       const list = albums.get(name);
@@ -5534,18 +5785,18 @@ async function loadGallery(){
       const thumbHtml = thumb
         ? `<div class="ah-thumb" style="background-image:url('${esc(thumb)}')"></div>`
         : `<div class="ah-ico">${esc(name.slice(0,1).toUpperCase())}</div>`;
-      parts.push(`<div class="album-header">${thumbHtml}<div class="ah-info">
+      tokens.push(`<div class="album-header">${thumbHtml}<div class="ah-info">
         <div class="ah-name">${esc(name)} <span class="en">Character</span></div>
         <div class="ah-stats">${list.length.toLocaleString()}장 · 최근 ${fmtDate(Math.max(...list.map(i=>i.ts)))}</div>
       </div></div>`);
-      parts.push(list.map(it => renderGalleryItemHtml(it.img, it.sesId)).join(''));
+      for(const it of list) tokens.push(renderGalleryItemHtml(it.img, it.sesId));
     }
     if(unsorted.length){
-      parts.push(`<div class="album-header"><div class="ah-ico" style="background:var(--b2)">?</div><div class="ah-info">
+      tokens.push(`<div class="album-header"><div class="ah-ico" style="background:var(--b2)">?</div><div class="ah-info">
         <div class="ah-name">미분류 <span class="en">Uncategorized</span></div>
         <div class="ah-stats">${unsorted.length.toLocaleString()}장 · 캐릭터 정보 없음</div>
       </div></div>`);
-      parts.push(unsorted.map(it => renderGalleryItemHtml(it.img, it.sesId)).join(''));
+      for(const it of unsorted) tokens.push(renderGalleryItemHtml(it.img, it.sesId));
     }
   } else {
     // 세션별 — 기본
@@ -5555,29 +5806,28 @@ async function loadGallery(){
         curSes = item.sesId;
         const ses = sessions.find(s => s.id === item.sesId);
         const countInSession = allImages.filter(a => a.sesId === item.sesId).length;
-        // 이 세션의 모든 이미지가 펼쳐졌는지 확인
         const sessionImgIds = allImages.filter(a => a.sesId === item.sesId).map(a => a.img.id);
         const allExp = sessionImgIds.length > 0 && sessionImgIds.every(id => _expandedGallery.has(id));
-        parts.push(`<div class="session-sep"><span class="ses-dot"></span><span>${esc(ses.label)}</span><span class="ses-meta">${countInSession}장</span><span class="ses-line"></span>
+        tokens.push(`<div class="session-sep"><span class="ses-dot"></span><span>${esc(ses.label)}</span><span class="ses-meta">${countInSession}장</span><span class="ses-line"></span>
           <button class="btn ghost" data-act="ses-toggle" data-sid="${item.sesId}" style="padding:4px 10px;font-size:11.5px" title="이 세션의 모든 이미지를 펼치거나 접습니다">${allExp?'⤡ 세션 접기':'⤢ 세션 펼침'} <span class="en">${allExp?'Collapse':'Expand'}</span></button>
           <button class="btn ghost" data-act="del-ses" data-sid="${item.sesId}" style="padding:4px 10px;font-size:11.5px">세션 삭제 <span class="en">Delete</span></button></div>`);
       }
-      parts.push(renderGalleryItemHtml(item.img, item.sesId));
+      tokens.push(renderGalleryItemHtml(item.img, item.sesId));
     }
   }
-  grid.innerHTML = parts.join('') || '<div style="grid-column:1/-1;text-align:center;color:var(--t3);padding:40px">검색 결과 없음</div>';
+  // 청크 렌더링 — 처음 80개만 즉시, 나머지는 IntersectionObserver로 점진 추가
   $('galleryInfo').textContent = `${allImages.length.toLocaleString()}장 · ${totalSessions}개 세션`;
-  // 마퀴 선택된 항목 시각 복원
-  applySelStyles();
-  // 삭제된 ID는 자동 정리
-  const existingIds = new Set([...grid.querySelectorAll('.g-item')].map(el => parseInt(el.dataset.id)));
-  for(const id of [..._gallerySel]){ if(!existingIds.has(id)) _gallerySel.delete(id); }
-  // 갤러리에 아무 카드도 없으면 선택 모드 자동 해제 → UI 상태 일관성
-  if(existingIds.size === 0 && _selectionMode){
+  // 삭제된 ID는 자동 정리 — DOM이 아닌 allImages에서 정답 도출(가상 스크롤 호환)
+  const knownIds = new Set(allImages.map(a => a.img.id));
+  for(const id of [..._gallerySel]){ if(!knownIds.has(id)) _gallerySel.delete(id); }
+  // 갤러리에 아무 이미지도 없으면 선택 모드 자동 해제 → UI 상태 일관성
+  if(knownIds.size === 0 && _selectionMode){
     setSelectionMode(false);
   } else {
     refreshGalSelToolbar();
   }
+  // 청크 렌더 시작 (applySelStyles는 청크마다 자동 호출됨)
+  renderGalleryTokens(grid, tokens);
 }
 
 async function refreshGallerySize(){
@@ -5805,6 +6055,8 @@ function initGalleryMarquee(){
   grid._marqueeInit = true;
 
   grid.addEventListener('mousedown', e => {
+    // 모바일·터치 디바이스에선 마퀴 비활성화 (롱프레스+탭으로 충분, 오작동 방지)
+    if(window.matchMedia('(hover: none)').matches || window.innerWidth <= 880) return;
     // 카드 클릭 / 버튼 클릭은 무시
     if(e.target.closest('.g-item, button, a, input, select, textarea')) return;
     if(e.button !== 0) return;  // 좌클릭만
@@ -6422,6 +6674,149 @@ function refreshPromptStats(){
   $('promptTokens').textContent = `${n.toLocaleString()} 글자 (chars)`;
 }
 
+// ═══════════════════════════════════════════════════════════
+// 💡 PROMPT AUTOCOMPLETE — 마지막 콤마 이후 단어로 태그 도감 검색
+// ═══════════════════════════════════════════════════════════
+let _acIndex = null;     // 캐시된 (영문, 한글) 평탄 인덱스
+let _acTarget = null;    // 현재 자동완성 대상 textarea
+let _acAnchorPos = 0;    // 마지막 콤마 이후 시작 위치
+let _acItems = [];
+let _acSelIdx = 0;
+let _acBox = null;
+
+function buildAutocompleteIndex(){
+  if(_acIndex) return _acIndex;
+  const seen = new Map();  // tag → korean
+  for(const cat of TAG_CATEGORIES){
+    for(const t of cat.tags){
+      const en = String(t[0]||'').toLowerCase();
+      const ko = String(t[1]||'');
+      if(en && !seen.has(en)) seen.set(en, ko);
+    }
+  }
+  // 갤러리에서 자주 쓴 태그 보강
+  for(const e of (state.galleryTagIndex || [])){
+    const en = String(e.tag||'').toLowerCase();
+    if(en && !seen.has(en)) seen.set(en, '');
+  }
+  _acIndex = [...seen.entries()].map(([en, ko]) => ({en, ko}));
+  return _acIndex;
+}
+
+function getAcPartial(ta){
+  const v = ta.value;
+  const caret = ta.selectionStart;
+  const before = v.slice(0, caret);
+  // 마지막 콤마 또는 줄바꿈 이후 부분이 검색어
+  const m = before.match(/(?:^|[,\n])\s*([^,\n]*)$/);
+  if(!m) return null;
+  const partial = m[1].trim();
+  if(partial.length < 2) return null;
+  const start = caret - m[1].length;
+  // 가중치 문법 `1.3::tag` 내부면 skip
+  if(/::[^:]*$/.test(before)) return null;
+  return {partial, start};
+}
+
+function showAcBox(ta){
+  if(!_acBox){
+    _acBox = document.createElement('div');
+    _acBox.id = 'acBox';
+    _acBox.className = 'ac-box';
+    document.body.appendChild(_acBox);
+    _acBox.addEventListener('mousedown', e => {
+      const item = e.target.closest('.ac-item');
+      if(item){
+        e.preventDefault();
+        const idx = parseInt(item.dataset.idx, 10);
+        applyAcItem(idx);
+      }
+    });
+  }
+  const r = ta.getBoundingClientRect();
+  const maxH = 200;
+  // textarea 아래에 배치, 화면 밖이면 위쪽으로
+  let top = r.bottom + window.scrollY + 4;
+  if(top + maxH > window.scrollY + window.innerHeight - 8){
+    top = r.top + window.scrollY - maxH - 4;
+  }
+  _acBox.style.top = `${top}px`;
+  _acBox.style.left = `${r.left + window.scrollX}px`;
+  _acBox.style.width = `${Math.max(220, Math.min(r.width, 480))}px`;
+  _acBox.style.display = 'block';
+}
+
+function hideAcBox(){
+  if(_acBox) _acBox.style.display = 'none';
+  _acItems = [];
+  _acSelIdx = 0;
+  _acTarget = null;
+}
+
+function renderAcBox(){
+  if(!_acBox) return;
+  _acBox.innerHTML = _acItems.map((it, i) =>
+    `<div class="ac-item${i===_acSelIdx?' act':''}" data-idx="${i}"><span class="ac-en">${esc(it.en)}</span>${it.ko?`<span class="ac-ko">${esc(it.ko)}</span>`:''}</div>`
+  ).join('');
+  // 선택 항목 보이게 스크롤
+  const sel = _acBox.querySelector('.ac-item.act');
+  if(sel) sel.scrollIntoView({block:'nearest'});
+}
+
+function updateAutocomplete(ta){
+  const part = getAcPartial(ta);
+  if(!part){ hideAcBox(); return; }
+  const idx = buildAutocompleteIndex();
+  const q = part.partial.toLowerCase();
+  const matches = [];
+  // 1) 영문 prefix 매치 우선 → 2) 영문 substring → 3) 한글 substring
+  for(const it of idx){
+    if(it.en.startsWith(q)) matches.push({...it, _rank: 0});
+    else if(it.en.includes(q)) matches.push({...it, _rank: 1});
+    else if(it.ko && it.ko.includes(part.partial)) matches.push({...it, _rank: 2});
+    if(matches.length >= 80) break;
+  }
+  matches.sort((a, b) => a._rank - b._rank || a.en.length - b.en.length);
+  _acItems = matches.slice(0, 20);
+  _acTarget = ta;
+  _acAnchorPos = part.start;
+  _acSelIdx = 0;
+  if(!_acItems.length){ hideAcBox(); return; }
+  showAcBox(ta);
+  renderAcBox();
+}
+
+function applyAcItem(idx){
+  if(!_acTarget || !_acItems[idx]) return;
+  const ta = _acTarget;
+  const v = ta.value;
+  const caret = ta.selectionStart;
+  const inserted = _acItems[idx].en + ', ';
+  ta.value = v.slice(0, _acAnchorPos) + inserted + v.slice(caret);
+  const newPos = _acAnchorPos + inserted.length;
+  ta.setSelectionRange(newPos, newPos);
+  hideAcBox();
+  refreshPromptStats();
+  saveSettingsDebounced();
+}
+
+function setupPromptAutocomplete(){
+  const ta = $('prompt');
+  if(!ta || ta._acInit) return;
+  ta._acInit = true;
+  ta.addEventListener('input', () => updateAutocomplete(ta));
+  ta.addEventListener('keydown', e => {
+    if(!_acBox || _acBox.style.display === 'none' || !_acItems.length) return;
+    if(e.key === 'ArrowDown'){ e.preventDefault(); _acSelIdx = (_acSelIdx + 1) % _acItems.length; renderAcBox(); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); _acSelIdx = (_acSelIdx - 1 + _acItems.length) % _acItems.length; renderAcBox(); }
+    else if(e.key === 'Enter' || e.key === 'Tab'){ e.preventDefault(); applyAcItem(_acSelIdx); }
+    else if(e.key === 'Escape'){ hideAcBox(); }
+  });
+  ta.addEventListener('blur', () => setTimeout(hideAcBox, 150));
+  // 스크롤·리사이즈 시 위치 재계산
+  window.addEventListener('scroll', () => { if(_acTarget) showAcBox(_acTarget); }, {passive:true});
+}
+
 function refreshSamplerListByModel(){
   const mi = modelInfo($('model').value);
   const sel = $('sampler');
@@ -6487,6 +6882,7 @@ async function saveSettings(){
     characters: state.characters,
     mode: state.mode,
     presetType: state.presetType,
+    seedHistory: state.seedHistory,
   };
   await DB.appSet(payload);
 }
@@ -6603,6 +6999,7 @@ async function loadSettings(){
     setTimeout(() => $$('#uiScaleBtns .ui-scale-btn').forEach(x => x.classList.toggle('act', parseInt(x.dataset.scale)===nearest)), 0);
   }
   if(s.theme) setTheme(s.theme);
+  if(Array.isArray(s.seedHistory)) state.seedHistory = s.seedHistory;
   if(s.characters){
     // 마이그레이션: 옛 c.prompt만 있고 appearance/action이 비어있으면 → appearance로 이동
     state.characters = s.characters.map(c => {
@@ -6733,6 +7130,31 @@ function wireEvents(){
     $('lockSeedBtn').textContent = state.seedLocked ? '🔒' : '🔓';
     $('lockSeedBtn').classList.toggle('act', state.seedLocked);
     if(state.seedLocked && state.lastSeed) $('seed').value = state.lastSeed;
+  });
+  // ⏱ 시드 히스토리
+  $('seedHistBtn').addEventListener('click', openSeedHistory);
+  $('seedHistClose').addEventListener('click', () => $('seedHistModal').classList.remove('open'));
+  $('seedHistModal').addEventListener('click', e => { if(e.target === $('seedHistModal')) $('seedHistModal').classList.remove('open'); });
+  $('seedHistFilter').addEventListener('input', renderSeedHistory);
+  $('seedHistFavOnly').addEventListener('click', e => {
+    _seedHistFavOnly = !_seedHistFavOnly;
+    e.currentTarget.classList.toggle('act', _seedHistFavOnly);
+    renderSeedHistory();
+  });
+  $('seedHistClear').addEventListener('click', () => {
+    confirmDialog('즐겨찾기로 표시된 시드를 제외하고 모든 기록을 비울까요?', clearSeedHistoryNonFav, '시드 기록 비우기');
+  });
+  $('seedHistList').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-act]');
+    if(!btn) return;
+    const seed = btn.dataset.seed;
+    if(btn.dataset.act === 'use') useSeedFromHistory(seed);
+    else if(btn.dataset.act === 'fav') toggleSeedFav(seed);
+    else if(btn.dataset.act === 'del') deleteSeedFromHistory(seed);
+  });
+  $('seedHistList').addEventListener('input', e => {
+    const inp = e.target.closest('input.sh-note');
+    if(inp) updateSeedNote(inp.dataset.seed, inp.value);
   });
 
   // Clear prompt
@@ -7853,6 +8275,7 @@ async function init(){
   document.body.dataset.mview = 'edit';
   $$('.mn-btn').forEach(b => b.classList.toggle('act', b.dataset.mview === 'edit'));
   wireEvents();
+  setupPromptAutocomplete();
   await loadPresetsFromDB();
   await loadAlbums();
   await loadGalleryTagIndex();
