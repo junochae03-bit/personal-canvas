@@ -2598,13 +2598,50 @@ const fmtDate = ts => { const d=new Date(ts); return `${d.getMonth()+1}/${d.getD
 const blobToDataURL = blob => new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); });
 const dataURLtoBlob = url => fetch(url).then(r=>r.blob());
 
-function toast(msg, kind){
+/**
+ * 토스트 알림. 액션 버튼(예: 실행 취소)을 옵션으로 받을 수 있음.
+ * @param {string} msg
+ * @param {'info'|'success'|'warning'|'error'} [kind]
+ * @param {{label:string, onClick:()=>void, timeoutMs?:number}} [action]
+ */
+function toast(msg, kind, action){
   kind = kind || 'info';
   const el = document.createElement('div');
   el.className = 'toast ' + (kind==='error'?'err':kind==='success'?'ok':kind==='warning'?'warn':'');
-  el.textContent = msg;
+  const span = document.createElement('span');
+  span.textContent = msg;
+  span.style.cssText = 'flex:1;min-width:0';
+  el.style.display = 'flex';
+  el.style.alignItems = 'center';
+  el.style.gap = '10px';
+  el.appendChild(span);
+  let timeoutId = null;
+  const remove = () => {
+    if(timeoutId) clearTimeout(timeoutId);
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(20px)';
+    setTimeout(() => el.remove(), 200);
+  };
+  if(action && action.label && typeof action.onClick === 'function'){
+    const btn = document.createElement('button');
+    btn.className = 'toast-act';
+    btn.type = 'button';
+    btn.textContent = action.label;
+    btn.style.cssText = 'background:rgba(255,255,255,.18);border:1.5px solid currentColor;color:inherit;padding:5px 11px;border-radius:5px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;flex-shrink:0';
+    btn.addEventListener('click', () => {
+      try { action.onClick(); } catch(e){ console.warn('[toast action]', e); }
+      remove();
+    });
+    el.appendChild(btn);
+  }
   $('toastBox').appendChild(el);
-  setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateX(20px)'; setTimeout(()=>el.remove(),200); }, kind==='error'?4500:2500);
+  const ttl = action?.timeoutMs ?? (kind === 'error' ? 5500 : action ? 6000 : 2500);
+  timeoutId = setTimeout(remove, ttl);
+}
+
+// ↶ 실행 취소 헬퍼 — 위험한 작업 직후 호출하면 자동으로 undo 토스트 띄움
+function toastUndo(msg, undoFn, timeoutMs){
+  toast(msg, 'success', {label:'↶ 실행 취소', onClick: undoFn, timeoutMs: timeoutMs ?? 6000});
 }
 
 function confirmDialog(msg, onOk, title){
@@ -3495,14 +3532,22 @@ function removeCharacter(idx){
   const c = state.characters[idx];
   if(!c){ return; }
   const hasContent = (c.name||'').trim() || (c.appearance||'').trim() || (c.action||'').trim() || (c.prompt||'').trim() || (c.neg||'').trim() || c.thumb;
+  // 깊은 복사로 보존 → 실행 취소 시 복원
+  const snapshot = JSON.parse(JSON.stringify(c));
+  const label = c.name ? `"${c.name}"` : `캐릭터 #${idx+1}`;
   const doRemove = () => {
     state.characters.splice(idx, 1);
     renderCharacters();
     refreshCost();
     saveSettingsDebounced();
+    toastUndo(`${label} 슬롯 삭제됨`, () => {
+      state.characters.splice(idx, 0, snapshot);
+      renderCharacters();
+      refreshCost();
+      saveSettingsDebounced();
+    });
   };
   if(hasContent){
-    const label = c.name ? `"${c.name}"` : `캐릭터 #${idx+1}`;
     confirmDialog(`${label} 슬롯을 삭제하시겠습니까?\n(프롬프트와 썸네일이 함께 제거됩니다)`, doRemove, '캐릭터 삭제');
   } else {
     doRemove();
@@ -3597,12 +3642,21 @@ function clearCharActionFromModal(){
   if(_charPickIdx < 0) return;
   const c = state.characters[_charPickIdx];
   if(!c || !(c.action || '').trim()) return;
+  const prev = c.action;
+  const idx = _charPickIdx;
   c.action = '';
-  const ta = $('charList').querySelector(`textarea[data-act="action"][data-idx="${_charPickIdx}"]`);
+  const ta = $('charList').querySelector(`textarea[data-act="action"][data-idx="${idx}"]`);
   if(ta) ta.value = '';
   saveSettingsDebounced();
   renderCpStatus();
-  toast(`#${_charPickIdx+1} 액션 슬롯을 비웠습니다`, 'success');
+  toastUndo(`#${idx+1} 액션 슬롯을 비웠습니다`, () => {
+    const cc = state.characters[idx]; if(!cc) return;
+    cc.action = prev;
+    const tta = $('charList').querySelector(`textarea[data-act="action"][data-idx="${idx}"]`);
+    if(tta) tta.value = prev;
+    saveSettingsDebounced();
+    if(_charPickIdx === idx) renderCpStatus();
+  });
 }
 
 // 단일 칩 × 제거
@@ -7633,7 +7687,12 @@ function wireEvents(){
   // Clear prompt
   $('clearPromptBtn').addEventListener('click', () => {
     if($('prompt').readOnly){ toast('잠금 해제 후 비울 수 있습니다', 'warning'); return; }
+    const prev = $('prompt').value;
+    if(!prev.trim()){ return; }  // 이미 비어있으면 조용히
     $('prompt').value=''; refreshPromptStats(); saveSettingsDebounced();
+    toastUndo('프롬프트를 비웠습니다', () => {
+      $('prompt').value = prev; refreshPromptStats(); saveSettingsDebounced();
+    });
   });
   // 🧹 중복 정리 — 수동 트리거
   $('dedupePromptBtn').addEventListener('click', () => {
@@ -8181,11 +8240,15 @@ function wireEvents(){
     const delBtn = e.target.closest('[data-act="del-ses"]');
     if(delBtn){
       const sid = parseInt(delBtn.dataset.sid);
-      confirmDialog('세션을 삭제하시겠습니까?', async () => {
+      const ses = state.gallerySessions.find(s => s.id === sid);
+      const label = ses?.label || `세션 #${sid}`;
+      const count = ses?.count || 0;
+      confirmDialog(`"${label}" 세션 (${count}장)을 삭제하시겠습니까?\n포함된 이미지가 모두 사라집니다 (되돌릴 수 없음).`, async () => {
         await DB.deleteSession(sid);
         await loadGallery();
         await refreshGallerySize();
-      });
+        toast(`🗑 세션 삭제됨: ${label}`, 'success');
+      }, '세션 삭제');
       e.stopPropagation();
       return;
     }
@@ -8502,11 +8565,29 @@ function wireEvents(){
   });
   $('lbDelete').addEventListener('click', () => {
     if(!_lbCurrent) return;
-    confirmDialog('이 이미지를 삭제하시겠습니까?', async () => {
+    confirmDialog('이 이미지를 삭제하시겠습니까?\n(실행 취소는 토스트 안 ↶ 버튼으로 6초 안에)', async () => {
+      // 복원용 스냅샷
+      const snap = {
+        blob: _lbCurrent.blob,
+        fname: _lbCurrent.fname,
+        label: _lbCurrent.label,
+        prompt: _lbCurrent.prompt,
+        meta: _lbCurrent.meta,
+      };
       await DB.deleteImage(_lbCurrent.id);
       closeLightbox();
       await loadGallery();
       await refreshGallerySize();
+      toastUndo('이미지 1장 삭제됨', async () => {
+        try {
+          await DB.saveImage(snap.blob, snap.fname, snap.label, snap.prompt, snap.meta);
+          await loadGallery();
+          await refreshGallerySize();
+          toast('복원됨', 'success');
+        } catch(e){
+          toast('복원 실패: ' + (e?.message||e), 'error');
+        }
+      });
     });
   });
 
