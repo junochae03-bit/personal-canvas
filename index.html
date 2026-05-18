@@ -1222,6 +1222,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <div class="row" style="margin-top:7px;justify-content:space-between;flex-wrap:wrap;gap:6px">
             <span class="lbl" id="promptTokens">0 글자</span>
             <div class="row" style="gap:6px;flex-wrap:wrap">
+              <button class="btn ghost" id="importExifBtn" style="padding:4px 10px;font-size:11.5px;border-color:rgba(58,99,152,.4);color:var(--blue)" title="NAI로 만든 PNG 파일을 올리면 그 안에 박힌 프롬프트·시드·모델 등 파라미터를 자동 복원합니다">📁 EXIF 복원 <span class="en" style="opacity:.6">Import</span></button>
+              <input type="file" id="exifFile" accept="image/png,image/*" style="display:none">
               <button class="btn ghost" id="lockPromptBtn" style="padding:4px 10px;font-size:11.5px" title="수정 잠금 (다시 누르면 해제)">🔓 잠금</button>
               <button class="btn ghost" id="dedupePromptBtn" style="padding:4px 10px;font-size:11.5px" title="콤마로 구분된 중복 태그를 한 번에 정리합니다">🧹 중복 정리</button>
               <button class="btn ghost" id="expandPromptBtn" style="padding:4px 10px;font-size:11.5px" title="큰 창에서 편집">⛶ 확대</button>
@@ -2956,6 +2958,86 @@ async function readPngMetadata(blob){
 // ═══════════════════════════════════════════════════════════
 function joinPrompts(...parts){
   return parts.map(s => (s||'').trim()).filter(Boolean).join(', ');
+}
+
+// 📁 외부 PNG의 NAI EXIF 메타에서 프롬프트·시드·모델·파라미터 일괄 복원
+// 이 앱이 저장한 PNG(내부 포맷)와 NovelAI 공식 포맷 둘 다 인식
+async function importPngExifToForm(file){
+  if(!file){ return; }
+  try {
+    const raw = await readPngMetadata(file);
+    if(!raw){
+      toast('PNG 파일이 아니거나 메타데이터가 없습니다', 'warning');
+      return;
+    }
+    const m = raw.parsed || {};
+    // 두 포맷 모두 커버하는 안전한 추출기
+    const pick = (...keys) => {
+      for(const k of keys){
+        const v = m[k];
+        if(v != null && v !== '') return v;
+      }
+      return null;
+    };
+    const prompt    = pick('prompt');
+    const neg       = pick('neg', 'uc', 'negative_prompt');
+    const seed      = pick('seed');
+    const model     = pick('model');
+    const steps     = pick('steps');
+    const cfg       = pick('cfg', 'scale');
+    const cfgResc   = pick('cfg_rescale');
+    const sampler   = pick('sampler');
+    const schedule  = pick('schedule', 'noise_schedule');
+    const w         = pick('w', 'width');
+    const h         = pick('h', 'height');
+    // tEXt 청크의 Description/parameters를 폴백 프롬프트 소스로
+    const altPrompt = raw.Description || raw.parameters;
+
+    const restored = [];
+    if(prompt != null){ $('prompt').value = prompt; restored.push('프롬프트'); }
+    else if(altPrompt){ $('prompt').value = altPrompt; restored.push('프롬프트(tEXt)'); }
+    if(neg != null){ $('negPrompt').value = neg; restored.push('네거티브'); }
+    if(seed != null){
+      $('seed').value = seed;
+      state.lastSeed = seed;
+      restored.push(`시드(${seed})`);
+    }
+    if(model){
+      const opt = [...$('model').options].find(o => o.value === model);
+      if(opt){ $('model').value = model; refreshSamplerListByModel(); restored.push('모델'); }
+    }
+    if(steps){ $('steps').value = steps; restored.push(`스텝(${steps})`); }
+    if(cfg != null){ $('cfgScale').value = cfg; restored.push(`CFG(${cfg})`); }
+    if(cfgResc != null) $('cfgRescale').value = cfgResc;
+    if(sampler){
+      const opt = [...$('sampler').options].find(o => o.value === sampler);
+      if(opt){ $('sampler').value = sampler; restored.push('샘플러'); }
+    }
+    if(schedule){
+      const opt = [...$('noiseSchedule').options].find(o => o.value === schedule);
+      if(opt) $('noiseSchedule').value = schedule;
+    }
+    if(w && h){
+      $('resAspect').value = 'custom';
+      $('customW').value = w;
+      $('customH').value = h;
+      const row = $('customResRow');
+      if(row) row.style.display = '';
+      restored.push(`${w}×${h}`);
+    }
+    refreshResInfo();
+    refreshPromptStats();
+    refreshCost();
+    saveSettingsDebounced();
+    if(restored.length){
+      toast(`✅ EXIF 복원: ${restored.join(' · ')}`, 'success');
+    } else {
+      toast('이 PNG에서 NAI 메타데이터를 찾지 못했습니다', 'warning');
+    }
+  } catch(e){
+    console.warn('[EXIF import]', e);
+    toast(`EXIF 추출 실패: ${e?.message || '알 수 없는 오류'}`, 'error');
+  }
 }
 
 // 🧹 콤마로 구분된 태그 중복 제거 (대소문자·공백 무시)
@@ -5763,6 +5845,7 @@ async function showLightboxAt(idx){
   }
   $('lbMeta').innerHTML = lines.join('<br>') || '메타 정보 없음 (No metadata)';
   $('lbMeta').classList.remove('expanded');  // 모바일에서 매번 접힌 상태로 시작
+  if(window._lbResetZoom) window._lbResetZoom();  // 이미지 전환 시 줌도 리셋
   // 카운터·내비 버튼 상태
   const counter = $('lbCounter');
   if(_lbList.length > 1){
@@ -5786,9 +5869,130 @@ function lbPrev(){ if(_lbIdx > 0) showLightboxAt(_lbIdx - 1); }
 function closeLightbox(){
   if($('lbImg').dataset.url) URL.revokeObjectURL($('lbImg').dataset.url);
   $('lightbox').classList.remove('open');
+  if(window._lbResetZoom) window._lbResetZoom();
   _lbCurrent = null;
   _lbList = [];
   _lbIdx = -1;
+}
+
+// 🔍 라이트박스 핀치 줌 + 팬 + 더블탭 — 모바일에서 이미지 확대 가능
+function setupLightboxZoomPan(){
+  const img = $('lbImg');
+  if(!img || img._zpInit) return;
+  img._zpInit = true;
+
+  let scale = 1, tx = 0, ty = 0;
+  let pinching = false, panning = false;
+  let pStartDist = 0, pStartScale = 1, pStartTx = 0, pStartTy = 0;
+  let pMidX = 0, pMidY = 0;
+  let panSX = 0, panSY = 0, panSTx = 0, panSTy = 0;
+  let lastTapT = 0, lastTapX = 0, lastTapY = 0;
+
+  const apply = () => {
+    img.style.transform = `translate3d(${tx}px,${ty}px,0) scale(${scale})`;
+  };
+  const reset = (animated) => {
+    scale = 1; tx = 0; ty = 0;
+    img.style.transition = animated ? 'transform .22s cubic-bezier(.22,.61,.36,1)' : 'none';
+    apply();
+    if(animated) setTimeout(() => { img.style.transition = ''; }, 240);
+  };
+  // 데스크탑 더블클릭 / 줌 외부 호출 노출
+  window._lbIsZoomed = () => scale > 1.05;
+  window._lbResetZoom = () => reset(false);
+
+  img.style.touchAction = 'none';   // 브라우저 기본 핀치/스크롤 차단 — 우리가 처리
+  img.style.transformOrigin = 'center center';
+  img.style.willChange = 'transform';
+
+  img.addEventListener('touchstart', e => {
+    if(e.touches.length === 2){
+      const [a,b] = e.touches;
+      pStartDist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
+      pStartScale = scale;
+      pStartTx = tx; pStartTy = ty;
+      pMidX = (a.clientX+b.clientX)/2;
+      pMidY = (a.clientY+b.clientY)/2;
+      pinching = true; panning = false;
+      img.style.transition = 'none';
+      img.style.cursor = 'grabbing';
+      e.preventDefault();
+      e.stopPropagation();
+    } else if(e.touches.length === 1 && scale > 1.05){
+      panSX = e.touches[0].clientX; panSY = e.touches[0].clientY;
+      panSTx = tx; panSTy = ty;
+      panning = true; pinching = false;
+      img.style.transition = 'none';
+      e.stopPropagation();
+    }
+  }, {passive:false});
+
+  img.addEventListener('touchmove', e => {
+    if(pinching && e.touches.length === 2){
+      const [a,b] = e.touches;
+      const d = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
+      const ns = Math.max(1, Math.min(6, pStartScale * (d / Math.max(1, pStartDist))));
+      const mx = (a.clientX+b.clientX)/2;
+      const my = (a.clientY+b.clientY)/2;
+      scale = ns;
+      tx = pStartTx + (mx - pMidX);
+      ty = pStartTy + (my - pMidY);
+      apply();
+      e.preventDefault();
+    } else if(panning && e.touches.length === 1 && scale > 1.05){
+      tx = panSTx + (e.touches[0].clientX - panSX);
+      ty = panSTy + (e.touches[0].clientY - panSY);
+      apply();
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, {passive:false});
+
+  img.addEventListener('touchend', e => {
+    if(e.touches.length === 0){
+      pinching = false; panning = false; pStartDist = 0;
+      // 스냅백 — 1배 미만으로 줄였으면 원상복귀
+      if(scale < 1.05) reset(true);
+    }
+    // 더블탭 감지 (단일 터치였고 핀치/팬 아니었을 때)
+    if(e.changedTouches.length === 1 && e.touches.length === 0 && !pinching){
+      const t = e.changedTouches[0];
+      const now = Date.now();
+      const isDouble = (now - lastTapT < 300) &&
+                       Math.abs(t.clientX - lastTapX) < 30 &&
+                       Math.abs(t.clientY - lastTapY) < 30;
+      if(isDouble){
+        if(scale > 1.1){ reset(true); }
+        else {
+          scale = 2.4;
+          img.style.transition = 'transform .22s cubic-bezier(.22,.61,.36,1)';
+          apply();
+          setTimeout(() => { img.style.transition = ''; }, 240);
+        }
+        lastTapT = 0;
+        e.preventDefault();
+        e.stopPropagation();
+      } else {
+        lastTapT = now;
+        lastTapX = t.clientX; lastTapY = t.clientY;
+      }
+    }
+  }, {passive:false});
+
+  // 마우스 휠 — 데스크탑 줌 (Ctrl+휠 또는 그냥 휠)
+  img.addEventListener('wheel', e => {
+    if(!e.ctrlKey && !e.metaKey && Math.abs(e.deltaY) < 30) return;
+    e.preventDefault();
+    const ns = Math.max(1, Math.min(6, scale * (e.deltaY < 0 ? 1.12 : 1/1.12)));
+    if(ns !== scale){
+      scale = ns;
+      img.style.transition = 'transform .12s ease-out';
+      apply();
+      setTimeout(() => { img.style.transition = ''; }, 140);
+    }
+  }, {passive:false});
+
+  // 라이트박스 닫힐 때 리셋 (closeLightbox에서 호출됨)
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -6722,6 +6926,23 @@ function wireEvents(){
   });
   $('openTagsBtn').addEventListener('click', () => setMainPane('tags'));
   $('openGuideBtn').addEventListener('click', openGuideModal);
+  // 📁 PNG EXIF 복원 — 외부 NAI 이미지에서 프롬프트·파라미터 일괄 가져오기
+  $('importExifBtn').addEventListener('click', () => $('exifFile').click());
+  $('exifFile').addEventListener('change', e => {
+    const f = e.target.files?.[0];
+    if(f) importPngExifToForm(f);
+    e.target.value = '';  // 같은 파일 재선택 가능하게
+  });
+  // 사이드바 빈 영역에 PNG 드롭 시 자동 EXIF 복원
+  document.querySelector('.sidebar')?.addEventListener('dragover', e => {
+    if(e.dataTransfer?.types?.includes('Files')) e.preventDefault();
+  });
+  document.querySelector('.sidebar')?.addEventListener('drop', e => {
+    // 캐릭터 썸네일/I2I 등 다른 dropzone이 잡았다면 스킵
+    if(e.target.closest('.img-drop,.char-thumb,#imgDrop,#directorImgWrap')) return;
+    const f = e.dataTransfer?.files?.[0];
+    if(f && /image\//.test(f.type)){ e.preventDefault(); importPngExifToForm(f); }
+  });
   $('guideClose').addEventListener('click', () => $('guideModal').classList.remove('open'));
   $('guideModal').addEventListener('click', e => { if(e.target === $('guideModal')) $('guideModal').classList.remove('open'); });
 
@@ -7048,15 +7269,21 @@ function wireEvents(){
     if(e.key === 'ArrowRight'){ e.preventDefault(); lbNext(); }
     else if(e.key === 'ArrowLeft'){ e.preventDefault(); lbPrev(); }
   });
-  // 모바일 스와이프 + 짧은 탭으로 닫기 (이미지 + 빈 영역)
+  // 🔍 라이트박스 핀치 줌 + 팬 + 더블탭
+  setupLightboxZoomPan();
+
+  // 모바일 스와이프(prev/next) + 짧은 탭으로 닫기 — 줌 중에는 무시
   let _lbTouchStartX = 0, _lbTouchStartY = 0, _lbTouchStartT = 0;
   const lbHandleTouchStart = e => {
-    if(!e.touches[0]) return;
+    if(window._lbIsZoomed && window._lbIsZoomed()) return;  // 줌 중엔 swipe 추적 안 함
+    if(e.touches.length !== 1) return;
     _lbTouchStartX = e.touches[0].clientX;
     _lbTouchStartY = e.touches[0].clientY;
     _lbTouchStartT = Date.now();
   };
   const lbHandleTouchEnd = e => {
+    if(window._lbIsZoomed && window._lbIsZoomed()) return;
+    if(e.touches.length > 0) return;            // 아직 손가락 남아있으면 무시
     if(!e.changedTouches[0]) return;
     const dx = e.changedTouches[0].clientX - _lbTouchStartX;
     const dy = e.changedTouches[0].clientY - _lbTouchStartY;
@@ -7074,10 +7301,10 @@ function wireEvents(){
   };
   $('lightbox').addEventListener('touchstart', lbHandleTouchStart, {passive: true});
   $('lightbox').addEventListener('touchend', lbHandleTouchEnd);
-  // 데스크톱: 이미지 클릭으로 닫기 (스와이프와 겹치지 않게 click 사용)
+  // 데스크톱: 이미지 클릭으로 닫기 (스와이프·줌과 겹치지 않게 click 사용)
   $('lbImg').addEventListener('click', e => {
-    // 모바일에서는 touchend가 click을 발생시킬 수 있으므로 touchend가 처리한 경우 무시
-    if(e.detail === 0) return;  // 합성 클릭(터치) 무시
+    if(e.detail === 0) return;  // 합성 클릭(터치) 무시 — touchend가 처리
+    if(window._lbIsZoomed && window._lbIsZoomed()) return;  // 줌 상태에선 닫지 않음
     closeLightbox();
   });
   $('lbDownload').addEventListener('click', () => {
