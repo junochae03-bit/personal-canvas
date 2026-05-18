@@ -1529,6 +1529,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
             </div>
           </div>
           <label class="chk" style="margin-bottom:7px"><input type="checkbox" id="continueOnError" checked>에러 시 다음 항목 계속 <span class="en">Continue on error</span></label>
+          <button class="btn ghost" id="previewGenBtnEdit" title="🎯 일괄 생성 — 현재 프롬프트에 시나리오를 결합하고 캐릭터별로 한 장씩 자동 생성. 백그라운드 동작 지원" style="width:100%;margin-bottom:7px;justify-content:center;border-color:rgba(58,99,152,.4);color:var(--blue);padding:9px 12px;font-size:13px;font-weight:700">🎯 일괄 생성 (캐릭터별) <span class="en" style="opacity:.6;font-weight:500;margin-left:4px">Batch</span></button>
 
           <!-- 📁 앱 내부 갤러리 저장 위치 -->
           <div class="field" style="margin-bottom:10px;padding:8px 10px;background:rgba(93,138,48,.06);border:1.5px solid rgba(93,138,48,.3);border-radius:5px">
@@ -1685,7 +1686,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <button class="btn ghost" id="autoClassifyBtn" title="이름 접두사로 자동 재분류 (의상_/상황_/배경_/포즈_/구도_/남녀_ 등)" style="border-color:rgba(162,90,31,.4)">🪄 자동 분류 <span class="en">Auto-classify</span></button>
           <div class="tb-grow"></div>
           <span id="presetInfo" style="font-size:12px;color:var(--t3);font-family:var(--mono)"></span>
-          <button class="btn ghost" id="previewGenBtn" title="액션 프리셋을 고정하고 캐릭터별로 미리보기 이미지 자동 생성" style="border-color:rgba(58,99,152,.4);color:var(--blue)">🎬 미리보기 생성 <span class="en" style="opacity:.6">Batch</span></button>
+          <button class="btn ghost" id="previewGenBtn" title="🎯 일괄 생성 — 현재 프롬프트에 시나리오를 결합하고 캐릭터별로 한 장씩 자동 생성" style="border-color:rgba(58,99,152,.4);color:var(--blue)">🎯 일괄 생성 <span class="en" style="opacity:.6">Batch</span></button>
           <button class="btn ghost" id="addPresetBtn">＋ 추가 <span class="en">Add</span></button>
         </div>
         <div class="preset-grid" id="presetGrid"></div>
@@ -1986,7 +1987,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       </div>
       <div id="cbGrid" class="cb-grid"></div>
       <div style="font-size:11.5px;color:var(--t3);margin-top:10px;line-height:1.55" id="cbHint">
-        💡 카드 탭으로 선택. 썸네일이 없는 캐릭터는 프리셋 탭의 <b>🎬 미리보기 생성</b>으로 한 번에 만들 수 있어요.
+        💡 카드 탭으로 선택. 썸네일 없는 캐릭터는 <b>🎯 일괄 생성</b>(프리셋 탭·편집 뷰)으로 한 번에 만들 수 있어요.
       </div>
     </div>
     <div class="modal-foot">
@@ -1999,24 +2000,27 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <!-- 🎬 PREVIEW GEN MODAL — 액션·상황 고정 + 캐릭터별로 미리보기 자동 생성 -->
 <div class="modal-bg" id="previewGenModal">
   <div class="modal" style="max-width:680px">
-    <h3 id="previewGenTitle">🎬 캐릭터 미리보기 일괄 생성 <span class="en">Batch Preview</span></h3>
+    <h3 id="previewGenTitle">🎯 일괄 생성 <span class="en">Batch Generate</span></h3>
     <div class="modal-body">
+      <div style="font-size:11.5px;color:var(--t3);margin-bottom:10px;line-height:1.55;padding:8px 11px;background:var(--card);border-radius:5px;border-left:3px solid var(--blue)">
+        💡 현재 프롬프트(그림체·품질 태그 포함) + 아래 시나리오를 합쳐서, 선택한 캐릭터들 각자로 한 장씩 생성합니다. 캐릭터 카탈로그·연속 변주·캐릭터 비교 등 어디든 활용 가능.
+      </div>
       <div class="field" style="margin-bottom:12px">
-        <span class="lbl">🎭 고정 시나리오 <span class="en">Scene</span></span>
+        <span class="lbl">🎭 추가할 시나리오 <span class="en">Scene</span> (선택)</span>
         <select id="pgPreset" class="inp" style="margin-bottom:6px"></select>
-        <textarea id="pgPromptText" class="ta tiny" style="min-height:64px;font-family:var(--mono);font-size:12.5px" placeholder="액션·상황·포즈 프리셋을 선택하거나 직접 입력 (캐릭터 외형 뒤에 결합됨)"></textarea>
+        <textarea id="pgPromptText" class="ta tiny" style="min-height:64px;font-family:var(--mono);font-size:12.5px" placeholder="(선택) 프리셋 골라 자동 채우거나 직접 입력 — 현재 프롬프트 뒤에 결합됩니다. 비워두면 캐릭터 외형만으로 생성"></textarea>
       </div>
       <div class="field" style="margin-bottom:12px">
         <span class="lbl">👥 대상 캐릭터 <span class="en">Targets</span> <span id="pgCharCount" style="color:var(--t3);font-weight:500;margin-left:4px"></span></span>
         <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
           <button class="btn ghost" id="pgSelectAll" style="padding:5px 10px;font-size:11.5px">☑ 전체 선택</button>
           <button class="btn ghost" id="pgDeselectAll" style="padding:5px 10px;font-size:11.5px">☐ 전체 해제</button>
-          <button class="btn ghost" id="pgSelectNoThumb" style="padding:5px 10px;font-size:11.5px" title="썸네일이 없는 캐릭터만 선택 (효율적 일괄 생성)">🆕 썸네일 없는 것만</button>
+          <button class="btn ghost" id="pgSelectNoThumb" style="padding:5px 10px;font-size:11.5px" title="썸네일이 없는 캐릭터만 선택 (썸네일 일괄 만들기 용도)">🆕 썸네일 없는 것만</button>
         </div>
         <div id="pgCharList" style="max-height:38vh;overflow-y:auto;border:1.5px solid var(--b1);border-radius:6px;background:var(--card);padding:6px"></div>
       </div>
       <div style="background:rgba(58,99,152,.06);border:1.5px solid rgba(58,99,152,.18);border-radius:6px;padding:9px 12px;margin-bottom:10px">
-        <label class="chk" style="margin-bottom:5px"><input type="checkbox" id="pgUpdateThumb" checked> 결과를 각 캐릭터 프리셋 썸네일로 자동 저장</label>
+        <label class="chk" style="margin-bottom:5px"><input type="checkbox" id="pgUpdateThumb"> 결과를 각 캐릭터 프리셋 썸네일로 자동 저장 <span class="en" style="color:var(--t3);opacity:.7">(카탈로그 만들기용)</span></label>
         <label class="chk" style="display:block"><input type="checkbox" id="pgNewSession" checked>📂 새 세션에 모아 저장</label>
       </div>
       <div style="padding:10px 13px;background:var(--card);border-radius:6px;border:1.5px solid var(--b1);font-size:13px;color:var(--t2)">
@@ -2117,10 +2121,10 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <!-- TOAST -->
 <div id="toastBox"></div>
 
-<!-- 🎬 백그라운드 미리보기 생성 진행 위젯 — 모달 닫아도 떠 있음 -->
-<button id="bgProgress" class="bg-progress" type="button" hidden aria-live="polite" title="진행 중인 미리보기 생성 — 탭하면 모달 다시 열기">
+<!-- 🎯 백그라운드 일괄 생성 진행 위젯 — 모달 닫아도 떠 있음 -->
+<button id="bgProgress" class="bg-progress" type="button" hidden aria-live="polite" title="진행 중인 일괄 생성 — 탭하면 모달 다시 열기">
   <span class="bg-pulse"></span>
-  <span class="bg-label">🎬 미리보기</span>
+  <span class="bg-label">🎯 일괄 생성</span>
   <span class="bg-count">0/0</span>
 </button>
 
@@ -6580,11 +6584,11 @@ function updateBgProgress(label, force){
     if(label && cnt){
       // label은 "🎬 N/M · name" 같은 형식
       const parts = label.split('·');
-      const main = parts[0]?.trim() || '🎬 미리보기';
+      const main = parts[0]?.trim() || '🎯 일괄 생성';
       const sub = parts.slice(1).join('·').trim();
       const m = /(\d+)\s*\/\s*(\d+)/.exec(main);
       if(m){ cnt.textContent = `${m[1]}/${m[2]}`; }
-      if(lbl) lbl.textContent = sub ? `🎬 ${sub}` : '🎬 미리보기';
+      if(lbl) lbl.textContent = sub ? `🎯 ${sub}` : '🎯 일괄 생성';
     }
   } else {
     el.hidden = true;
@@ -6682,7 +6686,7 @@ async function pgStart(){
   const useNewSession = $('pgNewSession').checked;
   // 새 세션
   if(useNewSession && typeof DB.newSession === 'function'){
-    await DB.newSession(`🎬 미리보기 — ${new Date().toLocaleString().slice(5,16)}`);
+    await DB.newSession(`🎯 일괄 — ${new Date().toLocaleString().slice(5,16)}`);
   }
   _pgRunning = true;
   _pgAbort = new AbortController();
@@ -6700,7 +6704,7 @@ async function pgStart(){
   for(const c of picked){
     if(!_pgRunning) break;
     $('pgProgLabel').textContent = `생성 중: ${c.name||'(이름 없음)'}`;
-    updateBgProgress(`🎬 ${done+1}/${total} · ${c.name||''}`);
+    updateBgProgress(`🎯 ${done+1}/${total} · ${c.name||''}`);
     try {
       const baseOpts = currentPromptOpts();
       // 그림체·품질 보존 — 사용자 현재 프롬프트가 메인이고, 시나리오는 뒤에 결합
@@ -6777,7 +6781,7 @@ async function pgStart(){
       await loadGallery();
     }
     await refreshGallerySize();
-    toast(`🎬 미리보기 ${done}장 생성됨${errors?` (실패 ${errors})`:''}`, 'success');
+    toast(`🎯 일괄 ${done}장 생성됨${errors?` (실패 ${errors})`:''}`, 'success');
   }
 }
 
@@ -9217,6 +9221,9 @@ function wireEvents(){
     localStorage.setItem('nai_pre_psub', on ? '1' : '0');
   });
   $('previewGenBtn').addEventListener('click', openPreviewGenModal);
+  // 편집 뷰 사이드바의 진입점도 같이 (모델·생성 옵션 카드 안)
+  const pgBtnEdit = $('previewGenBtnEdit');
+  if(pgBtnEdit) pgBtnEdit.addEventListener('click', openPreviewGenModal);
   setupPresetPinch();
   // 🎬 미리보기 일괄 생성 모달 액션
   // 닫기 = 모달만 닫음, 생성은 백그라운드에서 계속 (실행 중이면 위젯 노출)
