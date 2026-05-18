@@ -584,6 +584,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .p-group-hdr .p-group-mark{font-size:11px;color:var(--acc);width:14px;text-align:center;font-weight:700}
 .p-group-hdr .p-group-name{flex:1;font-family:inherit}
 .p-group-hdr .p-group-count{font-family:var(--mono);font-size:11.5px;font-weight:700;background:var(--card2);color:var(--t2);padding:2px 9px;border-radius:11px}
+.p-group-edit,.cb-group-edit{background:transparent;border:1.25px solid var(--b1);color:var(--t2);width:26px;height:26px;border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit;transition:all .12s;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
+.p-group-edit:hover,.cb-group-edit:hover{border-color:var(--acc);color:var(--acc);background:rgba(162,90,31,.08)}
 .p-item{background:var(--card);border:1.5px solid var(--b1);border-radius:8px;overflow:hidden;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s;display:flex;flex-direction:column}
 .p-item:hover{border-color:var(--acc);box-shadow:0 6px 16px rgba(74,52,20,.15)}
 .p-item .p-thumb{max-height:0;overflow:hidden;transition:max-height .25s ease;position:relative}
@@ -1717,6 +1719,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           </div>
           <button class="btn ghost" id="presetShowPsubBtn" title="프롬프트 본문 미리보기 표시/숨김" aria-pressed="false">👁 본문 표시 <span class="en" style="opacity:.6">Text</span></button>
           <button class="btn ghost" id="presetExpandAll" title="모든 프리셋의 미리보기를 펼치거나 접습니다">⤢ 전체 펼침 <span class="en">Expand All</span></button>
+          <button class="btn ghost" id="presetGroupsToggle" title="📚 작품/시리즈 그룹 모두 접기·펼치기 (캐릭터 카테고리)" style="border-color:rgba(162,90,31,.4);color:var(--acc)">📚 그룹 일괄 <span class="en">Groups</span></button>
           <button class="btn ghost" id="autoClassifyBtn" title="이름 접두사로 자동 재분류 (의상_/상황_/배경_/포즈_/구도_/남녀_ 등)" style="border-color:rgba(162,90,31,.4)">🪄 자동 분류 <span class="en">Auto-classify</span></button>
           <div class="tb-grow"></div>
           <span id="presetInfo" style="font-size:12px;color:var(--t3);font-family:var(--mono)"></span>
@@ -2015,6 +2018,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <button class="cb-mode-btn act" data-mode="single" type="button">🎯 단일 선택</button>
           <button class="cb-mode-btn" data-mode="pool" type="button" title="여러 명 골라서 풀로 만들면 생성할 때마다 자동 교체">🔄 후보 풀</button>
         </div>
+        <button class="btn ghost" id="cbGroupsToggle" title="📚 작품/시리즈 그룹 모두 접기·펼치기" style="padding:5px 10px;font-size:11.5px;border-color:rgba(162,90,31,.4);color:var(--acc);flex-shrink:0">📚 그룹 일괄</button>
       </div>
       <div class="cb-actions" id="cbPoolActions" style="display:none">
         <button class="btn ghost" id="cbSelectAll" style="padding:5px 10px;font-size:11.5px">☑ 전체 선택</button>
@@ -4366,6 +4370,96 @@ function groupCharsByWork(list){
 // 접힌 그룹 상태 (사용자 토글)
 const _collapsedPresetGroups = new Set();
 
+// 작품명 변경 — 그 그룹의 모든 캐릭터 이름의 prefix를 함께 갱신
+async function renameCharGroup(oldGroup, newGroupRaw){
+  const newGroup = String(newGroupRaw || '').trim();
+  if(!newGroup) return false;
+  if(newGroup === oldGroup) return false;
+  // 같은 카테고리에 새 이름과 충돌하는 항목 없는지 확인 (선검사)
+  const chars = state.presets.character || [];
+  const targets = chars.filter(p => getCharGroup(p.name) === oldGroup);
+  if(!targets.length){ toast('변경할 캐릭터 없음', 'warning'); return false; }
+  const conflicts = [];
+  const renames = [];
+  for(const p of targets){
+    const oldName = p.name || '';
+    let newName;
+    const bracket = /^\[([^\]]+)\](.*)$/.exec(oldName);
+    if(bracket){
+      newName = `[${newGroup}]${bracket[2]}`;
+    } else {
+      const us = oldName.indexOf('_');
+      if(us > 0) newName = newGroup + oldName.slice(us);
+      else newName = oldName;
+    }
+    if(newName === oldName) continue;
+    // 동일 이름이 다른 항목에 이미 존재?
+    if(chars.some(x => x.name === newName && x !== p)){
+      conflicts.push({oldName, newName});
+      continue;
+    }
+    renames.push({preset: p, oldName, newName});
+  }
+  if(!renames.length){
+    toast(conflicts.length ? `이름 충돌 ${conflicts.length}건 — 변경 안 함` : '변경할 이름 없음', 'warning');
+    return false;
+  }
+  // 실행: DB에서 옛 키 삭제 후 새 이름으로 저장
+  for(const r of renames){
+    try {
+      await DB.presetDelete('character', r.oldName);
+      r.preset.name = r.newName;
+      await DB.presetPut('character', r.preset);
+    } catch(e){
+      console.warn('[rename]', r.oldName, '→', r.newName, e);
+    }
+  }
+  // 접힘 상태 유지: 옛 키 → 새 키로 이전
+  const oldKey = `g:character:${oldGroup}`;
+  const newKey = `g:character:${newGroup}`;
+  if(_collapsedPresetGroups.has(oldKey)){
+    _collapsedPresetGroups.delete(oldKey);
+    _collapsedPresetGroups.add(newKey);
+  }
+  const oldCbKey = `cb:${oldGroup}`;
+  const newCbKey = `cb:${newGroup}`;
+  if(_collapsedCbGroups.has(oldCbKey)){
+    _collapsedCbGroups.delete(oldCbKey);
+    _collapsedCbGroups.add(newCbKey);
+  }
+  // state 갱신은 presetPut 호출만으로는 안 됨 → 다시 로드
+  await loadPresetsFromDB();
+  toast(`📚 "${oldGroup}" → "${newGroup}" — ${renames.length}개 캐릭터 이름 갱신${conflicts.length ? ` (충돌 ${conflicts.length}건 스킵)` : ''}`, 'success');
+  return true;
+}
+
+// 모든 그룹 접기·펼치기 토글 (현재 상태에 따라 반대로)
+function togglePresetGroupsCollapseAll(){
+  if(state.presetType !== 'character') return;
+  const list = state.presets.character || [];
+  const groups = groupCharsByWork(list);
+  const allKeys = groups.map(g => `g:character:${g.group}`);
+  const allCollapsed = allKeys.length > 0 && allKeys.every(k => _collapsedPresetGroups.has(k));
+  if(allCollapsed){
+    allKeys.forEach(k => _collapsedPresetGroups.delete(k));
+  } else {
+    allKeys.forEach(k => _collapsedPresetGroups.add(k));
+  }
+  renderPresets();
+}
+function toggleCbGroupsCollapseAll(){
+  const list = state.presets.character || [];
+  const groups = groupCharsByWork(list);
+  const allKeys = groups.map(g => `cb:${g.group}`);
+  const allCollapsed = allKeys.length > 0 && allKeys.every(k => _collapsedCbGroups.has(k));
+  if(allCollapsed){
+    allKeys.forEach(k => _collapsedCbGroups.delete(k));
+  } else {
+    allKeys.forEach(k => _collapsedCbGroups.add(k));
+  }
+  renderCbGrid();
+}
+
 function renderPresets(){
   const type = state.presetType;
   const search = ($('presetSearch').value||'').toLowerCase().trim();
@@ -4422,10 +4516,11 @@ function renderPresets(){
       const collapsed = _collapsedPresetGroups.has(gKey);
       const itemsHtml = collapsed ? '' : g.items.map(renderItem).join('');
       return `
-        <div class="p-group-hdr" data-gkey="${esc(gKey)}" data-act="toggle-group">
-          <span class="p-group-mark">${collapsed ? '▶' : '▼'}</span>
-          <span class="p-group-name">📚 ${esc(g.group)}</span>
+        <div class="p-group-hdr" data-gkey="${esc(gKey)}" data-group="${esc(g.group)}">
+          <span class="p-group-mark" data-act="toggle-group">${collapsed ? '▶' : '▼'}</span>
+          <span class="p-group-name" data-act="toggle-group">📚 ${esc(g.group)}</span>
           <span class="p-group-count">${g.items.length}</span>
+          <button class="p-group-edit" data-act="rename-group" data-group="${esc(g.group)}" title="작품명 일괄 수정 — 이 그룹의 모든 캐릭터 이름 prefix가 함께 바뀝니다">✏</button>
         </div>
         ${itemsHtml}`;
     }).join('');
@@ -6629,10 +6724,11 @@ function renderCbGrid(){
     const gKey = `cb:${g.group}`;
     const collapsed = _collapsedCbGroups.has(gKey);
     const cards = collapsed ? '' : g.items.map(renderCard).join('');
-    return `<div class="cb-group-hdr" data-gkey="${esc(gKey)}">
-      <span class="cb-group-mark">${collapsed ? '▶' : '▼'}</span>
-      <span class="cb-group-name">📚 ${esc(g.group)}</span>
+    return `<div class="cb-group-hdr" data-gkey="${esc(gKey)}" data-group="${esc(g.group)}">
+      <span class="cb-group-mark" data-act="toggle-cb-group">${collapsed ? '▶' : '▼'}</span>
+      <span class="cb-group-name" data-act="toggle-cb-group">📚 ${esc(g.group)}</span>
       <span class="cb-group-count">${g.items.length}</span>
+      <button class="cb-group-edit" data-act="rename-cb-group" data-group="${esc(g.group)}" title="작품명 일괄 수정">✏</button>
     </div>${cards}`;
   }).join('');
 }
@@ -9076,6 +9172,7 @@ function wireEvents(){
   $('charBrowseModal').addEventListener('click', e => { if(e.target === $('charBrowseModal')) e.currentTarget.classList.remove('open'); });
   $('cbSearch').addEventListener('input', debounce(renderCbGrid, 80));
   $$('#charBrowseModal .cb-mode-btn').forEach(b => b.addEventListener('click', () => setCbMode(b.dataset.mode)));
+  $('cbGroupsToggle').addEventListener('click', toggleCbGroupsCollapseAll);
   $('cbSelectAll').addEventListener('click', () => {
     (state.presets.character || []).forEach(c => _cbPicks.add(c.name));
     renderCbMode(); renderCbGrid();
@@ -9084,13 +9181,30 @@ function wireEvents(){
     _cbPicks.clear();
     renderCbMode(); renderCbGrid();
   });
-  $('cbGrid').addEventListener('click', e => {
-    const gHdr = e.target.closest('.cb-group-hdr');
-    if(gHdr){
-      const k = gHdr.dataset.gkey;
-      if(_collapsedCbGroups.has(k)) _collapsedCbGroups.delete(k);
-      else _collapsedCbGroups.add(k);
-      renderCbGrid();
+  $('cbGrid').addEventListener('click', async e => {
+    // 📚 그룹 이름 변경
+    const renameBtn = e.target.closest('[data-act="rename-cb-group"]');
+    if(renameBtn){
+      e.stopPropagation();
+      const oldGroup = renameBtn.dataset.group;
+      const nn = prompt(`작품/시리즈 이름 변경\n"${oldGroup}" → ?\n\n이 그룹의 모든 캐릭터 이름 prefix가 함께 바뀝니다.`, oldGroup);
+      if(nn && nn.trim() && nn.trim() !== oldGroup){
+        await renameCharGroup(oldGroup, nn.trim());
+        // 같은 슬롯에 적용된 캐릭터도 이름 동기 (현재 슬롯이 이 그룹이면 화면 갱신)
+        renderCbGrid();
+      }
+      return;
+    }
+    // 그룹 토글
+    const toggleEl = e.target.closest('[data-act="toggle-cb-group"]');
+    if(toggleEl){
+      const gHdr = toggleEl.closest('.cb-group-hdr');
+      const k = gHdr?.dataset.gkey;
+      if(k){
+        if(_collapsedCbGroups.has(k)) _collapsedCbGroups.delete(k);
+        else _collapsedCbGroups.add(k);
+        renderCbGrid();
+      }
       return;
     }
     const card = e.target.closest('.cb-card');
@@ -9301,14 +9415,28 @@ function wireEvents(){
   $('addPresetBtn').addEventListener('click', () => openPresetEdit(state.presetType, null));
   // (옛 상단바 import/export 버튼 이벤트는 제거됨 — 모든 백업은 설정 탭에서 처리)
 
-  $('presetGrid').addEventListener('click', e => {
-    // 📚 그룹 헤더 토글 (접고 펼치기)
-    const groupHdr = e.target.closest('.p-group-hdr');
-    if(groupHdr){
-      const gKey = groupHdr.dataset.gkey;
-      if(_collapsedPresetGroups.has(gKey)) _collapsedPresetGroups.delete(gKey);
-      else _collapsedPresetGroups.add(gKey);
-      renderPresets();
+  $('presetGrid').addEventListener('click', async e => {
+    // 📚 그룹 이름 변경 — ✏ 클릭
+    const renameBtn = e.target.closest('[data-act="rename-group"]');
+    if(renameBtn){
+      e.stopPropagation();
+      const oldGroup = renameBtn.dataset.group;
+      const nn = prompt(`작품/시리즈 이름 변경\n"${oldGroup}" → ?\n\n이 그룹에 속한 모든 캐릭터의 이름 prefix가 함께 바뀝니다.`, oldGroup);
+      if(nn && nn.trim() && nn.trim() !== oldGroup){
+        await renameCharGroup(oldGroup, nn.trim());
+      }
+      return;
+    }
+    // 📚 그룹 헤더 토글 (접고 펼치기) — 토글 대상 영역만
+    const toggleEl = e.target.closest('[data-act="toggle-group"]');
+    if(toggleEl){
+      const groupHdr = toggleEl.closest('.p-group-hdr');
+      const gKey = groupHdr?.dataset.gkey;
+      if(gKey){
+        if(_collapsedPresetGroups.has(gKey)) _collapsedPresetGroups.delete(gKey);
+        else _collapsedPresetGroups.add(gKey);
+        renderPresets();
+      }
       return;
     }
     const item = e.target.closest('.p-item');
@@ -9346,6 +9474,14 @@ function wireEvents(){
     $('presetExpandAll').innerHTML = allMode
       ? '⤡ 전체 접기 <span class="en">Collapse All</span>'
       : '⤢ 전체 펼침 <span class="en">Expand All</span>';
+  });
+  // 📚 그룹 일괄 접기/펼치기
+  $('presetGroupsToggle').addEventListener('click', () => {
+    if(state.presetType !== 'character'){
+      toast('그룹은 캐릭터 카테고리에서만 표시됩니다', 'info');
+      return;
+    }
+    togglePresetGroupsCollapseAll();
   });
   $('autoClassifyBtn').addEventListener('click', autoClassifyByPrefix);
 
