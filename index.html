@@ -561,7 +561,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .rating-btn[data-rating="rating:explicit"].act{background:var(--red);border-color:var(--red);color:#fff}
 
 /* (옛 .pinned-sec 제거됨 — 메인 프롬프트로 통합) */
-.preset-grid{flex:1;padding:16px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;align-content:start;background:var(--bg);grid-auto-rows:min-content}
+.preset-grid{--pre-cell:220px;flex:1;padding:16px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--pre-cell),1fr));gap:12px;align-content:start;background:var(--bg);grid-auto-rows:min-content;touch-action:pan-y pinch-zoom}
 .p-item{background:var(--card);border:1.5px solid var(--b1);border-radius:8px;overflow:hidden;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s;display:flex;flex-direction:column}
 .p-item:hover{border-color:var(--acc);box-shadow:0 6px 16px rgba(74,52,20,.15)}
 .p-item .p-thumb{max-height:0;overflow:hidden;transition:max-height .25s ease;position:relative}
@@ -578,8 +578,11 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .p-item .p-head .ico-mini{font-size:14px;flex-shrink:0;opacity:.7}
 .p-item.has-thumb .p-head .ico-mini{color:var(--acc);opacity:1}
 .p-item .pname{font-size:13.5px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;flex:1;line-height:1.3}
-.p-item .psub{padding:0 12px 6px;font-size:11.5px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.5;word-break:break-word}
-.p-item .psub.empty{color:var(--t3);font-style:italic}
+/* 프롬프트 본문 미리보기는 기본 숨김 (지저분함) — 펼친 상태에서 썸네일·이름만 표시.
+   .show-psub 클래스를 그리드에 부여하면 다시 노출 가능. */
+.p-item .psub{display:none}
+.preset-grid.show-psub .p-item .psub{display:-webkit-box;padding:0 12px 6px;font-size:11.5px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.5;word-break:break-word}
+.preset-grid.show-psub .p-item .psub.empty{color:var(--t3);font-style:italic}
 .p-item .pact{padding:6px 8px 8px;display:flex;gap:5px;border-top:1px solid var(--b1);background:var(--panel)}
 .p-item .pact button{flex:1;background:var(--card);border:1px solid var(--b1);color:var(--t2);padding:6px 4px;font-size:11.5px;font-weight:600;border-radius:4px;cursor:pointer;font-family:inherit;transition:all .15s}
 .p-item .pact button:hover{color:var(--t1);border-color:var(--b2);background:var(--card2)}
@@ -818,7 +821,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   .preset-tabs{gap:3px}
   .preset-tab{padding:5px 9px;font-size:11px;border-radius:4px}
   .preset-tab .en{display:none}
-  .preset-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:7px;padding:8px}
+  .preset-grid{gap:7px;padding:8px}
   .p-item .pname{padding:6px 9px 2px;font-size:12px}
   .p-item .psub{padding:0 9px 4px;font-size:10px}
   .p-item .pact{padding:0 5px 5px;gap:3px}
@@ -944,6 +947,21 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .ac-item .ac-en{font-family:var(--mono);font-weight:600;color:var(--t1);font-size:13px}
 .ac-item.act .ac-en{color:var(--acc)}
 .ac-item .ac-ko{font-size:11.5px;color:var(--t3);margin-left:auto;white-space:nowrap}
+
+/* 📁 앨범 관리 모달 */
+.alb-create-row{display:flex;gap:8px;align-items:stretch;margin-bottom:14px}
+.alb-create-row .inp{flex:1;min-width:0}
+.alb-create-row .btn{flex-shrink:0}
+.alb-list{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto;padding:1px}
+.alb-row{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1.5px solid var(--b1);border-radius:6px;background:var(--card);transition:border-color .12s}
+.alb-row:hover{border-color:var(--b2)}
+.alb-row:focus-within{border-color:var(--acc)}
+.alb-row .alb-ico{font-size:18px;flex-shrink:0;line-height:1}
+.alb-row .alb-name{flex:1;min-width:0;background:var(--panel);border:1.5px solid var(--b1);color:var(--t1);font-size:13.5px;font-weight:600;padding:7px 10px;border-radius:4px;outline:none}
+.alb-row .alb-name:focus{border-color:var(--acc)}
+.alb-row .alb-count{font-family:var(--mono);font-size:11px;color:var(--t3);font-weight:600;background:var(--card2);padding:3px 9px;border-radius:11px;flex-shrink:0;white-space:nowrap}
+.alb-row .alb-del{width:36px;height:36px;font-size:14px;color:var(--red);border-color:rgba(181,67,56,.32);flex-shrink:0}
+.alb-row .alb-del:hover{background:rgba(181,67,56,.10);border-color:var(--red);color:var(--red)}
 
 /* ⏱ 시드 히스토리 모달 — 호버/액티브 행 강조 */
 .sh-row:hover{background:rgba(162,90,31,.06)}
@@ -1521,10 +1539,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <div class="main-pane" data-pane="gallery">
         <div class="gallery-bar">
           <input type="text" class="inp" id="gallerySearch" placeholder="🔍 프롬프트로 검색...">
-          <select id="galleryFilter" class="inp tiny">
+          <select id="galleryFilter" class="inp tiny" title="세션 선택 — 특정 세션의 이미지만 보기">
             <option value="all">모든 세션 (All)</option>
-            <option value="today">오늘 (Today)</option>
-            <option value="week">최근 1주 (Week)</option>
+            <!-- 세션 옵션들은 loadGallery에서 동적 채움 -->
           </select>
           <div class="gv-toggle" id="galleryView" title="보기 모드 (View mode)">
             <button data-gv="detail" class="act">상세 <span class="en">Detail</span></button>
@@ -1563,10 +1580,17 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <div class="preset-tabs" id="presetTabs"></div>
           <div style="flex-basis:100%;height:0"></div>
           <input type="text" class="inp" id="presetSearch" placeholder="🔍 이름·내용 검색...">
+          <div class="gal-zoom" title="프리셋 카드 크기 조절 (모바일: 두 손가락 핀치)">
+            <button class="iconbtn" id="presetZoomOut" title="작게 보기 (−)">−</button>
+            <span class="gz-ind" id="presetZoomInd" title="현재 크기">M</span>
+            <button class="iconbtn" id="presetZoomIn" title="크게 보기 (+)">+</button>
+          </div>
+          <button class="btn ghost" id="presetShowPsubBtn" title="프롬프트 본문 미리보기 표시/숨김" aria-pressed="false">👁 본문 표시 <span class="en" style="opacity:.6">Text</span></button>
           <button class="btn ghost" id="presetExpandAll" title="모든 프리셋의 미리보기를 펼치거나 접습니다">⤢ 전체 펼침 <span class="en">Expand All</span></button>
           <button class="btn ghost" id="autoClassifyBtn" title="이름 접두사로 자동 재분류 (의상_/상황_/배경_/포즈_/구도_/남녀_ 등)" style="border-color:rgba(162,90,31,.4)">🪄 자동 분류 <span class="en">Auto-classify</span></button>
           <div class="tb-grow"></div>
           <span id="presetInfo" style="font-size:12px;color:var(--t3);font-family:var(--mono)"></span>
+          <button class="btn ghost" id="previewGenBtn" title="액션 프리셋을 고정하고 캐릭터별로 미리보기 이미지 자동 생성" style="border-color:rgba(58,99,152,.4);color:var(--blue)">🎬 미리보기 생성 <span class="en" style="opacity:.6">Batch</span></button>
           <button class="btn ghost" id="addPresetBtn">＋ 추가 <span class="en">Add</span></button>
         </div>
         <div class="preset-grid" id="presetGrid"></div>
@@ -1869,6 +1893,50 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <div class="modal-foot">
       <button class="btn ghost" id="expandPromptCancel">취소 <span class="en">Cancel</span></button>
       <button class="btn primary" id="expandPromptSave">적용 <span class="en">Apply</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- 🎬 PREVIEW GEN MODAL — 액션·상황 고정 + 캐릭터별로 미리보기 자동 생성 -->
+<div class="modal-bg" id="previewGenModal">
+  <div class="modal" style="max-width:680px">
+    <h3 id="previewGenTitle">🎬 캐릭터 미리보기 일괄 생성 <span class="en">Batch Preview</span></h3>
+    <div class="modal-body">
+      <div class="field" style="margin-bottom:12px">
+        <span class="lbl">🎭 고정 시나리오 <span class="en">Scene</span></span>
+        <select id="pgPreset" class="inp" style="margin-bottom:6px"></select>
+        <textarea id="pgPromptText" class="ta tiny" style="min-height:64px;font-family:var(--mono);font-size:12.5px" placeholder="액션·상황·포즈 프리셋을 선택하거나 직접 입력 (캐릭터 외형 뒤에 결합됨)"></textarea>
+      </div>
+      <div class="field" style="margin-bottom:12px">
+        <span class="lbl">👥 대상 캐릭터 <span class="en">Targets</span> <span id="pgCharCount" style="color:var(--t3);font-weight:500;margin-left:4px"></span></span>
+        <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+          <button class="btn ghost" id="pgSelectAll" style="padding:5px 10px;font-size:11.5px">☑ 전체 선택</button>
+          <button class="btn ghost" id="pgDeselectAll" style="padding:5px 10px;font-size:11.5px">☐ 전체 해제</button>
+          <button class="btn ghost" id="pgSelectNoThumb" style="padding:5px 10px;font-size:11.5px" title="썸네일이 없는 캐릭터만 선택 (효율적 일괄 생성)">🆕 썸네일 없는 것만</button>
+        </div>
+        <div id="pgCharList" style="max-height:38vh;overflow-y:auto;border:1.5px solid var(--b1);border-radius:6px;background:var(--card);padding:6px"></div>
+      </div>
+      <div style="background:rgba(58,99,152,.06);border:1.5px solid rgba(58,99,152,.18);border-radius:6px;padding:9px 12px;margin-bottom:10px">
+        <label class="chk" style="margin-bottom:5px"><input type="checkbox" id="pgUpdateThumb" checked> 결과를 각 캐릭터 프리셋 썸네일로 자동 저장</label>
+        <label class="chk" style="display:block"><input type="checkbox" id="pgNewSession" checked>📂 새 세션에 모아 저장</label>
+      </div>
+      <div style="padding:10px 13px;background:var(--card);border-radius:6px;border:1.5px solid var(--b1);font-size:13px;color:var(--t2)">
+        총 <b id="pgTotalCount" style="color:var(--acc);font-family:var(--mono);font-size:15px">0</b>장 생성 · 예상 비용 <b id="pgCost" style="color:var(--acc);font-family:var(--mono)">0 Anlas</b>
+      </div>
+      <div id="pgProgress" style="display:none;margin-top:10px;padding:10px 13px;background:rgba(162,90,31,.06);border-radius:6px;font-size:13px;color:var(--t1)">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span id="pgProgLabel">진행 중...</span>
+          <span id="pgProgCount" style="font-family:var(--mono);font-weight:700">0/0</span>
+        </div>
+        <div style="height:6px;background:var(--card2);border-radius:3px;overflow:hidden">
+          <div id="pgProgBar" style="height:100%;background:var(--acc);width:0;transition:width .2s"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="pgCancel">취소 <span class="en">Cancel</span></button>
+      <button class="btn primary" id="pgStart">▶ 시작 <span class="en">Start</span></button>
+      <button class="btn danger" id="pgStop" style="display:none">⏹ 중지 <span class="en">Stop</span></button>
     </div>
   </div>
 </div>
@@ -5328,40 +5396,46 @@ function getImageAlbums(imgId){
 
 // 앨범 관리 모달 — 만들기/이름변경/삭제
 function openAlbumManager(){
+  const albumCounts = id => Object.values(state.albumMembership).filter(arr => arr.includes(id)).length;
+  const rowsHtml = state.userAlbums.length === 0
+    ? `<div style="color:var(--t3);text-align:center;padding:40px 20px;font-size:13px;background:var(--card);border:1.5px dashed var(--b1);border-radius:6px">
+        📭 아직 만든 앨범이 없어요<br>
+        <span style="font-size:11.5px;color:var(--t3)">위 입력칸에 이름을 적고 만들기를 눌러보세요</span>
+      </div>`
+    : state.userAlbums.map(a => `
+        <div class="alb-row" data-aid="${esc(a.id)}">
+          <span class="alb-ico">📁</span>
+          <input type="text" class="alb-name" data-act="rename" data-aid="${esc(a.id)}" value="${esc(a.name)}" placeholder="앨범 이름">
+          <span class="alb-count">${albumCounts(a.id).toLocaleString()}장</span>
+          <button class="iconbtn alb-del" data-act="del-album" data-aid="${esc(a.id)}" title="이 앨범 삭제 (이미지 자체는 보존)" aria-label="앨범 삭제">🗑</button>
+        </div>`).join('');
   const html = `
-    <div style="margin-bottom:12px">
-      <input type="text" class="inp" id="newAlbumName" placeholder="새 앨범 이름 입력 후 Enter" style="width:calc(100% - 90px);margin-right:6px">
-      <button class="btn primary" id="newAlbumBtn" style="vertical-align:middle">＋ 만들기</button>
+    <div class="alb-create-row">
+      <input type="text" class="inp" id="newAlbumName" placeholder="새 앨범 이름 입력 후 Enter" autocomplete="off">
+      <button class="btn primary" id="newAlbumBtn">＋ 만들기</button>
     </div>
-    <div id="albumListMgr" style="display:flex;flex-direction:column;gap:6px;max-height:48vh;overflow-y:auto">
-      ${state.userAlbums.length === 0
-        ? '<div style="color:var(--t3);text-align:center;padding:30px;font-size:13px">아직 만든 앨범이 없습니다</div>'
-        : state.userAlbums.map(a => {
-          const count = Object.values(state.albumMembership).filter(arr => arr.includes(a.id)).length;
-          return `<div class="album-row" data-aid="${esc(a.id)}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid var(--b1);border-radius:5px;background:var(--card)">
-            <span style="font-size:18px">📁</span>
-            <input type="text" class="inp" data-act="rename" data-aid="${esc(a.id)}" value="${esc(a.name)}" style="flex:1;font-size:13px">
-            <span style="font-family:var(--mono);color:var(--t3);font-size:12px;min-width:40px;text-align:right">${count}장</span>
-            <button class="btn ghost" data-act="del-album" data-aid="${esc(a.id)}" style="padding:5px 9px;color:var(--red);border-color:rgba(181,67,56,.4)">🗑 삭제</button>
-          </div>`;
-        }).join('')}
+    <div id="albumListMgr" class="alb-list">${rowsHtml}</div>
+    <div style="font-size:11px;color:var(--t3);margin-top:10px;line-height:1.55">
+      💡 앨범 삭제는 이미지 자체를 지우지 않고 그룹핑만 해제합니다. 이름은 직접 입력해 바꿀 수 있어요.
     </div>`;
   $('confirmTitle').innerHTML = '앨범 관리 <span class="en">Manage Albums</span>';
   $('confirmBody').innerHTML = html;
   $('confirmOk').style.display = 'none';
   $('confirmCancel').innerHTML = '닫기 <span class="en">Close</span>';
   $('confirmModal').classList.add('open');
-  // 이벤트 바인딩
   const refresh = () => { $('confirmModal').classList.remove('open'); $('confirmOk').style.display=''; openAlbumManager(); };
   $('newAlbumBtn').onclick = async () => {
-    const n = $('newAlbumName').value;
+    const n = ($('newAlbumName').value || '').trim();
+    if(!n){ toast('이름을 입력하세요', 'warning'); $('newAlbumName').focus(); return; }
     const id = await createAlbum(n);
     if(id){ toast(`앨범 "${n}" 만들어짐`, 'success'); refresh(); }
   };
-  $('newAlbumName').onkeydown = e => { if(e.key === 'Enter') $('newAlbumBtn').click(); };
+  $('newAlbumName').onkeydown = e => { if(e.key === 'Enter'){ e.preventDefault(); $('newAlbumBtn').click(); } };
   $('albumListMgr').querySelectorAll('[data-act="rename"]').forEach(inp => {
     inp.onchange = async () => {
-      await renameAlbumById(inp.dataset.aid, inp.value);
+      const newName = (inp.value || '').trim();
+      if(!newName){ toast('이름이 비어있을 수 없습니다', 'warning'); return; }
+      await renameAlbumById(inp.dataset.aid, newName);
       toast('이름 변경됨', 'success');
     };
   });
@@ -5370,11 +5444,15 @@ function openAlbumManager(){
       const aid = btn.dataset.aid;
       const a = state.userAlbums.find(x => x.id === aid);
       if(!a) return;
-      const count = Object.values(state.albumMembership).filter(arr => arr.includes(aid)).length;
-      if(!confirm(`"${a.name}" 앨범을 삭제하시겠습니까?${count ? `\n(${count}장의 이미지가 이 앨범에서 제외됩니다. 이미지 자체는 삭제되지 않음)` : ''}`)) return;
-      await deleteAlbumById(aid);
-      toast('앨범 삭제됨', 'success');
-      refresh();
+      const count = albumCounts(aid);
+      const msg = count
+        ? `"${a.name}" 앨범을 삭제할까요?\n${count}장의 이미지가 이 앨범에서 제외됩니다 (이미지 자체는 보존).`
+        : `"${a.name}" 앨범(빈 상태)을 삭제할까요?`;
+      confirmDialog(msg, async () => {
+        await deleteAlbumById(aid);
+        toast('앨범 삭제됨', 'success');
+        refresh();
+      }, '앨범 삭제');
     };
   });
 }
@@ -6039,6 +6117,213 @@ function renderWorkflowList(){
   }).join('');
 }
 
+// ═══════════════════════════════════════════════════════════
+// 🎬 PREVIEW BATCH GENERATOR — 액션 고정·캐릭터별 순차 생성
+// ═══════════════════════════════════════════════════════════
+let _pgRunning = false;
+let _pgAbort = null;
+
+function pgAllScenes(){
+  // 시나리오로 쓸 만한 카테고리들 (외형이 아닌 것)
+  const cats = ['action','outfit','pose','expression','situation','background','composition','lighting','style'];
+  const items = [];
+  for(const cat of cats){
+    const list = state.presets[cat] || [];
+    const def = PRESET_TYPES.find(t => t.id === cat);
+    for(const p of list){
+      items.push({cat, label: `${def?.ico||'•'} ${def?.label||cat} · ${p.name}`, text: p.text || ''});
+    }
+  }
+  return items;
+}
+
+function openPreviewGenModal(){
+  // 시나리오 드롭다운
+  const scenes = pgAllScenes();
+  const opts = ['<option value="">— 직접 입력만 사용 —</option>'];
+  for(let i=0;i<scenes.length;i++){
+    opts.push(`<option value="${i}">${esc(scenes[i].label)}</option>`);
+  }
+  $('pgPreset').innerHTML = opts.join('');
+  $('pgPreset').dataset.scenes = JSON.stringify(scenes.map(s => s.text));
+  $('pgPreset').onchange = () => {
+    const idx = parseInt($('pgPreset').value, 10);
+    if(!isNaN(idx)){
+      const arr = JSON.parse($('pgPreset').dataset.scenes || '[]');
+      $('pgPromptText').value = arr[idx] || '';
+      pgRefreshCost();
+    }
+  };
+  $('pgPromptText').oninput = pgRefreshCost;
+
+  // 캐릭터 체크리스트
+  pgRenderCharList();
+  pgRefreshCost();
+
+  // 액션 버튼 초기 상태
+  $('pgStart').style.display = '';
+  $('pgStop').style.display = 'none';
+  $('pgProgress').style.display = 'none';
+  $('previewGenModal').classList.add('open');
+}
+
+function pgRenderCharList(){
+  const chars = state.presets.character || [];
+  const wrap = $('pgCharList');
+  if(!chars.length){
+    wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3);font-size:12.5px;font-style:italic">캐릭터 프리셋이 없습니다 — 프리셋 탭의 👤 캐릭터에서 먼저 추가하세요</div>';
+    $('pgCharCount').textContent = '';
+    return;
+  }
+  wrap.innerHTML = chars.map((c, i) => `
+    <label class="chk pg-char" data-idx="${i}" style="padding:7px 9px;border-radius:5px;display:flex;align-items:center;gap:9px;cursor:pointer;border-bottom:1px solid var(--b1)">
+      <input type="checkbox" data-act="pick" data-idx="${i}" checked>
+      ${c.thumb
+        ? `<span class="pg-thumb" style="width:32px;height:32px;border-radius:4px;background:url('${esc(c.thumb)}') center/cover var(--card2);flex-shrink:0;border:1.5px solid var(--b1)"></span>`
+        : `<span class="pg-thumb" style="width:32px;height:32px;border-radius:4px;background:var(--card2);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:14px">👤</span>`}
+      <span style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name||'(이름 없음)')}</span>
+      ${c.thumb ? '<span style="font-size:10px;color:var(--green);font-weight:700">썸 있음</span>' : '<span style="font-size:10px;color:var(--yellow);font-weight:700">썸 없음</span>'}
+    </label>`).join('');
+  wrap.querySelectorAll('input[data-act="pick"]').forEach(i => i.addEventListener('change', pgRefreshCost));
+  pgRefreshCost();
+}
+
+function pgRefreshCost(){
+  const picked = [...document.querySelectorAll('#pgCharList input[data-act="pick"]:checked')].length;
+  $('pgTotalCount').textContent = picked;
+  $('pgCharCount').textContent = `(${picked}/${state.presets.character?.length || 0} 선택)`;
+  // 비용: 현재 폼 설정 기준 1장 비용 × picked
+  const o = currentPromptOpts();
+  const per = anlasCostFor(o);
+  $('pgCost').textContent = `${(per * picked).toLocaleString()} Anlas`;
+}
+
+async function pgStart(){
+  if(_pgRunning) return;
+  const apiKey = (state.apiKey || $('apiKey').value || '').trim();
+  if(!apiKey){ toast('상단바에 API 키(pst-...)를 먼저 입력하세요', 'error'); return; }
+  const sceneText = $('pgPromptText').value.trim();
+  const picked = [...document.querySelectorAll('#pgCharList input[data-act="pick"]:checked')]
+    .map(i => state.presets.character[parseInt(i.dataset.idx, 10)])
+    .filter(Boolean);
+  if(!picked.length){ toast('대상 캐릭터를 1개 이상 선택하세요', 'warning'); return; }
+  if(!sceneText && !confirm('고정 시나리오 없이 진행할까요? 캐릭터 외형만으로 생성됩니다.')) return;
+
+  const updateThumb = $('pgUpdateThumb').checked;
+  const useNewSession = $('pgNewSession').checked;
+  // 새 세션
+  if(useNewSession && typeof DB.newSession === 'function'){
+    await DB.newSession(`🎬 미리보기 — ${new Date().toLocaleString().slice(5,16)}`);
+  }
+  _pgRunning = true;
+  _pgAbort = new AbortController();
+  $('pgStart').style.display = 'none';
+  $('pgStop').style.display = '';
+  $('pgProgress').style.display = '';
+  let done = 0, errors = 0;
+  const total = picked.length;
+  const updateProg = () => {
+    $('pgProgCount').textContent = `${done}/${total}`;
+    $('pgProgBar').style.width = `${(done/total)*100}%`;
+  };
+  updateProg();
+
+  for(const c of picked){
+    if(!_pgRunning) break;
+    $('pgProgLabel').textContent = `생성 중: ${c.name||'(이름 없음)'}`;
+    try {
+      const baseOpts = currentPromptOpts();
+      // 캐릭터 외형 + 시나리오 결합 (캐릭터를 v4_prompt에 직접 넣어 단일 캐릭터로)
+      const charPrompt = (c.text || '').trim();
+      const opts = {
+        ...baseOpts,
+        seed: Math.floor(Math.random() * 0xffffffff),
+        prompt: sceneText || charPrompt,  // 시나리오가 메인, 없으면 캐릭터가 베이스
+        characters: charPrompt
+          ? [{
+              enabled: true,
+              prompt: charPrompt,
+              pos: {x:0.5, y:0.5},
+              neg: '',
+            }]
+          : [],
+        useCoords: false,
+      };
+      const body = buildGenBody({...opts, action: 'generate'});
+      const blob = await naiGenerate(apiKey, body, _pgAbort.signal);
+      // 저장
+      const fname = `preview_${c.name || 'char'}_${opts.seed}.png`;
+      const meta = {
+        prompt: opts.prompt,
+        neg: opts.neg,
+        model: opts.model,
+        seed: opts.seed,
+        steps: opts.steps,
+        cfg: opts.cfg,
+        sampler: opts.sampler,
+        schedule: opts.schedule,
+        w: opts.w, h: opts.h,
+        characters: [c.name],
+        previewBatch: true,
+      };
+      const imgId = await DB.saveImage(blob, fname, c.name || '', opts.prompt, meta);
+      recordSeedHistory(opts.seed);
+
+      // 썸네일 업데이트
+      if(updateThumb){
+        try {
+          const thumb = await blobToCompressedThumb(blob, 256);
+          c.thumb = thumb;
+          // 영속화
+          await DB.presetPut('character', c);
+        } catch(e){ console.warn('[pg thumb]', e); }
+      }
+      // 미리보기 영역에 마지막 생성물 표시
+      state.lastImage = {blob, url: URL.createObjectURL(blob), meta};
+      const pi = $('previewImg');
+      if(pi){ pi.src = state.lastImage.url; pi.style.display = ''; }
+      const pe = $('previewEmpty'); if(pe) pe.style.display = 'none';
+
+      done++;
+    } catch(e){
+      errors++;
+      console.warn('[pg]', c.name, e);
+      if(e?.name === 'AbortError') break;
+      toast(`${c.name}: ${e?.message || e}`, 'error');
+    }
+    updateProg();
+  }
+  _pgRunning = false;
+  _pgAbort = null;
+  $('pgStart').style.display = '';
+  $('pgStop').style.display = 'none';
+  $('pgProgLabel').textContent = errors ? `완료 (성공 ${done}, 실패 ${errors})` : `✅ 완료 ${done}장`;
+  if(done){
+    pgRenderCharList();   // 썸네일 표시 갱신
+    if($('mainPane') ? state.mainPane === 'gallery' : false){
+      await loadGallery();
+    }
+    await refreshGallerySize();
+    toast(`🎬 미리보기 ${done}장 생성됨${errors?` (실패 ${errors})`:''}`, 'success');
+  }
+}
+
+function pgStop(){
+  _pgRunning = false;
+  if(_pgAbort) try { _pgAbort.abort(); } catch(_){}
+}
+
+// 1장당 Anlas 비용 추정 — refreshCost와 동일 로직 단순화
+function anlasCostFor(o){
+  try {
+    const px = (o.w * o.h);
+    const base = (px <= 1024*1024) ? 0 : Math.ceil(px / (1024*1024) * 5);
+    const steps = o.steps || 28;
+    const stepCost = Math.max(0, steps - 28) * 0.5;
+    return Math.max(0, Math.round(base + stepCost + (px > 1024*1024 ? 13 : 13)));
+  } catch(_){ return 13; }
+}
+
 async function runDirector(apiKey){
   if(!state.directorImage){ throw new Error('Director 이미지가 필요합니다'); }
   const action = $('directorAction').value;
@@ -6207,6 +6492,31 @@ function renderGalleryItemHtml(img, sesId){
   </div>`;
 }
 
+// 🗂 세션 필터 드롭다운을 세션 목록으로 채움 (최신 우선, 현재 선택 유지)
+function populateSessionFilter(sessions){
+  const sel = $('galleryFilter');
+  if(!sel) return;
+  const cur = sel.value;
+  // 정렬: 최신 ts 우선
+  const sorted = [...sessions].sort((a,b)=> (b.ts||0) - (a.ts||0));
+  const fmt = ts => {
+    if(!ts) return '';
+    const d = new Date(ts);
+    return ` · ${d.getMonth()+1}/${d.getDate()}`;
+  };
+  const opts = ['<option value="all">모든 세션 (All)</option>'];
+  for(const s of sorted){
+    const label = `${esc(s.label || '세션')}${fmt(s.ts)} · ${(s.count||0).toLocaleString()}장`;
+    opts.push(`<option value="ses:${s.id}">${label}</option>`);
+  }
+  sel.innerHTML = opts.join('');
+  // 옛 값(today/week)이면 all로 fallback
+  if(cur && (cur === 'all' || cur.startsWith('ses:'))) sel.value = cur;
+  else sel.value = 'all';
+  // 선택했던 세션이 사라졌으면 all로
+  if(![...sel.options].some(o => o.value === sel.value)) sel.value = 'all';
+}
+
 async function loadGallery(){
   const grid = $('galleryGrid');
   // 이전 ObjectURL 해제 — 메모리 누수 방지 (g-item 썸네일 + 앨범 헤더 썸네일)
@@ -6220,6 +6530,8 @@ async function loadGallery(){
   });
   const sessions = await DB.getSessions();
   state.gallerySessions = sessions;
+  // 🗂 세션 필터 드롭다운 갱신 — 세션별 항목으로
+  populateSessionFilter(sessions);
   if(!sessions.length){
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--t2);padding:60px 20px;font-size:14px">아직 생성된 이미지가 없습니다<div style="font-size:11.5px;color:var(--t3);margin-top:8px">No images yet — 생성을 시작하면 여기에 자동 저장됩니다</div></div>';
     return;
@@ -6227,13 +6539,17 @@ async function loadGallery(){
   const viewMode = grid.dataset.view || 'detail';
   const search = ($('gallerySearch').value || '').toLowerCase().trim();
   const filter = $('galleryFilter').value;
-  const now = Date.now();
   // 필터된 모든 이미지 수집
   let allImages = []; // {img, sesId, sesLabel, ts}
   let totalSessions = 0;
+  // filter 값:
+  //  - 'all' (모든 세션)
+  //  - 'ses:<id>' (특정 세션만)
+  //  - 옛 값 'today'/'week'도 안전하게 무시 (호환성)
+  const sesIdMatch = /^ses:(\d+)$/.exec(filter || '');
+  const selSesId = sesIdMatch ? parseInt(sesIdMatch[1], 10) : null;
   for(const ses of sessions){
-    if(filter === 'today' && (now - ses.ts) > 86400000) continue;
-    if(filter === 'week' && (now - ses.ts) > 604800000) continue;
+    if(selSesId != null && ses.id !== selSesId) continue;
     const imgs = await DB.getSessionImages(ses.id);
     if(!imgs.length) continue;
     let filtered = imgs;
@@ -6455,6 +6771,61 @@ function setGalZoom(delta){
   if(next === _galZoom) return;
   _galZoom = next;
   applyGalZoom();
+}
+
+// 🔍 프리셋 줌 — 갤러리와 동일한 메커니즘 재사용
+const PRE_ZOOM_LEVELS = [110, 140, 180, 220, 280, 360];
+const PRE_ZOOM_LABELS = ['XS','S','M','L','XL','XXL'];
+let _preZoom = (() => {
+  const saved = parseInt(localStorage.getItem('nai_prezoom') || '2', 10);
+  return isNaN(saved) ? 2 : Math.max(0, Math.min(PRE_ZOOM_LEVELS.length-1, saved));
+})();
+function applyPreZoom(){
+  const grid = $('presetGrid');
+  if(!grid) return;
+  grid.style.setProperty('--pre-cell', `${PRE_ZOOM_LEVELS[_preZoom]}px`);
+  const ind = $('presetZoomInd');
+  if(ind) ind.textContent = PRE_ZOOM_LABELS[_preZoom];
+  const inB = $('presetZoomIn'), outB = $('presetZoomOut');
+  if(outB) outB.disabled = _preZoom <= 0;
+  if(inB) inB.disabled = _preZoom >= PRE_ZOOM_LEVELS.length - 1;
+  localStorage.setItem('nai_prezoom', String(_preZoom));
+}
+function setPreZoom(delta){
+  const next = Math.max(0, Math.min(PRE_ZOOM_LEVELS.length-1, _preZoom + delta));
+  if(next === _preZoom) return;
+  _preZoom = next;
+  applyPreZoom();
+}
+function setupPresetPinch(){
+  const grid = $('presetGrid');
+  if(!grid || grid._pinchInit) return;
+  grid._pinchInit = true;
+  let startDist=0, startZoom=0, lastApplied=0, pinching=false;
+  const dist = (a,b)=>Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
+  grid.addEventListener('touchstart', e => {
+    if(e.touches.length >= 2){
+      startDist = dist(e.touches[0], e.touches[1]);
+      startZoom = _preZoom; lastApplied = _preZoom; pinching = true;
+    }
+  }, {passive:true});
+  grid.addEventListener('touchmove', e => {
+    if(!pinching || e.touches.length < 2 || startDist <= 0) return;
+    const r = dist(e.touches[0], e.touches[1]) / startDist;
+    let delta = 0;
+    if(r >= 1.85) delta = 3;
+    else if(r >= 1.42) delta = 2;
+    else if(r >= 1.12) delta = 1;
+    else if(r <= 0.55) delta = -3;
+    else if(r <= 0.7) delta = -2;
+    else if(r <= 0.88) delta = -1;
+    const next = Math.max(0, Math.min(PRE_ZOOM_LEVELS.length-1, startZoom + delta));
+    if(next !== lastApplied){ _preZoom = next; applyPreZoom(); lastApplied = next; }
+    e.preventDefault();
+  }, {passive:false});
+  const end = () => { startDist = 0; pinching = false; };
+  grid.addEventListener('touchend', end, {passive:true});
+  grid.addEventListener('touchcancel', end, {passive:true});
 }
 
 // 🤏 갤러리 핀치(두 손가락) 줌 — 모바일
@@ -8218,6 +8589,35 @@ function wireEvents(){
   // 🔍 갤러리 줌 (작게 / 크게)
   $('galZoomOut').addEventListener('click', () => setGalZoom(-1));
   $('galZoomIn').addEventListener('click', () => setGalZoom(+1));
+  // 🔍 프리셋 줌 + 본문 표시 토글 + 미리보기 일괄 생성
+  $('presetZoomOut').addEventListener('click', () => setPreZoom(-1));
+  $('presetZoomIn').addEventListener('click', () => setPreZoom(+1));
+  $('presetShowPsubBtn').addEventListener('click', e => {
+    const grid = $('presetGrid');
+    const on = grid.classList.toggle('show-psub');
+    e.currentTarget.setAttribute('aria-pressed', String(on));
+    e.currentTarget.innerHTML = on
+      ? '🙈 본문 숨기기 <span class="en" style="opacity:.6">Hide</span>'
+      : '👁 본문 표시 <span class="en" style="opacity:.6">Text</span>';
+    localStorage.setItem('nai_pre_psub', on ? '1' : '0');
+  });
+  $('previewGenBtn').addEventListener('click', openPreviewGenModal);
+  setupPresetPinch();
+  // 🎬 미리보기 일괄 생성 모달 액션
+  $('pgCancel').addEventListener('click', () => { if(_pgRunning) pgStop(); $('previewGenModal').classList.remove('open'); });
+  $('previewGenModal').addEventListener('click', e => { if(e.target === $('previewGenModal')){ if(_pgRunning) pgStop(); e.currentTarget.classList.remove('open'); } });
+  $('pgStart').addEventListener('click', pgStart);
+  $('pgStop').addEventListener('click', pgStop);
+  $('pgSelectAll').addEventListener('click', () => { document.querySelectorAll('#pgCharList input[data-act="pick"]').forEach(c => c.checked = true); pgRefreshCost(); });
+  $('pgDeselectAll').addEventListener('click', () => { document.querySelectorAll('#pgCharList input[data-act="pick"]').forEach(c => c.checked = false); pgRefreshCost(); });
+  $('pgSelectNoThumb').addEventListener('click', () => {
+    document.querySelectorAll('#pgCharList input[data-act="pick"]').forEach(c => {
+      const i = parseInt(c.dataset.idx, 10);
+      const char = state.presets.character[i];
+      c.checked = !char?.thumb;
+    });
+    pgRefreshCost();
+  });
   // ☑ 선택 모드 토글 (수동 진입)
   $('galSelectModeBtn').addEventListener('click', () => setSelectionMode(!_selectionMode));
   // ☰ 전체 선택 (보이는 모든 이미지)
@@ -8914,8 +9314,15 @@ async function init(){
   $$('#galleryView button').forEach(x => x.classList.toggle('act', x.dataset.gv === savedGv));
   $('galleryGrid').classList.toggle('compact', savedGv === 'compact');
   $('galleryGrid').dataset.view = savedGv;
-  // 🔍 갤러리 줌 복원
+  // 🔍 갤러리·프리셋 줌 복원
   applyGalZoom();
+  applyPreZoom();
+  // 프리셋 본문 표시 토글 복원
+  if(localStorage.getItem('nai_pre_psub') === '1'){
+    $('presetGrid').classList.add('show-psub');
+    const b = $('presetShowPsubBtn');
+    if(b){ b.setAttribute('aria-pressed', 'true'); b.innerHTML = '🙈 본문 숨기기 <span class="en" style="opacity:.6">Hide</span>'; }
+  }
 
   // Try Anlas if key exists
   if(state.apiKey) refreshAnlas();
