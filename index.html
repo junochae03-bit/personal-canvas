@@ -375,8 +375,26 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .gallery-grid.all-expanded .g-head .expand-mark{transform:rotate(90deg);color:var(--acc)}
 .g-item.sel{border-color:var(--acc);outline:2px solid var(--acc);box-shadow:0 0 0 4px rgba(162,90,31,.18)}
 .g-item.sel .g-thumb img{transform:scale(.96)}
-.g-item.sel::after{content:'✓';position:absolute;top:6px;left:6px;width:24px;height:24px;background:var(--acc);color:#fff8ec;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;box-shadow:0 2px 6px rgba(74,52,20,.3);z-index:3;pointer-events:none}
+.g-item.sel::after{content:'✓';position:absolute;top:6px;left:6px;width:26px;height:26px;background:var(--acc);color:#fff8ec;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;box-shadow:0 2px 6px rgba(74,52,20,.35);z-index:3;pointer-events:none;animation:gSelPop .15s ease-out}
+@keyframes gSelPop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
 .g-item{position:relative}
+
+/* ☑ 선택 모드 — 미선택 아이템에 빈 체크박스 오버레이 (모드 진입 시각화) */
+.gallery-grid.selection-mode .g-item:not(.sel)::after{
+  content:'';position:absolute;top:6px;left:6px;width:26px;height:26px;
+  background:rgba(255,255,255,.92);border:2.5px solid var(--acc);border-radius:50%;
+  z-index:3;pointer-events:none;
+  box-shadow:0 1px 4px rgba(74,52,20,.18);
+  animation:gSelPop .15s ease-out;
+}
+.gallery-grid.selection-mode .g-item{cursor:pointer;transition:transform .1s}
+.gallery-grid.selection-mode .g-item:active{transform:scale(.97)}
+/* 선택 모드에선 카드 헤더의 펼침/접힘 호버 효과 약화 */
+.gallery-grid.selection-mode .g-head{cursor:pointer}
+.gallery-grid.selection-mode .g-head:hover{background:rgba(162,90,31,.05);color:inherit}
+/* 선택 모드 토글 버튼이 켜져있을 때 강조 */
+#galSelectModeBtn.act{background:var(--blue);border-color:var(--blue);color:#fff8ec}
+#galSelectModeBtn.act:hover{background:#2f527c;border-color:#2f527c}
 
 /* 🖱 마우스 마퀴 선택 (Windows 스타일 사각형) */
 .gallery-grid{position:relative;user-select:none}
@@ -1332,6 +1350,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
             <button data-gv="compact">간단 <span class="en">Compact</span></button>
             <button data-gv="album">앨범 <span class="en">Albums</span></button>
           </div>
+          <button class="btn ghost" id="galSelectModeBtn" title="선택 모드 — 여러 이미지를 한 번에 삭제하거나 앨범에 추가 (모바일: 길게 누르기로도 진입)" style="border-color:rgba(58,99,152,.4)">☑ 선택 <span class="en">Select</span></button>
           <button class="btn ghost" id="galExpandAll" title="모든 카드의 미리보기를 펼치거나 접습니다">⤢ 전체 펼침 <span class="en">Expand All</span></button>
           <button class="btn ghost" id="manageAlbumsBtn" title="앨범 만들기·이름변경·삭제" style="border-color:rgba(162,90,31,.4)">📁 앨범 관리 <span class="en">Albums</span></button>
           <button class="btn ghost" id="newSessionBtn">＋ 새 세션 <span class="en">New Session</span></button>
@@ -1341,10 +1360,11 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <button class="btn danger" id="clearGalBtn">전체 삭제 <span class="en">Clear All</span></button>
         </div>
         <div id="galSelToolbar">
-          <span>📌 선택됨</span>
+          <span>📌 선택</span>
           <span class="sel-count" id="galSelCount">0장</span>
-          <button class="btn" id="galSelAlbum" title="선택한 이미지를 앨범에 추가">📁 앨범에 추가</button>
-          <button class="btn" id="galSelClear">선택 해제</button>
+          <button class="btn" id="galSelAll" title="화면에 보이는 모든 이미지를 선택">☰ 전체 선택</button>
+          <button class="btn" id="galSelAlbum" title="선택한 이미지를 앨범에 추가">📁 앨범에</button>
+          <button class="btn" id="galSelClear" title="선택 해제하고 선택 모드 종료">✕ 닫기</button>
           <div style="flex:1"></div>
           <button class="btn danger" id="galSelDelete" title="선택한 이미지 모두 삭제 (되돌릴 수 없음)">🗑 선택 삭제</button>
         </div>
@@ -5337,11 +5357,13 @@ const _gallerySel = new Set();  // 선택된 image id 모음
 let _marquee = null;
 let _marqueeStart = null;
 let _marqueeBaseSel = null;  // 드래그 시작 시점의 선택 (Ctrl/Shift 누적용)
+let _selectionMode = false;  // ☑ 선택 모드 (모바일 진입용)
 
 function refreshGalSelToolbar(){
   const tb = $('galSelToolbar');
   const n = _gallerySel.size;
-  if(n > 0){
+  // 선택 모드 ON 이거나 선택된 항목 있으면 툴바 표시
+  if(_selectionMode || n > 0){
     tb.classList.add('show');
     $('galSelCount').textContent = `${n.toLocaleString()}장`;
   } else {
@@ -5359,7 +5381,81 @@ function applySelStyles(){
 
 function clearGallerySelection(){
   _gallerySel.clear();
+  setSelectionMode(false);  // 선택 해제 = 모드 종료
+}
+
+// ☑ 선택 모드 토글 — 모바일에서 다중선택 진입용
+function setSelectionMode(on, opts){
+  const wasOn = _selectionMode;
+  _selectionMode = !!on;
+  const grid = $('galleryGrid');
+  if(grid) grid.classList.toggle('selection-mode', _selectionMode);
+  const btn = $('galSelectModeBtn');
+  if(btn){
+    btn.classList.toggle('act', _selectionMode);
+    btn.innerHTML = _selectionMode
+      ? '✓ 선택 중 <span class="en">Selecting</span>'
+      : '☑ 선택 <span class="en">Select</span>';
+  }
+  if(!_selectionMode && wasOn) _gallerySel.clear();
   applySelStyles();
+}
+
+function toggleGallerySelectAt(item){
+  if(!item) return;
+  const id = parseInt(item.dataset.id);
+  if(isNaN(id)) return;
+  if(_gallerySel.has(id)) _gallerySel.delete(id);
+  else _gallerySel.add(id);
+  applySelStyles();
+}
+
+function selectAllVisibleImages(){
+  let added = 0;
+  document.querySelectorAll('#galleryGrid .g-item').forEach(el => {
+    const id = parseInt(el.dataset.id);
+    if(!isNaN(id) && !_gallerySel.has(id)){ _gallerySel.add(id); added++; }
+  });
+  applySelStyles();
+  toast(`☰ ${_gallerySel.size}장 선택됨 (+${added})`, 'info');
+}
+
+// 👆 갤러리 롱프레스 — 한 번 길게 누르면 선택 모드 진입 + 그 카드 선택
+function setupGalleryLongPress(){
+  const grid = $('galleryGrid');
+  if(!grid || grid._lpInit) return;
+  grid._lpInit = true;
+  let timer = null, startX = 0, startY = 0, startItem = null;
+
+  const clearT = () => { if(timer){ clearTimeout(timer); timer = null; } };
+
+  grid.addEventListener('touchstart', e => {
+    if(_selectionMode) return;  // 이미 선택 모드면 평소대로 탭 처리
+    const item = e.target.closest('.g-item');
+    if(!item) return;
+    if(e.target.closest('button,a,input,select,textarea')) return;
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY; startItem = item;
+    timer = setTimeout(() => {
+      // 롱프레스 발동 → 선택 모드 진입 + 이 카드 선택
+      setSelectionMode(true);
+      const id = parseInt(item.dataset.id);
+      if(!isNaN(id)) _gallerySel.add(id);
+      applySelStyles();
+      try { navigator.vibrate && navigator.vibrate(25); } catch(_){}
+      toast('☑ 선택 모드 — 탭으로 추가, ✕ 닫기로 종료', 'info');
+      timer = null;
+    }, 420);
+  }, {passive:true});
+
+  grid.addEventListener('touchmove', e => {
+    if(!timer) return;
+    const t = e.touches[0];
+    if(Math.abs(t.clientX - startX) > 8 || Math.abs(t.clientY - startY) > 8) clearT();
+  }, {passive:true});
+
+  grid.addEventListener('touchend', clearT, {passive:true});
+  grid.addEventListener('touchcancel', clearT, {passive:true});
 }
 
 function initGalleryMarquee(){
@@ -6596,8 +6692,16 @@ function wireEvents(){
       : '⤢ 전체 펼침 <span class="en">Expand All</span>';
   });
   $('manageAlbumsBtn').addEventListener('click', openAlbumManager);
-  // 🖱 마퀴 선택 활성화
+  // 🖱 마퀴 선택 활성화 (데스크탑) + 👆 롱프레스 (모바일)
   initGalleryMarquee();
+  setupGalleryLongPress();
+  // ☑ 선택 모드 토글 (수동 진입)
+  $('galSelectModeBtn').addEventListener('click', () => setSelectionMode(!_selectionMode));
+  // ☰ 전체 선택 (보이는 모든 이미지)
+  $('galSelAll').addEventListener('click', () => {
+    if(!_selectionMode) setSelectionMode(true);
+    selectAllVisibleImages();
+  });
   // 일괄 작업 — 선택 해제 / 삭제 / 앨범 추가
   $('galSelClear').addEventListener('click', clearGallerySelection);
   $('galSelDelete').addEventListener('click', () => {
@@ -6739,6 +6843,12 @@ function wireEvents(){
     if(!item) return;
     const id = parseInt(item.dataset.id);
     const sid = parseInt(item.dataset.sid);
+    // ☑ 선택 모드: 카드 본체 탭 = 선택 토글 (라이트박스/펼침 안 됨)
+    if(_selectionMode){
+      toggleGallerySelectAt(item);
+      e.stopPropagation();
+      return;
+    }
     // Ctrl/Shift 클릭으로 다중 선택
     if(handleGalleryItemSelectClick(e, item)){
       e.stopPropagation();
