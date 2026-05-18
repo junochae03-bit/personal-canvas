@@ -99,6 +99,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .pill-err{background:rgba(181,67,56,.18);color:var(--red)}
 .iconbtn{background:var(--panel);border:1.5px solid var(--b1);color:var(--t2);width:38px;height:38px;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;font-size:16px}
 .iconbtn:hover{border-color:var(--acc);color:var(--acc);background:var(--card)}
+.topbar .key-mini{display:none}  /* 데스크탑 기본: 안 보임 (입력칸이 항상 노출) */
 .iconbtn.act,.iconbtn[aria-pressed="true"]{border-color:var(--acc);color:var(--acc);background:rgba(162,90,31,.1)}
 /* ♿ 키보드 포커스 표시 — focus-visible로 마우스 클릭 시엔 안 보이게 */
 .iconbtn:focus-visible,.btn:focus-visible,.mn-btn:focus-visible,.mode-btn:focus-visible,.main-tab-btn:focus-visible,.cp-mode-btn:focus-visible,.cp-cat:focus-visible,.cp-mode-btn:focus-visible,.gv-toggle button:focus-visible,.toast-act:focus-visible{outline:2.5px solid var(--acc);outline-offset:2px;box-shadow:0 0 0 4px color-mix(in oklab,var(--acc) 22%,transparent)}
@@ -948,6 +949,35 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .ac-item.act .ac-en{color:var(--acc)}
 .ac-item .ac-ko{font-size:11.5px;color:var(--t3);margin-left:auto;white-space:nowrap}
 
+/* 🎴 캐릭터 브라우저 모달 — 썸네일 그리드 + 단일/풀 모드 */
+#charBrowseModal .modal{max-width:900px}
+.cb-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:9px;flex-wrap:wrap}
+.cb-mode{display:inline-flex;background:var(--card);border:1.5px solid var(--b1);border-radius:6px;padding:2.5px;gap:1px;flex-shrink:0}
+.cb-mode-btn{background:transparent;border:none;color:var(--t2);padding:6px 11px;font-size:12px;font-weight:700;border-radius:4px;cursor:pointer;font-family:inherit;transition:all .15s}
+.cb-mode-btn:hover{color:var(--t1);background:var(--panel)}
+.cb-mode-btn.act{background:var(--acc);color:#fff8ec;box-shadow:0 1px 4px rgba(162,90,31,.3)}
+.cb-actions{display:flex;gap:6px;align-items:center;margin-bottom:9px;padding:6px 8px;background:rgba(58,99,152,.06);border-radius:5px;border:1.5px dashed rgba(58,99,152,.25)}
+.cb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:58vh;overflow-y:auto;padding:3px;background:var(--card);border:1.5px solid var(--b1);border-radius:6px;padding:8px}
+.cb-card{background:var(--panel);border:2px solid var(--b1);border-radius:7px;overflow:hidden;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;position:relative;-webkit-tap-highlight-color:transparent}
+.cb-card:hover{border-color:var(--acc);transform:translateY(-2px);box-shadow:0 6px 14px rgba(74,52,20,.18)}
+.cb-card.picked{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in oklab,var(--acc) 25%,transparent)}
+.cb-card.picked::after{content:'✓';position:absolute;top:6px;right:6px;width:24px;height:24px;background:var(--acc);color:#fff8ec;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;box-shadow:0 2px 6px rgba(74,52,20,.3);z-index:2;animation:gSelPop .15s ease-out}
+.cb-thumb{width:100%;aspect-ratio:1;background:var(--card2) center/cover no-repeat;border-bottom:1px solid var(--b1)}
+.cb-thumb.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--t3);font-size:32px;gap:3px;background:var(--card)}
+.cb-thumb.empty .cb-empty-lbl{font-size:9.5px;font-weight:600;letter-spacing:0;opacity:.65}
+.cb-card .cb-name{padding:7px 9px;font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
+.cb-empty-state{padding:40px 20px;text-align:center;color:var(--t3);font-size:13px;grid-column:1/-1}
+
+/* 캐릭터 카드 — 후보 풀 배지 */
+.char-pool-bar{grid-column:1/-1;display:flex;align-items:center;gap:5px;margin-top:6px;padding:4px 7px;background:rgba(58,99,152,.08);border:1.5px solid rgba(58,99,152,.25);border-radius:5px;font-size:11.5px}
+.char-pool-count{flex:1;font-family:var(--mono);font-weight:700;color:var(--blue);text-align:center}
+.char-pool-btn{background:transparent;border:1.25px solid var(--b1);color:var(--blue);width:26px;height:26px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;transition:all .12s}
+.char-pool-btn:hover{background:rgba(58,99,152,.15);border-color:var(--blue)}
+.char-pool-btn.pool-clear{color:var(--red);margin-left:auto}
+.char-pool-btn.pool-clear:hover{background:rgba(181,67,56,.12);border-color:var(--red)}
+.char-act-btn.browse{color:var(--blue);border-color:rgba(58,99,152,.35)}
+.char-act-btn.browse:hover{background:rgba(58,99,152,.08);border-color:var(--blue);color:var(--blue)}
+
 /* 📁 앨범 관리 모달 */
 .alb-create-row{display:flex;gap:8px;align-items:stretch;margin-bottom:14px}
 .alb-create-row .inp{flex:1;min-width:0}
@@ -1185,12 +1215,23 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 /* 좁은 폰(≤600px) — 추가 컴팩트 + 상단바 정리 */
 @media (max-width:600px){
-  /* 상단바 — API키만 시원하게, 나머지는 정리 */
-  .topbar{padding:0 9px;gap:6px}
+  /* 상단바 — API키 접기 (🔑 버튼으로 토글) */
+  .topbar{padding:0 7px;gap:5px;justify-content:flex-start}
   .topbar .lbl{display:none}                    /* "키 API" 라벨 숨김 */
-  .topbar #toggleKey{display:none}              /* 눈(👁) 토글 숨김 — 보안상 항상 마스킹 유지 */
-  .topbar .tb-group:first-of-type{flex:1;min-width:0}
-  #apiKey{flex:1;width:auto;min-width:0;max-width:none;font-size:12px;padding:6px 9px}
+  .topbar #toggleKey{display:none}              /* 눈 토글은 펼친 상태에서만 의미 있음 */
+  /* 기본 — 키 입력 그룹 숨김, 🔑 버튼만 노출 */
+  .topbar .key-group{display:none}
+  .topbar .key-mini{display:inline-flex;flex-shrink:0;width:38px;height:38px}
+  .topbar .key-mini.key-set{border-color:var(--green);color:var(--green);background:rgba(93,138,48,.08)}
+  .topbar .key-mini.key-empty{border-color:var(--red);color:var(--red);background:rgba(181,67,56,.06);animation:keyPulse 1.6s ease-in-out infinite}
+  @keyframes keyPulse{0%,100%{box-shadow:0 0 0 0 rgba(181,67,56,0)}50%{box-shadow:0 0 0 4px rgba(181,67,56,.18)}}
+  /* 펼친 상태 — 키 입력 라인이 상단바를 가득 채움 */
+  .topbar.key-expanded{flex-wrap:wrap}
+  .topbar.key-expanded .key-mini{display:none}
+  .topbar.key-expanded .key-group{display:flex;flex:1 1 100%;order:99;margin-top:6px;padding:6px 0;border-top:1.5px solid var(--b1);align-items:center;gap:6px}
+  .topbar.key-expanded #toggleKey{display:inline-flex}
+  .topbar.key-expanded #apiKey{flex:1;min-width:0;font-size:14px}
+  #apiKey{flex:1;min-width:0;font-size:14px;padding:7px 10px}
   #anlasPill{font-size:10px;padding:3px 8px;white-space:nowrap}
   .topbar .tb-grow{display:none}                /* 모바일에서는 빈 공간 필요 없음 */
 
@@ -1211,7 +1252,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <body>
 <div class="topbar">
   <div class="logo">NAI STUDIO <span class="sub">이미지 생성</span></div>
-  <div class="tb-group">
+  <button class="iconbtn key-mini" id="keyToggleBtn" title="API 키 입력/수정" aria-label="API 키 입력 열기" aria-pressed="false">🔑</button>
+  <div class="tb-group key-group">
     <span class="lbl">키 <span class="en">API</span></span>
     <input id="apiKey" class="inp pw" placeholder="pst-... NovelAI Persistent Token" autocomplete="off" spellcheck="false">
     <button class="iconbtn" id="toggleKey" title="키 보이기/숨기기 (Show/Hide)">👁</button>
@@ -1219,7 +1261,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   <div class="tb-group">
     <span id="anlasPill" class="pill pill-off">오프라인 (Offline)</span>
     <button class="iconbtn" id="refreshAnlas" title="잔량 새로고침 (Refresh Anlas)">⟳</button>
-    <button class="iconbtn" id="fullscreenBtn" title="전체화면 켜기·끄기 (Fullscreen)">⛶</button>
+    <button class="iconbtn" id="fullscreenBtn" title="전체화면 켜기·끄기 (Fullscreen)" aria-pressed="false">⛶</button>
   </div>
   <div class="tb-grow"></div>
 </div>
@@ -1893,6 +1935,35 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <div class="modal-foot">
       <button class="btn ghost" id="expandPromptCancel">취소 <span class="en">Cancel</span></button>
       <button class="btn primary" id="expandPromptSave">적용 <span class="en">Apply</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- 🎴 CHARACTER BROWSER — 썸네일 그리드로 캐릭터 고르기 + 후보 풀 -->
+<div class="modal-bg" id="charBrowseModal">
+  <div class="modal" style="max-width:900px">
+    <h3 id="charBrowseTitle">🎴 캐릭터 둘러보기 <span class="en">Character Browser</span></h3>
+    <div class="modal-body">
+      <div class="cb-toolbar">
+        <input id="cbSearch" class="inp" placeholder="🔍 이름 검색…" style="flex:1;min-width:140px" autocomplete="off">
+        <div class="cb-mode">
+          <button class="cb-mode-btn act" data-mode="single" type="button">🎯 단일 선택</button>
+          <button class="cb-mode-btn" data-mode="pool" type="button" title="여러 명 골라서 풀로 만들면 생성할 때마다 자동 교체">🔄 후보 풀</button>
+        </div>
+      </div>
+      <div class="cb-actions" id="cbPoolActions" style="display:none">
+        <button class="btn ghost" id="cbSelectAll" style="padding:5px 10px;font-size:11.5px">☑ 전체 선택</button>
+        <button class="btn ghost" id="cbDeselectAll" style="padding:5px 10px;font-size:11.5px">☐ 전체 해제</button>
+        <span id="cbPickedCount" style="margin-left:auto;font-size:12px;color:var(--t2);font-family:var(--mono);font-weight:600">0명 선택</span>
+      </div>
+      <div id="cbGrid" class="cb-grid"></div>
+      <div style="font-size:11.5px;color:var(--t3);margin-top:10px;line-height:1.55" id="cbHint">
+        💡 카드 탭으로 선택. 썸네일이 없는 캐릭터는 프리셋 탭의 <b>🎬 미리보기 생성</b>으로 한 번에 만들 수 있어요.
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="cbCancel">취소 <span class="en">Cancel</span></button>
+      <button class="btn primary" id="cbApply">적용 <span class="en">Apply</span></button>
     </div>
   </div>
 </div>
@@ -3915,17 +3986,30 @@ function refreshCharTagSelects(){}
 function renderCharacters(){
   const list = $('charList');
   $('charCount').textContent = state.characters.length;
-  list.innerHTML = state.characters.map((c, i) => `
+  list.innerHTML = state.characters.map((c, i) => {
+    const hasPool = Array.isArray(c.pool) && c.pool.length > 1;
+    const poolIdx = c.poolIdx || 0;
+    const poolBadge = hasPool
+      ? `<div class="char-pool-bar">
+          <button class="char-pool-btn" data-act="pool-prev" data-idx="${i}" title="이전 후보">◀</button>
+          <span class="char-pool-count" title="현재 ${poolIdx+1} / 전체 ${c.pool.length} · 생성마다 자동 교체">🔄 ${poolIdx+1}/${c.pool.length}</span>
+          <button class="char-pool-btn" data-act="pool-next" data-idx="${i}" title="다음 후보">▶</button>
+          <button class="char-pool-btn pool-clear" data-act="pool-clear" data-idx="${i}" title="후보 풀 해제">×</button>
+        </div>`
+      : '';
+    return `
     <div class="char-card ${c.enabled?'active':''}" data-idx="${i}">
       <div class="char-hdr">
-        <div class="char-thumb ${c.thumb?'has':''}" data-act="thumb" data-idx="${i}" ${c.thumb?`style="background-image:url('${c.thumb}')"`:''} title="썸네일 (Click to set)">${c.thumb?'':'#'+(i+1)}</div>
+        <div class="char-thumb ${c.thumb?'has':''}" data-act="thumb" data-idx="${i}" ${c.thumb?`style="background-image:url('${c.thumb}')"`:''} title="썸네일 (탭하면 캐릭터 브라우저 열림)">${c.thumb?'':'#'+(i+1)}</div>
         <input class="char-name" data-act="name" data-idx="${i}" placeholder="이름 입력 — 프리셋 자동 로드" value="${esc(c.name||'')}" list="charPresetNames" autocomplete="off" title="캐릭터 프리셋 이름을 입력/선택하면 프롬프트와 썸네일이 자동 적용됩니다">
         <button class="char-pos ${c.pos&&(c.pos.x!==0.5||c.pos.y!==0.5)?'set':''}" data-act="pos" data-idx="${i}" title="위치 (Position)">${posLabel(c.pos)}</button>
         <div class="char-actions">
+          <button class="char-act-btn browse" data-act="browse" data-idx="${i}" title="🎴 캐릭터 둘러보기 — 썸네일 그리드로 보고 단일/후보 풀 선택">🎴 둘러보기 <span class="en" style="opacity:.55;font-weight:400">Browse</span></button>
           <button class="char-act-btn ${c.enabled?'act':''}" data-act="toggle" data-idx="${i}">${c.enabled?'✓ 활성':'⭕ 비활성'} <span class="en" style="opacity:.55;font-weight:400">${c.enabled?'On':'Off'}</span></button>
           <button class="char-act-btn edit" data-act="expand" data-idx="${i}">✏ 프롬프트 <span class="en" style="opacity:.55;font-weight:400">Edit</span></button>
           <button class="char-act-btn del" data-act="del" data-idx="${i}" title="이 캐릭터 슬롯 삭제">🗑 삭제</button>
         </div>
+        ${poolBadge}
       </div>
       <div class="char-body open" data-body="${i}">
         <div class="char-section-label">👤 외형·신체 <span class="en">Appearance</span></div>
@@ -5705,6 +5789,8 @@ async function startGeneration(){
     state.queueIdx = i;
     const q = state.queue[i];
     q.status = 'run';
+    // 🔄 후보 풀이 있는 캐릭터들은 다음 캐릭터로 자동 교체 (첫 번째는 그대로 사용)
+    if(i > 0) advanceCharPoolsBeforeGenerate();
     renderQueue();
     $('previewStatus').textContent = `생성 중 (${i+1}/${state.queue.length})`;
     try {
@@ -6115,6 +6201,170 @@ function renderWorkflowList(){
       </div>
     </div>`;
   }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🎴 CHARACTER BROWSER — 썸네일 그리드 픽커 + 후보 풀 자동 교체
+// ═══════════════════════════════════════════════════════════
+let _cbSlotIdx = -1;
+let _cbMode = 'single';   // 'single' | 'pool'
+let _cbPicks = new Set(); // 선택된 캐릭터 name 집합
+
+function openCharBrowser(slotIdx){
+  _cbSlotIdx = slotIdx;
+  // 이 슬롯의 현재 풀/이름을 기본 선택으로
+  const c = state.characters[slotIdx];
+  _cbPicks = new Set();
+  if(c){
+    if(Array.isArray(c.pool) && c.pool.length){
+      _cbMode = 'pool';
+      c.pool.forEach(n => _cbPicks.add(n));
+    } else {
+      _cbMode = 'single';
+      if(c.name) _cbPicks.add(c.name);
+    }
+  }
+  $('cbSearch').value = '';
+  $('charBrowseTitle').innerHTML = `🎴 캐릭터 #${slotIdx+1} 둘러보기 <span class="en">Character Browser</span>`;
+  renderCbMode();
+  renderCbGrid();
+  $('charBrowseModal').classList.add('open');
+  setTimeout(() => $('cbSearch').focus(), 80);
+}
+
+function renderCbMode(){
+  $$('#charBrowseModal .cb-mode-btn').forEach(b => b.classList.toggle('act', b.dataset.mode === _cbMode));
+  $('cbPoolActions').style.display = _cbMode === 'pool' ? 'flex' : 'none';
+  $('cbHint').innerHTML = _cbMode === 'pool'
+    ? '🔄 <b>후보 풀 모드</b> — 여러 명 선택하면 풀로 저장됩니다. 생성마다 다음 캐릭터로 자동 교체.'
+    : '🎯 <b>단일 선택 모드</b> — 카드 한 장 탭하면 적용. 외형·이름·썸네일 모두 자동 채워짐.';
+  $('cbPickedCount').textContent = `${_cbPicks.size}명 선택`;
+}
+
+function renderCbGrid(){
+  const chars = state.presets.character || [];
+  const q = ($('cbSearch').value || '').toLowerCase().trim();
+  const filtered = q ? chars.filter(c => (c.name||'').toLowerCase().includes(q)) : chars;
+  const grid = $('cbGrid');
+  if(!filtered.length){
+    grid.innerHTML = `<div class="cb-empty-state">${chars.length === 0 ? '캐릭터 프리셋이 없습니다 — 프리셋 탭에서 먼저 추가하세요' : `"${esc(q)}" 검색 결과 없음`}</div>`;
+    return;
+  }
+  grid.innerHTML = filtered.map(c => {
+    const picked = _cbPicks.has(c.name);
+    const thumbHtml = c.thumb
+      ? `<div class="cb-thumb" style="background-image:url('${esc(c.thumb)}')"></div>`
+      : `<div class="cb-thumb empty">👤<span class="cb-empty-lbl">썸네일 없음</span></div>`;
+    return `<div class="cb-card${picked?' picked':''}" data-name="${esc(c.name)}" role="button" tabindex="0">
+      ${thumbHtml}
+      <div class="cb-name" title="${esc(c.name)}">${esc(c.name)}</div>
+    </div>`;
+  }).join('');
+}
+
+function setCbMode(mode){
+  if(mode !== 'single' && mode !== 'pool') return;
+  // single 모드로 전환 시 1개 초과 선택은 마지막 것만 유지
+  if(mode === 'single' && _cbPicks.size > 1){
+    const last = [..._cbPicks].pop();
+    _cbPicks = new Set([last]);
+  }
+  _cbMode = mode;
+  renderCbMode();
+  renderCbGrid();
+}
+
+function toggleCbPick(name){
+  if(_cbMode === 'single'){
+    _cbPicks = new Set([name]);
+    // 단일 모드에선 즉시 적용 + 닫기
+    applyCbSelection();
+    return;
+  }
+  // 풀 모드
+  if(_cbPicks.has(name)) _cbPicks.delete(name);
+  else _cbPicks.add(name);
+  renderCbMode();
+  // 그리드는 picked 클래스만 토글로 효율화
+  document.querySelectorAll(`#cbGrid .cb-card[data-name="${CSS.escape(name)}"]`).forEach(el => {
+    el.classList.toggle('picked', _cbPicks.has(name));
+  });
+}
+
+function applyCbSelection(){
+  const c = state.characters[_cbSlotIdx];
+  if(!c){ $('charBrowseModal').classList.remove('open'); return; }
+  if(!_cbPicks.size){ toast('최소 1명 이상 선택해주세요', 'warning'); return; }
+  const picks = [..._cbPicks];
+  if(_cbMode === 'single' || picks.length === 1){
+    const p = state.presets.character.find(x => x.name === picks[0]);
+    if(p) applyCharPresetToSlot(c, p);
+    c.pool = null;
+    c.poolIdx = 0;
+  } else {
+    c.pool = picks;
+    c.poolIdx = 0;
+    // 첫 캐릭터로 슬롯 채움
+    const p = state.presets.character.find(x => x.name === picks[0]);
+    if(p) applyCharPresetToSlot(c, p);
+  }
+  renderCharacters();
+  saveSettingsDebounced();
+  refreshCost();
+  $('charBrowseModal').classList.remove('open');
+  toast(_cbMode === 'pool' && picks.length > 1
+    ? `🔄 후보 풀 ${picks.length}명 설정됨 — 생성마다 자동 교체`
+    : `✅ 캐릭터 적용: ${picks[0]}`,
+    'success');
+}
+
+// 한 캐릭터 슬롯에 프리셋 적용 (이름/외형/썸네일 동기)
+function applyCharPresetToSlot(c, p){
+  if(!c || !p) return;
+  c.name = p.name;
+  c.appearance = p.text || '';
+  if(p.thumb) c.thumb = p.thumb;
+}
+
+// 🔄 후보 풀 — 다음/이전 캐릭터로 수동 회전
+function rotateCharPool(slotIdx, delta){
+  const c = state.characters[slotIdx];
+  if(!c || !Array.isArray(c.pool) || c.pool.length < 2) return;
+  const n = c.pool.length;
+  c.poolIdx = (((c.poolIdx || 0) + delta) % n + n) % n;
+  const p = state.presets.character.find(x => x.name === c.pool[c.poolIdx]);
+  if(p) applyCharPresetToSlot(c, p);
+  renderCharacters();
+  saveSettingsDebounced();
+  refreshCost();
+}
+
+// 풀 해제 — 현재 캐릭터는 유지
+function clearCharPool(slotIdx){
+  const c = state.characters[slotIdx];
+  if(!c) return;
+  c.pool = null;
+  c.poolIdx = 0;
+  renderCharacters();
+  saveSettingsDebounced();
+  toast('후보 풀 해제됨', 'info');
+}
+
+// 🎲 생성 직전에 호출 — 풀이 있는 캐릭터들을 다음 풀 아이템으로 자동 교체
+function advanceCharPoolsBeforeGenerate(){
+  let advanced = 0;
+  for(const c of state.characters || []){
+    if(!c.enabled) continue;
+    if(!Array.isArray(c.pool) || c.pool.length < 2) continue;
+    c.poolIdx = ((c.poolIdx || 0) + 1) % c.pool.length;
+    const p = state.presets.character.find(x => x.name === c.pool[c.poolIdx]);
+    if(p) applyCharPresetToSlot(c, p);
+    advanced++;
+  }
+  if(advanced){
+    renderCharacters();
+    saveSettingsDebounced();
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -7883,11 +8133,14 @@ async function loadSettings(){
   apply('inpAddOrig', s.inpAddOrig ?? true);
   apply('i2iStrength', s.i2iStrength);
   apply('i2iNoise', s.i2iNoise);
-  if(s.uiScale){
-    const v = parseInt(s.uiScale) || 100;
+  // UI 스케일 — 사용자 저장값 있으면 그대로, 없으면 화면 폭에 따라 모바일 80% / 데스크탑 100%
+  const isMobileViewport = window.matchMedia('(max-width:880px)').matches;
+  const defaultScale = isMobileViewport ? 80 : 100;
+  const savedScale = s.uiScale ? (parseInt(s.uiScale) || defaultScale) : defaultScale;
+  {
+    const v = savedScale;
     $('uiScale').value = v;
     applyUiScale(v);
-    // 가장 가까운 프리셋 버튼 활성화
     const presets = [80,90,100,110,125];
     const nearest = presets.reduce((a,b) => Math.abs(b-v) < Math.abs(a-v) ? b : a, 100);
     setTimeout(() => $$('#uiScaleBtns .ui-scale-btn').forEach(x => x.classList.toggle('act', parseInt(x.dataset.scale)===nearest)), 0);
@@ -7913,10 +8166,30 @@ function loadApiKey(){
   const k = localStorage.getItem('nai_apikey') || '';
   $('apiKey').value = k;
   state.apiKey = k;
+  updateKeyMiniState();
 }
 function saveApiKey(k){
   state.apiKey = k;
   localStorage.setItem('nai_apikey', k);
+  updateKeyMiniState();
+}
+// 🔑 모바일 상단바의 미니 키 버튼 상태 표시 (set: 녹색 / empty: 빨강 펄스)
+function updateKeyMiniState(){
+  const btn = $('keyToggleBtn');
+  if(!btn) return;
+  const has = !!(state.apiKey || $('apiKey').value || '').trim();
+  btn.classList.toggle('key-set', has);
+  btn.classList.toggle('key-empty', !has);
+  btn.title = has ? 'API 키 입력/수정 (저장됨)' : 'API 키 미설정 — 탭하여 입력';
+}
+function toggleApiKeyExpanded(force){
+  const tb = document.querySelector('.topbar');
+  if(!tb) return;
+  const next = (typeof force === 'boolean') ? force : !tb.classList.contains('key-expanded');
+  tb.classList.toggle('key-expanded', next);
+  const btn = $('keyToggleBtn');
+  if(btn) btn.setAttribute('aria-pressed', String(next));
+  if(next) setTimeout(() => { try { $('apiKey').focus(); } catch(_){} }, 80);
 }
 
 function setTheme(theme){
@@ -7967,6 +8240,16 @@ function wireEvents(){
   });
   $('apiKey').addEventListener('blur', () => {
     if($('apiKey').value && !state.anlas) refreshAnlas();
+  });
+  $('keyToggleBtn').addEventListener('click', () => toggleApiKeyExpanded());
+  // 키 입력칸 blur 시 자동 접기 (모바일에서만 의미 있음 — 데스크탑은 key-group 항상 표시)
+  $('apiKey').addEventListener('blur', () => {
+    setTimeout(() => {
+      // 입력 도중 다른 키 토글 버튼 누른 게 아니라면 접기
+      if(document.activeElement !== $('toggleKey') && document.activeElement !== $('keyToggleBtn')){
+        toggleApiKeyExpanded(false);
+      }
+    }, 200);
   });
   $('toggleKey').addEventListener('click', () => {
     const i = $('apiKey'); i.classList.toggle('pw');
@@ -8173,8 +8456,15 @@ function wireEvents(){
     else if(act === 'del'){ removeCharacter(idx); saveSettingsDebounced(); }
     else if(act === 'expand'){ const b = $('charList').querySelector(`[data-body="${idx}"]`); b?.classList.toggle('open'); }
     else if(act === 'pos'){ openPosGrid(idx, t); }
+    else if(act === 'browse'){ openCharBrowser(idx); }
+    else if(act === 'pool-prev'){ rotateCharPool(idx, -1); }
+    else if(act === 'pool-next'){ rotateCharPool(idx, +1); }
+    else if(act === 'pool-clear'){ clearCharPool(idx); }
     else if(act === 'thumb'){
-      // 갤러리에서 선택할지 파일에서 업로드할지 선택
+      // 썸네일 탭 = 캐릭터 브라우저 열기 (단일 선택 또는 후보 풀)
+      openCharBrowser(idx);
+      return;
+      // 옛 직접 설정 UI는 아래에 보존 — 필요 시 호출
       $('confirmTitle').innerHTML = '캐릭터 썸네일 <span class="en">Thumbnail</span>';
       $('confirmBody').innerHTML = `<div style="color:var(--t2);font-size:13px;margin-bottom:12px">캐릭터 #${idx+1} 썸네일을 어떻게 설정할까요?</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
@@ -8283,6 +8573,30 @@ function wireEvents(){
     if(x) removeCharActionTagAt(parseInt(x.dataset.idx, 10));
   });
   $('charPickClose').addEventListener('click', () => $('charPickModal').classList.remove('open'));
+  // 🎴 캐릭터 브라우저
+  $('cbCancel').addEventListener('click', () => $('charBrowseModal').classList.remove('open'));
+  $('cbApply').addEventListener('click', applyCbSelection);
+  $('charBrowseModal').addEventListener('click', e => { if(e.target === $('charBrowseModal')) e.currentTarget.classList.remove('open'); });
+  $('cbSearch').addEventListener('input', debounce(renderCbGrid, 80));
+  $$('#charBrowseModal .cb-mode-btn').forEach(b => b.addEventListener('click', () => setCbMode(b.dataset.mode)));
+  $('cbSelectAll').addEventListener('click', () => {
+    (state.presets.character || []).forEach(c => _cbPicks.add(c.name));
+    renderCbMode(); renderCbGrid();
+  });
+  $('cbDeselectAll').addEventListener('click', () => {
+    _cbPicks.clear();
+    renderCbMode(); renderCbGrid();
+  });
+  $('cbGrid').addEventListener('click', e => {
+    const card = e.target.closest('.cb-card');
+    if(card) toggleCbPick(card.dataset.name);
+  });
+  // 키보드 접근성 — Enter/Space로 선택
+  $('cbGrid').addEventListener('keydown', e => {
+    if(e.key !== 'Enter' && e.key !== ' ') return;
+    const card = e.target.closest('.cb-card');
+    if(card){ e.preventDefault(); toggleCbPick(card.dataset.name); }
+  });
   $('charPickModal').addEventListener('click', e => {
     if(e.target === $('charPickModal')) $('charPickModal').classList.remove('open');
   });
