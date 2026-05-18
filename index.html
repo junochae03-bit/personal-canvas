@@ -5628,6 +5628,8 @@ function setupGalleryPinch(){
   grid._pinchInit = true;
   let startDist = 0, startZoom = 0, lastApplied = 0;
   let pinching = false;
+  let pinchItem = null;   // 핀치 시작 중간점이 위치한 카드 (있으면)
+  let opened = false;
 
   const dist = (a, b) => Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
 
@@ -5637,6 +5639,12 @@ function setupGalleryPinch(){
       startZoom = _galZoom;
       lastApplied = _galZoom;
       pinching = true;
+      opened = false;
+      // 두 손가락 중간점에 있는 .g-item을 추적 → 핀치-아웃 시 라이트박스 자동 오픈
+      const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      const el = document.elementFromPoint(mx, my);
+      pinchItem = el && el.closest ? el.closest('.g-item') : null;
     }
   }, {passive:true});
 
@@ -5645,7 +5653,23 @@ function setupGalleryPinch(){
     if(!pinching || e.touches.length < 2 || startDist <= 0) return;
     const d = dist(e.touches[0], e.touches[1]);
     const r = d / startDist;
-    // 비율→단계 매핑 (민감하게, 히스테리시스로 떨림 방지)
+
+    // 🔍 카드 위에서 시작한 핀치-아웃 → 그 이미지의 라이트박스 열기
+    // (라이트박스 안에서 이어서 더 핀치 줌 가능)
+    if(pinchItem && !opened && r >= 1.2){
+      const id = parseInt(pinchItem.dataset.id);
+      const sid = parseInt(pinchItem.dataset.sid);
+      if(!isNaN(id) && !isNaN(sid)){
+        try { navigator.vibrate && navigator.vibrate(15); } catch(_){}
+        openLightbox(id, sid);
+        opened = true;
+        pinching = false;
+      }
+      e.preventDefault();
+      return;
+    }
+
+    // 그 외(빈 영역 핀치 / 카드 위 핀치-인) → 그리드 셀 크기 조정
     let delta = 0;
     if(r >= 1.85) delta = 3;
     else if(r >= 1.42) delta = 2;
@@ -5659,10 +5683,12 @@ function setupGalleryPinch(){
       applyGalZoom();
       lastApplied = next;
     }
-    e.preventDefault();  // 브라우저가 핀치를 가로채지 않게
+    e.preventDefault();
   }, {passive:false});
 
-  const endPinch = () => { startDist = 0; pinching = false; };
+  const endPinch = () => {
+    startDist = 0; pinching = false; pinchItem = null; opened = false;
+  };
   grid.addEventListener('touchend', endPinch, {passive:true});
   grid.addEventListener('touchcancel', endPinch, {passive:true});
 }
