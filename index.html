@@ -503,7 +503,23 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .preset-tab.act{background:var(--acc);color:#fff8ec;border-color:var(--acc)}
 /* 🎨 템플릿 페인 */
 .tpl-body{padding:14px 18px;max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
-@media (max-width:600px){ .tpl-body{padding:10px 12px;gap:10px} }
+@media (max-width:600px){
+  .tpl-body{padding:8px 8px;gap:8px}
+  .tpl-body .set-card{padding:10px 10px}
+  .tpl-body .set-card h3{font-size:13px}
+  .tpl-cat-chip{padding:4px 8px !important;font-size:11px !important}
+  .tpl-cat-chip .cnt{font-size:9.5px !important}
+  /* 현재 조합 항목 — 텍스트 줄바꿈 허용으로 잘림 방지 */
+  .tpl-roll-item{padding:7px 8px !important;gap:7px !important}
+  .tpl-roll-item .tri-ico{font-size:16px;width:20px}
+  .tpl-roll-item .tri-name{font-size:12px !important;white-space:normal !important;word-break:break-all}
+  .tpl-roll-item .tri-text{font-size:10.5px !important;white-space:normal !important;word-break:break-all;line-height:1.4}
+  .tpl-roll-item .tri-act button{padding:3px 6px;font-size:10.5px}
+  .tpl-saved-item{padding:7px 8px !important;gap:5px !important;flex-wrap:wrap}
+  .tpl-saved-item .tsi-name{font-size:12px !important;flex-basis:100%;order:0}
+  .tpl-saved-item .tsi-cats{font-size:10px}
+  .tpl-saved-item button{padding:3px 6px;font-size:10.5px}
+}
 .tpl-cat-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border:1.5px solid var(--b1);border-radius:16px;background:var(--card);color:var(--t2);font-size:12px;font-weight:600;cursor:pointer;user-select:none;transition:all .15s}
 .tpl-cat-chip:hover{border-color:var(--b2);color:var(--t1)}
 .tpl-cat-chip.act{background:var(--acc);color:#fff8ec;border-color:var(--acc)}
