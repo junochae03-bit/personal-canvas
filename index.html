@@ -1722,7 +1722,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           </div>
           <button class="btn ghost" id="presetShowPsubBtn" title="프롬프트 본문 미리보기 표시/숨김" aria-pressed="false">👁 본문 표시 <span class="en" style="opacity:.6">Text</span></button>
           <button class="btn ghost" id="presetExpandAll" title="모든 프리셋의 미리보기를 펼치거나 접습니다">⤢ 전체 펼침 <span class="en">Expand All</span></button>
-          <button class="btn ghost" id="presetGroupsToggle" title="📚 작품/시리즈 그룹 모두 접기·펼치기 (캐릭터 카테고리)" style="border-color:rgba(162,90,31,.4);color:var(--acc)">📚 그룹 일괄 <span class="en">Groups</span></button>
+          <button class="btn ghost" id="presetGroupsToggle" title="📚 그룹 모두 접기·펼치기 (캐릭터·의상·상황·인원 카테고리)" style="border-color:rgba(162,90,31,.4);color:var(--acc)">📚 그룹 일괄 <span class="en">Groups</span></button>
           <button class="btn ghost" id="autoClassifyBtn" title="이름 접두사로 자동 재분류 (의상·헤어·페티쉬 → 의상 / 콤보·노출·자위·백합 → 상황 / 포커스·구도 → 구도 / 하렘·남녀 → 인원 등)" style="border-color:rgba(162,90,31,.4)">🪄 자동 분류 <span class="en">Auto-classify</span></button>
           <div class="tb-grow"></div>
           <span id="presetInfo" style="font-size:12px;color:var(--t3);font-family:var(--mono)"></span>
@@ -4557,6 +4557,9 @@ function getCharGroup(name){
   return '기타';
 }
 
+// 그룹 표시를 지원하는 프리셋 카테고리 — 의상/상황/인원·성별도 같은 prefix 규칙으로 묶음
+const GROUPABLE_PRESET_TYPES = new Set(['character', 'outfit', 'situation', 'people']);
+
 // 그룹별로 묶고, 그룹은 항목수 내림차순(기타는 항상 마지막)으로 정렬
 // 3명 미만 그룹은 "기타"로 통합 — 의미있는 작품 묶음만 별도 표시
 function groupCharsByWork(list){
@@ -4592,14 +4595,13 @@ function groupCharsByWork(list){
 const _collapsedPresetGroups = new Set();
 
 // 작품명 변경 — 그 그룹의 모든 캐릭터 이름의 prefix를 함께 갱신
-async function renameCharGroup(oldGroup, newGroupRaw){
+async function renamePresetGroup(type, oldGroup, newGroupRaw){
   const newGroup = String(newGroupRaw || '').trim();
   if(!newGroup) return false;
   if(newGroup === oldGroup) return false;
-  // 같은 카테고리에 새 이름과 충돌하는 항목 없는지 확인 (선검사)
-  const chars = state.presets.character || [];
-  const targets = chars.filter(p => getCharGroup(p.name) === oldGroup);
-  if(!targets.length){ toast('변경할 캐릭터 없음', 'warning'); return false; }
+  const list = state.presets[type] || [];
+  const targets = list.filter(p => getCharGroup(p.name) === oldGroup);
+  if(!targets.length){ toast('변경할 항목 없음', 'warning'); return false; }
   const conflicts = [];
   const renames = [];
   for(const p of targets){
@@ -4614,8 +4616,7 @@ async function renameCharGroup(oldGroup, newGroupRaw){
       else newName = oldName;
     }
     if(newName === oldName) continue;
-    // 동일 이름이 다른 항목에 이미 존재?
-    if(chars.some(x => x.name === newName && x !== p)){
+    if(list.some(x => x.name === newName && x !== p)){
       conflicts.push({oldName, newName});
       continue;
     }
@@ -4625,41 +4626,48 @@ async function renameCharGroup(oldGroup, newGroupRaw){
     toast(conflicts.length ? `이름 충돌 ${conflicts.length}건 — 변경 안 함` : '변경할 이름 없음', 'warning');
     return false;
   }
-  // 실행: DB에서 옛 키 삭제 후 새 이름으로 저장
   for(const r of renames){
     try {
-      await DB.presetDelete('character', r.oldName);
+      await DB.presetDelete(type, r.oldName);
       r.preset.name = r.newName;
-      await DB.presetPut('character', r.preset);
+      await DB.presetPut(type, r.preset);
     } catch(e){
       console.warn('[rename]', r.oldName, '→', r.newName, e);
     }
   }
-  // 접힘 상태 유지: 옛 키 → 새 키로 이전
-  const oldKey = `g:character:${oldGroup}`;
-  const newKey = `g:character:${newGroup}`;
+  // 접힘 상태 유지
+  const oldKey = `g:${type}:${oldGroup}`;
+  const newKey = `g:${type}:${newGroup}`;
   if(_collapsedPresetGroups.has(oldKey)){
     _collapsedPresetGroups.delete(oldKey);
     _collapsedPresetGroups.add(newKey);
   }
-  const oldCbKey = `cb:${oldGroup}`;
-  const newCbKey = `cb:${newGroup}`;
-  if(_collapsedCbGroups.has(oldCbKey)){
-    _collapsedCbGroups.delete(oldCbKey);
-    _collapsedCbGroups.add(newCbKey);
+  if(type === 'character'){
+    const oldCbKey = `cb:${oldGroup}`;
+    const newCbKey = `cb:${newGroup}`;
+    if(_collapsedCbGroups.has(oldCbKey)){
+      _collapsedCbGroups.delete(oldCbKey);
+      _collapsedCbGroups.add(newCbKey);
+    }
   }
-  // state 갱신은 presetPut 호출만으로는 안 됨 → 다시 로드
   await loadPresetsFromDB();
-  toast(`📚 "${oldGroup}" → "${newGroup}" — ${renames.length}개 캐릭터 이름 갱신${conflicts.length ? ` (충돌 ${conflicts.length}건 스킵)` : ''}`, 'success');
+  const def = PRESET_TYPES.find(t => t.id === type) || {label:'프리셋'};
+  toast(`${def.ico||'📚'} "${oldGroup}" → "${newGroup}" — ${def.label} ${renames.length}개 이름 갱신${conflicts.length ? ` (충돌 ${conflicts.length}건 스킵)` : ''}`, 'success');
   return true;
+}
+
+// 후방 호환 — 캐릭터 전용 래퍼 (다른 곳에서 호출)
+async function renameCharGroup(oldGroup, newGroupRaw){
+  return renamePresetGroup('character', oldGroup, newGroupRaw);
 }
 
 // 모든 그룹 접기·펼치기 토글 (현재 상태에 따라 반대로)
 function togglePresetGroupsCollapseAll(){
-  if(state.presetType !== 'character') return;
-  const list = state.presets.character || [];
+  const type = state.presetType;
+  if(!GROUPABLE_PRESET_TYPES.has(type)) return;
+  const list = state.presets[type] || [];
   const groups = groupCharsByWork(list);
-  const allKeys = groups.map(g => `g:character:${g.group}`);
+  const allKeys = groups.map(g => `g:${type}:${g.group}`);
   const allCollapsed = allKeys.length > 0 && allKeys.every(k => _collapsedPresetGroups.has(k));
   if(allCollapsed){
     allKeys.forEach(k => _collapsedPresetGroups.delete(k));
@@ -4729,9 +4737,12 @@ function renderPresets(){
       </div>`;
   };
 
-  // 캐릭터 카테고리는 작품(시리즈)별로 자동 그룹핑
-  if(type === 'character' && list.length > 0){
+  // 그룹화 지원 카테고리(캐릭터·의상·상황·인원·성별) — 이름 prefix로 자동 묶음
+  if(GROUPABLE_PRESET_TYPES.has(type) && list.length > 0){
     const groups = groupCharsByWork(list);
+    const renameTitle = type === 'character'
+      ? '작품명 일괄 수정 — 이 그룹의 모든 캐릭터 이름 prefix가 함께 바뀝니다'
+      : `그룹명 일괄 수정 — 이 그룹의 모든 ${def.label||'프리셋'} 이름 prefix가 함께 바뀝니다`;
     grid.innerHTML = groups.map(g => {
       const gKey = `g:${type}:${g.group}`;
       const collapsed = _collapsedPresetGroups.has(gKey);
@@ -4739,9 +4750,9 @@ function renderPresets(){
       return `
         <div class="p-group-hdr" data-gkey="${esc(gKey)}" data-group="${esc(g.group)}">
           <span class="p-group-mark" data-act="toggle-group">${collapsed ? '▶' : '▼'}</span>
-          <span class="p-group-name" data-act="toggle-group">📚 ${esc(g.group)}</span>
+          <span class="p-group-name" data-act="toggle-group">${ico} ${esc(g.group)}</span>
           <span class="p-group-count">${g.items.length}</span>
-          <button class="p-group-edit" data-act="rename-group" data-group="${esc(g.group)}" title="작품명 일괄 수정 — 이 그룹의 모든 캐릭터 이름 prefix가 함께 바뀝니다">✏</button>
+          <button class="p-group-edit" data-act="rename-group" data-group="${esc(g.group)}" title="${esc(renameTitle)}">✏</button>
         </div>
         ${itemsHtml}`;
     }).join('');
@@ -10501,9 +10512,11 @@ function wireGenerationAndPresetEvents(){
     if(renameBtn){
       e.stopPropagation();
       const oldGroup = renameBtn.dataset.group;
-      const nn = prompt(`작품/시리즈 이름 변경\n"${oldGroup}" → ?\n\n이 그룹에 속한 모든 캐릭터의 이름 prefix가 함께 바뀝니다.`, oldGroup);
+      const curType = state.presetType;
+      const def = PRESET_TYPES.find(t => t.id === curType) || {label:'프리셋'};
+      const nn = prompt(`그룹 이름 변경 (${def.label})\n"${oldGroup}" → ?\n\n이 그룹의 모든 ${def.label} 이름 prefix가 함께 바뀝니다.`, oldGroup);
       if(nn && nn.trim() && nn.trim() !== oldGroup){
-        await renameCharGroup(oldGroup, nn.trim());
+        await renamePresetGroup(curType, oldGroup, nn.trim());
       }
       return;
     }
@@ -10555,10 +10568,10 @@ function wireGenerationAndPresetEvents(){
       ? '⤡ 전체 접기 <span class="en">Collapse All</span>'
       : '⤢ 전체 펼침 <span class="en">Expand All</span>';
   });
-  // 📚 그룹 일괄 접기/펼치기
+  // 📚 그룹 일괄 접기/펼치기 — 캐릭터·의상·상황·인원에서 모두 지원
   $('presetGroupsToggle').addEventListener('click', () => {
-    if(state.presetType !== 'character'){
-      toast('그룹은 캐릭터 카테고리에서만 표시됩니다', 'info');
+    if(!GROUPABLE_PRESET_TYPES.has(state.presetType)){
+      toast('그룹은 캐릭터·의상·상황·인원 카테고리에서만 표시됩니다', 'info');
       return;
     }
     togglePresetGroupsCollapseAll();
