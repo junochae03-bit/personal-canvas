@@ -7198,8 +7198,29 @@ function renderCbGrid(){
       <span class="cb-group-name" data-act="toggle-cb-group">📚 ${esc(g.group)}</span>
       <span class="cb-group-count">${g.items.length}</span>
       <button class="cb-group-edit" data-act="rename-cb-group" data-group="${esc(g.group)}" title="작품명 일괄 수정">✏</button>
+      <button class="cb-group-edit" data-act="cb-group-rand" data-group="${esc(g.group)}" title="🎲 이 그룹에서 랜덤 1명 — 현재 슬롯에 즉시 적용 (단일) / 풀에 통째로 적용 (풀 모드)">🎲</button>
     </div>${cards}`;
   }).join('');
+}
+
+// 🎲 캐릭터 브라우저 — 그 그룹에서 랜덤 픽
+// 단일 모드: 1명 즉시 슬롯 적용 + 모달 닫기
+// 풀 모드: 그룹 전체를 풀에 적용 + 모달 닫기 (이후 매 생성마다 순환)
+function cbGroupRandomPick(group){
+  const members = (state.presets.character || []).filter(p => getCharGroup(p.name) === group);
+  if(!members.length){ toast('그룹에 캐릭터 없음', 'warning'); return; }
+  if(_cbMode === 'pool'){
+    // 풀 모드: 그룹 전체를 풀로 (다중 선택)
+    _cbPicks = new Set(members.map(p => p.name));
+    applyCbSelection();
+    toast(`🎲 "${group}" 그룹 ${members.length}명을 풀로 적용 — 매 생성마다 순환`, 'success');
+    return;
+  }
+  // 단일 모드: 랜덤 1명
+  const pick = members[Math.floor(Math.random() * members.length)];
+  _cbPicks = new Set([pick.name]);
+  applyCbSelection();
+  toast(`🎲 "${group}" 그룹에서 ${pick.name} 선택`, 'success');
 }
 
 function setCbMode(mode){
@@ -10507,6 +10528,13 @@ function wireCharacterEvents(){
         // 같은 슬롯에 적용된 캐릭터도 이름 동기 (현재 슬롯이 이 그룹이면 화면 갱신)
         renderCbGrid();
       }
+      return;
+    }
+    // 🎲 그룹 랜덤 픽
+    const randBtn = e.target.closest('[data-act="cb-group-rand"]');
+    if(randBtn){
+      e.stopPropagation();
+      cbGroupRandomPick(randBtn.dataset.group);
       return;
     }
     // 그룹 토글
