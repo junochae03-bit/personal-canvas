@@ -6270,11 +6270,16 @@ async function startGeneration(){
   const delayMs = (parseFloat($('genDelay').value) || 0.5) * 1000;
   const continueOnErr = $('continueOnError').checked;
 
-  for(let i = 0; i < state.queue.length; i++){
+  // 🔒 큐 스냅샷 — 생성 중 외부에서 state.queue가 수정되어도 인덱스가 어긋나지 않게
+  // 각 항목은 객체 참조이므로 q.status 변경은 그대로 UI에 반영됨
+  const snapshot = state.queue.slice();
+  for(let i = 0; i < snapshot.length; i++){
     while(state.paused && state.running){ await sleep(200); }
     if(!state.running) break;
-    state.queueIdx = i;
-    const q = state.queue[i];
+    const q = snapshot[i];
+    // 외부에서 항목이 제거되었으면 건너뜀 (UI에서 사용자가 삭제했을 가능성)
+    if(state.queue.indexOf(q) === -1) continue;
+    state.queueIdx = state.queue.indexOf(q);
     q.status = 'run';
     // 🔄 후보 풀이 있는 캐릭터들은 다음 캐릭터로 자동 교체 (첫 번째는 그대로 사용)
     if(i > 0) advanceCharPoolsBeforeGenerate();
@@ -6294,7 +6299,7 @@ async function startGeneration(){
       if(!continueOnErr){ state.running = false; break; }
     }
     renderQueue();
-    if(i < state.queue.length - 1 && state.running){
+    if(i < snapshot.length - 1 && state.running){
       await sleep(delayMs);
     }
   }
@@ -8774,16 +8779,82 @@ async function loadSettings(){
   if(s.mode) setMode(s.mode);
 }
 
-// API key persistence — localStorage (easier than DB, separate from settings)
-function loadApiKey(){
-  const k = localStorage.getItem('nai_apikey') || '';
-  $('apiKey').value = k;
+// API 키 저장 — Web Crypto AES-GCM 으로 IndexedDB 에 암호화 보관
+// 디바이스 고유 키(extractable:false)는 IDB에 직접 저장 → 다른 도메인 XSS·디스크 스캐너로부터
+// localStorage 평문 노출 방지. 동일 도메인 XSS는 여전히 위험하므로 PIN 보호는 별도 옵션.
+const KEY_STORE_KEY = 'nai_apikey_enc';   // {iv, ct}
+const KEY_CRYPTOKEY = 'nai_apikey_cryptokey';  // CryptoKey (non-extractable)
+const LEGACY_LS_KEY = 'nai_apikey';        // 마이그레이션용
+
+async function _getOrCreateCryptoKey(){
+  let k = await DB.getFlag(KEY_CRYPTOKEY);
+  if(k && k.type === 'secret') return k;
+  k = await crypto.subtle.generateKey({name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+  await DB.setFlag(KEY_CRYPTOKEY, k);  // structured clone으로 CryptoKey 저장 가능
+  return k;
+}
+
+async function _encryptApiKey(plain){
+  if(!plain) return null;
+  try {
+    const k = await _getOrCreateCryptoKey();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, k, new TextEncoder().encode(plain));
+    return {iv: Array.from(iv), ct: Array.from(new Uint8Array(ct))};
+  } catch(e){
+    console.warn('[apikey] encrypt fail, fallback to plain', e?.message);
+    return {plain};  // 폴백 (구형 브라우저)
+  }
+}
+
+async function _decryptApiKey(rec){
+  if(!rec) return '';
+  if(rec.plain) return rec.plain;  // 폴백
+  try {
+    const k = await _getOrCreateCryptoKey();
+    const iv = new Uint8Array(rec.iv);
+    const ct = new Uint8Array(rec.ct);
+    const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv}, k, ct);
+    return new TextDecoder().decode(pt);
+  } catch(e){
+    console.warn('[apikey] decrypt fail', e?.message);
+    return '';
+  }
+}
+
+async function loadApiKey(){
+  // 1) 기존 localStorage 평문 키가 있으면 즉시 IDB로 옮기고 평문 삭제
+  let k = '';
+  const legacy = localStorage.getItem(LEGACY_LS_KEY);
+  if(legacy){
+    k = legacy;
+    try {
+      const rec = await _encryptApiKey(legacy);
+      if(rec) await DB.setFlag(KEY_STORE_KEY, rec);
+      localStorage.removeItem(LEGACY_LS_KEY);
+      console.log('[apikey] localStorage → IndexedDB(AES-GCM) 마이그레이션 완료');
+    } catch(e){ console.warn('[apikey] migrate fail', e); }
+  } else {
+    const rec = await DB.getFlag(KEY_STORE_KEY);
+    k = await _decryptApiKey(rec);
+  }
+  if($('apiKey')) $('apiKey').value = k;
   state.apiKey = k;
   updateKeyMiniState();
 }
-function saveApiKey(k){
-  state.apiKey = k;
-  localStorage.setItem('nai_apikey', k);
+
+async function saveApiKey(k){
+  state.apiKey = k || '';
+  try {
+    if(k){
+      const rec = await _encryptApiKey(k);
+      if(rec) await DB.setFlag(KEY_STORE_KEY, rec);
+    } else {
+      await DB.setFlag(KEY_STORE_KEY, null);
+    }
+    // 혹시 남아있을 평문 키도 정리
+    if(localStorage.getItem(LEGACY_LS_KEY)) localStorage.removeItem(LEGACY_LS_KEY);
+  } catch(e){ console.warn('[apikey] save fail', e); }
   updateKeyMiniState();
 }
 // 🔑 모바일 상단바의 미니 키 버튼 상태 표시 (set: 녹색 / empty: 빨강 펄스)
@@ -10308,8 +10379,8 @@ async function init(){
 
   // 샘플러 옵션을 loadSettings 호출 전에 먼저 채워야 saved sampler 값이 정상 복원됨
   refreshSamplerListByModel();
-  loadApiKey();
   await DB.init();
+  await loadApiKey();   // DB.init 이후에 호출 (암호화 키가 IDB에 있음)
   await loadSettings();
   // 설정 복원 후 한 번 더 갱신 (모델별 호환 표시·prev 보존)
   refreshSamplerListByModel();
