@@ -2172,7 +2172,17 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
         <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center;padding:4px 8px;background:var(--card);border:1.5px solid var(--b1);border-radius:5px">
           <span style="font-size:11.5px;color:var(--t3);font-weight:600">출연 방식:</span>
           <label class="chk" style="font-size:12px"><input type="radio" name="pgCharMode" value="solo" checked>👤 각자 (1명씩 한 장)</label>
-          <label class="chk" style="font-size:12px" title="선택된 캐릭터들이 한 장에 모두 동시 출연 (최대 6명, V4 모델)"><input type="radio" name="pgCharMode" value="together">👥 같이 (선택 N명 동시 출연)</label>
+          <label class="chk" style="font-size:12px" title="아래 체크 → [➕ 그룹 생성] 으로 그룹 정의. 각 그룹이 한 장씩 동시 출연"><input type="radio" name="pgCharMode" value="together">👥 같이 (그룹 단위)</label>
+        </div>
+        <!-- 👥 같이 모드 — 사용자가 만든 출연 그룹 목록 -->
+        <div id="pgCharGroupsArea" style="display:none;margin-bottom:8px;padding:8px 10px;background:rgba(58,99,152,.05);border:1.5px solid rgba(58,99,152,.2);border-radius:6px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span style="font-size:12px;font-weight:700;color:var(--t1)">🎞 출연 그룹</span>
+            <span id="pgCharGroupsCount" style="font-size:11px;color:var(--t3);font-family:var(--mono)">0개</span>
+            <button class="btn ghost" id="pgMakeGroupBtn" type="button" title="아래 체크된 캐릭터들로 새 그룹 생성 (체크 자동 해제됨)" style="margin-left:auto;padding:5px 10px;font-size:11.5px;border-color:rgba(58,99,152,.4);color:var(--blue)">➕ 새 그룹</button>
+            <button class="btn ghost" id="pgClearGroupsBtn" type="button" title="모든 그룹 초기화" style="padding:5px 10px;font-size:11.5px">🗑 비우기</button>
+          </div>
+          <div id="pgCharGroupsList" style="display:flex;flex-direction:column;gap:4px"></div>
         </div>
         <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
           <button class="btn ghost" id="pgSelectAll" type="button" style="padding:5px 10px;font-size:11.5px">☑ 전체 선택</button>
@@ -7693,6 +7703,52 @@ function pgPopulateSceneChar(rawQ){
 // 최대 6명까지(V4 캐릭터 슬롯 제한)
 let _pgSceneExtraChars = [];   // [{idx, name, text, thumb}, ...]
 
+// 👥 캐릭터별 '같이' 모드 — 사용자가 직접 만든 출연 그룹들 (각 배열이 한 장에 출연)
+// 예) [[c1, c2], [c3], [c4, c5]] → 3장 (그룹1=2명, 그룹2=1명, 그룹3=2명)
+let _pgCharGroups = [];
+
+function pgRenderCharGroups(){
+  const wrap = $('pgCharGroupsList');
+  const cnt = $('pgCharGroupsCount');
+  if(!wrap) return;
+  if(cnt) cnt.textContent = _pgCharGroups.length ? `${_pgCharGroups.length}개 그룹 · ${_pgCharGroups.reduce((s,g)=>s+g.length,0)}명` : '0개';
+  if(!_pgCharGroups.length){
+    wrap.innerHTML = '<div style="color:var(--t3);font-size:11.5px;font-style:italic;padding:6px 4px">아직 그룹 없음 — 아래 캐릭터 체크 → [➕ 새 그룹] 으로 만드세요</div>';
+    return;
+  }
+  wrap.innerHTML = _pgCharGroups.map((g, gi) =>
+    `<div style="display:flex;align-items:center;gap:6px;padding:5px 9px;background:var(--card);border:1.5px solid var(--b1);border-radius:5px">
+      <span style="font-weight:700;color:var(--blue);font-size:11.5px;flex-shrink:0">그룹${gi+1}</span>
+      <span style="flex:1;font-size:12px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.map(c => esc(c.name||'')).join(' + ')}</span>
+      <span style="font-family:var(--mono);font-size:10.5px;color:var(--t3);flex-shrink:0">${g.length}명</span>
+      <button type="button" data-pg-cg-rm="${gi}" title="이 그룹 제거" style="background:transparent;border:0;color:var(--red);cursor:pointer;padding:2px 5px;font-size:13px;line-height:1;flex-shrink:0">✕</button>
+    </div>`
+  ).join('');
+}
+
+// 같이 모드면 그룹 영역 표시, 각자 모드면 숨김 + 비용 갱신
+function pgSyncCharModeUI(){
+  const mode = document.querySelector('input[name="pgCharMode"]:checked')?.value || 'solo';
+  const area = $('pgCharGroupsArea');
+  if(area) area.style.display = mode === 'together' ? '' : 'none';
+  if(typeof pgRefreshCost === 'function') pgRefreshCost();
+}
+
+// 체크된 캐릭터로 새 그룹 만들기
+function pgMakeGroupFromChecked(){
+  const checked = [...document.querySelectorAll('#pgCharList input[data-act="pick"]:checked')]
+    .map(i => state.presets.character?.[parseInt(i.dataset.idx, 10)])
+    .filter(Boolean);
+  if(!checked.length){ toast('체크된 캐릭터 없음 — 먼저 아래에서 K명 체크하세요', 'warning'); return; }
+  if(checked.length > 6){ toast('한 그룹 최대 6명 (V4 슬롯) — 처음 6명만 사용', 'warning'); }
+  _pgCharGroups.push(checked.slice(0, 6));
+  pgRenderCharGroups();
+  // 다음 그룹 만들기 편하게 체크 자동 해제
+  document.querySelectorAll('#pgCharList input[data-act="pick"]').forEach(c => c.checked = false);
+  pgRefreshCost();
+  toast(`그룹${_pgCharGroups.length} 추가 (${checked.length}명) — 체크 해제됨, 다음 그룹 만드세요`, 'success');
+}
+
 function pgRenderSceneCharChips(){
   const wrap = $('pgSceneCharChips');
   if(!wrap) return;
@@ -8032,6 +8088,10 @@ function openPreviewGenModal(){
   // 시나리오별 모드의 동시 출연 칩 초기화 + 렌더
   _pgSceneExtraChars = [];
   pgRenderSceneCharChips();
+  // 캐릭터별 '같이' 그룹 초기화
+  _pgCharGroups = [];
+  pgRenderCharGroups();
+  pgSyncCharModeUI();
   // 기본 모드는 캐릭터별 (이전 동작 유지)
   pgSetMode(_pgMode);
 
@@ -8151,8 +8211,14 @@ function pgRefreshCost(){
     if($('pgScenesCount')) $('pgScenesCount').textContent = `(${checked}/${totalScenes} 선택${custom ? ` + 직접 ${custom}개` : ''})`;
   } else {
     const picked = [...document.querySelectorAll('#pgCharList input[data-act="pick"]:checked')].length;
-    total = picked;
-    $('pgCharCount').textContent = `(${picked}/${state.presets.character?.length || 0} 선택)`;
+    const charMode = document.querySelector('input[name="pgCharMode"]:checked')?.value || 'solo';
+    if(charMode === 'together'){
+      // 같이 모드: 정의된 그룹 수 = 생성 장수 (체크된 항목은 단순 표시용)
+      total = _pgCharGroups.length;
+    } else {
+      total = picked;
+    }
+    $('pgCharCount').textContent = `(${picked}/${state.presets.character?.length || 0} 선택${charMode==='together'?` · 그룹 ${_pgCharGroups.length}개`:''})`;
   }
   $('pgTotalCount').textContent = total;
   $('pgCost').textContent = `${(per * total).toLocaleString()} Anlas`;
@@ -8337,12 +8403,18 @@ async function pgStart(){
   $('pgStop').style.display = '';
   $('pgProgress').style.display = '';
   let done = 0, errors = 0;
-  // 👥 출연 방식 — '각자' = 1명씩 한 장 / '같이' = 선택한 N명을 한 장에 동시 (최대 6명)
+  // 👥 출연 방식 — '각자' = 체크 N명 각자 한 장 / '같이' = 사용자 정의 그룹 단위 (각 그룹 1장)
   const charMode = document.querySelector('input[name="pgCharMode"]:checked')?.value || 'solo';
   let chunks;
   if(charMode === 'together'){
-    if(picked.length > 6){ toast('동시 출연은 최대 6명 — 처음 6명만 사용', 'warning'); }
-    chunks = [picked.slice(0, 6)];
+    if(!_pgCharGroups.length){
+      // fallback: picked 전체를 한 그룹으로 (사용자가 그룹 안 만든 경우)
+      if(!picked.length){ toast('그룹을 만들거나 캐릭터를 체크하세요', 'warning'); state.running = false; return; }
+      if(picked.length > 6){ toast('그룹 없이 시작 — 처음 6명만 한 그룹으로', 'warning'); }
+      chunks = [picked.slice(0, 6)];
+    } else {
+      chunks = _pgCharGroups;
+    }
   } else {
     chunks = picked.map(c => [c]);
   }
@@ -11715,6 +11787,27 @@ function wireGalleryEvents(){
   // 🗂 전체 접기·펼치기 + 그룹 필터 (캐릭터별 모드)
   $('pgCollapseAll')?.addEventListener('click', pgToggleCollapseAll);
   $('pgGroupFilter')?.addEventListener('change', pgApplyGroupFilter);
+  // 👥 출연 방식 라디오 — 같이 모드면 그룹 영역 노출
+  document.querySelectorAll('input[name="pgCharMode"]').forEach(r => {
+    r.addEventListener('change', pgSyncCharModeUI);
+  });
+  $('pgMakeGroupBtn')?.addEventListener('click', pgMakeGroupFromChecked);
+  $('pgClearGroupsBtn')?.addEventListener('click', () => {
+    if(!_pgCharGroups.length) return;
+    _pgCharGroups = [];
+    pgRenderCharGroups();
+    pgRefreshCost();
+    toast('모든 그룹 비웠어요', 'info');
+  });
+  $('pgCharGroupsList')?.addEventListener('click', e => {
+    const b = e.target.closest('[data-pg-cg-rm]');
+    if(!b) return;
+    const i = parseInt(b.dataset.pgCgRm, 10);
+    if(isNaN(i)) return;
+    _pgCharGroups.splice(i, 1);
+    pgRenderCharGroups();
+    pgRefreshCost();
+  });
   // 🎬 시나리오별 모드 — 전체 선택/해제/접기 + 카테고리 필터
   $('pgSceneSelectAll')?.addEventListener('click', () => {
     document.querySelectorAll('#pgSceneList input[data-act="pick-scene"]').forEach(c => c.checked = true);
