@@ -2973,6 +2973,25 @@ function toastUndo(msg, undoFn, timeoutMs){
   toast(msg, 'success', {label:'↶ 실행 취소', onClick: undoFn, timeoutMs: timeoutMs ?? 6000});
 }
 
+// 🛡 비동기 작업 에러 표준화 — 실패 시 console.error + toast(error) 자동
+// 사용: const blob = await safeAsync(() => naiGenerate(...), '이미지 생성');
+//      throw 다시 던져 caller가 흐름 제어 가능. 토스트는 한 번만.
+async function safeAsync(fn, context){
+  try {
+    return await fn();
+  } catch(e){
+    const msg = e?.message || String(e || '알 수 없는 오류');
+    console.error(`[${context || 'Async'}] ${msg}`, e);
+    try { toast(`${context || '오류'}: ${msg}`, 'error'); } catch(_){}
+    throw e;
+  }
+}
+
+// AbortError 등 사용자가 의도한 중단은 조용히 처리
+function isUserAbort(e){
+  return e?.name === 'AbortError' || /aborted|cancelled|abort/i.test(e?.message || '');
+}
+
 function confirmDialog(msg, onOk, title){
   $('confirmTitle').textContent = title || '확인';
   $('confirmBody').textContent = msg;
@@ -8962,6 +8981,19 @@ function applyUiScale(percent){
 // EVENT WIRING
 // ═══════════════════════════════════════════════════════════
 function wireEvents(){
+  // 🔧 영역별 이벤트 바인딩 함수로 분할 — wireEvents 자체는 디스패처
+  wireTopbarAndFormEvents();   // API key, fullscreen, mode bar, tabs, sections, form changes, sliders, seed, workflows, seed history, clear/dedupe/lock prompts and negs
+  wireCharacterEvents();   // Character section + char browser + pos grid outside click
+  wireGenerationAndPresetEvents();   // Generate button, preview actions, image drop, vibe, director, preset bar, tag codex, PNG EXIF, prompt expand, preset group toggle, preset modal, confirm modal
+  wireGalleryEvents();   // Gallery search/filter/reload/marquee/zoom/select mode/batch ops/etc.
+  wireLightboxEvents();   // Lightbox open/close/nav/zoom-pan/swipe/seed extract/vibe/tags/enhance/upscale
+  wireMiscEvents();   // Inpaint, storage, XYZ, global drop, keyboard shortcuts
+}
+
+// ───────────────────────────────────────────────────────────
+// wireTopbarAndFormEvents — API key, fullscreen, mode bar, tabs, sections, form changes, sliders, seed, workflows, seed history, clear/dedupe/lock prompts and negs
+// ───────────────────────────────────────────────────────────
+function wireTopbarAndFormEvents(){
   // API key — 공백·줄바꿈·제로폭 문자 자동 제거 (복붙 시 흔한 문제)
   $('apiKey').addEventListener('input', e => {
     const cleaned = (e.target.value || '').replace(/[\s​‌‍﻿]/g, '');
@@ -9223,6 +9255,12 @@ function wireEvents(){
 
   // (옛 구역별 입력 / 품질·레이팅 / 가중치 이벤트는 모두 제거됨 — 자유 입력만 사용)
 
+}
+
+// ───────────────────────────────────────────────────────────
+// wireCharacterEvents — Character section + char browser + pos grid outside click
+// ───────────────────────────────────────────────────────────
+function wireCharacterEvents(){
   // Character section
   $('addCharBtn').addEventListener('click', () => addCharacter());
   $('charList').addEventListener('click', e => {
@@ -9415,7 +9453,12 @@ function wireEvents(){
   document.addEventListener('mousedown', e => {
     if(!$('posGrid').contains(e.target) && !e.target.closest('.char-pos')) closePosGrid();
   });
+}
 
+// ───────────────────────────────────────────────────────────
+// wireGenerationAndPresetEvents — Generate button, preview actions, image drop, vibe, director, preset bar, tag codex, PNG EXIF, prompt expand, preset group toggle, preset modal, confirm modal
+// ───────────────────────────────────────────────────────────
+function wireGenerationAndPresetEvents(){
   // Generate button
   $('genBtn').addEventListener('click', startGeneration);
   $('pauseBtn').addEventListener('click', () => {
@@ -9710,7 +9753,12 @@ function wireEvents(){
 
   // Confirm modal
   $('confirmCancel').addEventListener('click', () => $('confirmModal').classList.remove('open'));
+}
 
+// ───────────────────────────────────────────────────────────
+// wireGalleryEvents — Gallery search/filter/reload/marquee/zoom/select mode/batch ops/etc.
+// ───────────────────────────────────────────────────────────
+function wireGalleryEvents(){
   // Gallery
   $('gallerySearch').addEventListener('input', debounce(loadGallery, 250));
   $('galleryFilter').addEventListener('change', loadGallery);
@@ -9997,6 +10045,12 @@ function wireEvents(){
     }
   });
 
+}
+
+// ───────────────────────────────────────────────────────────
+// wireLightboxEvents — Lightbox open/close/nav/zoom-pan/swipe/seed extract/vibe/tags/enhance/upscale
+// ───────────────────────────────────────────────────────────
+function wireLightboxEvents(){
   // Lightbox
   $('lbClose').addEventListener('click', closeLightbox);
   $('lightbox').addEventListener('click', e => { if(e.target === $('lightbox')) closeLightbox(); });
@@ -10241,6 +10295,12 @@ function wireEvents(){
     });
   });
 
+}
+
+// ───────────────────────────────────────────────────────────
+// wireMiscEvents — Inpaint, storage, XYZ, global drop, keyboard shortcuts
+// ───────────────────────────────────────────────────────────
+function wireMiscEvents(){
   // Inpaint
   $('inpaintCancel').addEventListener('click', () => $('inpaintModal').classList.remove('open'));
   $('inpaintSave').addEventListener('click', saveMaskFromCanvas);
