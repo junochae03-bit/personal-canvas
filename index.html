@@ -6763,6 +6763,15 @@ async function startGeneration(){
   const apiKey = $('apiKey').value.trim();
   if(!apiKey){ toast('API 키를 입력하세요', 'error'); return; }
 
+  // 🛡 빈 프롬프트·캐릭터·시퀀스 모두 비었으면 생성 차단 (자원 낭비 방지)
+  const promptText = ($('prompt').value || '').trim();
+  const seqText = ($('seqInput')?.value || '').trim();
+  const enabledChars = (state.characters || []).filter(c => c.enabled !== false && ((c.appearance||'').trim() || (c.action||'').trim() || (c.prompt||'').trim()));
+  if(!promptText && !seqText && !enabledChars.length){
+    toast('프롬프트가 비어있습니다 — 메인 프롬프트·시퀀스·캐릭터 중 하나 이상 입력하세요', 'warning');
+    return;
+  }
+
   // 커스텀 큐(예: XYZ)가 이미 세팅되어 있으면 그대로 사용
   if(state._customQueue && state.queue.length){
     state._customQueue = false;
@@ -7139,8 +7148,12 @@ async function workflowSave(name){
     data: captureWorkflowState(),
   };
   state.workflows.unshift(wf);
-  // 최대 50개 — 가장 오래된 것부터 잘라냄
-  if(state.workflows.length > 50) state.workflows.length = 50;
+  // 최대 50개 — 가장 오래된 것부터 잘라냄 (사용자에게 명시)
+  if(state.workflows.length > 50){
+    const removed = state.workflows.splice(50);
+    const oldest = removed.map(w => w.name || '(이름 없음)').slice(-3).join(', ');
+    toast(`⚠ 워크플로우 최대 50개 — 가장 오래된 ${removed.length}개 자동 삭제 (${oldest}…)`, 'warning');
+  }
   await saveWorkflows();
   return wf;
 }
@@ -8591,7 +8604,7 @@ async function loadGallery(){
     if(selWork) filtered = filtered.filter(matchesWork);
     if(search){
       filtered = filtered.filter(i => {
-        const t = ((i.prompt||'') + ' ' + (i.label||'') + ' ' + (i.meta?.prompt||'') + ' ' + (i.meta?.characters||[]).join(' ')).toLowerCase();
+        const t = ((i.prompt||'') + ' ' + (i.label||'') + ' ' + (i.meta?.prompt||'') + ' ' + (i.meta?.characters||[]).join(' ') + ' ' + (i.meta?.sceneLabel||'') + ' ' + (i.meta?.sceneCharPreset||'') + ' ' + (i.meta?.seed!=null?i.meta.seed:'') ).toLowerCase();
         return t.includes(search);
       });
     }
