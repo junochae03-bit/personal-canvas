@@ -10209,7 +10209,10 @@ function setMainPane(pane){
   document.body.dataset.mview = pane;
   $$('.main-tab-btn').forEach(b => b.classList.toggle('act', b.dataset.pane === pane));
   $$('.mn-btn').forEach(b => b.classList.toggle('act', b.dataset.mview === pane));
-  $$('.main-pane').forEach(p => p.classList.toggle('act', p.dataset.pane === pane));
+  // 🛡 'edit'은 모바일 전용 mview (사이드바 표시) — data-pane="edit"인 메인 영역이 없으므로
+  // main-pane은 'preview'로 폴백해서 빈 화면 방지 (데스크탑에서 메인 영역이 사라지지 않게)
+  const mainPaneTarget = (pane === 'edit') ? 'preview' : pane;
+  $$('.main-pane').forEach(p => p.classList.toggle('act', p.dataset.pane === mainPaneTarget));
   if(pane === 'gallery') loadGallery();
   else if(pane === 'presets'){ renderPresetTabs(); renderPresets(); }
   else if(pane === 'templates'){ tplRenderCatChips(); tplRenderRoll(); tplRenderSavedList(); }
