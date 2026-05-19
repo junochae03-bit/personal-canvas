@@ -1743,8 +1743,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <div class="tag-cats" id="tagCats"></div>
           <div style="flex-basis:100%;height:0"></div>
           <input type="text" class="inp" id="tagSearch" placeholder="🔍 태그 또는 한글 뜻으로 검색..." style="width:280px">
-          <div class="tag-mode-row">
+          <div class="tag-mode-row" style="display:flex;gap:10px;flex-wrap:wrap">
             <label class="chk"><input type="checkbox" id="tagToNeg">제외 프롬프트로 추가 <span class="en">→ Negative</span></label>
+            <label class="chk" title="🪄 클릭한 태그를 의미별로 자동 분류 — 외형(hair/eyes/skin)·의상·포즈·표정·상황은 활성 캐릭터의 액션 슬롯에, 그 외는 메인 프롬프트로"><input type="checkbox" id="tagAutoClassify">🪄 자동 분류 <span class="en">Auto-route</span></label>
           </div>
           <div class="tb-grow"></div>
           <span class="tag-mode-info" id="tagInfo"></span>
@@ -1941,8 +1942,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
         <span class="cp-mode-hint" id="cpModeHint">선택한 항목을 기존 태그 뒤에 콤마로 이어 붙입니다</span>
       </div>
 
-      <div class="cp-search-row">
-        <input id="charPickSearch" class="inp" placeholder="🔍 영문 태그·한글 이름으로 검색…" autocomplete="off" spellcheck="false">
+      <div class="cp-search-row" style="display:flex;gap:6px;align-items:center">
+        <input id="charPickSearch" class="inp" placeholder="🔍 영문 태그·한글 이름으로 검색…" autocomplete="off" spellcheck="false" style="flex:1">
+        <button class="btn ghost" id="charPickRandom" type="button" title="🎲 현재 카테고리·그룹에서 랜덤 1개를 액션 슬롯에 추가" style="padding:6px 11px;font-size:12.5px;flex-shrink:0">🎲 랜덤 <span class="en">Random</span></button>
       </div>
       <div class="cp-cats" id="charPickCats"></div>
       <div class="cp-cats" id="charPickSubgroups" style="margin-top:-2px"></div>
@@ -9624,8 +9626,9 @@ let _tagTargetCharIdx = -1;
 function insertTag(tag, category){
   // 우선순위:
   //   1) 캐릭터 네거티브 모드 활성 → 그 캐릭터의 neg에 추가
-  //   2) tagToNeg 체크 / negative 카테고리 → 메인 negPrompt
-  //   3) 그 외 → 메인 prompt
+  //   2) 🪄 자동 분류 — classifyTagToSlot으로 외형/액션은 캐릭터 슬롯, 그 외는 프롬프트
+  //   3) tagToNeg 체크 / negative 카테고리 → 메인 negPrompt
+  //   4) 그 외 → 메인 prompt
   if(_tagTargetCharIdx >= 0){
     const c = state.characters[_tagTargetCharIdx];
     if(c){
@@ -9639,6 +9642,29 @@ function insertTag(tag, category){
       saveSettingsDebounced();
       toast(`#${_tagTargetCharIdx+1} 네거티브에 추가: ${tag}`, 'success');
       return;
+    }
+  }
+  // 🪄 자동 분류 — 활성 캐릭터의 적절한 슬롯에 라우팅
+  if($('tagAutoClassify')?.checked && category !== 'negative'){
+    const slot = (typeof classifyTagToSlot === 'function') ? classifyTagToSlot(tag) : null;
+    // 외형/의상/포즈 → 캐릭터 action 슬롯
+    if(slot === 'sp_appearance' || slot === 'sp_outfit' || slot === 'sp_pose'){
+      const charIdx = (state.characters || []).findIndex(c => c.enabled !== false);
+      if(charIdx >= 0){
+        const c = state.characters[charIdx];
+        const target = (slot === 'sp_appearance') ? 'appearance' : 'action';
+        const cur = (c[target] || '').trim();
+        c[target] = cur ? `${cur}, ${tag}` : tag;
+        const ta = $('charList')?.querySelector(`textarea[data-act="${target}"][data-idx="${charIdx}"]`);
+        if(ta) ta.value = c[target];
+        const chip = $('tagBody').querySelector(`[data-tag="${CSS.escape(tag)}"]`);
+        if(chip){ chip.classList.add('added'); setTimeout(()=> chip.classList.remove('added'), 700); }
+        saveSettingsDebounced();
+        const slotLbl = target === 'appearance' ? '외형' : '액션';
+        toast(`🪄 #${charIdx+1} ${(c.name||'캐릭터').slice(0,15)} ${slotLbl}에 자동: ${tag}`, 'success');
+        return;
+      }
+      // 캐릭터 없으면 프롬프트 fallback (아래로 흐름)
     }
   }
   const toNeg = $('tagToNeg').checked || category === 'negative';
@@ -10731,6 +10757,17 @@ function wireCharacterEvents(){
     _cpSubGroup = b.dataset.subgrp || '';
     renderCharPickSubgroups();
     renderCharPickList();
+  });
+  // 🎲 빠른 추가 모달 — 현재 카테고리·서브그룹에서 랜덤 1개 선택
+  $('charPickRandom')?.addEventListener('click', () => {
+    if(_charPickIdx < 0){ toast('캐릭터 슬롯이 선택되지 않음', 'warning'); return; }
+    // 모든 가시 .cp-item에서 랜덤 — 현재 필터·검색·서브그룹 그대로 적용
+    const visible = [...$('charPickList').querySelectorAll('.cp-item')];
+    if(!visible.length){ toast('표시 중인 항목 없음', 'warning'); return; }
+    const pick = visible[Math.floor(Math.random() * visible.length)];
+    selectCharPickItem(pick);
+    // 시각적 강조 — 잠시 스크롤해서 어떤 게 선택됐는지 보여줌
+    pick.scrollIntoView({block:'nearest', behavior:'smooth'});
   });
   $('charPickList').addEventListener('click', e => {
     // ➕ 서브그룹 일괄 추가 버튼 우선 처리
