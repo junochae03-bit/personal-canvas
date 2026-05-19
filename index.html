@@ -1223,6 +1223,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     margin:0;letter-spacing:.04em;
     box-shadow:0 2px 8px rgba(162,90,31,.25);
   }
+  /* 생성 버튼 그룹 — 모바일에서도 가로 확장, 두 버튼 50:50 */
+  .side-foot #genBtnGroup{flex:1;min-width:0;display:flex;gap:6px}
+  .side-foot #genBtnGroup .gen-btn{flex:1;min-width:0;font-size:13.5px;padding:11px 8px}
 
   /* 사이드바·메인영역 콘텐츠가 하단 고정 요소에 가리지 않도록 패딩 확보 */
   .sidebar{padding-bottom:0}
@@ -1634,9 +1637,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
         <span id="costEstimate">비용: ~0 Anlas</span>
         <span id="resInfo">832×1216</span>
       </div>
-      <div id="genBtnGroup" style="display:flex;gap:6px">
-        <button id="genBtn" class="gen-btn" style="flex:1">생성 시작 <span class="en">Generate</span></button>
-        <button id="genQueueAddBtn" class="gen-btn" type="button" title="진행 중인 큐에 현재 설정으로 한 장 더 추가" style="flex:1;display:none;background:var(--blue);border-color:var(--blue);color:#fff8ec">＋ 대기열 추가 <span class="en">Add</span></button>
+      <div id="genBtnGroup" style="display:flex;gap:6px;flex:1;min-width:0">
+        <button id="genBtn" class="gen-btn" style="flex:1;min-width:0">생성 시작 <span class="en">Generate</span></button>
+        <button id="genQueueAddBtn" class="gen-btn" type="button" title="진행 중인 큐에 현재 설정으로 한 장 더 추가" style="flex:1;min-width:0;display:none;background:var(--blue);border-color:var(--blue);color:#fff8ec">＋ 추가 <span class="en">Add</span></button>
       </div>
     </div>
   </aside>
