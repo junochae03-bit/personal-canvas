@@ -1147,11 +1147,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   body[data-mview="preview"] .sidebar,
   body[data-mview="gallery"] .sidebar,
   body[data-mview="presets"] .sidebar,
+  body[data-mview="templates"] .sidebar,
   body[data-mview="tags"] .sidebar,
   body[data-mview="settings"] .sidebar{display:none}
   body[data-mview="preview"] .main-area,
   body[data-mview="gallery"] .main-area,
   body[data-mview="presets"] .main-area,
+  body[data-mview="templates"] .main-area,
   body[data-mview="tags"] .main-area,
   body[data-mview="settings"] .main-area{display:flex}
 
@@ -1280,6 +1282,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   body[data-mview="preview"] .main-area,
   body[data-mview="gallery"] .main-area,
   body[data-mview="presets"] .main-area,
+  body[data-mview="templates"] .main-area,
   body[data-mview="tags"] .main-area,
   body[data-mview="settings"] .main-area{
     animation:mvFade .14s ease-out;
@@ -1289,6 +1292,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   body[data-mventer="right"][data-mview="preview"] .main-area,
   body[data-mventer="right"][data-mview="gallery"] .main-area,
   body[data-mventer="right"][data-mview="presets"] .main-area,
+  body[data-mventer="right"][data-mview="templates"] .main-area,
   body[data-mventer="right"][data-mview="tags"] .main-area,
   body[data-mventer="right"][data-mview="settings"] .main-area{
     animation:mvFromRight .22s cubic-bezier(.22,.61,.36,1);
@@ -1297,6 +1301,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   body[data-mventer="left"][data-mview="preview"] .main-area,
   body[data-mventer="left"][data-mview="gallery"] .main-area,
   body[data-mventer="left"][data-mview="presets"] .main-area,
+  body[data-mventer="left"][data-mview="templates"] .main-area,
   body[data-mventer="left"][data-mview="tags"] .main-area,
   body[data-mventer="left"][data-mview="settings"] .main-area{
     animation:mvFromLeft .22s cubic-bezier(.22,.61,.36,1);
@@ -13120,7 +13125,7 @@ async function init(){
 // · 가로 스크롤 요소/입력/캔버스/모달 위에서는 동작하지 않음
 // ═══════════════════════════════════════════════════════════
 function setupMobileSwipe(){
-  const ORDER = ['edit','preview','gallery','presets','tags','settings'];
+  const ORDER = ['edit','preview','gallery','presets','templates','tags','settings'];
   const BLOCK_SEL = 'textarea,input,select,canvas,#lightbox,.modal,.modal-bg,#posGrid,.mobile-nav,.side-foot,.slider-row,#inpaintCanvasWrap';
   let sx=0, sy=0, st=0;
   let active=false;    // 터치 시작이 유효한지
