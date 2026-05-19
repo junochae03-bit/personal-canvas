@@ -3216,20 +3216,41 @@ const DB = {
           if(ses){ ses.count = Math.max(0, (ses.count||1)-1); sesStore.put(ses); }
         };
       };
-      tx.oncomplete = () => res();
+      tx.oncomplete = () => {
+        // 🧹 앨범 멤버십 orphan 정리 — fire-and-forget
+        pruneAlbumMembership([imgId]).catch(() => {});
+        res();
+      };
       tx.onerror = e => rej(e);
     });
   },
   async deleteSession(sid){
     if(!this.db) return;
     const imgs = await this.getSessionImages(sid);
+    const deletedIds = imgs.map(i => i.id);
     return new Promise(res => {
       const tx = this.tx([this.IMG, this.SES], 'readwrite');
       const imgStore = tx.objectStore(this.IMG);
       imgs.forEach(i => imgStore.delete(i.id));
       tx.objectStore(this.SES).delete(sid);
-      tx.oncomplete = () => res();
+      tx.oncomplete = () => {
+        // 🧹 세션 내 모든 이미지에 대한 albumMembership orphan 정리
+        pruneAlbumMembership(deletedIds).catch(() => {});
+        res();
+      };
       tx.onerror = (e) => { console.warn('[DB] tx error', e?.target?.error || e); res(); };
+    });
+  },
+  // 모든 이미지 ID — pruneAlbumMembership(전체 검증) 용도
+  async getAllImageIds(){
+    if(!this.db) return [];
+    return new Promise(res => {
+      try {
+        const tx = this.tx(this.IMG, 'readonly');
+        const req = tx.objectStore(this.IMG).getAllKeys();
+        req.onsuccess = () => res(req.result || []);
+        req.onerror = () => res([]);
+      } catch(e){ res([]); }
     });
   },
   async clearAll(){
@@ -3803,6 +3824,33 @@ function applyParsedMetaToForm(rawMeta, opts){
     const row = $('customResRow');
     if(row) row.style.display = '';
     restored.push(`${w}×${h}`);
+  }
+  // 👤 V4 캐릭터 메타 복원 — 저장된 characters 배열을 state에 주입하고 UI 다시 렌더
+  // 외부 PNG/EXIF에서 옴 → 신뢰할 수 없으므로 안전한 필드만 추출
+  const chars = m.characters;
+  if(Array.isArray(chars) && chars.length){
+    const sanitized = chars.slice(0, 6).map(c => ({
+      enabled: c.enabled !== false,
+      name: String(c.name || '').slice(0, 80),
+      appearance: String(c.appearance || '').slice(0, 2000),
+      action: String(c.action || '').slice(0, 2000),
+      neg: String(c.neg || '').slice(0, 2000),
+      prompt: String(c.prompt || '').slice(0, 4000),
+      pos: c.pos && typeof c.pos === 'object' ? {
+        x: clamp(parseFloat(c.pos.x) || 0.5, 0, 1),
+        y: clamp(parseFloat(c.pos.y) || 0.5, 0, 1),
+      } : {x:0.5, y:0.5},
+      pool: Array.isArray(c.pool) ? c.pool.slice(0, 50).map(p => ({
+        name: String(p?.name || '').slice(0, 80),
+        appearance: String(p?.appearance || '').slice(0, 2000),
+        action: String(p?.action || '').slice(0, 2000),
+        neg: String(p?.neg || '').slice(0, 2000),
+      })) : [],
+      poolIdx: Math.max(0, parseInt(c.poolIdx) || 0),
+    }));
+    state.characters = sanitized;
+    if(typeof renderCharacters === 'function') renderCharacters();
+    restored.push(`캐릭터(${sanitized.length}명)`);
   }
   refreshResInfo();
   refreshPromptStats();
@@ -5241,11 +5289,12 @@ async function startXyzGeneration(){
   }
   const fixedSeed = $('xyz_fix_seed').checked ? Math.floor(Math.random() * 0xffffffff) : null;
   const newSession = $('xyz_new_session').checked;
-  // 큐 구성
+  // 큐 구성 — XYZ_PARAMS.find가 undefined를 반환할 가능성 방어 (잘못된 옵션값 등)
   const queue = [];
-  const xPretty = XYZ_PARAMS.find(p => p.id === xParam).pretty;
-  const yPretty = useY ? XYZ_PARAMS.find(p => p.id === yParam).pretty : '';
-  const zPretty = useZ ? XYZ_PARAMS.find(p => p.id === zParam).pretty : '';
+  const prettyOf = id => XYZ_PARAMS.find(p => p.id === id)?.pretty || id;
+  const xPretty = prettyOf(xParam);
+  const yPretty = useY ? prettyOf(yParam) : '';
+  const zPretty = useZ ? prettyOf(zParam) : '';
   let idx = 0;
   for(const z of (useZ ? zs : [null])){
     for(const y of (useY ? ys : [null])){
@@ -5969,10 +6018,32 @@ async function openGalleryPicker(onPick){
 async function loadAlbums(){
   state.userAlbums = (await DB.getFlag('user_albums')) || [];
   state.albumMembership = (await DB.getFlag('album_membership')) || {};
+  // 과거 버전에서 누적된 orphan 항목 정리 (1회) — fire-and-forget
+  pruneAlbumMembership().catch(() => {});
 }
 async function saveAlbumsState(){
   await DB.setFlag('user_albums', state.userAlbums);
   await DB.setFlag('album_membership', state.albumMembership);
+}
+
+// 🧹 삭제된 이미지에 대한 albumMembership orphan 엔트리 제거
+// imgIds 배열을 주면 그 ID들만, 없으면 IDB에 실존하는 ID와 대조해서 전부 청소.
+async function pruneAlbumMembership(imgIds){
+  let dirty = false;
+  if(Array.isArray(imgIds)){
+    for(const id of imgIds){
+      if(state.albumMembership[id]){ delete state.albumMembership[id]; dirty = true; }
+    }
+  } else {
+    // 전체 검증 — 대량 작업, getAllImageIds 한 번 호출
+    try {
+      const allIds = new Set(await DB.getAllImageIds());
+      for(const k of Object.keys(state.albumMembership)){
+        if(!allIds.has(Number(k))){ delete state.albumMembership[k]; dirty = true; }
+      }
+    } catch(e){ console.warn('[albums] prune all failed', e); }
+  }
+  if(dirty) await saveAlbumsState();
 }
 function newAlbumId(){
   return 'a_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
