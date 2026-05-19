@@ -182,6 +182,10 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .char-body{padding:10px;display:none;background:var(--card)}
 .char-body.open{display:block}
 .char-body .ta{min-height:66px;margin-bottom:5px}
+.char-ta-wrap{position:relative}
+.char-ta-wrap .ta{padding-right:26px}
+.char-ta-clear{position:absolute;top:5px;right:5px;background:transparent;border:0;color:var(--t3);opacity:.45;cursor:pointer;font-size:13px;line-height:1;padding:3px 6px;border-radius:4px;font-family:inherit;transition:opacity .15s,color .15s}
+.char-ta-clear:hover{opacity:.95;color:var(--red);background:rgba(181,67,56,.07)}
 .char-section-label{font-size:11px;color:var(--t2);font-weight:700;margin:8px 0 3px;display:flex;align-items:center;gap:5px;letter-spacing:0}
 .char-tagcodex-btn{background:transparent;border:1.25px solid rgba(58,99,152,.4);color:var(--blue);padding:3px 8px;font-size:10.5px;font-weight:700;border-radius:4px;cursor:pointer;margin-left:auto;font-family:inherit;transition:all .12s}
 .char-tagcodex-btn:hover{background:rgba(58,99,152,.1);border-color:var(--blue)}
@@ -4605,16 +4609,25 @@ function renderCharacters(){
       </div>
       <div class="char-body open" data-body="${i}">
         <div class="char-section-label">👤 외형·신체 <span class="en">Appearance</span></div>
-        <textarea class="ta tiny" data-act="appearance" data-idx="${i}" placeholder="예: 1girl, long blonde hair, blue eyes, petite, fair skin">${esc(c.appearance||'')}</textarea>
+        <div class="char-ta-wrap">
+          <textarea class="ta tiny" data-act="appearance" data-idx="${i}" placeholder="예: 1girl, long blonde hair, blue eyes, petite, fair skin">${esc(c.appearance||'')}</textarea>
+          <button type="button" class="char-ta-clear" data-act="clear-char-field" data-field="appearance" data-idx="${i}" title="외형 비우기" aria-label="외형 비우기">✕</button>
+        </div>
 
         <div class="char-section-label">🤸 액션·의상·자세 <span class="en">Action & Outfit</span></div>
-        <textarea class="ta tiny" data-act="action" data-idx="${i}" placeholder="예: school uniform, sitting, smile, source#hug">${esc(c.action||'')}</textarea>
+        <div class="char-ta-wrap">
+          <textarea class="ta tiny" data-act="action" data-idx="${i}" placeholder="예: school uniform, sitting, smile, source#hug">${esc(c.action||'')}</textarea>
+          <button type="button" class="char-ta-clear" data-act="clear-char-field" data-field="action" data-idx="${i}" title="액션·의상 비우기" aria-label="액션·의상 비우기">✕</button>
+        </div>
         <button class="char-quick-btn" data-act="quickadd" data-idx="${i}">🪄 빠른 추가 — 액션·프리셋 찾기 <span class="en" style="opacity:.6">Quick Add</span></button>
 
         <div class="char-section-label">🚫 네거티브 <span class="en">Negative</span>
           <button class="char-tagcodex-btn" data-act="open-char-tagcodex" data-idx="${i}" title="태그 도감에서 이 캐릭터 네거티브로 추가" type="button">📖 도감에서 추가</button>
         </div>
-        <textarea class="ta tiny" data-act="neg" data-idx="${i}" placeholder="예: bad anatomy, bad hands">${esc(c.neg||'')}</textarea>
+        <div class="char-ta-wrap">
+          <textarea class="ta tiny" data-act="neg" data-idx="${i}" placeholder="예: bad anatomy, bad hands">${esc(c.neg||'')}</textarea>
+          <button type="button" class="char-ta-clear" data-act="clear-char-field" data-field="neg" data-idx="${i}" title="네거티브 비우기" aria-label="네거티브 비우기">✕</button>
+        </div>
       </div>
     </div>
   `;
@@ -11164,6 +11177,24 @@ function wireCharacterEvents(){
     else if(act === 'pool-next'){ rotateCharPool(idx, +1); }
     else if(act === 'pool-clear'){ clearCharPool(idx); }
     else if(act === 'open-char-tagcodex'){ openTagCodexForCharNeg(idx); }
+    else if(act === 'clear-char-field'){
+      // ✕ 캐릭터 카드 textarea 비우기 (외형·액션·네거티브) — 실행 취소 토스트 제공
+      const c = state.characters[idx];
+      if(!c) return;
+      const field = t.dataset.field;
+      const prev = c[field] || '';
+      if(!prev.trim()) return;
+      c[field] = '';
+      const ta = $('charList').querySelector(`textarea[data-act="${field}"][data-idx="${idx}"]`);
+      if(ta) ta.value = '';
+      saveSettingsDebounced();
+      const labelMap = {appearance:'외형', action:'액션·의상', neg:'네거티브'};
+      toastUndo(`#${idx+1} ${labelMap[field]||field} 비움`, () => {
+        c[field] = prev;
+        if(ta) ta.value = prev;
+        saveSettingsDebounced();
+      });
+    }
     else if(act === 'thumb'){
       // 썸네일/번호 탭 = 랜덤 캐릭터 프리셋 즉시 로드
       // (브라우저는 "🎴 둘러보기" 버튼으로 열기 — 명확히 분리)
