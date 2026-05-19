@@ -1790,9 +1790,16 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
               <div class="label">사용할 카테고리 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Sources</span></div>
               <div id="tplCatChips" style="display:flex;flex-wrap:wrap;gap:6px"></div>
             </div>
-            <div class="set-row" style="margin-top:10px">
-              <button class="btn primary" id="tplRollBtn" type="button" style="flex:1;padding:11px;font-size:14px">🎲 랜덤 조합 생성 <span class="en">Roll</span></button>
-              <button class="btn ghost" id="tplApplyBtn" type="button" title="현재 조합을 메인 폼에 적용 (프롬프트·캐릭터 슬롯 채움)" style="flex:1;padding:11px;font-size:13px;border-color:rgba(58,99,152,.4);color:var(--blue)">✅ 폼에 적용</button>
+            <div class="set-row" style="margin-top:10px;flex-direction:column;align-items:stretch;gap:8px">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:4px 8px;background:var(--card);border:1.5px solid var(--b1);border-radius:5px">
+                <span style="font-size:11.5px;color:var(--t3);font-weight:600">적용 방식:</span>
+                <label class="chk" style="font-size:12px" title="기존 첫 캐릭터 슬롯의 액션·의상에 콤마로 이어 붙임"><input type="radio" name="tplApplyMode" value="merge" checked>＋ 병합 (기존 슬롯에 추가)</label>
+                <label class="chk" style="font-size:12px" title="새 캐릭터 슬롯을 만들고 거기에 모든 항목 적용"><input type="radio" name="tplApplyMode" value="newslot">➕ 새 슬롯 추가</label>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button class="btn primary" id="tplRollBtn" type="button" style="flex:1;padding:11px;font-size:14px">🎲 랜덤 조합 생성 <span class="en">Roll</span></button>
+                <button class="btn ghost" id="tplApplyBtn" type="button" title="현재 조합을 메인 폼에 적용 (위 적용 방식대로)" style="flex:1;padding:11px;font-size:13px;border-color:rgba(58,99,152,.4);color:var(--blue)">✅ 폼에 적용</button>
+              </div>
             </div>
           </div>
           <div class="set-card">
@@ -9904,11 +9911,54 @@ function tplRenderRoll(){
 }
 
 // 현재 조합을 메인 폼에 적용
-function tplApplyRoll(){
+// mode: 'merge' (기본) — 기존 첫 캐릭터에 추가 / 'newslot' — 새 캐릭터 슬롯 만들고 거기에 다 적용
+function tplApplyRoll(forceMode){
   if(!_tplCurrentRoll.length){ toast('조합이 비어있습니다 — 먼저 🎲 랜덤 생성', 'warning'); return; }
-  // 1) character 항목 먼저 — 새 캐릭터 슬롯 추가
+  const mode = forceMode || document.querySelector('input[name="tplApplyMode"]:checked')?.value || 'merge';
   const charRolls = _tplCurrentRoll.filter(r => r.cat === 'character');
   const otherRolls = _tplCurrentRoll.filter(r => r.cat !== 'character');
+  const appendParts = otherRolls.map(r => (r.preset.text || '').trim()).filter(Boolean);
+
+  if(mode === 'newslot'){
+    // ➕ 새 슬롯 추가 모드 — 캐릭터 항목 + 다른 항목들을 새 캐릭터 슬롯에 통합
+    // character가 있으면 그 정보로 만들고, 없으면 빈 슬롯 + action에 항목들
+    const charPick = charRolls[0];   // 한 명만 사용 (여러 명이면 첫 번째)
+    const newCharName = charPick?.preset.name || '';
+    const newCharAppearance = charPick?.preset
+      ? [charPick.preset.appearance, charPick.preset.action]
+          .map(s=>(s||'').trim()).filter(Boolean).join(', ') || (charPick.preset.text || '')
+      : '';
+    const newCharAction = appendParts.join(', ');
+    addCharacter({
+      name: newCharName,
+      prompt: newCharAppearance,
+      thumb: charPick?.preset.thumb || null,
+    });
+    // addCharacter는 이름·외형만 받음. action 필드는 직접 설정해야 함
+    const lastIdx = state.characters.length - 1;
+    if(lastIdx >= 0 && newCharAction){
+      state.characters[lastIdx].action = newCharAction;
+    }
+    if(typeof renderCharacters === 'function') renderCharacters();
+    // 나머지 character 항목(2번째부터)도 별도 슬롯 추가 — newslot 모드는 각자 새 슬롯
+    for(let i = 1; i < charRolls.length; i++){
+      const r = charRolls[i];
+      const p = r.preset;
+      const derived = [p.appearance, p.action].map(s=>(s||'').trim()).filter(Boolean).join(', ');
+      addCharacter({
+        name: p.name || '',
+        prompt: derived || (p.text || p.prompt || ''),
+        thumb: p.thumb || null,
+      });
+    }
+    if(charRolls.length > 1 && typeof renderCharacters === 'function') renderCharacters();
+    saveSettingsDebounced();
+    toast(`➕ 새 슬롯 ${charRolls.length || 1}개 추가됨 — 템플릿 ${_tplCurrentRoll.length}개 항목 적용`, 'success');
+    setMainPane('edit');
+    return;
+  }
+
+  // 🔁 병합 모드 (기본): character 항목 새 슬롯 추가 + 다른 항목은 첫 활성 캐릭터의 action에 append
   for(const r of charRolls){
     const p = r.preset;
     const derived = [p.appearance, p.action].map(s=>(s||'').trim()).filter(Boolean).join(', ');
@@ -9920,9 +9970,6 @@ function tplApplyRoll(){
   }
   if(charRolls.length && typeof renderCharacters === 'function') renderCharacters();
 
-  // 2) 나머지 모든 카테고리(의상·포즈·표정·상황·배경·구도·분위기·인원·스타일)
-  //    → 첫 번째 활성 캐릭터의 액션·의상·자세 슬롯에 콤마로 append
-  const appendParts = otherRolls.map(r => (r.preset.text || '').trim()).filter(Boolean);
   if(appendParts.length){
     const targetIdx = (state.characters || []).findIndex(c => c.enabled !== false);
     if(targetIdx >= 0){
@@ -9943,7 +9990,7 @@ function tplApplyRoll(){
     }
   }
   saveSettingsDebounced();
-  toast(`✅ 템플릿 ${_tplCurrentRoll.length}개 적용 — 편집 탭에서 확인`, 'success');
+  toast(`✅ 템플릿 ${_tplCurrentRoll.length}개 적용 (병합 모드)`, 'success');
   setMainPane('edit');
 }
 
