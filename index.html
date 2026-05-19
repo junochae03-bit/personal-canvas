@@ -1716,7 +1716,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <!-- GALLERY PANE — 갤러리 -->
       <div class="main-pane" data-pane="gallery">
         <div class="gallery-bar">
-          <input type="text" class="inp" id="gallerySearch" placeholder="🔍 프롬프트로 검색...">
+          <input type="text" class="inp" id="gallerySearch" placeholder="🔍 프롬프트·캐릭터·앨범·시드…">
           <select id="galleryFilter" class="inp tiny" title="세션 선택 — 특정 세션의 이미지만 보기">
             <option value="all">모든 세션 (All)</option>
             <!-- 세션 옵션들은 loadGallery에서 동적 채움 -->
@@ -8907,9 +8907,17 @@ async function loadGallery(){
   // tokens: 개별 HTML 조각 배열 — 가상 스크롤을 위해 청크 렌더링 가능
   let tokens = [];
   if(viewMode === 'album'){
+    // 🗂 앨범 펼침 상태 — 검색어 있으면 매치되는 앨범 자동 펼침
+    const qLow = (search||'').toLowerCase().trim();
     // 1) 사용자 앨범 — 항상 표시 (비어있어도)
     for(const ua of state.userAlbums){
       const list = allImages.filter(item => (state.albumMembership[item.img.id]||[]).includes(ua.id));
+      const key = `u:${ua.id}`;
+      const nameMatch = qLow && ua.name.toLowerCase().includes(qLow);
+      // 검색 중에 매치 안 되고 사용자 앨범에 매치 이미지도 없으면 숨김
+      if(qLow && !nameMatch && !list.length) continue;
+      const isExpanded = _galAlbumExpanded.has(key) || nameMatch;
+      const mark = isExpanded ? '▼' : '▶';
       const firstImg = list[0]?.img;
       let thumbHtml;
       if(firstImg){
@@ -8918,19 +8926,23 @@ async function loadGallery(){
       } else {
         thumbHtml = `<div class="ah-ico" style="background:var(--b3)">📁</div>`;
       }
-      tokens.push(`<div class="album-header">${thumbHtml}<div class="ah-info">
+      tokens.push(`<div class="album-header" data-album-key="${esc(key)}" data-act="toggle-album" style="cursor:pointer">
+        <span class="album-toggle-mark" style="font-size:14px;color:var(--t3);width:14px;flex-shrink:0">${mark}</span>
+        ${thumbHtml}<div class="ah-info">
         <div class="ah-name">${esc(ua.name)} <span class="en">User Album</span></div>
         <div class="ah-stats">${list.length.toLocaleString()}장 · 사용자 앨범</div>
       </div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap">
+      <div style="display:flex;gap:5px;flex-wrap:wrap" data-no-toggle="1">
         <button class="btn ghost" data-act="download-album" data-aid="${esc(ua.id)}" style="padding:5px 10px;font-size:11.5px;border-color:rgba(58,99,152,.4);color:var(--blue)" title="이 앨범의 모든 이미지를 ZIP으로 다운로드">⬇ 일괄 다운로드</button>
         <button class="btn ghost" data-act="rename-user-album" data-aid="${esc(ua.id)}" style="padding:5px 10px;font-size:11.5px">✏ 이름변경</button>
         <button class="btn ghost" data-act="del-user-album" data-aid="${esc(ua.id)}" style="padding:5px 10px;font-size:11.5px;color:var(--red);border-color:rgba(181,67,56,.4)">🗑 삭제</button>
       </div></div>`);
-      if(list.length){
-        for(const it of list) tokens.push({type:'img', img: it.img, sesId: it.sesId});
-      } else {
-        tokens.push(`<div style="grid-column:1/-1;text-align:center;padding:14px;color:var(--t3);font-size:12px;background:var(--card);border:1.5px dashed var(--b1);border-radius:6px">이 앨범은 비어있습니다 — 이미지의 📁 버튼으로 추가하세요</div>`);
+      if(isExpanded){
+        if(list.length){
+          for(const it of list) tokens.push({type:'img', img: it.img, sesId: it.sesId});
+        } else {
+          tokens.push(`<div style="grid-column:1/-1;text-align:center;padding:14px;color:var(--t3);font-size:12px;background:var(--card);border:1.5px dashed var(--b1);border-radius:6px">이 앨범은 비어있습니다 — 이미지의 📁 버튼으로 추가하세요</div>`);
+        }
       }
     }
     // 2) 캐릭터 자동 앨범
@@ -8951,27 +8963,46 @@ async function loadGallery(){
     const charPresets = state.presets.character || [];
     const findThumb = name => charPresets.find(p => p.name === name)?.thumb;
     const sortedNames = [...albums.keys()].sort((a,b)=> albums.get(b).length - albums.get(a).length);
-    if(sortedNames.length){
-      tokens.push(`<div style="grid-column:1/-1;padding:20px 4px 6px;color:var(--t1);font-size:14px;font-weight:700">👥 캐릭터별 자동 앨범 <span style="color:var(--t3);font-weight:400;font-size:12px">— 생성 시 사용한 캐릭터 이름 기준</span></div>`);
+    // 검색 매치된 캐릭터만 (검색 없으면 전체)
+    const visibleNames = qLow
+      ? sortedNames.filter(n => n.toLowerCase().includes(qLow) || albums.get(n).length > 0)
+      : sortedNames;
+    if(visibleNames.length){
+      tokens.push(`<div style="grid-column:1/-1;padding:20px 4px 6px;color:var(--t1);font-size:14px;font-weight:700">👥 캐릭터별 자동 앨범 <span style="color:var(--t3);font-weight:400;font-size:12px">— 생성 시 사용한 캐릭터 이름 기준${qLow ? ` · 🔍 "${esc(search)}" 매치 ${visibleNames.length}개`:''}</span></div>`);
     }
-    for(const name of sortedNames){
+    for(const name of visibleNames){
       const list = albums.get(name);
+      const key = `c:${name}`;
+      const nameMatch = qLow && name.toLowerCase().includes(qLow);
+      const isExpanded = _galAlbumExpanded.has(key) || nameMatch;
+      const mark = isExpanded ? '▼' : '▶';
       const thumb = findThumb(name);
       const thumbHtml = thumb
         ? `<div class="ah-thumb" style="background-image:url('${esc(thumb)}')"></div>`
         : `<div class="ah-ico">${esc(name.slice(0,1).toUpperCase())}</div>`;
-      tokens.push(`<div class="album-header">${thumbHtml}<div class="ah-info">
+      tokens.push(`<div class="album-header" data-album-key="${esc(key)}" data-act="toggle-album" style="cursor:pointer">
+        <span class="album-toggle-mark" style="font-size:14px;color:var(--t3);width:14px;flex-shrink:0">${mark}</span>
+        ${thumbHtml}<div class="ah-info">
         <div class="ah-name">${esc(name)} <span class="en">Character</span></div>
         <div class="ah-stats">${list.length.toLocaleString()}장 · 최근 ${fmtDate(Math.max(...list.map(i=>i.ts)))}</div>
       </div></div>`);
-      for(const it of list) tokens.push({type:'img', img: it.img, sesId: it.sesId});
+      if(isExpanded){
+        for(const it of list) tokens.push({type:'img', img: it.img, sesId: it.sesId});
+      }
     }
-    if(unsorted.length){
-      tokens.push(`<div class="album-header"><div class="ah-ico" style="background:var(--b2)">?</div><div class="ah-info">
+    if(unsorted.length && (!qLow || '미분류'.includes(qLow))){
+      const key = `__unsorted`;
+      const isExpanded = _galAlbumExpanded.has(key);
+      const mark = isExpanded ? '▼' : '▶';
+      tokens.push(`<div class="album-header" data-album-key="${esc(key)}" data-act="toggle-album" style="cursor:pointer">
+        <span class="album-toggle-mark" style="font-size:14px;color:var(--t3);width:14px;flex-shrink:0">${mark}</span>
+        <div class="ah-ico" style="background:var(--b2)">?</div><div class="ah-info">
         <div class="ah-name">미분류 <span class="en">Uncategorized</span></div>
         <div class="ah-stats">${unsorted.length.toLocaleString()}장 · 캐릭터 정보 없음</div>
       </div></div>`);
-      for(const it of unsorted) tokens.push({type:'img', img: it.img, sesId: it.sesId});
+      if(isExpanded){
+        for(const it of unsorted) tokens.push({type:'img', img: it.img, sesId: it.sesId});
+      }
     }
   } else {
     // 세션별 — 기본
@@ -10193,6 +10224,8 @@ let _tagActiveCats = new Set(TAG_CATEGORIES.map(c => c.id));  // 전체 표시
 let _tagQuery = '';
 const _expandedPresets = new Set();   // key = "type:name"
 const _expandedGallery = new Set();   // key = image.id (number)
+// 🗂 갤러리 앨범 뷰 — 펼친 앨범 키 (사용자: 'u:aid' / 캐릭터: 'c:name' / 미분류: '__unsorted')
+const _galAlbumExpanded = new Set();
 let _userTagIndex = [];               // [{tag, count, sources:[]}] — 유저 프리셋에서 추출
 
 // 🪄 사용자 태그를 의미별 카테고리로 자동 분류 — classifyTagToSlot 활용
@@ -12205,6 +12238,18 @@ function wireGalleryEvents(){
   });
   $('purgeGalBtn').addEventListener('click', () => $('clearGalBtn').click());
   $('galleryGrid').addEventListener('click', async e => {
+    // 🗂 앨범 헤더 토글 (펼치기/접기) — 내부 버튼 클릭은 제외
+    const albumHdr = e.target.closest('[data-act="toggle-album"]');
+    if(albumHdr && !e.target.closest('button, [data-no-toggle]')){
+      const key = albumHdr.dataset.albumKey;
+      if(key){
+        if(_galAlbumExpanded.has(key)) _galAlbumExpanded.delete(key);
+        else _galAlbumExpanded.add(key);
+        await loadGallery();
+      }
+      e.stopPropagation();
+      return;
+    }
     const dlSesBtn = e.target.closest('[data-act="download-ses"]');
     if(dlSesBtn){
       const sid = parseInt(dlSesBtn.dataset.sid);
@@ -12237,20 +12282,27 @@ function wireGalleryEvents(){
     const sesToggleBtn = e.target.closest('[data-act="ses-toggle"]');
     if(sesToggleBtn){
       const sid = parseInt(sesToggleBtn.dataset.sid);
-      // 🆔 버튼 data-imgids에서 ID 목록 가져오기 — 가상 스크롤로 DOM에 없는 항목도 포함
       const idsStr = sesToggleBtn.dataset.imgids || '';
       const sesImgIds = idsStr ? idsStr.split(',').map(s => parseInt(s, 10)).filter(Number.isFinite) : [];
       if(!sesImgIds.length) return;
+      const grid = $('galleryGrid');
+      // ⚠ .all-expanded 클래스가 grid에 있으면 세션 접기와 CSS 충돌 (max-height 강제 펼침)
+      // → 모든 보이는 항목을 _expandedGallery에 등록한 뒤 .all-expanded 제거
+      if(grid.classList.contains('all-expanded')){
+        grid.querySelectorAll('.g-item').forEach(el => {
+          const idn = parseInt(el.dataset.id);
+          if(!isNaN(idn)){ _expandedGallery.add(idn); el.classList.add('expanded'); }
+        });
+        grid.classList.remove('all-expanded');
+        if($('galExpandAll')) $('galExpandAll').innerHTML = '⤢ 전체 펼침 <span class="en">Expand All</span>';
+      }
       const allExp = sesImgIds.every(id => _expandedGallery.has(id));
       if(allExp){
-        // 모두 접기
         sesImgIds.forEach(id => _expandedGallery.delete(id));
       } else {
-        // 모두 펼치기
         sesImgIds.forEach(id => _expandedGallery.add(id));
       }
-      // DOM 즉시 갱신 (보이는 청크만, 나머지는 materializeToken에서 자동 반영)
-      $('galleryGrid').querySelectorAll(`.g-item[data-sid="${sid}"]`).forEach(el => {
+      grid.querySelectorAll(`.g-item[data-sid="${sid}"]`).forEach(el => {
         const id = parseInt(el.dataset.id);
         el.classList.toggle('expanded', _expandedGallery.has(id));
       });
