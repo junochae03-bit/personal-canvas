@@ -8290,16 +8290,37 @@ function populateSessionFilter(sessions){
     return ` · ${d.getMonth()+1}/${d.getDate()}`;
   };
   const opts = ['<option value="all">모든 세션 (All)</option>'];
-  for(const s of sorted){
-    const label = `${esc(s.label || '세션')}${fmt(s.ts)} · ${(s.count||0).toLocaleString()}장`;
-    opts.push(`<option value="ses:${s.id}">${label}</option>`);
+  // 📂 세션 그룹
+  if(sorted.length){
+    opts.push('<optgroup label="📂 세션">');
+    for(const s of sorted){
+      const label = `${esc(s.label || '세션')}${fmt(s.ts)} · ${(s.count||0).toLocaleString()}장`;
+      opts.push(`<option value="ses:${s.id}">${label}</option>`);
+    }
+    opts.push('</optgroup>');
   }
+  // 📚 작품 그룹 — 캐릭터 프리셋 그룹 기반, 3명 이상만 (기존 그룹 규칙)
+  try {
+    const chars = state.presets?.character || [];
+    if(chars.length){
+      const grouped = (typeof groupCharsByWork === 'function') ? groupCharsByWork(chars) : [];
+      const workGroups = grouped.filter(g => g.group !== '기타');
+      if(workGroups.length){
+        opts.push('<optgroup label="📚 작품 (캐릭터 그룹별)">');
+        for(const g of workGroups){
+          opts.push(`<option value="work:${esc(g.group)}">📚 ${esc(g.group)} (${g.items.length}명)</option>`);
+        }
+        opts.push('</optgroup>');
+      }
+    }
+  } catch(_){}
   sel.innerHTML = opts.join('');
-  // 옛 값(today/week)이면 all로 fallback
-  if(cur && (cur === 'all' || cur.startsWith('ses:'))) sel.value = cur;
-  else sel.value = 'all';
-  // 선택했던 세션이 사라졌으면 all로
-  if(![...sel.options].some(o => o.value === sel.value)) sel.value = 'all';
+  // 옛 값이거나 새 work:* 옵션 호환
+  if(cur && (cur === 'all' || cur.startsWith('ses:') || cur.startsWith('work:')) && [...sel.options].some(o => o.value === cur)){
+    sel.value = cur;
+  } else {
+    sel.value = 'all';
+  }
 }
 
 async function loadGallery(){
@@ -8330,16 +8351,25 @@ async function loadGallery(){
   // filter 값:
   //  - 'all' (모든 세션)
   //  - 'ses:<id>' (특정 세션만)
+  //  - 'work:<그룹명>' (캐릭터 그룹별 — meta.characters 중 한 명이라도 이 그룹이면 매치)
   //  - 옛 값 'today'/'week'도 안전하게 무시 (호환성)
   const sesIdMatch = /^ses:(\d+)$/.exec(filter || '');
   const selSesId = sesIdMatch ? parseInt(sesIdMatch[1], 10) : null;
+  const workMatch = /^work:(.+)$/.exec(filter || '');
+  const selWork = workMatch ? workMatch[1] : null;
+  const matchesWork = img => {
+    if(!selWork) return true;
+    const names = img.meta?.characters || [];
+    return names.some(n => (typeof getCharGroup === 'function' ? getCharGroup(n) : '') === selWork);
+  };
   for(const ses of sessions){
     if(selSesId != null && ses.id !== selSesId) continue;
     const imgs = await DB.getSessionImages(ses.id);
     if(!imgs.length) continue;
     let filtered = imgs;
+    if(selWork) filtered = filtered.filter(matchesWork);
     if(search){
-      filtered = imgs.filter(i => {
+      filtered = filtered.filter(i => {
         const t = ((i.prompt||'') + ' ' + (i.label||'') + ' ' + (i.meta?.prompt||'') + ' ' + (i.meta?.characters||[]).join(' ')).toLowerCase();
         return t.includes(search);
       });
