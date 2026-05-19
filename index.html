@@ -649,6 +649,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 @keyframes fadeIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
 #lbInfoBtn.act,#lbInfoBtn[aria-pressed="true"]{background:rgba(162,90,31,.18);border-color:var(--acc);color:var(--acc)}
 #lightbox .lb-actions{position:absolute;right:24px;top:24px;display:flex;flex-direction:column;gap:8px}
+#lightbox .lb-act-btn{width:auto;min-width:56px;padding:6px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.1}
+#lightbox .lb-act-btn .lb-act-ico{font-size:15px;line-height:1}
+#lightbox .lb-act-btn .lb-act-lbl{font-size:10px;font-weight:600;opacity:.85;letter-spacing:.2px}
 /* ⟨⟩ 내비게이션 — 작고 반투명해서 이미지·UI를 가리지 않게 */
 .lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(20,14,4,.32);color:#fff8ec;border:1px solid rgba(255,255,255,.10);width:36px;height:54px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:all .15s;font-weight:300;z-index:5;user-select:none;opacity:.35;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 .lb-nav:hover{background:rgba(20,14,4,.78);border-color:rgba(255,255,255,.35);opacity:1;transform:translateY(-50%) scale(1.08)}
@@ -932,7 +935,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--b1);
   }
   #lightbox .lb-actions{flex-direction:row;flex-wrap:wrap;top:auto;bottom:6px;right:6px;left:6px;background:rgba(20,14,4,.62);border-radius:8px;padding:4px;gap:3px;justify-content:center}
-  #lightbox .lb-actions .iconbtn{width:32px;height:32px;font-size:12px;border-radius:4px}
+  #lightbox .lb-act-btn{min-width:46px;padding:4px 6px;gap:1px}
+  #lightbox .lb-act-btn .lb-act-ico{font-size:13px}
+  #lightbox .lb-act-btn .lb-act-lbl{font-size:9px}
   #lightbox .lb-actions > div[style*="height:1px"]{display:none}
   .lb-counter{top:6px;font-size:10.5px;padding:4px 10px}
 
@@ -1847,21 +1852,21 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   <div class="lb-counter" id="lbCounter"></div>
   <div class="lb-meta" id="lbMeta"></div>
   <div class="lb-actions">
-    <button class="iconbtn" id="lbDownload" title="다운로드 (Download)">⬇</button>
-    <button class="iconbtn" id="lbReuse" title="모든 파라미터 복원 (Reuse all)">↻</button>
-    <button class="iconbtn" id="lbExifApply" title="📁 EXIF 복원 — 이 이미지의 메타로 폼 채우기" style="border-color:rgba(58,99,152,.4);color:var(--blue)">📁</button>
-    <button class="iconbtn" id="lbSeedOnly" title="🌱 시드만 가져오기 (Seed only)">🌱</button>
+    <button class="iconbtn lb-act-btn" id="lbDownload" title="다운로드 (Download)"><span class="lb-act-ico">⬇</span><span class="lb-act-lbl">다운</span></button>
+    <button class="iconbtn lb-act-btn" id="lbReuse" title="모든 파라미터 복원 (Reuse all)"><span class="lb-act-ico">↻</span><span class="lb-act-lbl">복원</span></button>
+    <button class="iconbtn lb-act-btn" id="lbExifApply" title="📁 EXIF 복원 — 이 이미지의 메타로 폼 채우기" style="border-color:rgba(58,99,152,.4);color:var(--blue)"><span class="lb-act-ico">📁</span><span class="lb-act-lbl">EXIF</span></button>
+    <button class="iconbtn lb-act-btn" id="lbSeedOnly" title="🌱 시드만 가져오기 (Seed only)"><span class="lb-act-ico">🌱</span><span class="lb-act-lbl">시드</span></button>
     <div style="height:1px;background:var(--b1);margin:2px 0"></div>
-    <button class="iconbtn" id="lbEnhance" title="✨ Enhance — 디테일업 (img2img, 약한 강도)">✨</button>
-    <button class="iconbtn" id="lbUpscale" title="⬆ 4배 업스케일 (해상도 ×4, 비용 ↑)">⬆</button>
+    <button class="iconbtn lb-act-btn" id="lbEnhance" title="✨ Enhance — 디테일업 (img2img, 약한 강도)"><span class="lb-act-ico">✨</span><span class="lb-act-lbl">향상</span></button>
+    <button class="iconbtn lb-act-btn" id="lbUpscale" title="⬆ 4배 업스케일 (해상도 ×4, 비용 ↑)"><span class="lb-act-ico">⬆</span><span class="lb-act-lbl">4배</span></button>
     <div style="height:1px;background:var(--b1);margin:2px 0"></div>
-    <button class="iconbtn" id="lbI2I" title="→ I2I로 보내기 (Send to I2I)">→I</button>
-    <button class="iconbtn" id="lbVibe" title="→ Vibe 참조로 사용 (Send to Vibe)">→V</button>
-    <button class="iconbtn" id="lbExtractTags" title="📋 이 이미지의 태그를 도감에 추출">📋</button>
+    <button class="iconbtn lb-act-btn" id="lbI2I" title="→ I2I로 보내기 (Send to I2I)"><span class="lb-act-ico">→I</span><span class="lb-act-lbl">I2I</span></button>
+    <button class="iconbtn lb-act-btn" id="lbVibe" title="→ Vibe 참조로 사용 (Send to Vibe)"><span class="lb-act-ico">→V</span><span class="lb-act-lbl">Vibe</span></button>
+    <button class="iconbtn lb-act-btn" id="lbExtractTags" title="📋 이 이미지의 태그를 도감에 추출"><span class="lb-act-ico">📋</span><span class="lb-act-lbl">태그</span></button>
     <div style="height:1px;background:var(--b1);margin:2px 0"></div>
-    <button class="iconbtn" id="lbInfoBtn" title="ℹ 상세정보 펼치기/접기 (메타·프롬프트)" aria-pressed="false">ℹ</button>
-    <button class="iconbtn" id="lbDelete" title="삭제 (Delete)" style="color:var(--red);border-color:rgba(181,67,56,.3)">🗑</button>
-    <button class="iconbtn" id="lbClose" title="닫기 (Close)">✕</button>
+    <button class="iconbtn lb-act-btn" id="lbInfoBtn" title="ℹ 상세정보 펼치기/접기 (메타·프롬프트)" aria-pressed="false"><span class="lb-act-ico">ℹ</span><span class="lb-act-lbl">정보</span></button>
+    <button class="iconbtn lb-act-btn" id="lbDelete" title="삭제 (Delete)" style="color:var(--red);border-color:rgba(181,67,56,.3)"><span class="lb-act-ico">🗑</span><span class="lb-act-lbl">삭제</span></button>
+    <button class="iconbtn lb-act-btn" id="lbClose" title="닫기 (Close)"><span class="lb-act-ico">✕</span><span class="lb-act-lbl">닫기</span></button>
   </div>
 </div>
 
@@ -11467,11 +11472,16 @@ function wireGalleryEvents(){
       openImageAlbumPicker(id);
       return;
     }
-    // ↻ EXIF 복원 버튼 — 이 이미지의 메타로 폼 채우기
+    // ↻ EXIF 복원 버튼 — 이 이미지의 메타로 폼 채우기 (현재 폼 덮어쓰므로 확인)
     const exifBtn = e.target.closest('[data-act="exif"]');
     if(exifBtn){
       e.stopPropagation();
-      applyExifFromGalleryImage(id);
+      const curPrompt = ($('prompt')?.value || '').trim();
+      const curChars = (state.characters || []).filter(c => c.enabled !== false).length;
+      const warn = (curPrompt || curChars > 0)
+        ? `현재 폼에 작성 중인 내용이 있습니다.\n\n프롬프트: ${curPrompt.slice(0,40)}${curPrompt.length>40?'…':''}\n캐릭터: ${curChars}명\n\n이 이미지의 EXIF로 덮어쓸까요? (취소 시 그대로 유지)`
+        : `이 이미지의 EXIF(프롬프트·시드·모델·캐릭터 등)로 폼을 채울까요?`;
+      confirmDialog(warn, () => applyExifFromGalleryImage(id), '↻ EXIF 복원');
       return;
     }
     // 컴팩트 모드에서는 즉시 라이트박스
