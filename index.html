@@ -1733,7 +1733,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
             <button class="iconbtn" id="galZoomIn" title="크게 보기 (+)">+</button>
           </div>
           <button class="btn ghost" id="galExpandAll" title="모든 카드의 미리보기를 펼치거나 접습니다">⤢ 전체 펼침 <span class="en">Expand All</span></button>
-          <button class="btn ghost" id="galAlbumsToggleAll" type="button" style="display:none;border-color:rgba(162,90,31,.4);color:var(--acc)" title="앨범 뷰 — 모든 앨범 펼침/접힘 일괄 토글">📁 앨범 전체 <span class="en">Albums</span></button>
+          <button class="btn ghost" id="galAlbumsExpandAll" type="button" style="display:none;border-color:rgba(58,99,152,.4);color:var(--blue)" title="모든 앨범 한 번에 펼치기">📁 모두 펼침 <span class="en">Expand</span></button>
+          <button class="btn ghost" id="galAlbumsCollapseAll" type="button" style="display:none" title="모든 앨범 한 번에 접기">📁 모두 접기 <span class="en">Collapse</span></button>
           <button class="btn ghost" id="manageAlbumsBtn" title="앨범 만들기·이름변경·삭제" style="border-color:rgba(162,90,31,.4)">📁 앨범 관리 <span class="en">Albums</span></button>
           <button class="btn ghost" id="newSessionBtn">＋ 새 세션 <span class="en">New Session</span></button>
           <div class="tb-grow"></div>
@@ -12018,9 +12019,10 @@ function wireGalleryEvents(){
     grid.classList.toggle('compact', mode === 'compact');
     grid.dataset.view = mode;
     localStorage.setItem('nai_gv', mode);
-    // 📁 앨범 전체 토글 버튼은 album view에서만
-    const albToggle = $('galAlbumsToggleAll');
-    if(albToggle) albToggle.style.display = (mode === 'album') ? '' : 'none';
+    // 📁 앨범 전체 펼침/접기 — album view에서만 노출
+    const showAlb = (mode === 'album') ? '' : 'none';
+    if($('galAlbumsExpandAll')) $('galAlbumsExpandAll').style.display = showAlb;
+    if($('galAlbumsCollapseAll')) $('galAlbumsCollapseAll').style.display = showAlb;
     loadGallery();
   });
   $('galExpandAll').addEventListener('click', () => {
@@ -12046,18 +12048,15 @@ function wireGalleryEvents(){
       ? '⤡ 전체 접기 <span class="en">Collapse All</span>'
       : '⤢ 전체 펼침 <span class="en">Expand All</span>';
   });
-  // 📁 앨범 전체 토글 — album view에서만 동작
-  $('galAlbumsToggleAll')?.addEventListener('click', async () => {
+  // 📁 앨범 모두 펼침
+  $('galAlbumsExpandAll')?.addEventListener('click', async () => {
     if(!_galAlbumLastKeys.length){ toast('앨범 뷰가 아닙니다 — 갤러리 보기 모드를 "앨범"으로 바꿔주세요', 'info'); return; }
-    const allOpen = _galAlbumLastKeys.every(k => _galAlbumExpanded.has(k));
-    if(allOpen){
-      // 모두 접기
-      _galAlbumLastKeys.forEach(k => _galAlbumExpanded.delete(k));
-      $('galAlbumsToggleAll').innerHTML = '📁 앨범 전체 <span class="en">Albums</span>';
-    } else {
-      _galAlbumLastKeys.forEach(k => _galAlbumExpanded.add(k));
-      $('galAlbumsToggleAll').innerHTML = '📁 앨범 접기 <span class="en">Collapse All</span>';
-    }
+    _galAlbumLastKeys.forEach(k => _galAlbumExpanded.add(k));
+    await loadGallery();
+  });
+  // 📁 앨범 모두 접기
+  $('galAlbumsCollapseAll')?.addEventListener('click', async () => {
+    _galAlbumExpanded.clear();
     await loadGallery();
   });
   $('manageAlbumsBtn').addEventListener('click', openAlbumManager);
@@ -13040,8 +13039,10 @@ async function init(){
   $$('#galleryView button').forEach(x => x.classList.toggle('act', x.dataset.gv === savedGv));
   $('galleryGrid').classList.toggle('compact', savedGv === 'compact');
   $('galleryGrid').dataset.view = savedGv;
-  // 📁 앨범 전체 토글 버튼 초기 표시 (album view면 노출)
-  if($('galAlbumsToggleAll')) $('galAlbumsToggleAll').style.display = (savedGv === 'album') ? '' : 'none';
+  // 📁 앨범 펼침/접기 버튼 초기 표시 (album view면 노출)
+  const _initAlbDisp = (savedGv === 'album') ? '' : 'none';
+  if($('galAlbumsExpandAll')) $('galAlbumsExpandAll').style.display = _initAlbDisp;
+  if($('galAlbumsCollapseAll')) $('galAlbumsCollapseAll').style.display = _initAlbDisp;
   // 🔍 갤러리·프리셋 줌 복원
   applyGalZoom();
   applyPreZoom();
