@@ -2142,7 +2142,8 @@ coffee shop, latte art"></textarea>
       </div>
       <div style="background:rgba(58,99,152,.06);border:1.5px solid rgba(58,99,152,.18);border-radius:6px;padding:9px 12px;margin-bottom:10px">
         <label class="chk" style="margin-bottom:5px"><input type="checkbox" id="pgUpdateThumb"> <span id="pgUpdateThumbLabel">결과를 각 캐릭터 프리셋 썸네일로 자동 저장</span> <span class="en" style="color:var(--t3);opacity:.7">(카탈로그 만들기용)</span></label>
-        <label class="chk" style="display:block"><input type="checkbox" id="pgNewSession" checked>📂 새 세션에 모아 저장</label>
+        <label class="chk" style="display:block;margin-bottom:5px"><input type="checkbox" id="pgNewSession" checked>📂 새 세션에 모아 저장</label>
+        <label class="chk" style="display:block"><input type="checkbox" id="pgLockSeed">🌱 시드 고정 <span class="en" style="color:var(--t3);opacity:.7">(Lock seed — 모든 생성에 동일 시드 적용. 폼 시드가 비어있거나 -1이면 한 번만 랜덤 결정)</span></label>
       </div>
       <div style="padding:10px 13px;background:var(--card);border-radius:6px;border:1.5px solid var(--b1);font-size:13px;color:var(--t2)">
         총 <b id="pgTotalCount" style="color:var(--acc);font-family:var(--mono);font-size:15px">0</b>장 생성 · 예상 비용 <b id="pgCost" style="color:var(--acc);font-family:var(--mono)">0 Anlas</b>
@@ -7154,6 +7155,17 @@ function pgSetMode(mode){
   pgRefreshCost();
 }
 
+// 🌱 시드 고정 — 폼 시드 우선, 비어있거나 -1이면 한 번 랜덤 결정
+// 같은 모달 한 번 시작에서 모든 큐가 동일 시드를 공유 (재호출 시 새 값)
+function pgResolveLockedSeed(){
+  const raw = ($('seed')?.value || '').trim();
+  if(raw === '' || raw === '-1'){
+    return Math.floor(Math.random() * 0xffffffff);
+  }
+  const n = parseInt(raw, 10);
+  return isNaN(n) ? Math.floor(Math.random() * 0xffffffff) : n;
+}
+
 // 🔎 캐릭터별 모드의 시나리오 드롭다운 — 검색 q 기준으로 option 재구성
 // dataset.scenes에는 전체 scenes의 text를 저장해서 onchange가 원본 인덱스로 매핑 가능하게 유지
 function pgPopulateScenePreset(rawQ){
@@ -7592,6 +7604,10 @@ async function pgStartScenes(){
     $('pgProgCount').textContent = `${done}/${total}`;
     $('pgProgBar').style.width = `${(done/total)*100}%`;
   };
+  // 🌱 시드 고정 — 체크 시 한 번 결정하고 모든 큐에 동일 적용
+  const lockSeed = $('pgLockSeed')?.checked;
+  const lockedSeedValue = lockSeed ? pgResolveLockedSeed() : null;
+  if(lockSeed) console.log('[pg-scene] 시드 고정:', lockedSeedValue);
   updateProg();
 
   for(const s of scenes){
@@ -7608,7 +7624,7 @@ async function pgStartScenes(){
         const charPrompt = (presetChar.text || '').trim();
         opts = {
           ...baseOpts,
-          seed: Math.floor(Math.random() * 0xffffffff),
+          seed: lockSeed ? lockedSeedValue : Math.floor(Math.random() * 0xffffffff),
           prompt: combinedBase || s.prompt,
           characters: charPrompt
             ? [{enabled: true, prompt: charPrompt, pos:{x:0.5, y:0.5}, neg:''}]
@@ -7619,7 +7635,7 @@ async function pgStartScenes(){
         // 현재 폼 캐릭터·useCoords·characters 그대로
         opts = {
           ...baseOpts,
-          seed: Math.floor(Math.random() * 0xffffffff),
+          seed: lockSeed ? lockedSeedValue : Math.floor(Math.random() * 0xffffffff),
           prompt: combinedBase || s.prompt,
         };
       }
@@ -7715,6 +7731,10 @@ async function pgStart(){
   $('pgProgress').style.display = '';
   let done = 0, errors = 0;
   const total = picked.length;
+  // 🌱 시드 고정 — 체크 시 한 번 결정하고 모든 큐에 동일 적용 (폼 시드 우선, 비어있으면 랜덤)
+  const lockSeed = $('pgLockSeed')?.checked;
+  const lockedSeedValue = lockSeed ? pgResolveLockedSeed() : null;
+  if(lockSeed) console.log('[pg] 시드 고정:', lockedSeedValue);
   const updateProg = () => {
     $('pgProgCount').textContent = `${done}/${total}`;
     $('pgProgBar').style.width = `${(done/total)*100}%`;
@@ -7735,7 +7755,7 @@ async function pgStart(){
       const combinedBase = parts.join(', ');
       const opts = {
         ...baseOpts,
-        seed: Math.floor(Math.random() * 0xffffffff),
+        seed: lockSeed ? lockedSeedValue : Math.floor(Math.random() * 0xffffffff),
         prompt: combinedBase || charPrompt,  // 최종 안전망
         characters: charPrompt
           ? [{
