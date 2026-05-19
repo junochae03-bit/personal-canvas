@@ -7108,16 +7108,57 @@ function pgRenderCharList(){
     $('pgCharCount').textContent = '';
     return;
   }
-  wrap.innerHTML = chars.map((c, i) => `
-    <label class="chk pg-char" data-idx="${i}" style="padding:7px 9px;border-radius:5px;display:flex;align-items:center;gap:9px;cursor:pointer;border-bottom:1px solid var(--b1)">
-      <input type="checkbox" data-act="pick" data-idx="${i}" checked>
+  // 작품/시리즈별 그룹화 — 같은 prefix 3명 이상만 별도 그룹, 미만은 "기타"
+  // 원본 인덱스를 보존해야 pgStart에서 정확한 캐릭터 매핑 가능
+  const indexed = chars.map((c, i) => ({...c, _idx: i}));
+  const groups = groupCharsByWork(indexed);
+  const renderChar = (c) => `
+    <label class="chk pg-char" data-idx="${c._idx}" style="padding:7px 9px;border-radius:5px;display:flex;align-items:center;gap:9px;cursor:pointer;border-bottom:1px solid var(--b1)">
+      <input type="checkbox" data-act="pick" data-idx="${c._idx}" checked>
       ${c.thumb
         ? `<span class="pg-thumb" style="width:32px;height:32px;border-radius:4px;background:url('${esc(c.thumb)}') center/cover var(--card2);flex-shrink:0;border:1.5px solid var(--b1)"></span>`
         : `<span class="pg-thumb" style="width:32px;height:32px;border-radius:4px;background:var(--card2);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:14px">👤</span>`}
       <span style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name||'(이름 없음)')}</span>
       ${c.thumb ? '<span style="font-size:10px;color:var(--green);font-weight:700">썸 있음</span>' : '<span style="font-size:10px;color:var(--yellow);font-weight:700">썸 없음</span>'}
-    </label>`).join('');
+    </label>`;
+  wrap.innerHTML = groups.map(g => `
+    <div class="pg-group" data-group="${esc(g.group)}" style="border-bottom:2px solid var(--b1)">
+      <div class="pg-group-head" style="display:flex;align-items:center;gap:6px;padding:8px 9px;background:var(--card2);position:sticky;top:0;z-index:1;cursor:pointer" data-act="toggle-group">
+        <span class="pg-group-mark" style="font-size:11px;color:var(--t3);transition:transform .15s">▾</span>
+        <span style="font-weight:700;font-size:13px;color:var(--t1);flex:1">${esc(g.group)} <span style="color:var(--t3);font-weight:500;font-size:11.5px">${g.items.length}명</span></span>
+        <button type="button" class="btn ghost" data-act="group-all" data-group="${esc(g.group)}" style="padding:3px 8px;font-size:11px" title="이 그룹만 선택">☑ 그룹</button>
+        <button type="button" class="btn ghost" data-act="group-none" data-group="${esc(g.group)}" style="padding:3px 8px;font-size:11px" title="이 그룹 해제">☐ 그룹</button>
+      </div>
+      <div class="pg-group-body">${g.items.map(renderChar).join('')}</div>
+    </div>`).join('');
+
+  // 개별 체크
   wrap.querySelectorAll('input[data-act="pick"]').forEach(i => i.addEventListener('change', pgRefreshCost));
+
+  // 그룹 헤더 — 펼치기/접기 (헤더 클릭, 단 그룹 버튼 클릭은 제외)
+  wrap.querySelectorAll('.pg-group-head').forEach(head => {
+    head.addEventListener('click', e => {
+      if(e.target.closest('button')) return;
+      const body = head.parentElement.querySelector('.pg-group-body');
+      const mark = head.querySelector('.pg-group-mark');
+      const collapsed = body.style.display === 'none';
+      body.style.display = collapsed ? '' : 'none';
+      if(mark) mark.style.transform = collapsed ? '' : 'rotate(-90deg)';
+    });
+  });
+
+  // 그룹별 일괄 선택/해제
+  wrap.querySelectorAll('button[data-act="group-all"], button[data-act="group-none"]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const groupName = btn.dataset.group;
+      const checked = btn.dataset.act === 'group-all';
+      const groupBody = btn.closest('.pg-group').querySelector('.pg-group-body');
+      groupBody.querySelectorAll('input[data-act="pick"]').forEach(c => c.checked = checked);
+      pgRefreshCost();
+    });
+  });
+
   pgRefreshCost();
 }
 
