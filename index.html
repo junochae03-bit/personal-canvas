@@ -2449,7 +2449,6 @@ function showInstallInstructions(){
     navigator.serviceWorker.register('./sw.js', {scope: './'})
       .then(reg => {
         console.log('[SW] registered, scope:', reg.scope);
-        // 업데이트 감지 — 새 워커가 설치되면 다음 새로고침에 활성화
         reg.addEventListener('updatefound', () => {
           const nw = reg.installing;
           if(!nw) return;
@@ -2461,6 +2460,18 @@ function showInstallInstructions(){
         });
       })
       .catch(err => console.warn('[SW] register failed:', err));
+    // SW가 새 HTML 빌드 감지 시 알림 → 사용자에게 새로고침 안내 (toast 함수 늦게 정의되므로 가드)
+    navigator.serviceWorker.addEventListener('message', e => {
+      if(e.data?.type === 'NEW_VERSION_AVAILABLE'){
+        const showUpdate = () => {
+          if(typeof toast === 'function'){
+            toast('🔄 새 버전이 준비됐어요 — 새로고침하면 적용됩니다', 'info');
+          }
+        };
+        if(document.readyState === 'complete') showUpdate();
+        else window.addEventListener('load', showUpdate, {once:true});
+      }
+    });
   });
 })();
 
@@ -7226,8 +7237,15 @@ async function afterImage(blob, q){
 // GALLERY
 // ═══════════════════════════════════════════════════════════
 // 📦 가상 스크롤 — 큰 갤러리에서 한꺼번에 렌더하지 않고 청크 단위로
+// tokens 항목은 문자열(미리 만든 HTML) 또는 {type:'img', img, sesId} (지연 생성)
+//   → 이미지 토큰은 청크 진입 시점에만 ObjectURL 생성 (메모리 효율 ↑)
 let _galObserver = null;
 const GAL_CHUNK = 80;
+function materializeToken(t){
+  if(typeof t === 'string') return t;
+  if(t && t.type === 'img') return renderGalleryItemHtml(t.img, t.sesId);
+  return '';
+}
 function renderGalleryTokens(grid, tokens){
   // 이전 observer 정리
   if(_galObserver){ _galObserver.disconnect(); _galObserver = null; }
@@ -7241,7 +7259,9 @@ function renderGalleryTokens(grid, tokens){
     if(rendered >= tokens.length){ cleanupSentinel(); return; }
     const end = Math.min(rendered + GAL_CHUNK, tokens.length);
     // 첫 청크는 innerHTML로 전체 교체(이전 잔류 제거), 이후는 insertAdjacentHTML로 추가
-    const html = tokens.slice(rendered, end).join('');
+    // 청크 진입 시점에 토큰 materialize → 화면 밖 이미지는 ObjectURL 미생성
+    let html = '';
+    for(let i = rendered; i < end; i++) html += materializeToken(tokens[i]);
     if(rendered === 0){
       grid.innerHTML = html;
     } else {
@@ -7402,7 +7422,7 @@ async function loadGallery(){
         <button class="btn ghost" data-act="del-user-album" data-aid="${esc(ua.id)}" style="padding:5px 10px;font-size:11.5px;color:var(--red);border-color:rgba(181,67,56,.4)">🗑 삭제</button>
       </div></div>`);
       if(list.length){
-        for(const it of list) tokens.push(renderGalleryItemHtml(it.img, it.sesId));
+        for(const it of list) tokens.push({type:'img', img: it.img, sesId: it.sesId});
       } else {
         tokens.push(`<div style="grid-column:1/-1;text-align:center;padding:14px;color:var(--t3);font-size:12px;background:var(--card);border:1.5px dashed var(--b1);border-radius:6px">이 앨범은 비어있습니다 — 이미지의 📁 버튼으로 추가하세요</div>`);
       }
@@ -7438,14 +7458,14 @@ async function loadGallery(){
         <div class="ah-name">${esc(name)} <span class="en">Character</span></div>
         <div class="ah-stats">${list.length.toLocaleString()}장 · 최근 ${fmtDate(Math.max(...list.map(i=>i.ts)))}</div>
       </div></div>`);
-      for(const it of list) tokens.push(renderGalleryItemHtml(it.img, it.sesId));
+      for(const it of list) tokens.push({type:'img', img: it.img, sesId: it.sesId});
     }
     if(unsorted.length){
       tokens.push(`<div class="album-header"><div class="ah-ico" style="background:var(--b2)">?</div><div class="ah-info">
         <div class="ah-name">미분류 <span class="en">Uncategorized</span></div>
         <div class="ah-stats">${unsorted.length.toLocaleString()}장 · 캐릭터 정보 없음</div>
       </div></div>`);
-      for(const it of unsorted) tokens.push(renderGalleryItemHtml(it.img, it.sesId));
+      for(const it of unsorted) tokens.push({type:'img', img: it.img, sesId: it.sesId});
     }
   } else {
     // 세션별 — 기본
@@ -7462,7 +7482,7 @@ async function loadGallery(){
           <button class="btn ghost" data-act="download-ses" data-sid="${item.sesId}" style="padding:4px 10px;font-size:11.5px;border-color:rgba(58,99,152,.4);color:var(--blue)" title="이 세션의 모든 이미지를 ZIP으로 다운로드">⬇ 일괄 <span class="en">DL</span></button>
           <button class="btn ghost" data-act="del-ses" data-sid="${item.sesId}" style="padding:4px 10px;font-size:11.5px">세션 삭제 <span class="en">Delete</span></button></div>`);
       }
-      tokens.push(renderGalleryItemHtml(item.img, item.sesId));
+      tokens.push({type:'img', img: item.img, sesId: item.sesId});
     }
   }
   // 청크 렌더링 — 처음 80개만 즉시, 나머지는 IntersectionObserver로 점진 추가
@@ -8327,6 +8347,18 @@ function renderTagCats(){
     }).join('');
 }
 
+// 카테고리별 소문자 검색 인덱스 캐시 — 매 키스트로크마다 toLowerCase() 호출 방지
+// WeakMap 키는 카테고리 객체 (TAG_CATEGORIES 멤버 또는 가상 카테고리)
+const _catSearchIdxCache = new WeakMap();
+function getCatSearchIdx(c){
+  let idx = _catSearchIdxCache.get(c);
+  if(idx) return idx;
+  // 영문은 소문자 변환 1회, 한글은 원본 (한국어는 보통 대소문자 없음)
+  idx = c.tags.map(([en, ko]) => ({en, ko, enLc: String(en||'').toLowerCase(), koS: String(ko||'')}));
+  _catSearchIdxCache.set(c, idx);
+  return idx;
+}
+
 function renderTagBody(){
   const wrap = $('tagBody');
   const q = _tagQuery.toLowerCase().trim();
@@ -8336,10 +8368,8 @@ function renderTagBody(){
   let totalShown = 0;
   const parts = [];
   for(const c of cats){
-    const filtered = c.tags.filter(([en, ko]) => {
-      if(!q) return true;
-      return en.toLowerCase().includes(q) || (ko||'').includes(q);
-    });
+    const idx = getCatSearchIdx(c);
+    const filtered = q ? idx.filter(it => it.enLc.includes(q) || it.koS.includes(q)) : idx;
     if(!filtered.length) continue;
     totalShown += filtered.length;
     const headStyle = c.isUser ? 'border-bottom-color:var(--green)' : '';
@@ -8349,10 +8379,10 @@ function renderTagBody(){
     const hint = c.isUser ? '내 프리셋' : (c.id === 'negative' ? '네거티브' : c.id === 'quality' ? '자유 입력' : slotName || '자유 입력');
     parts.push(`<div class="tag-section">
       <h4 style="${headStyle}"><span class="ico">${c.ico}</span><span style="${labelStyle}">${esc(c.label)}</span>${c.isUser ? ' <span style="font-size:11px;color:var(--t3);font-weight:500">— 프리셋에서 자동 추출, 빈도순</span>' : ` <span style="font-size:11px;color:var(--t3);font-weight:500">→ ${esc(hint)}</span>`}<span class="en">${filtered.length} / ${c.tags.length}</span></h4>
-      <div class="tag-grid">${filtered.map(([en, ko]) => `
-        <button class="tag-chip" data-tag="${esc(en)}" data-cat="${esc(c.id)}" title="클릭 → ${esc(hint)}에 추가">
-          <span class="t-en">${esc(en)}</span>
-          <span class="t-ko">${esc(ko||'(번역 없음)')}</span>
+      <div class="tag-grid">${filtered.map(it => `
+        <button class="tag-chip" data-tag="${esc(it.en)}" data-cat="${esc(c.id)}" title="클릭 → ${esc(hint)}에 추가">
+          <span class="t-en">${esc(it.en)}</span>
+          <span class="t-ko">${esc(it.ko||'(번역 없음)')}</span>
         </button>
       `).join('')}</div>
     </div>`);
@@ -8450,8 +8480,22 @@ function buildAutocompleteIndex(){
     const en = String(e.tag||'').toLowerCase();
     if(en && !seen.has(en)) seen.set(en, '');
   }
-  _acIndex = [...seen.entries()].map(([en, ko]) => ({en, ko}));
+  // 정렬 — 영문 prefix 검색을 이진 탐색으로 가속
+  _acIndex = [...seen.entries()]
+    .map(([en, ko]) => ({en, ko}))
+    .sort((a, b) => a.en < b.en ? -1 : a.en > b.en ? 1 : 0);
   return _acIndex;
+}
+
+// 정렬된 _acIndex 에서 en >= q 인 첫 위치를 이진 탐색
+function _acLowerBound(idx, q){
+  let lo = 0, hi = idx.length;
+  while(lo < hi){
+    const mid = (lo + hi) >>> 1;
+    if(idx[mid].en < q) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
 }
 
 function getAcPartial(ta){
@@ -8520,12 +8564,22 @@ function updateAutocomplete(ta){
   const idx = buildAutocompleteIndex();
   const q = part.partial.toLowerCase();
   const matches = [];
-  // 1) 영문 prefix 매치 우선 → 2) 영문 substring → 3) 한글 substring
-  for(const it of idx){
-    if(it.en.startsWith(q)) matches.push({...it, _rank: 0});
-    else if(it.en.includes(q)) matches.push({...it, _rank: 1});
-    else if(it.ko && it.ko.includes(part.partial)) matches.push({...it, _rank: 2});
-    if(matches.length >= 80) break;
+  // 1) 영문 prefix 매치 — 정렬된 인덱스에서 이진 탐색으로 O(log N + k)
+  const start = _acLowerBound(idx, q);
+  for(let i = start; i < idx.length && matches.length < 20; i++){
+    const it = idx[i];
+    if(!it.en.startsWith(q)) break;
+    matches.push({...it, _rank: 0});
+  }
+  // 2)·3) substring 매치 — prefix가 부족할 때만 선형 스캔 (조기 중단)
+  if(matches.length < 20){
+    const seen = new Set(matches.map(m => m.en));
+    for(const it of idx){
+      if(seen.has(it.en)) continue;
+      if(it.en.includes(q)) matches.push({...it, _rank: 1});
+      else if(it.ko && it.ko.includes(part.partial)) matches.push({...it, _rank: 2});
+      if(matches.length >= 80) break;
+    }
   }
   matches.sort((a, b) => a._rank - b._rank || a.en.length - b.en.length);
   _acItems = matches.slice(0, 20);
