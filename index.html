@@ -3027,6 +3027,13 @@ function toast(msg, kind, action){
   kind = kind || 'info';
   const el = document.createElement('div');
   el.className = 'toast ' + (kind==='error'?'err':kind==='success'?'ok':kind==='warning'?'warn':'');
+  // ✓ ⚠ ✕ ℹ 아이콘 — 색맹 친화 (색 외에 모양으로 의미 전달)
+  const icoMap = {error:'✕', success:'✓', warning:'⚠', info:'ℹ'};
+  const ico = icoMap[kind] || icoMap.info;
+  const icoSpan = document.createElement('span');
+  icoSpan.textContent = ico;
+  icoSpan.style.cssText = 'flex-shrink:0;font-weight:700;font-size:14px;line-height:1';
+  el.appendChild(icoSpan);
   const span = document.createElement('span');
   span.textContent = msg;
   span.style.cssText = 'flex:1;min-width:0';
@@ -3053,9 +3060,18 @@ function toast(msg, kind, action){
     });
     el.appendChild(btn);
   }
+  // 🗙 닫기 버튼 — 모든 토스트에 추가 (에러는 자동 종료 X, 사용자가 명시적으로 닫게)
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.setAttribute('aria-label', '토스트 닫기');
+  closeBtn.textContent = '✕';
+  closeBtn.style.cssText = 'background:transparent;border:0;color:inherit;opacity:.6;cursor:pointer;font-size:14px;padding:2px 6px;flex-shrink:0;line-height:1;font-family:inherit';
+  closeBtn.addEventListener('click', remove);
+  el.appendChild(closeBtn);
   $('toastBox').appendChild(el);
-  const ttl = action?.timeoutMs ?? (kind === 'error' ? 5500 : action ? 6000 : 2500);
-  timeoutId = setTimeout(remove, ttl);
+  // 지속시간: info/success/warning은 4.5s (가독성 ↑), error는 자동 종료 X, action은 6s
+  const ttl = action?.timeoutMs ?? (kind === 'error' ? 0 : action ? 6000 : 4500);
+  if(ttl > 0) timeoutId = setTimeout(remove, ttl);
 }
 
 // ↶ 실행 취소 헬퍼 — 위험한 작업 직후 호출하면 자동으로 undo 토스트 띄움
@@ -6702,13 +6718,44 @@ function renderQueue(){
     list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--t3);font-size:12.5px">생성 시작 시 진행 상황이 표시됩니다 <span style="opacity:.7">(Generation status will appear here)</span></div>';
     return;
   }
-  list.innerHTML = state.queue.map((q, i) => `
+  list.innerHTML = state.queue.map((q, i) => {
+    const retryBtn = q.status === 'err'
+      ? `<button class="iconbtn" data-act="qi-retry" data-qi="${i}" title="이 항목만 다시 시도 (${esc(q.error||'')})" style="padding:2px 7px;font-size:11px;line-height:1.2;border-radius:4px;flex-shrink:0">↻</button>`
+      : '';
+    return `
     <div class="qi ${q.status==='run'?'run':q.status==='done'?'done':q.status==='err'?'err':''}" data-qi="${i}">
       <span class="lbl">#${i+1}</span>
       <span class="txt" title="${esc(q.promptOverride||q.prompt||'')}">${esc(q.label)} · ${esc((q.promptOverride||q.prompt||'').slice(0,60))}</span>
       <span class="st st-${q.status}">${QSTAT[q.status]||q.status}</span>
-    </div>
-  `).join('');
+      ${retryBtn}
+    </div>`;
+  }).join('');
+}
+
+// ↻ 단일 큐 항목 재시도 — 실패한 항목 1개만 다시 실행
+async function retryQueueItem(qi){
+  if(state.running){ toast('생성 진행 중에는 개별 재시도 불가', 'warning'); return; }
+  const q = state.queue[qi];
+  if(!q) return;
+  if(q.status !== 'err'){ toast('실패 항목만 재시도 가능', 'info'); return; }
+  const apiKey = (state.apiKey || $('apiKey')?.value || '').trim();
+  if(!apiKey){ toast('API 키를 입력하세요', 'error'); return; }
+  q.status = 'run';
+  q.error = '';
+  renderQueue();
+  try {
+    const blob = await runOne(q, apiKey);
+    if(blob){
+      q.status = 'done';
+      await afterImage(blob, q);
+      toast(`#${qi+1} 재시도 성공`, 'success');
+    }
+  } catch(e){
+    q.status = 'err';
+    q.error = e.message || String(e);
+    toast(`#${qi+1} 재시도 실패: ${q.error}`, 'error');
+  }
+  renderQueue();
 }
 
 async function startGeneration(){
@@ -10794,6 +10841,14 @@ function wireGenerationAndPresetEvents(){
     $('pauseBtn').innerHTML = state.paused ? '▶ 재개 <span class="en">Resume</span>' : '⏸ 일시정지 <span class="en">Pause</span>';
   });
   $('clearQueueBtn').addEventListener('click', () => { state.queue = []; renderQueue(); });
+  // ↻ 큐 항목 개별 재시도 — 실패 항목만
+  $('queueList')?.addEventListener('click', e => {
+    const btn = e.target.closest('[data-act="qi-retry"]');
+    if(!btn) return;
+    e.stopPropagation();
+    const qi = parseInt(btn.dataset.qi, 10);
+    if(!isNaN(qi)) retryQueueItem(qi);
+  });
 
   // Preview actions
   $('previewImg').addEventListener('click', () => {
