@@ -2082,7 +2082,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       </div>
       <!-- 캐릭터별 모드: 시나리오 1개 -->
       <div class="field" style="margin-bottom:12px" id="pgCharsSceneField">
-        <span class="lbl">🎭 추가할 시나리오 <span class="en">Scene</span> (선택)</span>
+        <span class="lbl">🎭 추가할 시나리오 <span class="en">Scene</span> (선택) <span id="pgPresetSearchCount" style="color:var(--t3);font-weight:500;margin-left:4px"></span></span>
+        <input id="pgPresetSearch" type="text" class="inp" placeholder="🔎 시나리오 이름·카테고리로 검색..." style="margin-bottom:6px" autocomplete="off" spellcheck="false">
         <select id="pgPreset" class="inp" style="margin-bottom:6px"></select>
         <textarea id="pgPromptText" class="ta tiny" style="min-height:64px;font-family:var(--mono);font-size:12.5px" placeholder="(선택) 프리셋 골라 자동 채우거나 직접 입력 — 현재 프롬프트 뒤에 결합됩니다. 비워두면 캐릭터 외형만으로 생성"></textarea>
       </div>
@@ -7153,6 +7154,30 @@ function pgSetMode(mode){
   pgRefreshCost();
 }
 
+// 🔎 캐릭터별 모드의 시나리오 드롭다운 — 검색 q 기준으로 option 재구성
+// dataset.scenes에는 전체 scenes의 text를 저장해서 onchange가 원본 인덱스로 매핑 가능하게 유지
+function pgPopulateScenePreset(rawQ){
+  const sel = $('pgPreset');
+  if(!sel) return;
+  const q = String(rawQ || '').trim().toLowerCase();
+  const prev = sel.value;
+  const scenes = pgAllScenes();
+  const matched = q
+    ? scenes.map((s, i) => ({...s, _idx: i})).filter(s => (s.label || '').toLowerCase().includes(q))
+    : scenes.map((s, i) => ({...s, _idx: i}));
+  const opts = ['<option value="">— 직접 입력만 사용 —</option>'];
+  for(const s of matched){
+    opts.push(`<option value="${s._idx}">${esc(s.label)}</option>`);
+  }
+  sel.innerHTML = opts.join('');
+  // 전체 scenes의 text 매핑 유지 — onchange가 _idx로 정확히 찾음
+  sel.dataset.scenes = JSON.stringify(scenes.map(s => s.text));
+  if(prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+  if($('pgPresetSearchCount')){
+    $('pgPresetSearchCount').textContent = q ? `(${matched.length}/${scenes.length} 매치)` : `(전체 ${scenes.length}개)`;
+  }
+}
+
 // 🔎 시나리오별 모드의 캐릭터 드롭다운 — 검색 q 기준으로 필터·그룹화해서 option 재구성
 // 캐릭터별 모드의 시나리오 드롭다운(pgPreset)과 미러 구조 — 단순한 select 하나
 function pgPopulateSceneChar(rawQ){
@@ -7354,14 +7379,8 @@ function pgParseScenes(text){
 }
 
 function openPreviewGenModal(){
-  // 시나리오 드롭다운 — 두 모드 공용
-  const scenes = pgAllScenes();
-  const opts = ['<option value="">— 직접 입력만 사용 —</option>'];
-  for(let i=0;i<scenes.length;i++){
-    opts.push(`<option value="${i}">${esc(scenes[i].label)}</option>`);
-  }
-  $('pgPreset').innerHTML = opts.join('');
-  $('pgPreset').dataset.scenes = JSON.stringify(scenes.map(s => s.text));
+  // 시나리오 드롭다운 — 캐릭터별 모드의 시나리오 1개 선택 (검색 가능)
+  pgPopulateScenePreset('');
   $('pgPreset').onchange = () => {
     const idx = parseInt($('pgPreset').value, 10);
     if(!isNaN(idx)){
@@ -7371,6 +7390,15 @@ function openPreviewGenModal(){
     }
   };
   $('pgPromptText').oninput = pgRefreshCost;
+  // 시나리오 검색 — 디바운스
+  if($('pgPresetSearch') && !$('pgPresetSearch')._wired){
+    $('pgPresetSearch')._wired = true;
+    const onSearch = (typeof debounce === 'function')
+      ? debounce(() => pgPopulateScenePreset($('pgPresetSearch').value), 120)
+      : () => pgPopulateScenePreset($('pgPresetSearch').value);
+    $('pgPresetSearch').addEventListener('input', onSearch);
+  }
+  if($('pgPresetSearch')) $('pgPresetSearch').value = '';
 
   // 사용할 캐릭터 드롭다운 — 시나리오별 모드용. 캐릭터별의 시나리오 드롭다운과 미러
   if($('pgSceneChar')){
