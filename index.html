@@ -10204,13 +10204,17 @@ async function tplDelSaved(i){
 }
 
 function setMainPane(pane){
+  // 🛡 'edit'은 모바일 전용 mview (사이드바 표시 모드)
+  //  · 모바일: data-mview='edit'으로 사이드바 보이게
+  //  · 데스크탑: 사이드바·메인 동시 표시라 페인 변경 불필요 → 현재 페인 유지 (자동 이동 X)
+  const isMobile = window.matchMedia('(max-width:880px)').matches;
+  if(pane === 'edit' && !isMobile) return;
   const prev = state.mainPane;
   state.mainPane = pane;
   document.body.dataset.mview = pane;
   $$('.main-tab-btn').forEach(b => b.classList.toggle('act', b.dataset.pane === pane));
   $$('.mn-btn').forEach(b => b.classList.toggle('act', b.dataset.mview === pane));
-  // 🛡 'edit'은 모바일 전용 mview (사이드바 표시) — data-pane="edit"인 메인 영역이 없으므로
-  // main-pane은 'preview'로 폴백해서 빈 화면 방지 (데스크탑에서 메인 영역이 사라지지 않게)
+  // 'edit'은 메인 영역 매칭 페인이 없음 → preview로 폴백 (빈 화면 방지)
   const mainPaneTarget = (pane === 'edit') ? 'preview' : pane;
   $$('.main-pane').forEach(p => p.classList.toggle('act', p.dataset.pane === mainPaneTarget));
   if(pane === 'gallery') loadGallery();
