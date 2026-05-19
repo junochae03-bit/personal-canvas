@@ -9936,9 +9936,10 @@ function tplRenderSavedList(){
       return def?.ico || '•';
     }).join('');
     return `<div class="tpl-saved-item">
-      <span class="tsi-name" data-tpl-saved-act="load" data-idx="${i}" title="이 템플릿 불러오기">${esc(t.name)}</span>
+      <span class="tsi-name" data-tpl-saved-act="load" data-idx="${i}" title="조합 영역에 불러와서 수정·재롤">${esc(t.name)}</span>
       <span class="tsi-cats">${cats} · ${t.roll.length}개</span>
-      <button type="button" data-tpl-saved-act="load" data-idx="${i}" title="현재 조합으로 불러오기">📥</button>
+      <button type="button" data-tpl-saved-act="apply" data-idx="${i}" title="✅ 캐릭터 슬롯에 즉시 적용 + 편집 탭 이동" style="color:var(--blue);border-color:rgba(58,99,152,.4)">✅</button>
+      <button type="button" data-tpl-saved-act="load" data-idx="${i}" title="📥 현재 조합 영역에 불러오기 (미리보기·수정용)">📥</button>
       <button type="button" class="danger" data-tpl-saved-act="del" data-idx="${i}" title="삭제">✕</button>
     </div>`;
   }).join('');
@@ -9959,6 +9960,28 @@ function tplLoadSaved(i){
   tplRenderRoll();
   if(missing > 0) toast(`📥 "${t.name}" 불러옴 (${missing}개 프리셋 누락 — 삭제됐을 수 있음)`, 'warning');
   else toast(`📥 "${t.name}" 불러옴`, 'success');
+}
+
+// ✅ 저장된 템플릿을 캐릭터 슬롯에 즉시 적용 (조합 영역 거치지 않고)
+function tplApplyDirect(i){
+  const t = (state.templates || [])[i];
+  if(!t) return;
+  // 조합 영역에 동기 로드 (재롤 가능하게 상태도 채움)
+  _tplCurrentRoll = [];
+  let missing = 0;
+  for(const r of t.roll){
+    const list = state.presets[r.cat] || [];
+    const p = list.find(x => x.name === r.presetName);
+    if(p) _tplCurrentRoll.push({cat: r.cat, preset: p});
+    else missing++;
+  }
+  if(!_tplCurrentRoll.length){
+    toast(`"${t.name}" — 프리셋이 모두 삭제됐어요. 적용 불가`, 'error');
+    return;
+  }
+  tplRenderRoll();
+  tplApplyRoll();   // 캐릭터 슬롯에 적용 + 편집 탭 이동
+  if(missing) setTimeout(() => toast(`(${missing}개 프리셋 누락 — 삭제됐거나 이름 변경됨)`, 'warning'), 80);
 }
 
 async function tplDelSaved(i){
@@ -12429,6 +12452,7 @@ function wireMiscEvents(){
     if(isNaN(i)) return;
     const act = b.dataset.tplSavedAct;
     if(act === 'load') tplLoadSaved(i);
+    else if(act === 'apply') tplApplyDirect(i);
     else if(act === 'del'){
       const t = state.templates?.[i];
       if(!t) return;
