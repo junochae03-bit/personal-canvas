@@ -2143,7 +2143,12 @@ coffee shop, latte art"></textarea>
       <div style="background:rgba(58,99,152,.06);border:1.5px solid rgba(58,99,152,.18);border-radius:6px;padding:9px 12px;margin-bottom:10px">
         <label class="chk" style="margin-bottom:5px"><input type="checkbox" id="pgUpdateThumb"> <span id="pgUpdateThumbLabel">결과를 각 캐릭터 프리셋 썸네일로 자동 저장</span> <span class="en" style="color:var(--t3);opacity:.7">(카탈로그 만들기용)</span></label>
         <label class="chk" style="display:block;margin-bottom:5px"><input type="checkbox" id="pgNewSession" checked>📂 새 세션에 모아 저장</label>
-        <label class="chk" style="display:block"><input type="checkbox" id="pgLockSeed">🌱 시드 고정 <span class="en" style="color:var(--t3);opacity:.7">(Lock seed — 모든 생성에 동일 시드 적용. 폼 시드가 비어있거나 -1이면 한 번만 랜덤 결정)</span></label>
+        <label class="chk" style="display:block"><input type="checkbox" id="pgLockSeed">🌱 시드 고정 <span class="en" style="color:var(--t3);opacity:.7">(Lock seed — 모든 생성에 동일 시드 적용)</span></label>
+        <div id="pgSeedRow" style="display:none;margin-top:6px;padding-left:22px;align-items:center;gap:6px">
+          <input id="pgFixedSeed" class="inp" type="number" inputmode="numeric" placeholder="시드 값 (비우면 한 번 랜덤 결정)" style="flex:1;min-width:0;font-family:var(--mono);font-size:12.5px" min="0" max="4294967295">
+          <button class="iconbtn" id="pgSeedRand" type="button" title="🎲 랜덤 시드 생성 (4294967295까지)">🎲</button>
+          <button class="iconbtn" id="pgSeedFromForm" type="button" title="↻ 메인 폼의 시드값 가져오기">↻</button>
+        </div>
       </div>
       <div style="padding:10px 13px;background:var(--card);border-radius:6px;border:1.5px solid var(--b1);font-size:13px;color:var(--t2)">
         총 <b id="pgTotalCount" style="color:var(--acc);font-family:var(--mono);font-size:15px">0</b>장 생성 · 예상 비용 <b id="pgCost" style="color:var(--acc);font-family:var(--mono)">0 Anlas</b>
@@ -7155,15 +7160,23 @@ function pgSetMode(mode){
   pgRefreshCost();
 }
 
-// 🌱 시드 고정 — 폼 시드 우선, 비어있거나 -1이면 한 번 랜덤 결정
+// 🌱 시드 고정 — 모달 내 #pgFixedSeed 우선, 비어있거나 -1이면 한 번 랜덤 결정
 // 같은 모달 한 번 시작에서 모든 큐가 동일 시드를 공유 (재호출 시 새 값)
 function pgResolveLockedSeed(){
-  const raw = ($('seed')?.value || '').trim();
+  const raw = ($('pgFixedSeed')?.value || '').trim();
   if(raw === '' || raw === '-1'){
-    return Math.floor(Math.random() * 0xffffffff);
+    const v = Math.floor(Math.random() * 0xffffffff);
+    if($('pgFixedSeed')) $('pgFixedSeed').value = v;  // 사용한 시드 표시
+    return v;
   }
   const n = parseInt(raw, 10);
   return isNaN(n) ? Math.floor(Math.random() * 0xffffffff) : n;
+}
+
+// 시드 고정 체크박스 토글 → input 행 표시/숨김
+function pgRefreshSeedRow(){
+  const row = $('pgSeedRow');
+  if(row) row.style.display = $('pgLockSeed')?.checked ? 'flex' : 'none';
 }
 
 // 🔎 캐릭터별 모드의 시나리오 드롭다운 — 검색 q 기준으로 option 재구성
@@ -7442,6 +7455,7 @@ function openPreviewGenModal(){
   $('pgStart').style.display = '';
   $('pgStop').style.display = 'none';
   $('pgProgress').style.display = 'none';
+  pgRefreshSeedRow();  // 체크박스 상태에 맞춰 시드 입력 행 표시
   $('previewGenModal').classList.add('open');
 }
 
@@ -10656,6 +10670,15 @@ function wireGalleryEvents(){
   });
   $('pgStart').addEventListener('click', pgStart);
   $('pgStop').addEventListener('click', pgStop);
+  // 🌱 시드 고정 토글 + 시드 입력 보조 버튼
+  $('pgLockSeed')?.addEventListener('change', pgRefreshSeedRow);
+  $('pgSeedRand')?.addEventListener('click', () => {
+    if($('pgFixedSeed')) $('pgFixedSeed').value = Math.floor(Math.random() * 0xffffffff);
+  });
+  $('pgSeedFromForm')?.addEventListener('click', () => {
+    const formSeed = ($('seed')?.value || '').trim();
+    if($('pgFixedSeed')) $('pgFixedSeed').value = (formSeed && formSeed !== '-1') ? formSeed : '';
+  });
   $('pgSelectAll').addEventListener('click', () => { document.querySelectorAll('#pgCharList input[data-act="pick"]').forEach(c => c.checked = true); pgRefreshCost(); });
   $('pgDeselectAll').addEventListener('click', () => { document.querySelectorAll('#pgCharList input[data-act="pick"]').forEach(c => c.checked = false); pgRefreshCost(); });
   $('pgSelectNoThumb').addEventListener('click', () => {
