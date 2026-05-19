@@ -1733,6 +1733,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
             <button class="iconbtn" id="galZoomIn" title="크게 보기 (+)">+</button>
           </div>
           <button class="btn ghost" id="galExpandAll" title="모든 카드의 미리보기를 펼치거나 접습니다">⤢ 전체 펼침 <span class="en">Expand All</span></button>
+          <button class="btn ghost" id="galAlbumsToggleAll" type="button" style="display:none;border-color:rgba(162,90,31,.4);color:var(--acc)" title="앨범 뷰 — 모든 앨범 펼침/접힘 일괄 토글">📁 앨범 전체 <span class="en">Albums</span></button>
           <button class="btn ghost" id="manageAlbumsBtn" title="앨범 만들기·이름변경·삭제" style="border-color:rgba(162,90,31,.4)">📁 앨범 관리 <span class="en">Albums</span></button>
           <button class="btn ghost" id="newSessionBtn">＋ 새 세션 <span class="en">New Session</span></button>
           <div class="tb-grow"></div>
@@ -8909,10 +8910,13 @@ async function loadGallery(){
   if(viewMode === 'album'){
     // 🗂 앨범 펼침 상태 — 검색어 있으면 매치되는 앨범 자동 펼침
     const qLow = (search||'').toLowerCase().trim();
+    // 📁 키 스냅샷 초기화 — 전체 토글용
+    _galAlbumLastKeys = [];
     // 1) 사용자 앨범 — 항상 표시 (비어있어도)
     for(const ua of state.userAlbums){
       const list = allImages.filter(item => (state.albumMembership[item.img.id]||[]).includes(ua.id));
       const key = `u:${ua.id}`;
+      _galAlbumLastKeys.push(key);
       const nameMatch = qLow && ua.name.toLowerCase().includes(qLow);
       // 검색 중에 매치 안 되고 사용자 앨범에 매치 이미지도 없으면 숨김
       if(qLow && !nameMatch && !list.length) continue;
@@ -8973,6 +8977,7 @@ async function loadGallery(){
     for(const name of visibleNames){
       const list = albums.get(name);
       const key = `c:${name}`;
+      _galAlbumLastKeys.push(key);
       const nameMatch = qLow && name.toLowerCase().includes(qLow);
       const isExpanded = _galAlbumExpanded.has(key) || nameMatch;
       const mark = isExpanded ? '▼' : '▶';
@@ -8992,6 +8997,7 @@ async function loadGallery(){
     }
     if(unsorted.length && (!qLow || '미분류'.includes(qLow))){
       const key = `__unsorted`;
+      _galAlbumLastKeys.push(key);
       const isExpanded = _galAlbumExpanded.has(key);
       const mark = isExpanded ? '▼' : '▶';
       tokens.push(`<div class="album-header" data-album-key="${esc(key)}" data-act="toggle-album" style="cursor:pointer">
@@ -10226,6 +10232,8 @@ const _expandedPresets = new Set();   // key = "type:name"
 const _expandedGallery = new Set();   // key = image.id (number)
 // 🗂 갤러리 앨범 뷰 — 펼친 앨범 키 (사용자: 'u:aid' / 캐릭터: 'c:name' / 미분류: '__unsorted')
 const _galAlbumExpanded = new Set();
+// 📁 마지막 album view 렌더 시점의 모든 앨범 키 (전체 토글용)
+let _galAlbumLastKeys = [];
 let _userTagIndex = [];               // [{tag, count, sources:[]}] — 유저 프리셋에서 추출
 
 // 🪄 사용자 태그를 의미별 카테고리로 자동 분류 — classifyTagToSlot 활용
@@ -12010,6 +12018,9 @@ function wireGalleryEvents(){
     grid.classList.toggle('compact', mode === 'compact');
     grid.dataset.view = mode;
     localStorage.setItem('nai_gv', mode);
+    // 📁 앨범 전체 토글 버튼은 album view에서만
+    const albToggle = $('galAlbumsToggleAll');
+    if(albToggle) albToggle.style.display = (mode === 'album') ? '' : 'none';
     loadGallery();
   });
   $('galExpandAll').addEventListener('click', () => {
@@ -12034,6 +12045,20 @@ function wireGalleryEvents(){
     $('galExpandAll').innerHTML = allMode
       ? '⤡ 전체 접기 <span class="en">Collapse All</span>'
       : '⤢ 전체 펼침 <span class="en">Expand All</span>';
+  });
+  // 📁 앨범 전체 토글 — album view에서만 동작
+  $('galAlbumsToggleAll')?.addEventListener('click', async () => {
+    if(!_galAlbumLastKeys.length){ toast('앨범 뷰가 아닙니다 — 갤러리 보기 모드를 "앨범"으로 바꿔주세요', 'info'); return; }
+    const allOpen = _galAlbumLastKeys.every(k => _galAlbumExpanded.has(k));
+    if(allOpen){
+      // 모두 접기
+      _galAlbumLastKeys.forEach(k => _galAlbumExpanded.delete(k));
+      $('galAlbumsToggleAll').innerHTML = '📁 앨범 전체 <span class="en">Albums</span>';
+    } else {
+      _galAlbumLastKeys.forEach(k => _galAlbumExpanded.add(k));
+      $('galAlbumsToggleAll').innerHTML = '📁 앨범 접기 <span class="en">Collapse All</span>';
+    }
+    await loadGallery();
   });
   $('manageAlbumsBtn').addEventListener('click', openAlbumManager);
   // 🖱 마퀴 선택 활성화 (데스크탑) + 👆 롱프레스 (모바일) + 🤏 핀치 줌
@@ -13015,6 +13040,8 @@ async function init(){
   $$('#galleryView button').forEach(x => x.classList.toggle('act', x.dataset.gv === savedGv));
   $('galleryGrid').classList.toggle('compact', savedGv === 'compact');
   $('galleryGrid').dataset.view = savedGv;
+  // 📁 앨범 전체 토글 버튼 초기 표시 (album view면 노출)
+  if($('galAlbumsToggleAll')) $('galAlbumsToggleAll').style.display = (savedGv === 'album') ? '' : 'none';
   // 🔍 갤러리·프리셋 줌 복원
   applyGalZoom();
   applyPreZoom();
