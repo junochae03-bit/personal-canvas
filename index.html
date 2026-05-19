@@ -2109,12 +2109,22 @@ beach, summer afternoon"></textarea>
           <button class="btn ghost" id="pgSelectAll" style="padding:5px 10px;font-size:11.5px">☑ 전체 선택</button>
           <button class="btn ghost" id="pgDeselectAll" style="padding:5px 10px;font-size:11.5px">☐ 전체 해제</button>
           <button class="btn ghost" id="pgSelectNoThumb" style="padding:5px 10px;font-size:11.5px" title="썸네일이 없는 캐릭터만 선택 (썸네일 일괄 만들기 용도)">🆕 썸네일 없는 것만</button>
+          <button class="btn ghost" id="pgCollapseAll" style="padding:5px 10px;font-size:11.5px" title="모든 그룹을 한 번에 접거나 펼침">▸ 전체 접기</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:11.5px;color:var(--t3)">그룹 필터:</span>
+          <select id="pgGroupFilter" class="inp" style="font-size:11.5px;padding:4px 7px;flex:1;min-width:120px">
+            <option value="">— 모든 그룹 표시 —</option>
+          </select>
         </div>
         <div id="pgCharList" style="max-height:38vh;overflow-y:auto;border:1.5px solid var(--b1);border-radius:6px;background:var(--card);padding:6px"></div>
       </div>
-      <!-- 시나리오별 모드: 현재 폼 캐릭터 안내 -->
+      <!-- 시나리오별 모드: 사용할 캐릭터 (프리셋 선택 또는 현재 폼) -->
       <div class="field" style="margin-bottom:12px;display:none" id="pgFormCharInfo">
-        <span class="lbl">👤 사용할 캐릭터 <span class="en">From Form</span></span>
+        <span class="lbl">👤 사용할 캐릭터 <span class="en">Character</span></span>
+        <select id="pgSceneChar" class="inp" style="margin-bottom:6px">
+          <option value="">— 현재 폼 캐릭터 그대로 사용 —</option>
+        </select>
         <div id="pgFormCharSummary" style="padding:10px 12px;background:var(--card);border:1.5px solid var(--b1);border-radius:6px;font-size:12.5px;color:var(--t2);line-height:1.6"></div>
       </div>
       <div style="background:rgba(58,99,152,.06);border:1.5px solid rgba(58,99,152,.18);border-radius:6px;padding:9px 12px;margin-bottom:10px">
@@ -7124,15 +7134,39 @@ function pgSetMode(mode){
 function pgUpdateFormCharSummary(){
   const el = $('pgFormCharSummary');
   if(!el) return;
-  const chars = (state.characters || []).filter(c => c.enabled !== false);
+  const sel = $('pgSceneChar');
+  const selIdx = sel ? parseInt(sel.value, 10) : NaN;
   const promptHead = ($('prompt')?.value || '').trim().slice(0, 80);
+
+  // 1) 프리셋 캐릭터 선택됨 — 그 1명으로 시나리오 N개 돌림
+  if(!isNaN(selIdx)){
+    const p = state.presets.character?.[selIdx];
+    if(p){
+      const desc = (p.text || '').replace(/\s+/g, ' ').slice(0, 120);
+      el.innerHTML = `
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          ${p.thumb
+            ? `<span style="width:48px;height:48px;border-radius:5px;background:url('${esc(p.thumb)}') center/cover var(--card2);flex-shrink:0;border:1.5px solid var(--b1)"></span>`
+            : `<span style="width:48px;height:48px;border-radius:5px;background:var(--card2);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:20px">👤</span>`}
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;color:var(--t1)">${esc(p.name || '(이름 없음)')}</div>
+            <div style="font-family:var(--mono);font-size:11.5px;color:var(--t3);margin-top:3px;line-height:1.5">${esc(desc)}${desc.length === 120 ? '…' : ''}</div>
+          </div>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--blue)">📌 이 캐릭터로 시나리오 N개를 차례로 생성합니다 (현재 폼의 캐릭터 슬롯 무시).</div>`;
+      return;
+    }
+  }
+
+  // 2) 현재 폼 캐릭터 그대로
+  const chars = (state.characters || []).filter(c => c.enabled !== false);
   if(!chars.length){
     el.innerHTML = `<div style="color:var(--t3);font-style:italic">캐릭터 슬롯 없음 — 메인 프롬프트만 사용됩니다.</div>
       <div style="margin-top:6px;font-family:var(--mono);font-size:11.5px;color:var(--t2)">${esc(promptHead || '(빈 프롬프트)')}${promptHead.length === 80 ? '…' : ''}</div>`;
     return;
   }
   el.innerHTML = `
-    <div style="font-weight:600;color:var(--t1);margin-bottom:4px">${chars.length}명 사용 중</div>
+    <div style="font-weight:600;color:var(--t1);margin-bottom:4px">${chars.length}명 사용 중 (현재 폼)</div>
     ${chars.map((c, i) => {
       const name = c.name || `슬롯 ${i+1}`;
       const desc = [c.appearance, c.action].map(s => (s||'').trim()).filter(Boolean).join(' · ').slice(0, 60);
@@ -7187,6 +7221,23 @@ function openPreviewGenModal(){
     }
   };
   $('pgScenesText').oninput = pgRefreshCost;
+
+  // 사용할 캐릭터 드롭다운 — 시나리오별 모드용. 그룹 단위로 묶어서 표시
+  if($('pgSceneChar')){
+    const chars = state.presets.character || [];
+    const indexed = chars.map((c, i) => ({...c, _idx: i}));
+    const groups = (typeof groupCharsByWork === 'function') ? groupCharsByWork(indexed) : [{group:'전체', items: indexed}];
+    const parts = ['<option value="">— 현재 폼 캐릭터 그대로 사용 —</option>'];
+    for(const g of groups){
+      parts.push(`<optgroup label="${esc(g.group)} (${g.items.length}명)">`);
+      for(const c of g.items){
+        parts.push(`<option value="${c._idx}">${esc(c.name || '(이름 없음)')}</option>`);
+      }
+      parts.push('</optgroup>');
+    }
+    $('pgSceneChar').innerHTML = parts.join('');
+    $('pgSceneChar').onchange = pgUpdateFormCharSummary;
+  }
 
   // 모드 탭 핸들러 (1회 등록)
   if(!$('pgModeChars')._wired){
@@ -7266,7 +7317,41 @@ function pgRenderCharList(){
     });
   });
 
+  // 🗂 그룹 필터 옵션 동기화 — 현재 그룹 목록으로 select 채움
+  const filter = $('pgGroupFilter');
+  if(filter){
+    const prev = filter.value;
+    filter.innerHTML = '<option value="">— 모든 그룹 표시 —</option>'
+      + groups.map(g => `<option value="${esc(g.group)}">${esc(g.group)} (${g.items.length}명)</option>`).join('');
+    if(prev && [...filter.options].some(o => o.value === prev)) filter.value = prev;
+    pgApplyGroupFilter();
+  }
+
   pgRefreshCost();
+}
+
+// 그룹 필터 적용 — 선택된 그룹만 표시, 나머지 숨김
+function pgApplyGroupFilter(){
+  const wrap = $('pgCharList');
+  const filter = $('pgGroupFilter');
+  if(!wrap || !filter) return;
+  const target = filter.value;
+  wrap.querySelectorAll('.pg-group').forEach(g => {
+    g.style.display = (!target || g.dataset.group === target) ? '' : 'none';
+  });
+}
+
+// 모든 그룹 접기/펼치기 토글
+function pgToggleCollapseAll(){
+  const wrap = $('pgCharList');
+  const btn = $('pgCollapseAll');
+  if(!wrap || !btn) return;
+  const bodies = wrap.querySelectorAll('.pg-group-body');
+  if(!bodies.length) return;
+  const anyOpen = [...bodies].some(b => b.style.display !== 'none');
+  bodies.forEach(b => b.style.display = anyOpen ? 'none' : '');
+  wrap.querySelectorAll('.pg-group-mark').forEach(m => m.style.transform = anyOpen ? 'rotate(-90deg)' : '');
+  btn.textContent = anyOpen ? '▾ 전체 펼치기' : '▸ 전체 접기';
 }
 
 function pgRefreshCost(){
@@ -7294,9 +7379,16 @@ async function pgStartScenes(){
   const scenes = pgParseScenes($('pgScenesText').value);
   if(!scenes.length){ toast('시나리오를 1개 이상 입력하세요', 'warning'); return; }
 
+  // 사용할 캐릭터 — 프리셋 선택 시 그 1명, 아니면 현재 폼 그대로
+  const selIdx = parseInt($('pgSceneChar')?.value, 10);
+  const presetChar = !isNaN(selIdx) ? state.presets.character?.[selIdx] : null;
+
   const useNewSession = $('pgNewSession').checked;
   if(useNewSession && typeof DB.newSession === 'function'){
-    await DB.newSession(`🎬 시나리오 — ${new Date().toLocaleString().slice(5,16)}`);
+    const sesLabel = presetChar
+      ? `🎬 ${presetChar.name || '시나리오'} — ${new Date().toLocaleString().slice(5,16)}`
+      : `🎬 시나리오 — ${new Date().toLocaleString().slice(5,16)}`;
+    await DB.newSession(sesLabel);
   }
   _pgRunning = true;
   _pgAbort = new AbortController();
@@ -7317,17 +7409,33 @@ async function pgStartScenes(){
     updateBgProgress(`🎬 ${done+1}/${total} · ${s.label}`);
     try {
       const baseOpts = currentPromptOpts();
-      // 현재 폼 프롬프트 + 시나리오 텍스트를 결합 (캐릭터·useCoords·characters는 그대로)
       const userBase = (baseOpts.prompt || '').trim();
       const combinedBase = [userBase, s.prompt].filter(Boolean).join(', ');
-      const opts = {
-        ...baseOpts,
-        seed: Math.floor(Math.random() * 0xffffffff),
-        prompt: combinedBase || s.prompt,
-      };
+      let opts;
+      if(presetChar){
+        // 📌 프리셋 캐릭터 1명 — 현재 폼 슬롯 무시, 이 캐릭터로 시나리오 N개
+        const charPrompt = (presetChar.text || '').trim();
+        opts = {
+          ...baseOpts,
+          seed: Math.floor(Math.random() * 0xffffffff),
+          prompt: combinedBase || s.prompt,
+          characters: charPrompt
+            ? [{enabled: true, prompt: charPrompt, pos:{x:0.5, y:0.5}, neg:''}]
+            : [],
+          useCoords: false,
+        };
+      } else {
+        // 현재 폼 캐릭터·useCoords·characters 그대로
+        opts = {
+          ...baseOpts,
+          seed: Math.floor(Math.random() * 0xffffffff),
+          prompt: combinedBase || s.prompt,
+        };
+      }
       const body = buildGenBody({...opts, action: 'generate'});
       const blob = await naiGenerate(apiKey, body, _pgAbort.signal);
-      const fname = `scene_${s.label}_${opts.seed}.png`;
+      const fnameChar = presetChar?.name ? `${presetChar.name}_` : '';
+      const fname = `scene_${fnameChar}${s.label}_${opts.seed}.png`;
       const meta = {
         prompt: opts.prompt,
         neg: opts.neg,
@@ -7338,11 +7446,15 @@ async function pgStartScenes(){
         sampler: opts.sampler,
         schedule: opts.schedule,
         w: opts.w, h: opts.h,
-        characters: (state.characters || []).map(c => c.name).filter(Boolean),
+        characters: presetChar
+          ? [presetChar.name].filter(Boolean)
+          : (state.characters || []).map(c => c.name).filter(Boolean),
         sceneBatch: true,
         sceneLabel: s.label,
+        sceneCharPreset: presetChar?.name || null,
       };
-      await DB.saveImage(blob, fname, s.label, opts.prompt, meta);
+      const imgLabel = presetChar?.name ? `${presetChar.name} · ${s.label}` : s.label;
+      await DB.saveImage(blob, fname, imgLabel, opts.prompt, meta);
       recordSeedHistory(opts.seed);
       // 미리보기 갱신
       if(state.lastImage?.url) URL.revokeObjectURL(state.lastImage.url);
@@ -10329,6 +10441,9 @@ function wireGalleryEvents(){
     });
     pgRefreshCost();
   });
+  // 🗂 전체 접기·펼치기 + 그룹 필터 (캐릭터별 모드)
+  $('pgCollapseAll')?.addEventListener('click', pgToggleCollapseAll);
+  $('pgGroupFilter')?.addEventListener('change', pgApplyGroupFilter);
   // ☑ 선택 모드 토글 (수동 진입)
   $('galSelectModeBtn').addEventListener('click', () => setSelectionMode(!_selectionMode));
   // ☰ 전체 선택 (보이는 모든 이미지)
