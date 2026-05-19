@@ -4709,6 +4709,161 @@ async function renamePresetGroup(type, oldGroup, newGroupRaw){
   return true;
 }
 
+// 그룹 단위 작업 메뉴 — confirmModal 재사용해서 액션 선택 UI 표시
+function openPresetGroupMenu(type, group){
+  const def = PRESET_TYPES.find(t => t.id === type) || {label:'프리셋', ico:'📚'};
+  const list = (state.presets[type] || []).filter(p => getCharGroup(p.name) === group);
+  $('confirmTitle').innerHTML = `${def.ico} ${esc(group)} <span class="en" style="opacity:.6;font-weight:500">${list.length}개 항목</span>`;
+  $('confirmBody').innerHTML = `
+    <div style="font-size:12.5px;color:var(--t2);margin-bottom:10px">이 그룹(<b>${esc(group)}</b>)의 ${esc(def.label)} 프리셋 ${list.length}개에 대해 일괄 작업합니다.</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
+      <button class="btn ghost" data-grp-act="export" style="justify-content:flex-start;padding:9px 12px">
+        <span style="font-size:16px;margin-right:4px">📤</span>
+        내보내기 <span class="en">Export JSON</span>
+      </button>
+      <button class="btn ghost" data-grp-act="batch" style="justify-content:flex-start;padding:9px 12px;border-color:rgba(58,99,152,.4);color:var(--blue)">
+        <span style="font-size:16px;margin-right:4px">🎯</span>
+        일괄 생성 <span class="en">Batch Gen</span>
+      </button>
+      <button class="btn ghost" data-grp-act="move" style="justify-content:flex-start;padding:9px 12px">
+        <span style="font-size:16px;margin-right:4px">↪</span>
+        카테고리 이동 <span class="en">Move</span>
+      </button>
+      <button class="btn ghost" data-grp-act="delete" style="justify-content:flex-start;padding:9px 12px;color:var(--red);border-color:rgba(181,67,56,.4)">
+        <span style="font-size:16px;margin-right:4px">🗑</span>
+        그룹 삭제 <span class="en">Delete</span>
+      </button>
+    </div>`;
+  $('confirmOk').style.display = 'none';
+  $('confirmCancel').textContent = '닫기';
+  $('confirmModal').classList.add('open');
+  $('confirmBody').querySelectorAll('[data-grp-act]').forEach(btn => {
+    btn.onclick = async () => {
+      const act = btn.dataset.grpAct;
+      $('confirmModal').classList.remove('open');
+      $('confirmOk').style.display = '';
+      if(act === 'export') exportPresetGroup(type, group, list);
+      else if(act === 'batch') startBatchForGroup(type, group);
+      else if(act === 'move') openPresetGroupMoveDialog(type, group, list);
+      else if(act === 'delete') deletePresetGroupConfirm(type, group, list);
+    };
+  });
+}
+
+// 📤 그룹 내보내기 — 표준 백업 JSON 포맷
+function exportPresetGroup(type, group, list){
+  if(!list.length){ toast('내보낼 항목 없음', 'warning'); return; }
+  const out = {
+    _meta: {
+      app: 'NAI Studio',
+      exported: new Date().toISOString(),
+      version: 2,
+      selective: true,
+      parts: [`preset:${type}`],
+      group: group,
+    },
+    [type]: list,
+  };
+  const blob = new Blob([JSON.stringify(out, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const safeGroup = String(group).replace(/[^\w가-힣\-]+/g, '_');
+  a.href = url;
+  a.download = `nai_preset_${type}_${safeGroup}_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast(`📤 "${group}" ${list.length}개 내보내기 완료`, 'success');
+}
+
+// ↪ 그룹 전체를 다른 카테고리로 이동
+function openPresetGroupMoveDialog(type, group, list){
+  const others = PRESET_TYPES.filter(t => t.id !== type);
+  $('confirmTitle').innerHTML = `이동: <b>${esc(group)}</b> (${list.length}개)`;
+  $('confirmBody').innerHTML = `
+    <div style="margin-bottom:12px;color:var(--t2);font-size:13px">"${esc(group)}" 그룹의 <b>${list.length}개</b> 항목을 어느 카테고리로 옮길까요?</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
+      ${others.map(t => `<button class="btn ghost" data-mvto="${t.id}" style="justify-content:flex-start;padding:9px 12px">
+        <span style="font-size:16px;margin-right:4px">${t.ico}</span>
+        ${esc(t.label)} <span class="en">${esc(t.en)}</span>
+      </button>`).join('')}
+    </div>`;
+  $('confirmOk').style.display = 'none';
+  $('confirmCancel').textContent = '취소';
+  $('confirmModal').classList.add('open');
+  $('confirmBody').querySelectorAll('[data-mvto]').forEach(btn => {
+    btn.onclick = async () => {
+      const toType = btn.dataset.mvto;
+      let moved = 0, conflicts = 0;
+      const existingNames = new Set((state.presets[toType] || []).map(p => p.name));
+      for(const p of list){
+        if(existingNames.has(p.name)){ conflicts++; continue; }
+        try {
+          await DB.presetDelete(type, p.name);
+          await DB.presetPut(toType, p);
+          moved++;
+        } catch(e){ console.warn('[move]', p.name, e); }
+      }
+      $('confirmModal').classList.remove('open');
+      $('confirmOk').style.display = '';
+      await loadPresetsFromDB();
+      const defTo = PRESET_TYPES.find(t => t.id === toType);
+      toast(`↪ "${group}" → ${defTo?.label}: ${moved}개 이동${conflicts ? ` (이름 충돌 ${conflicts}개 스킵)` : ''}`, 'success');
+    };
+  });
+}
+
+// 🗑 그룹 삭제
+function deletePresetGroupConfirm(type, group, list){
+  const def = PRESET_TYPES.find(t => t.id === type) || {label:'프리셋'};
+  confirmDialog(
+    `정말 "${group}" 그룹의 ${def.label} ${list.length}개를 모두 삭제할까요?\n\n실행 취소는 6초 동안 가능합니다.`,
+    async () => {
+      const backup = list.map(p => ({...p}));  // 깊은 복사로 undo 백업
+      let deleted = 0;
+      for(const p of backup){
+        try { await DB.presetDelete(type, p.name); deleted++; }
+        catch(e){ console.warn('[del]', p.name, e); }
+      }
+      await loadPresetsFromDB();
+      toastUndo(`🗑 "${group}" ${deleted}개 삭제됨`, async () => {
+        for(const p of backup){
+          try { await DB.presetPut(type, p); } catch(e){ console.warn('[undo]', e); }
+        }
+        await loadPresetsFromDB();
+        toast(`↶ "${group}" ${backup.length}개 복원됨`, 'success');
+      });
+    },
+    `🗑 ${group} 삭제`
+  );
+}
+
+// 🎯 그룹 단위로 일괄 생성 시작 — 일괄 생성 모달 열고 그 그룹만 자동 체크
+function startBatchForGroup(type, group){
+  // 캐릭터 그룹은 일괄 생성 모달의 캐릭터별 모드에서 그 그룹만 체크
+  // 의상/상황/인원 그룹은 일괄 생성에 직접 매핑 안 됨 → 사용자에게 안내
+  if(type !== 'character'){
+    toast(`🎯 그룹 일괄 생성은 캐릭터 그룹에서만 동작합니다 (${PRESET_TYPES.find(t=>t.id===type)?.label}는 시나리오/액션 슬롯으로 활용하세요)`, 'info');
+    return;
+  }
+  // 그룹의 캐릭터 이름 셋 만들고, 모달 연 후 그 그룹만 체크
+  const groupNames = new Set((state.presets.character || [])
+    .filter(p => getCharGroup(p.name) === group)
+    .map(p => p.name));
+  openPreviewGenModal();
+  // 모드를 캐릭터별로 강제
+  if(typeof pgSetMode === 'function') pgSetMode('chars');
+  // 다음 tick에 체크박스 적용 (렌더 완료 후)
+  setTimeout(() => {
+    document.querySelectorAll('#pgCharList input[data-act="pick"]').forEach(c => {
+      const idx = parseInt(c.dataset.idx, 10);
+      const char = state.presets.character?.[idx];
+      c.checked = !!(char && groupNames.has(char.name));
+    });
+    if(typeof pgRefreshCost === 'function') pgRefreshCost();
+    toast(`🎯 "${group}" 그룹 ${groupNames.size}명만 선택됨 — 시작 누르면 생성 시작`, 'info');
+  }, 50);
+}
+
 // 후방 호환 — 캐릭터 전용 래퍼 (다른 곳에서 호출)
 async function renameCharGroup(oldGroup, newGroupRaw){
   return renamePresetGroup('character', oldGroup, newGroupRaw);
@@ -4806,6 +4961,7 @@ function renderPresets(){
           <span class="p-group-name" data-act="toggle-group">${ico} ${esc(g.group)}</span>
           <span class="p-group-count">${g.items.length}</span>
           <button class="p-group-edit" data-act="rename-group" data-group="${esc(g.group)}" title="${esc(renameTitle)}">✏</button>
+          <button class="p-group-edit" data-act="group-menu" data-group="${esc(g.group)}" title="그룹 단위 작업 — 내보내기·이동·삭제·일괄 생성">⋯</button>
         </div>
         ${itemsHtml}`;
     }).join('');
@@ -10590,6 +10746,13 @@ function wireGenerationAndPresetEvents(){
       if(nn && nn.trim() && nn.trim() !== oldGroup){
         await renamePresetGroup(curType, oldGroup, nn.trim());
       }
+      return;
+    }
+    // ⋯ 그룹 단위 작업 메뉴
+    const menuBtn = e.target.closest('[data-act="group-menu"]');
+    if(menuBtn){
+      e.stopPropagation();
+      openPresetGroupMenu(state.presetType, menuBtn.dataset.group);
       return;
     }
     // 📚 그룹 헤더 토글 (접고 펼치기) — 토글 대상 영역만
