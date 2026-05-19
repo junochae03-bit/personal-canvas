@@ -1536,7 +1536,11 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           </div>
           <div class="row" style="margin-bottom:8px;gap:7px">
             <div class="field" style="flex:1"><span class="lbl">시드 <span class="en">Seed</span></span>
-              <input type="number" id="seed" class="inp" placeholder="비우면 랜덤 (-1 = random)"></div>
+              <div style="position:relative">
+                <input type="number" id="seed" class="inp" placeholder="비우면 랜덤 (-1 = random)" style="padding-right:28px;width:100%">
+                <button type="button" id="seedClearBtn" title="시드 비우기" aria-label="시드 비우기" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:transparent;border:0;color:var(--t3);opacity:.55;cursor:pointer;font-size:14px;line-height:1;padding:4px 6px;border-radius:4px">✕</button>
+              </div>
+            </div>
             <button class="iconbtn" id="randSeedBtn" title="랜덤 시드 (Random)" style="margin-top:21px">🎲</button>
             <button class="iconbtn" id="lockSeedBtn" title="마지막 시드 고정 (Lock)" style="margin-top:21px">🔓</button>
             <button class="iconbtn" id="seedHistBtn" title="시드 히스토리·즐겨찾기 (Seed history)" style="margin-top:21px">⏱</button>
@@ -1630,7 +1634,10 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
         <span id="costEstimate">비용: ~0 Anlas</span>
         <span id="resInfo">832×1216</span>
       </div>
-      <button id="genBtn" class="gen-btn">생성 시작 <span class="en">Generate</span></button>
+      <div id="genBtnGroup" style="display:flex;gap:6px">
+        <button id="genBtn" class="gen-btn" style="flex:1">생성 시작 <span class="en">Generate</span></button>
+        <button id="genQueueAddBtn" class="gen-btn" type="button" title="진행 중인 큐에 현재 설정으로 한 장 더 추가" style="flex:1;display:none;background:var(--blue);border-color:var(--blue);color:#fff8ec">＋ 대기열 추가 <span class="en">Add</span></button>
+      </div>
     </div>
   </aside>
 
@@ -6806,8 +6813,9 @@ async function startGeneration(){
   state.running = true;
   state.paused = false;
   state.abortCtrl = new AbortController();
-  $('genBtn').innerHTML = '중단 <span class="en">Stop</span>';
+  $('genBtn').innerHTML = '⏹ 중단 <span class="en">Stop</span>';
   $('genBtn').classList.add('stop');
+  if($('genQueueAddBtn')) $('genQueueAddBtn').style.display = '';   // 대기열 추가 버튼 노출
   $('previewStatus').classList.add('show');
   renderQueue();
 
@@ -6852,6 +6860,7 @@ async function startGeneration(){
   state.paused = false;
   $('genBtn').innerHTML = '생성 시작 <span class="en">Generate</span>';
   $('genBtn').classList.remove('stop');
+  if($('genQueueAddBtn')) $('genQueueAddBtn').style.display = 'none';
   $('previewStatus').classList.remove('show');
   const errs = state.queue.filter(q => q.status === 'err').length;
   if(state.queue.length){
@@ -10514,6 +10523,7 @@ function wireTopbarAndFormEvents(){
 
   // Seed buttons
   $('randSeedBtn').addEventListener('click', () => $('seed').value = Math.floor(Math.random() * 0xffffffff));
+  $('seedClearBtn')?.addEventListener('click', () => { $('seed').value = ''; $('seed').dispatchEvent(new Event('input',{bubbles:true})); });
   $('lockSeedBtn').addEventListener('click', () => {
     state.seedLocked = !state.seedLocked;
     $('lockSeedBtn').textContent = state.seedLocked ? '🔒' : '🔓';
@@ -10813,15 +10823,17 @@ function wireCharacterEvents(){
     renderCharPickSubgroups();
     renderCharPickList();
   });
-  // 🎲 빠른 추가 모달 — 현재 카테고리·서브그룹에서 랜덤 1개 선택
+  // 🎲 빠른 추가 모달 — 현재 카테고리·서브그룹에서 랜덤 1개 선택 (항상 '변경' 모드로 적용)
   $('charPickRandom')?.addEventListener('click', () => {
     if(_charPickIdx < 0){ toast('캐릭터 슬롯이 선택되지 않음', 'warning'); return; }
-    // 모든 가시 .cp-item에서 랜덤 — 현재 필터·검색·서브그룹 그대로 적용
     const visible = [...$('charPickList').querySelectorAll('.cp-item')];
     if(!visible.length){ toast('표시 중인 항목 없음', 'warning'); return; }
     const pick = visible[Math.floor(Math.random() * visible.length)];
-    selectCharPickItem(pick);
-    // 시각적 강조 — 잠시 스크롤해서 어떤 게 선택됐는지 보여줌
+    // 🎲 랜덤은 '병합'이 아닌 '변경' — 기존 슬롯을 새 항목으로 통째 교체
+    const prevMode = _cpMode;
+    _cpMode = 'replace';
+    try { selectCharPickItem(pick); }
+    finally { _cpMode = prevMode; }
     pick.scrollIntoView({block:'nearest', behavior:'smooth'});
   });
   $('charPickList').addEventListener('click', e => {
@@ -10945,6 +10957,23 @@ function wireCharacterEvents(){
 function wireGenerationAndPresetEvents(){
   // Generate button
   $('genBtn').addEventListener('click', startGeneration);
+  // ＋ 대기열 추가 — 진행 중인 큐에 현재 설정으로 한 장 더 추가 (생성 흐름 유지)
+  $('genQueueAddBtn')?.addEventListener('click', () => {
+    if(!state.running){ toast('생성 중일 때만 대기열에 추가할 수 있습니다', 'info'); return; }
+    // 현재 buildQueue 1개를 추출해 끝에 push (간단한 항목 1개)
+    const seqText = ($('seqInput')?.value || '').trim();
+    let extra;
+    if(seqText){
+      const items = parseSeqInput(seqText);
+      const last = items[items.length - 1];
+      extra = last ? {id: _qSeq++, status:'wait', label: last.label, promptOverride: last.prompt} : {id: _qSeq++, status:'wait', label: 'Add'};
+    } else {
+      extra = {id: _qSeq++, status:'wait', label: `+${state.queue.length+1}`};
+    }
+    state.queue.push(extra);
+    renderQueue();
+    toast(`＋ 대기열에 추가됨 (#${state.queue.length})`, 'success');
+  });
   $('pauseBtn').addEventListener('click', () => {
     if(!state.running) return;
     state.paused = !state.paused;
