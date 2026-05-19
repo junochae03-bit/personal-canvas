@@ -1373,6 +1373,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <span id="anlasPill" class="pill pill-off">오프라인 (Offline)</span>
     <button class="iconbtn" id="refreshAnlas" title="잔량 새로고침 (Refresh Anlas)">⟳</button>
     <button class="iconbtn" id="fullscreenBtn" title="전체화면 켜기·끄기 (Fullscreen)" aria-pressed="false">⛶</button>
+    <button class="iconbtn" id="settingsBtn" title="설정 (Settings)" aria-label="설정">⚙</button>
   </div>
   <div class="tb-grow"></div>
 </div>
@@ -1923,8 +1924,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   <button class="mn-btn" data-mview="presets" type="button" aria-label="프리셋">
     <span class="mn-ico">📚</span><span class="mn-lbl">프리셋</span>
   </button>
-  <button class="mn-btn" data-mview="settings" type="button" aria-label="설정">
-    <span class="mn-ico">⚙️</span><span class="mn-lbl">설정</span>
+  <button class="mn-btn" data-mview="templates" type="button" aria-label="템플릿">
+    <span class="mn-ico">🎨</span><span class="mn-lbl">템플릿</span>
   </button>
 </nav>
 
@@ -11170,6 +11171,7 @@ function wireTopbarAndFormEvents(){
   $('refreshAnlas').addEventListener('click', refreshAnlas);
   // ⛶ 전체화면 토글 — 시스템 네비/상태바 숨김 (브라우저 모두 + 비-설치 환경 호환)
   $('fullscreenBtn').addEventListener('click', toggleFullscreen);
+  $('settingsBtn')?.addEventListener('click', () => setMainPane('settings'));
   document.addEventListener('fullscreenchange', updateFullscreenBtn);
   document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
 
