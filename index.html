@@ -2105,8 +2105,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       </div>
       <!-- 시나리오별 모드: 캐릭터 1명 선택 + 시나리오 체크리스트 -->
       <div class="field" style="margin-bottom:12px;display:none" id="pgFormCharInfo">
-        <span class="lbl">👤 사용할 캐릭터 <span class="en">Character</span></span>
-        <select id="pgSceneChar" class="inp" style="margin-bottom:6px">
+        <span class="lbl">👤 사용할 캐릭터 <span class="en">Character</span> <span id="pgCharSearchCount" style="color:var(--t3);font-weight:500;margin-left:4px"></span></span>
+        <input id="pgCharSearch" type="text" class="inp" placeholder="🔎 캐릭터 또는 작품 이름으로 검색..." style="margin-bottom:6px" autocomplete="off" spellcheck="false">
+        <select id="pgSceneChar" class="inp" style="margin-bottom:6px" size="6">
           <option value="">— 현재 폼 캐릭터 그대로 사용 —</option>
         </select>
         <div id="pgFormCharSummary" style="padding:10px 12px;background:var(--card);border:1.5px solid var(--b1);border-radius:6px;font-size:12.5px;color:var(--t2);line-height:1.6"></div>
@@ -7144,6 +7145,44 @@ function pgSetMode(mode){
   pgRefreshCost();
 }
 
+// 🔎 시나리오별 모드의 캐릭터 드롭다운 — 검색 q 기준으로 필터·그룹화해서 재구성
+function pgPopulateSceneChar(rawQ){
+  const sel = $('pgSceneChar');
+  if(!sel) return;
+  const q = String(rawQ || '').trim().toLowerCase();
+  const prev = sel.value;
+  const chars = state.presets.character || [];
+  const indexed = chars.map((c, i) => ({...c, _idx: i}));
+  // 매치: 캐릭터 이름 또는 작품(그룹) 이름
+  const matched = q
+    ? indexed.filter(c => {
+        const name = (c.name || '').toLowerCase();
+        const group = (typeof getCharGroup === 'function' ? getCharGroup(c.name) : '').toLowerCase();
+        return name.includes(q) || group.includes(q);
+      })
+    : indexed;
+  const groups = (typeof groupCharsByWork === 'function')
+    ? groupCharsByWork(matched)
+    : (matched.length ? [{group:'전체', items: matched}] : []);
+  const parts = ['<option value="">— 현재 폼 캐릭터 그대로 사용 —</option>'];
+  for(const g of groups){
+    parts.push(`<optgroup label="${esc(g.group)} (${g.items.length}명)">`);
+    for(const c of g.items){
+      parts.push(`<option value="${c._idx}">${esc(c.name || '(이름 없음)')}</option>`);
+    }
+    parts.push('</optgroup>');
+  }
+  sel.innerHTML = parts.join('');
+  // 이전 선택이 검색 결과에 남아있으면 유지, 아니면 ''
+  if(prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+  // 카운트 표시
+  if($('pgCharSearchCount')){
+    const total = chars.length;
+    $('pgCharSearchCount').textContent = q ? `(${matched.length}/${total} 매치)` : `(전체 ${total}명)`;
+  }
+  pgUpdateFormCharSummary();
+}
+
 function pgUpdateFormCharSummary(){
   const el = $('pgFormCharSummary');
   if(!el) return;
@@ -7326,21 +7365,19 @@ function openPreviewGenModal(){
   };
   $('pgPromptText').oninput = pgRefreshCost;
 
-  // 사용할 캐릭터 드롭다운 — 시나리오별 모드용. 그룹 단위로 묶어서 표시
+  // 사용할 캐릭터 드롭다운 — 시나리오별 모드용. 그룹 단위로 묶고 검색 가능
   if($('pgSceneChar')){
-    const chars = state.presets.character || [];
-    const indexed = chars.map((c, i) => ({...c, _idx: i}));
-    const groups = (typeof groupCharsByWork === 'function') ? groupCharsByWork(indexed) : [{group:'전체', items: indexed}];
-    const parts = ['<option value="">— 현재 폼 캐릭터 그대로 사용 —</option>'];
-    for(const g of groups){
-      parts.push(`<optgroup label="${esc(g.group)} (${g.items.length}명)">`);
-      for(const c of g.items){
-        parts.push(`<option value="${c._idx}">${esc(c.name || '(이름 없음)')}</option>`);
-      }
-      parts.push('</optgroup>');
-    }
-    $('pgSceneChar').innerHTML = parts.join('');
+    pgPopulateSceneChar('');
     $('pgSceneChar').onchange = pgUpdateFormCharSummary;
+    // 검색 — 디바운스해서 매 키스트로크마다 1500여 option 재생성 부담 줄임
+    if($('pgCharSearch') && !$('pgCharSearch')._wired){
+      $('pgCharSearch')._wired = true;
+      const onSearch = (typeof debounce === 'function')
+        ? debounce(() => pgPopulateSceneChar($('pgCharSearch').value), 120)
+        : () => pgPopulateSceneChar($('pgCharSearch').value);
+      $('pgCharSearch').addEventListener('input', onSearch);
+    }
+    if($('pgCharSearch')) $('pgCharSearch').value = '';
   }
 
   // 모드 탭 핸들러 (1회 등록)
