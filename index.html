@@ -2128,6 +2128,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
             <option value="">— 모든 카테고리 표시 —</option>
           </select>
         </div>
+        <!-- 📚 카테고리가 그룹화 지원이면 작품/시리즈별 서브 칩 노출 -->
+        <div id="pgSceneSubGroupChips" class="cp-cats" style="margin-bottom:6px;display:none"></div>
         <div id="pgSceneList" style="max-height:38vh;overflow-y:auto;border:1.5px solid var(--b1);border-radius:6px;background:var(--card);padding:6px"></div>
         <details style="margin-top:8px">
           <summary style="cursor:pointer;font-size:11.5px;color:var(--t3);padding:4px 0">➕ 직접 입력 추가 <span class="en">Custom scenes</span> (선택)</summary>
@@ -7559,6 +7561,9 @@ function pgUpdateFormCharSummary(){
 }
 
 // 🎬 시나리오별 모드의 체크리스트 렌더 — 카테고리별 그룹화 (캐릭터별 모드의 거울 구조)
+// 그룹화 지원 카테고리(의상·상황·인원)는 카테고리 안에서 또 작품별 서브헤더로 분리
+let _pgSceneSubGroup = '';   // 선택된 작품 서브그룹 ('' = 모든 작품)
+
 function pgRenderSceneList(){
   const wrap = $('pgSceneList');
   if(!wrap) return;
@@ -7579,9 +7584,13 @@ function pgRenderSceneList(){
     const def = (typeof PRESET_TYPES !== 'undefined') ? PRESET_TYPES.find(t => t.id === id) : null;
     return def ? `${def.ico||'•'} ${def.label||id}` : id;
   };
+  // 시나리오 객체의 prefix 추출 (s.cat은 카테고리, 이름에서 작품/시리즈 추출)
+  const sceneGroup = s => {
+    const name = s.label.split('·').pop().trim();
+    return getCharGroup(name);
+  };
   const renderItem = s => {
     const head = (s.text || '').replace(/\s+/g, ' ').slice(0, 90);
-    // 라벨에서 '아이콘 카테고리 · 이름' 중 이름 부분만 추출
     const name = s.label.split('·').pop().trim();
     return `
       <label class="chk pg-scene" style="padding:7px 9px;border-radius:5px;display:flex;align-items:flex-start;gap:9px;cursor:pointer;border-bottom:1px solid var(--b1)">
@@ -7592,7 +7601,43 @@ function pgRenderSceneList(){
         </span>
       </label>`;
   };
-  wrap.innerHTML = [...byCat.entries()].map(([cat, items]) => `
+  // 카테고리별 묶기 + 그룹화 지원 카테고리는 안에서 작품별 서브헤더로 또 나눔
+  wrap.innerHTML = [...byCat.entries()].map(([cat, items]) => {
+    const groupable = GROUPABLE_PRESET_TYPES.has(cat);
+    let bodyHtml;
+    if(groupable){
+      // 작품별 묶음
+      const subMap = new Map();
+      for(const it of items){
+        const g = sceneGroup(it);
+        if(!subMap.has(g)) subMap.set(g, []);
+        subMap.get(g).push(it);
+      }
+      // 정렬: 인원수 내림차순, 기타 마지막
+      const entries = [...subMap.entries()].sort((a,b) => {
+        if(a[0] === '기타') return 1;
+        if(b[0] === '기타') return -1;
+        return b[1].length - a[1].length || a[0].localeCompare(b[0], 'ko');
+      });
+      const hasSub = entries.length > 1;
+      bodyHtml = entries.map(([sub, subItems]) => {
+        if(!hasSub) return subItems.map(renderItem).join('');
+        return `
+          <div class="pg-scene-subgroup" data-sub="${esc(sub)}" style="border-top:1px solid var(--b1)">
+            <div class="pg-scene-subhead" data-act="toggle-scene-sub" style="display:flex;align-items:center;gap:6px;padding:5px 12px 5px 24px;background:rgba(162,90,31,.04);font-size:11.5px;color:var(--t2);cursor:pointer">
+              <span class="pg-scene-submark" style="font-size:10px;color:var(--t3);transition:transform .15s;width:10px;display:inline-block">▾</span>
+              <span style="font-weight:600">${esc(sub)}</span>
+              <span style="margin-left:auto;font-family:var(--mono);color:var(--t3);font-size:10.5px">${subItems.length}</span>
+              <button type="button" class="btn ghost" data-act="scene-subgroup-all" data-sub="${esc(sub)}" style="padding:2px 7px;font-size:10.5px" title="이 작품 모두 선택">☑</button>
+              <button type="button" class="btn ghost" data-act="scene-subgroup-none" data-sub="${esc(sub)}" style="padding:2px 7px;font-size:10.5px" title="이 작품 해제">☐</button>
+            </div>
+            <div class="pg-scene-subbody">${subItems.map(renderItem).join('')}</div>
+          </div>`;
+      }).join('');
+    } else {
+      bodyHtml = items.map(renderItem).join('');
+    }
+    return `
     <div class="pg-scene-group" data-cat="${esc(cat)}" style="border-bottom:2px solid var(--b1)">
       <div class="pg-scene-head" style="display:flex;align-items:center;gap:6px;padding:8px 9px;background:var(--card2);position:sticky;top:0;z-index:1;cursor:pointer">
         <span class="pg-scene-mark" style="font-size:11px;color:var(--t3);transition:transform .15s">▾</span>
@@ -7600,8 +7645,9 @@ function pgRenderSceneList(){
         <button type="button" class="btn ghost" data-act="scene-group-all" style="padding:3px 8px;font-size:11px" title="이 카테고리만 선택">☑ 그룹</button>
         <button type="button" class="btn ghost" data-act="scene-group-none" style="padding:3px 8px;font-size:11px" title="이 카테고리 해제">☐ 그룹</button>
       </div>
-      <div class="pg-scene-body">${items.map(renderItem).join('')}</div>
-    </div>`).join('');
+      <div class="pg-scene-body">${bodyHtml}</div>
+    </div>`;
+  }).join('');
 
   // 시나리오 인덱스 → scene 객체 매핑 캐시 (pgStartScenes에서 사용)
   wrap.dataset.scenes = JSON.stringify(scenes);
@@ -7632,6 +7678,31 @@ function pgRenderSceneList(){
     });
   });
 
+  // 📚 작품별 서브그룹 헤더 접기/펼치기
+  wrap.querySelectorAll('[data-act="toggle-scene-sub"]').forEach(head => {
+    head.addEventListener('click', e => {
+      if(e.target.closest('button')) return;
+      const body = head.parentElement.querySelector('.pg-scene-subbody');
+      const mark = head.querySelector('.pg-scene-submark');
+      if(body){
+        const collapsed = body.style.display === 'none';
+        body.style.display = collapsed ? '' : 'none';
+        if(mark) mark.textContent = collapsed ? '▾' : '▸';
+      }
+    });
+  });
+
+  // 📚 작품별 일괄 선택/해제
+  wrap.querySelectorAll('button[data-act="scene-subgroup-all"], button[data-act="scene-subgroup-none"]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const checked = btn.dataset.act === 'scene-subgroup-all';
+      const body = btn.closest('.pg-scene-subgroup').querySelector('.pg-scene-subbody');
+      body.querySelectorAll('input[data-act="pick-scene"]').forEach(c => c.checked = checked);
+      pgRefreshCost();
+    });
+  });
+
   // 카테고리 필터 동기화
   const filter = $('pgSceneCatFilter');
   if(filter){
@@ -7641,7 +7712,50 @@ function pgRenderSceneList(){
     if(prev && [...filter.options].some(o => o.value === prev)) filter.value = prev;
     pgApplySceneCatFilter();
   }
+  // 📚 서브그룹 칩 렌더 (선택된 카테고리가 그룹화 지원이면)
+  pgRenderSceneSubGroupChips();
   pgRefreshCost();
+}
+
+// 카테고리 필터로 좁힌 후 그 카테고리 내의 작품 칩 렌더
+function pgRenderSceneSubGroupChips(){
+  const wrap = $('pgSceneSubGroupChips');
+  if(!wrap) return;
+  const cat = $('pgSceneCatFilter')?.value || '';
+  // 전체 또는 그룹화 미지원 카테고리면 칩 숨김
+  if(!cat || !GROUPABLE_PRESET_TYPES.has(cat)){
+    wrap.style.display = 'none';
+    wrap.innerHTML = '';
+    return;
+  }
+  const list = state.presets[cat] || [];
+  if(!list.length){ wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  // groupCharsByWork 규칙으로 작품 묶기
+  const groups = groupCharsByWork(list);
+  if(groups.length <= 1){ wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  wrap.style.display = '';
+  const chips = [{id:'', label:'전체', cnt: list.length, isAll:true}];
+  for(const g of groups) chips.push({id: g.group, label: g.group, cnt: g.items.length});
+  wrap.innerHTML = chips.map(c => {
+    const isAct = _pgSceneSubGroup === c.id;
+    const ico = c.isAll ? '📚' : '📁';
+    return `<button class="cp-cat ${isAct?'act':''}" data-pg-sub="${esc(c.id)}" title="${esc(c.label)} 그룹만 보기">${ico} ${esc(c.label)} <span class="cp-cnt">${c.cnt.toLocaleString()}</span></button>`;
+  }).join('');
+  pgApplySceneSubGroupFilter();
+}
+
+// 작품 칩으로 시나리오 리스트 필터링 — DOM에 hidden 클래스 토글
+function pgApplySceneSubGroupFilter(){
+  const wrap = $('pgSceneList');
+  if(!wrap) return;
+  if(!_pgSceneSubGroup){
+    // 모든 항목 표시 (display 복원)
+    wrap.querySelectorAll('.pg-scene-subgroup').forEach(el => el.style.display = '');
+    return;
+  }
+  wrap.querySelectorAll('.pg-scene-subgroup').forEach(el => {
+    el.style.display = el.dataset.sub === _pgSceneSubGroup ? '' : 'none';
+  });
 }
 
 function pgApplySceneCatFilter(){
@@ -7652,6 +7766,9 @@ function pgApplySceneCatFilter(){
   wrap.querySelectorAll('.pg-scene-group').forEach(g => {
     g.style.display = (!target || g.dataset.cat === target) ? '' : 'none';
   });
+  // 카테고리 변경 시 작품 서브그룹 칩 리셋 + 다시 렌더
+  _pgSceneSubGroup = '';
+  if(typeof pgRenderSceneSubGroupChips === 'function') pgRenderSceneSubGroupChips();
 }
 
 function pgToggleSceneCollapseAll(){
@@ -11051,6 +11168,13 @@ function wireGalleryEvents(){
   });
   $('pgSceneCollapseAll')?.addEventListener('click', pgToggleSceneCollapseAll);
   $('pgSceneCatFilter')?.addEventListener('change', pgApplySceneCatFilter);
+  // 📚 작품 서브그룹 칩
+  $('pgSceneSubGroupChips')?.addEventListener('click', e => {
+    const b = e.target.closest('.cp-cat');
+    if(!b) return;
+    _pgSceneSubGroup = b.dataset.pgSub || '';
+    pgRenderSceneSubGroupChips();
+  });
   $('pgScenesText')?.addEventListener('input', pgRefreshCost);
   // ☑ 선택 모드 토글 (수동 진입)
   $('galSelectModeBtn').addEventListener('click', () => setSelectionMode(!_selectionMode));
