@@ -2117,9 +2117,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <div class="field" style="margin-bottom:12px;display:none" id="pgFormCharInfo">
         <span class="lbl">👤 사용할 캐릭터 <span class="en">Character</span> <span id="pgCharSearchCount" style="color:var(--t3);font-weight:500;margin-left:4px"></span></span>
         <input id="pgCharSearch" type="text" class="inp" placeholder="🔎 캐릭터 또는 작품 이름으로 검색..." style="margin-bottom:6px" autocomplete="off" spellcheck="false">
-        <select id="pgSceneChar" class="inp" style="margin-bottom:6px">
-          <option value="">— 현재 폼 캐릭터 그대로 사용 —</option>
-        </select>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+          <select id="pgSceneChar" class="inp" style="flex:1;min-width:0">
+            <option value="">— 현재 폼 캐릭터 그대로 사용 —</option>
+          </select>
+          <button class="btn ghost" id="pgSceneCharAdd" type="button" title="이 캐릭터를 같이 출연시킬 목록에 추가 (한 장에 2~3명까지)" style="padding:6px 10px;font-size:12px;flex-shrink:0">➕ 동시</button>
+        </div>
+        <div id="pgSceneCharChips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px"></div>
         <div id="pgFormCharSummary" style="padding:10px 12px;background:var(--card);border:1.5px solid var(--b1);border-radius:6px;font-size:12.5px;color:var(--t2);line-height:1.6"></div>
       </div>
       <div class="field" style="margin-bottom:12px;display:none" id="pgScenesField">
@@ -2151,6 +2155,16 @@ coffee shop, latte art"></textarea>
         </details>
       </div>
       <div style="background:rgba(58,99,152,.06);border:1.5px solid rgba(58,99,152,.18);border-radius:6px;padding:9px 12px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:600;color:var(--t1)">👥 한 장에 캐릭터 수</span>
+          <select id="pgCharsPerImage" class="inp" style="font-size:12px;padding:3px 8px;width:auto">
+            <option value="1" selected>1명 (기본)</option>
+            <option value="2">2명 동시</option>
+            <option value="3">3명 동시</option>
+            <option value="4">4명 동시</option>
+          </select>
+          <span style="font-size:11px;color:var(--t3)" id="pgCharsPerImageHint">선택한 캐릭터를 N명씩 묶어서 같은 장에 출연</span>
+        </div>
         <label class="chk" style="margin-bottom:5px"><input type="checkbox" id="pgUpdateThumb"> <span id="pgUpdateThumbLabel">결과를 각 캐릭터 프리셋 썸네일로 자동 저장</span> <span class="en" style="color:var(--t3);opacity:.7">(카탈로그 만들기용)</span></label>
         <label class="chk" style="display:block;margin-bottom:5px"><input type="checkbox" id="pgNewSession" checked>📂 새 세션에 모아 저장</label>
         <label class="chk" style="display:block"><input type="checkbox" id="pgLockSeed">🌱 시드 고정 <span class="en" style="color:var(--t3);opacity:.7">(Lock seed — 모든 생성에 동일 시드 적용)</span></label>
@@ -7607,6 +7621,23 @@ function pgPopulateSceneChar(rawQ){
   pgUpdateFormCharSummary();
 }
 
+// 🎬 시나리오별 모드 — 같이 출연시킬 추가 캐릭터 (메인 select에 선택된 1명 + 이 배열)
+// 최대 6명까지(V4 캐릭터 슬롯 제한)
+let _pgSceneExtraChars = [];   // [{idx, name, text, thumb}, ...]
+
+function pgRenderSceneCharChips(){
+  const wrap = $('pgSceneCharChips');
+  if(!wrap) return;
+  if(!_pgSceneExtraChars.length){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = _pgSceneExtraChars.map((c, i) =>
+    `<span class="pg-scene-chip" style="display:inline-flex;align-items:center;gap:4px;background:var(--card);border:1.5px solid var(--b2);border-radius:14px;padding:3px 4px 3px 9px;font-size:12px;color:var(--t1)" title="${esc(c.text||'').slice(0,80)}">
+      ${c.thumb ? `<span style="width:18px;height:18px;border-radius:50%;background:url('${esc(c.thumb)}') center/cover;border:1.5px solid var(--b1);margin-right:1px"></span>` : ''}
+      <span>${esc(c.name||'(이름 없음)')}</span>
+      <button type="button" data-pg-scene-chip-rm="${i}" style="background:transparent;border:0;cursor:pointer;color:var(--t3);font-size:14px;line-height:1;padding:0 2px" aria-label="제거">×</button>
+    </span>`
+  ).join('');
+}
+
 function pgUpdateFormCharSummary(){
   const el = $('pgFormCharSummary');
   if(!el) return;
@@ -7930,6 +7961,9 @@ function openPreviewGenModal(){
 
   // 캐릭터 체크리스트 (캐릭터별 모드 영역)
   pgRenderCharList();
+  // 시나리오별 모드의 동시 출연 칩 초기화 + 렌더
+  _pgSceneExtraChars = [];
+  pgRenderSceneCharChips();
   // 기본 모드는 캐릭터별 (이전 동작 유지)
   pgSetMode(_pgMode);
 
@@ -8116,16 +8150,25 @@ async function pgStartScenes(){
       const combinedBase = [userBase, s.prompt].filter(Boolean).join(', ');
       let opts;
       if(presetChar){
-        // 📌 프리셋 캐릭터 1명 — 현재 폼 슬롯 무시, 이 캐릭터로 시나리오 N개
-        const charPrompt = (presetChar.text || '').trim();
+        // 📌 프리셋 캐릭터 — presetChar(메인) + extraChars(동시 출연) 모두 한 장에 출연
+        const allChars = [presetChar, ..._pgSceneExtraChars.map(e => state.presets.character?.[e.idx]).filter(Boolean)];
+        const cnt = allChars.length;
+        const charactersArr = allChars.map((c, idx) => {
+          const x = cnt === 1 ? 0.5 : (idx + 1) / (cnt + 1);
+          return {
+            enabled: true,
+            prompt: (c.text || '').trim(),
+            pos: {x, y: 0.5},
+            neg: '',
+            name: c.name || '',
+          };
+        }).filter(c => c.prompt);
         opts = {
           ...baseOpts,
           seed: lockSeed ? lockedSeedValue : Math.floor(Math.random() * 0xffffffff),
           prompt: combinedBase || s.prompt,
-          characters: charPrompt
-            ? [{enabled: true, prompt: charPrompt, pos:{x:0.5, y:0.5}, neg:''}]
-            : [],
-          useCoords: false,
+          characters: charactersArr,
+          useCoords: cnt > 1,
         };
       } else {
         // 현재 폼 캐릭터·useCoords·characters 그대로
@@ -8226,7 +8269,13 @@ async function pgStart(){
   $('pgStop').style.display = '';
   $('pgProgress').style.display = '';
   let done = 0, errors = 0;
-  const total = picked.length;
+  // 👥 한 장에 K명 — picked를 K명씩 chunk로 묶어 같이 출연시킴 (V4 멀티 캐릭터)
+  const charsPerImage = clamp(parseInt($('pgCharsPerImage')?.value, 10) || 1, 1, 6);
+  const chunks = [];
+  for(let i = 0; i < picked.length; i += charsPerImage){
+    chunks.push(picked.slice(i, i + charsPerImage));
+  }
+  const total = chunks.length;
   // 🌱 시드 고정 — 체크 시 한 번 결정하고 모든 큐에 동일 적용 (폼 시드 우선, 비어있으면 랜덤)
   const lockSeed = $('pgLockSeed')?.checked;
   const lockedSeedValue = lockSeed ? pgResolveLockedSeed() : null;
@@ -8237,37 +8286,43 @@ async function pgStart(){
   };
   updateProg();
 
-  for(const c of picked){
+  for(const chunk of chunks){
     if(!_pgRunning) break;
-    $('pgProgLabel').textContent = `생성 중: ${c.name||'(이름 없음)'}`;
-    updateBgProgress(`🎯 ${done+1}/${total} · ${c.name||''}`);
+    const chunkNames = chunk.map(c => c.name || '').filter(Boolean).join(' + ');
+    $('pgProgLabel').textContent = `생성 중: ${chunkNames || '(이름 없음)'}`;
+    updateBgProgress(`🎯 ${done+1}/${total} · ${chunkNames}`);
     try {
       const baseOpts = currentPromptOpts();
-      // 그림체·품질 보존 — 사용자 현재 프롬프트 + 시나리오 + (필요 시 캐릭터 외형도 base에 포함)
       const userBase = (baseOpts.prompt || '').trim();
-      const charPrompt = (c.text || '').trim();
-      // 안전한 fallback: 사용자 프롬프트 비었으면 캐릭터 외형이라도 base에 들어가게
-      const parts = [userBase, sceneText, !userBase && !sceneText ? charPrompt : ''].filter(Boolean);
+      // K명을 가로 균등 배치 (1명=중앙, 2명=0.33/0.66, 3명=0.25/0.5/0.75 …)
+      const cnt = chunk.length;
+      const charactersArr = chunk.map((c, idx) => {
+        const charPrompt = (c.text || '').trim();
+        const x = cnt === 1 ? 0.5 : (idx + 1) / (cnt + 1);
+        return {
+          enabled: true,
+          prompt: charPrompt,
+          pos: {x, y: 0.5},
+          neg: '',
+          name: c.name || '',
+        };
+      }).filter(c => c.prompt);
+      // 시나리오·user prompt 결합. K=1이고 둘 다 비면 캐릭터 외형 fallback
+      const fallbackChar = (cnt === 1 && !userBase && !sceneText) ? (chunk[0]?.text || '').trim() : '';
+      const parts = [userBase, sceneText, fallbackChar].filter(Boolean);
       const combinedBase = parts.join(', ');
       const opts = {
         ...baseOpts,
         seed: lockSeed ? lockedSeedValue : Math.floor(Math.random() * 0xffffffff),
-        prompt: combinedBase || charPrompt,  // 최종 안전망
-        characters: charPrompt
-          ? [{
-              enabled: true,
-              prompt: charPrompt,
-              pos: {x:0.5, y:0.5},
-              neg: '',
-            }]
-          : [],
-        useCoords: false,
+        prompt: combinedBase || fallbackChar,
+        characters: charactersArr,
+        useCoords: cnt > 1,  // 다중 캐릭터일 때만 좌표 사용
       };
-      console.log('[pg-batch]', {char: c.name, userBase_len: userBase.length, sceneText_len: sceneText.length, charPrompt_len: charPrompt.length, finalBase_head: opts.prompt.slice(0,100)});
       const body = buildGenBody({...opts, action: 'generate'});
       const blob = await naiGenerate(apiKey, body, _pgAbort.signal);
-      // 저장
-      const fname = `preview_${c.name || 'char'}_${opts.seed}.png`;
+      const labelNames = chunkNames || 'multi';
+      const safeLabel = labelNames.replace(/[\/\\:*?"<>|]+/g, '_').slice(0, 60);
+      const fname = `preview_${safeLabel}_${opts.seed}.png`;
       const meta = {
         prompt: opts.prompt,
         neg: opts.neg,
@@ -8278,19 +8333,19 @@ async function pgStart(){
         sampler: opts.sampler,
         schedule: opts.schedule,
         w: opts.w, h: opts.h,
-        characters: [c.name],
+        characters: chunk.map(c => c.name).filter(Boolean),
         previewBatch: true,
+        charsPerImage: cnt,
       };
-      const imgId = await DB.saveImage(blob, fname, c.name || '', opts.prompt, meta);
+      await DB.saveImage(blob, fname, labelNames, opts.prompt, meta);
       recordSeedHistory(opts.seed);
 
-      // 썸네일 업데이트
-      if(updateThumb){
+      // 썸네일 업데이트 — K=1일 때만 캐릭터 프리셋에 적용 (K>1이면 어느 캐릭터에 저장할지 모호)
+      if(updateThumb && cnt === 1 && chunk[0]){
         try {
           const thumb = await blobToCompressedThumb(blob, 256);
-          c.thumb = thumb;
-          // 영속화
-          await DB.presetPut('character', c);
+          chunk[0].thumb = thumb;
+          await DB.presetPut('character', chunk[0]);
         } catch(e){ console.warn('[pg thumb]', e); }
       }
       // 미리보기 영역에 마지막 생성물 표시
@@ -8302,9 +8357,9 @@ async function pgStart(){
       done++;
     } catch(e){
       errors++;
-      console.warn('[pg]', c.name, e);
+      console.warn('[pg]', chunkNames, e);
       if(e?.name === 'AbortError') break;
-      toast(`${c.name}: ${e?.message || e}`, 'error');
+      toast(`${chunkNames}: ${e?.message || e}`, 'error');
     }
     updateProg();
   }
@@ -11328,6 +11383,28 @@ function wireGalleryEvents(){
     pgRenderSceneSubGroupChips();
   });
   $('pgScenesText')?.addEventListener('input', pgRefreshCost);
+  // 🎬 시나리오별 모드 — 같이 출연시킬 캐릭터 추가
+  $('pgSceneCharAdd')?.addEventListener('click', () => {
+    const sel = $('pgSceneChar');
+    const idx = parseInt(sel?.value, 10);
+    if(isNaN(idx)){ toast('먼저 위 드롭다운에서 캐릭터를 선택하세요', 'warning'); return; }
+    if(_pgSceneExtraChars.some(c => c.idx === idx)){ toast('이미 추가된 캐릭터', 'info'); return; }
+    if(_pgSceneExtraChars.length >= 5){ toast('최대 6명까지 (현재 5명 + 메인 선택 1명)', 'warning'); return; }
+    const p = state.presets.character?.[idx];
+    if(!p){ toast('캐릭터를 찾지 못함', 'error'); return; }
+    _pgSceneExtraChars.push({idx, name: p.name, text: p.text, thumb: p.thumb || null});
+    pgRenderSceneCharChips();
+    toast(`➕ "${p.name}" 동시 출연 추가됨`, 'success');
+  });
+  $('pgSceneCharChips')?.addEventListener('click', e => {
+    const btn = e.target.closest('[data-pg-scene-chip-rm]');
+    if(!btn) return;
+    const i = parseInt(btn.dataset.pgSceneChipRm, 10);
+    if(!isNaN(i)){
+      _pgSceneExtraChars.splice(i, 1);
+      pgRenderSceneCharChips();
+    }
+  });
   // ☑ 선택 모드 토글 (수동 진입)
   $('galSelectModeBtn').addEventListener('click', () => setSelectionMode(!_selectionMode));
   // ☰ 전체 선택 (보이는 모든 이미지)
