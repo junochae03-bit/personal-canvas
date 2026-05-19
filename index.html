@@ -497,6 +497,30 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .preset-tab{background:var(--card);border:1.5px solid var(--b1);color:var(--t2);padding:6px 11px;font-size:12.5px;font-weight:600;border-radius:5px;cursor:pointer;transition:all .15s;font-family:inherit;display:inline-flex;align-items:center;gap:6px;line-height:1}
 .preset-tab:hover{color:var(--t1);background:var(--panel);border-color:var(--b2)}
 .preset-tab.act{background:var(--acc);color:#fff8ec;border-color:var(--acc)}
+/* 🎨 템플릿 페인 */
+.tpl-body{padding:14px 18px;max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+@media (max-width:600px){ .tpl-body{padding:10px 12px;gap:10px} }
+.tpl-cat-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border:1.5px solid var(--b1);border-radius:16px;background:var(--card);color:var(--t2);font-size:12px;font-weight:600;cursor:pointer;user-select:none;transition:all .15s}
+.tpl-cat-chip:hover{border-color:var(--b2);color:var(--t1)}
+.tpl-cat-chip.act{background:var(--acc);color:#fff8ec;border-color:var(--acc)}
+.tpl-cat-chip .cnt{font-family:var(--mono);font-size:10px;opacity:.7}
+.tpl-roll-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--card);border:1.5px solid var(--b1);border-radius:6px}
+.tpl-roll-item .tri-ico{font-size:18px;width:24px;text-align:center;flex-shrink:0}
+.tpl-roll-item .tri-body{flex:1;min-width:0;overflow:hidden}
+.tpl-roll-item .tri-cat{font-size:10.5px;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.tpl-roll-item .tri-name{font-size:13px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tpl-roll-item .tri-text{font-family:var(--mono);font-size:11px;color:var(--t3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tpl-roll-item .tri-act{display:flex;gap:4px;flex-shrink:0}
+.tpl-roll-item .tri-act button{padding:4px 8px;font-size:11px;line-height:1.2;border-radius:4px;background:transparent;border:1.5px solid var(--b1);color:var(--t2);cursor:pointer;font-family:inherit;font-weight:600}
+.tpl-roll-item .tri-act button:hover{color:var(--t1);border-color:var(--b2)}
+.tpl-saved-item{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--card);border:1.5px solid var(--b1);border-radius:6px}
+.tpl-saved-item:hover{border-color:var(--b2)}
+.tpl-saved-item .tsi-name{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.tpl-saved-item .tsi-cats{font-size:11px;color:var(--t3);font-family:var(--mono);flex-shrink:0}
+.tpl-saved-item button{padding:4px 8px;font-size:11px;border-radius:4px;background:transparent;border:1.5px solid var(--b1);color:var(--t2);cursor:pointer;font-family:inherit;font-weight:600}
+.tpl-saved-item button:hover{color:var(--t1);border-color:var(--b2)}
+.tpl-saved-item button.danger{color:var(--red);border-color:rgba(181,67,56,.3)}
+.tpl-empty{padding:20px;text-align:center;color:var(--t3);font-size:12.5px;font-style:italic}
 .pg-mode-tab{font-weight:600}
 .pg-mode-tab.act{background:var(--acc);color:#fff8ec;border-color:var(--acc)}
 .pg-mode-tab.act .en{color:#fff8ec;opacity:.85}
@@ -1650,6 +1674,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <button class="main-tab-btn act" data-pane="preview">미리보기 <span class="en">Preview</span></button>
       <button class="main-tab-btn" data-pane="gallery">갤러리 <span class="en">Gallery</span> <span class="badge" id="gallerySize">0</span></button>
       <button class="main-tab-btn" data-pane="presets">프리셋 <span class="en">Presets</span></button>
+      <button class="main-tab-btn" data-pane="templates">템플릿 <span class="en">Templates</span></button>
       <button class="main-tab-btn" data-pane="tags">태그 도감 <span class="en">Tags</span></button>
       <button class="main-tab-btn" data-pane="settings">설정 <span class="en">Settings</span></button>
     </div>
@@ -1745,6 +1770,38 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <button class="btn ghost" id="addPresetBtn">＋ 추가 <span class="en">Add</span></button>
         </div>
         <div class="preset-grid" id="presetGrid"></div>
+      </div>
+
+      <!-- TEMPLATES PANE — 🎨 프리셋 조합 템플릿 -->
+      <div class="main-pane" data-pane="templates">
+        <div class="tpl-body">
+          <div class="set-card">
+            <h3>🎨 템플릿 — 프리셋 랜덤 조합 <span class="en">Templates</span></h3>
+            <div style="font-size:12px;color:var(--t3);margin-bottom:10px;line-height:1.55">
+              체크한 카테고리에서 랜덤 1개씩 골라서 조합을 만듭니다. 마음에 들면 적용해서 즉시 생성하거나, 이름 붙여 저장하세요.
+            </div>
+            <div class="set-row" style="flex-direction:column;align-items:stretch;gap:8px">
+              <div class="label">사용할 카테고리 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Sources</span></div>
+              <div id="tplCatChips" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+            </div>
+            <div class="set-row" style="margin-top:10px">
+              <button class="btn primary" id="tplRollBtn" type="button" style="flex:1;padding:11px;font-size:14px">🎲 랜덤 조합 생성 <span class="en">Roll</span></button>
+              <button class="btn ghost" id="tplApplyBtn" type="button" title="현재 조합을 메인 폼에 적용 (프롬프트·캐릭터 슬롯 채움)" style="flex:1;padding:11px;font-size:13px;border-color:rgba(58,99,152,.4);color:var(--blue)">✅ 폼에 적용</button>
+            </div>
+          </div>
+          <div class="set-card">
+            <h3>현재 조합 <span class="en">Current Roll</span> <span id="tplRollStatus" style="font-size:11px;color:var(--t3);font-weight:500;margin-left:6px"></span></h3>
+            <div id="tplRollList" style="display:flex;flex-direction:column;gap:6px"></div>
+            <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+              <input id="tplSaveName" class="inp" placeholder="템플릿 이름 (예: 비 오는 학교 / 카페 데이트 …)" style="flex:1;min-width:120px;font-size:13px">
+              <button class="btn ghost" id="tplSaveBtn" type="button" style="padding:8px 14px;font-size:13px;flex-shrink:0">💾 저장 <span class="en">Save</span></button>
+            </div>
+          </div>
+          <div class="set-card">
+            <h3>저장된 템플릿 <span class="en">Saved</span> <span id="tplListCount" style="font-size:11px;color:var(--t3);font-weight:500;margin-left:6px"></span></h3>
+            <div id="tplList" style="display:flex;flex-direction:column;gap:6px"></div>
+          </div>
+        </div>
       </div>
 
       <!-- TAG CODEX PANE — 태그 도감 -->
@@ -9575,6 +9632,210 @@ function setMode(mode){
  * 메인 페인 전환. body[data-mview]와 .main-pane.act, .mn-btn/.main-tab-btn 활성화를 동기.
  * @param {'preview'|'gallery'|'presets'|'tags'|'settings'|'edit'} pane
  */
+// ═══════════════════════════════════════════════════════════
+// 🎨 TEMPLATES — 프리셋 랜덤 조합 (메인 탭)
+// ═══════════════════════════════════════════════════════════
+// 사용할 카테고리 — 기본값: 캐릭터·의상·포즈·표정·상황 (가장 흔한 5개)
+const TPL_DEFAULT_CATS = ['character','outfit','pose','expression','situation'];
+const TPL_AVAILABLE_CATS = ['character','outfit','pose','expression','situation','background','composition','mood','people','style'];
+let _tplActiveCats = new Set(TPL_DEFAULT_CATS);
+let _tplCurrentRoll = [];   // [{cat, preset:{name,text,thumb}}, ...]
+
+function tplRenderCatChips(){
+  const wrap = $('tplCatChips');
+  if(!wrap) return;
+  wrap.innerHTML = TPL_AVAILABLE_CATS.map(cid => {
+    const def = PRESET_TYPES.find(t => t.id === cid);
+    if(!def) return '';
+    const cnt = (state.presets[cid] || []).length;
+    const act = _tplActiveCats.has(cid);
+    return `<button class="tpl-cat-chip ${act?'act':''}" data-tpl-cat="${esc(cid)}" type="button" title="${esc(def.label)} (${cnt}개) 사용 토글">${def.ico} ${esc(def.label)} <span class="cnt">${cnt}</span></button>`;
+  }).filter(Boolean).join('');
+}
+
+function tplRoll(){
+  _tplCurrentRoll = [];
+  for(const cid of TPL_AVAILABLE_CATS){
+    if(!_tplActiveCats.has(cid)) continue;
+    const list = state.presets[cid] || [];
+    if(!list.length) continue;
+    const pick = list[Math.floor(Math.random() * list.length)];
+    _tplCurrentRoll.push({cat: cid, preset: pick});
+  }
+  tplRenderRoll();
+}
+
+function tplRerollOne(cid){
+  const list = state.presets[cid] || [];
+  if(!list.length) return;
+  const pick = list[Math.floor(Math.random() * list.length)];
+  const i = _tplCurrentRoll.findIndex(r => r.cat === cid);
+  if(i >= 0) _tplCurrentRoll[i].preset = pick;
+  else _tplCurrentRoll.push({cat: cid, preset: pick});
+  tplRenderRoll();
+}
+
+function tplRemoveOne(cid){
+  _tplCurrentRoll = _tplCurrentRoll.filter(r => r.cat !== cid);
+  tplRenderRoll();
+}
+
+function tplRenderRoll(){
+  const wrap = $('tplRollList');
+  if(!wrap) return;
+  if(!_tplCurrentRoll.length){
+    wrap.innerHTML = '<div class="tpl-empty">아직 조합 없음 — 위 [🎲 랜덤 조합 생성] 버튼을 눌러보세요</div>';
+    if($('tplRollStatus')) $('tplRollStatus').textContent = '';
+    return;
+  }
+  wrap.innerHTML = _tplCurrentRoll.map(r => {
+    const def = PRESET_TYPES.find(t => t.id === r.cat) || {label:r.cat, ico:'•'};
+    const text = (r.preset.text || '').replace(/\s+/g,' ').trim();
+    const sub = text.length > 70 ? text.slice(0,70)+'…' : text;
+    return `<div class="tpl-roll-item" data-cat="${esc(r.cat)}">
+      <span class="tri-ico">${def.ico}</span>
+      <div class="tri-body">
+        <div class="tri-cat">${esc(def.label)}</div>
+        <div class="tri-name">${esc(r.preset.name || '(이름 없음)')}</div>
+        ${sub ? `<div class="tri-text">${esc(sub)}</div>` : ''}
+      </div>
+      <div class="tri-act">
+        <button type="button" data-tpl-roll-act="reroll" data-cat="${esc(r.cat)}" title="이 항목만 다시 랜덤">🎲</button>
+        <button type="button" data-tpl-roll-act="remove" data-cat="${esc(r.cat)}" title="이 항목 빼기">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+  if($('tplRollStatus')) $('tplRollStatus').textContent = `${_tplCurrentRoll.length}개 항목`;
+}
+
+// 현재 조합을 메인 폼에 적용
+function tplApplyRoll(){
+  if(!_tplCurrentRoll.length){ toast('조합이 비어있습니다 — 먼저 🎲 랜덤 생성', 'warning'); return; }
+  let appliedChar = false;
+  const appendParts = [];
+  for(const r of _tplCurrentRoll){
+    if(r.cat === 'character'){
+      // 캐릭터 — 새 슬롯에 추가
+      const p = r.preset;
+      const derived = [p.appearance, p.action].map(s=>(s||'').trim()).filter(Boolean).join(', ');
+      addCharacter({
+        name: p.name || '',
+        prompt: derived || (p.text || p.prompt || ''),
+        thumb: p.thumb || null,
+      });
+      appliedChar = true;
+    } else if(r.cat === 'outfit'){
+      // 의상 — 첫 활성 캐릭터의 액션 슬롯에 append
+      const idx = (state.characters || []).findIndex(c => c.enabled !== false);
+      if(idx >= 0){
+        const c = state.characters[idx];
+        const cur = (c.action || '').trim();
+        c.action = cur ? `${cur}, ${r.preset.text || ''}` : (r.preset.text || '');
+        const ta = $('charList')?.querySelector(`textarea[data-act="action"][data-idx="${idx}"]`);
+        if(ta) ta.value = c.action;
+      } else {
+        appendParts.push(r.preset.text || '');
+      }
+    } else {
+      // 그 외 (pose/expression/situation/background/composition/mood/people/style) → 메인 프롬프트 append
+      appendParts.push(r.preset.text || '');
+    }
+  }
+  if(appendParts.length){
+    if(!$('prompt').readOnly){
+      appendToTextarea('prompt', appendParts.filter(Boolean).join(', '));
+    } else {
+      toast('프롬프트 잠금 상태 — 일부 항목 적용 실패', 'warning');
+    }
+  }
+  if(appliedChar && typeof renderCharacters === 'function') renderCharacters();
+  saveSettingsDebounced();
+  toast(`✅ 템플릿 ${_tplCurrentRoll.length}개 적용 — 편집 탭에서 확인`, 'success');
+  setMainPane('edit');
+}
+
+// 💾 현재 조합 저장
+async function tplSaveCurrent(){
+  if(!_tplCurrentRoll.length){ toast('저장할 조합이 없습니다', 'warning'); return; }
+  const name = ($('tplSaveName')?.value || '').trim();
+  if(!name){ toast('템플릿 이름을 입력하세요', 'warning'); $('tplSaveName')?.focus(); return; }
+  const item = {
+    name,
+    ts: Date.now(),
+    roll: _tplCurrentRoll.map(r => ({cat: r.cat, presetName: r.preset.name || ''})),
+  };
+  state.templates = Array.isArray(state.templates) ? state.templates : [];
+  // 같은 이름 덮어쓰기
+  const idx = state.templates.findIndex(t => t.name === name);
+  if(idx >= 0) state.templates[idx] = item;
+  else state.templates.unshift(item);
+  // 최대 100개
+  if(state.templates.length > 100){
+    const removed = state.templates.splice(100);
+    if(removed.length) console.log('[tpl] 100개 초과, 가장 오래된', removed.length, '개 자동 정리');
+  }
+  await DB.setFlag('templates', state.templates);
+  $('tplSaveName').value = '';
+  tplRenderSavedList();
+  toast(`💾 "${name}" 저장됨`, 'success');
+}
+
+async function tplLoadTemplates(){
+  try {
+    const saved = await DB.getFlag('templates');
+    state.templates = Array.isArray(saved) ? saved : [];
+  } catch(_){ state.templates = []; }
+}
+
+function tplRenderSavedList(){
+  const wrap = $('tplList');
+  if(!wrap) return;
+  const list = state.templates || [];
+  if($('tplListCount')) $('tplListCount').textContent = list.length ? `(${list.length}개)` : '';
+  if(!list.length){
+    wrap.innerHTML = '<div class="tpl-empty">저장된 템플릿이 없습니다 — 위에서 조합 만든 후 이름 붙여 저장하세요</div>';
+    return;
+  }
+  wrap.innerHTML = list.map((t, i) => {
+    const cats = t.roll.map(r => {
+      const def = PRESET_TYPES.find(x => x.id === r.cat);
+      return def?.ico || '•';
+    }).join('');
+    return `<div class="tpl-saved-item">
+      <span class="tsi-name" data-tpl-saved-act="load" data-idx="${i}" title="이 템플릿 불러오기">${esc(t.name)}</span>
+      <span class="tsi-cats">${cats} · ${t.roll.length}개</span>
+      <button type="button" data-tpl-saved-act="load" data-idx="${i}" title="현재 조합으로 불러오기">📥</button>
+      <button type="button" class="danger" data-tpl-saved-act="del" data-idx="${i}" title="삭제">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// 저장된 템플릿을 현재 조합 영역에 불러옴 (해당 시점의 프리셋 데이터 기준)
+function tplLoadSaved(i){
+  const t = (state.templates || [])[i];
+  if(!t) return;
+  _tplCurrentRoll = [];
+  let missing = 0;
+  for(const r of t.roll){
+    const list = state.presets[r.cat] || [];
+    const p = list.find(x => x.name === r.presetName);
+    if(p) _tplCurrentRoll.push({cat: r.cat, preset: p});
+    else missing++;
+  }
+  tplRenderRoll();
+  if(missing > 0) toast(`📥 "${t.name}" 불러옴 (${missing}개 프리셋 누락 — 삭제됐을 수 있음)`, 'warning');
+  else toast(`📥 "${t.name}" 불러옴`, 'success');
+}
+
+async function tplDelSaved(i){
+  const t = (state.templates || [])[i];
+  if(!t) return;
+  state.templates.splice(i, 1);
+  await DB.setFlag('templates', state.templates);
+  tplRenderSavedList();
+  toast(`🗑 "${t.name}" 삭제됨`, 'info');
+}
+
 function setMainPane(pane){
   const prev = state.mainPane;
   state.mainPane = pane;
@@ -9584,6 +9845,7 @@ function setMainPane(pane){
   $$('.main-pane').forEach(p => p.classList.toggle('act', p.dataset.pane === pane));
   if(pane === 'gallery') loadGallery();
   else if(pane === 'presets'){ renderPresetTabs(); renderPresets(); }
+  else if(pane === 'templates'){ tplRenderCatChips(); tplRenderRoll(); tplRenderSavedList(); }
   else if(pane === 'tags'){ loadDanbooruTags(); renderTagCats(); renderTagBody(); }
   // 페인 변경 이벤트 발행 — 캐릭터 네거티브 모드 등이 자동 해제 가능
   if(prev !== pane) document.dispatchEvent(new CustomEvent('mview-change', {detail:{prev, next:pane}}));
@@ -11966,6 +12228,40 @@ function wireLightboxEvents(){
 // wireMiscEvents — Inpaint, storage, XYZ, global drop, keyboard shortcuts
 // ───────────────────────────────────────────────────────────
 function wireMiscEvents(){
+  // 🎨 템플릿 — 카테고리 칩 / 랜덤 / 적용 / 저장 / 로드 / 삭제
+  $('tplCatChips')?.addEventListener('click', e => {
+    const b = e.target.closest('[data-tpl-cat]');
+    if(!b) return;
+    const cat = b.dataset.tplCat;
+    if(_tplActiveCats.has(cat)) _tplActiveCats.delete(cat);
+    else _tplActiveCats.add(cat);
+    tplRenderCatChips();
+  });
+  $('tplRollBtn')?.addEventListener('click', tplRoll);
+  $('tplApplyBtn')?.addEventListener('click', tplApplyRoll);
+  $('tplRollList')?.addEventListener('click', e => {
+    const b = e.target.closest('[data-tpl-roll-act]');
+    if(!b) return;
+    const act = b.dataset.tplRollAct;
+    const cat = b.dataset.cat;
+    if(act === 'reroll') tplRerollOne(cat);
+    else if(act === 'remove') tplRemoveOne(cat);
+  });
+  $('tplSaveBtn')?.addEventListener('click', tplSaveCurrent);
+  $('tplSaveName')?.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); tplSaveCurrent(); } });
+  $('tplList')?.addEventListener('click', async e => {
+    const b = e.target.closest('[data-tpl-saved-act]');
+    if(!b) return;
+    const i = parseInt(b.dataset.idx, 10);
+    if(isNaN(i)) return;
+    const act = b.dataset.tplSavedAct;
+    if(act === 'load') tplLoadSaved(i);
+    else if(act === 'del'){
+      const t = state.templates?.[i];
+      if(!t) return;
+      confirmDialog(`"${t.name}" 템플릿을 삭제할까요?`, () => tplDelSaved(i), '🗑 템플릿 삭제');
+    }
+  });
   // Inpaint
   $('inpaintCancel').addEventListener('click', () => $('inpaintModal').classList.remove('open'));
   $('inpaintSave').addEventListener('click', saveMaskFromCanvas);
@@ -12239,6 +12535,7 @@ async function init(){
   await loadAlbums();
   await loadGalleryTagIndex();
   await loadWorkflows();
+  await tplLoadTemplates();
   // 📁 갤러리 저장 위치 드롭다운 초기 채움
   state.gallerySessions = await DB.getSessions();
   refreshTargetSessionDropdown();
