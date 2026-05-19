@@ -4342,11 +4342,18 @@ function renderCharPickList(){
         // 검색 중이거나 그룹이 1개뿐이면 서브헤더 생략 (잡음 줄이기)
         const showSub = !q && groups.length > 1;
         if(showSub){
-          parts.push(`<div class="cp-subgroup-hdr" style="padding:6px 12px;background:rgba(162,90,31,.05);border-bottom:1px solid var(--b1);font-size:11.5px;color:var(--t2);display:flex;align-items:center;gap:6px"><span style="opacity:.7">📁</span><span style="font-weight:600">${esc(g.group)}</span><span style="margin-left:auto;font-family:var(--mono);color:var(--t3);font-size:10.5px">${g.items.length}</span></div>`);
+          parts.push(`<div class="cp-subgroup-hdr" data-act="toggle-cp-sub" style="padding:6px 12px;background:rgba(162,90,31,.05);border-bottom:1px solid var(--b1);font-size:11.5px;color:var(--t2);display:flex;align-items:center;gap:6px;cursor:pointer">
+            <span class="cp-sub-mark" style="font-size:10px;color:var(--t3);transition:transform .15s;width:10px;display:inline-block">▾</span>
+            <span style="font-weight:600">${esc(g.group)}</span>
+            <span style="margin-left:auto;font-family:var(--mono);color:var(--t3);font-size:10.5px">${g.items.length}</span>
+            <button class="iconbtn" data-act="cp-sub-addall" data-pcat="${esc(pcat)}" data-group="${esc(g.group)}" title="이 그룹의 모든 항목을 액션 슬롯에 콤마로 일괄 추가" style="padding:2px 8px;font-size:12px;line-height:1.2;border-radius:4px">➕</button>
+          </div>`);
         }
+        parts.push(`<div class="cp-subgroup-body">`);
         for(const p of g.items.slice(0, 300)){
           parts.push(renderCpItem(p));
         }
+        parts.push(`</div>`);
       }
     } else {
       for(const p of filtered.slice(0, 300)){
@@ -4360,6 +4367,33 @@ function renderCharPickList(){
     parts.push(`<div class="cp-empty">${q ? `"${esc(q)}"` : ''} 검색 결과가 없습니다</div>`);
   }
   $('charPickList').innerHTML = parts.join('');
+}
+
+// ➕ 빠른 추가 모달 — 한 작품/시리즈 서브그룹의 모든 항목을 일괄 추가
+function cpAddSubgroupAll(pcat, group, btnEl){
+  if(_charPickIdx < 0){ toast('캐릭터 슬롯이 선택되지 않음', 'warning'); return; }
+  const c = state.characters[_charPickIdx];
+  if(!c) return;
+  const list = (state.presets[pcat] || []).filter(p => getCharGroup(p.name) === group);
+  if(!list.length){ toast('그룹에 항목 없음', 'warning'); return; }
+  const merged = list.map(p => (p.text || '').trim()).filter(Boolean).join(', ');
+  if(!merged){ toast('추가할 텍스트 없음', 'warning'); return; }
+  if(_cpMode === 'replace'){
+    c.action = merged;
+  } else {
+    const cur = (c.action || '').trim();
+    c.action = cur ? `${cur}, ${merged}` : merged;
+  }
+  const ta = $('charList').querySelector(`textarea[data-act="action"][data-idx="${_charPickIdx}"]`);
+  if(ta) ta.value = c.action;
+  if(btnEl){
+    btnEl.classList.add('added');
+    setTimeout(() => btnEl.classList.remove('added'), 700);
+  }
+  saveSettingsDebounced();
+  if(typeof renderCpStatus === 'function') renderCpStatus();
+  const verb = _cpMode === 'replace' ? '교체' : '추가';
+  toast(`#${_charPickIdx+1} ${group} 그룹 ${list.length}개 ${verb}`, 'success');
 }
 
 function selectCharPickItem(itemEl){
@@ -10242,6 +10276,25 @@ function wireCharacterEvents(){
     renderCharPickList();
   });
   $('charPickList').addEventListener('click', e => {
+    // ➕ 서브그룹 일괄 추가 버튼 우선 처리
+    const addAllBtn = e.target.closest('[data-act="cp-sub-addall"]');
+    if(addAllBtn){
+      e.stopPropagation();
+      cpAddSubgroupAll(addAllBtn.dataset.pcat, addAllBtn.dataset.group, addAllBtn);
+      return;
+    }
+    // 서브그룹 헤더 클릭 → 접기/펼치기
+    const subHdr = e.target.closest('[data-act="toggle-cp-sub"]');
+    if(subHdr){
+      const body = subHdr.nextElementSibling;
+      const mark = subHdr.querySelector('.cp-sub-mark');
+      if(body && body.classList.contains('cp-subgroup-body')){
+        const collapsed = body.style.display === 'none';
+        body.style.display = collapsed ? '' : 'none';
+        if(mark) mark.textContent = collapsed ? '▾' : '▸';
+      }
+      return;
+    }
     const it = e.target.closest('.cp-item');
     if(it) selectCharPickItem(it);
   });
