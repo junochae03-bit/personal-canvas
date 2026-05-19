@@ -1723,7 +1723,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <button class="btn ghost" id="presetShowPsubBtn" title="프롬프트 본문 미리보기 표시/숨김" aria-pressed="false">👁 본문 표시 <span class="en" style="opacity:.6">Text</span></button>
           <button class="btn ghost" id="presetExpandAll" title="모든 프리셋의 미리보기를 펼치거나 접습니다">⤢ 전체 펼침 <span class="en">Expand All</span></button>
           <button class="btn ghost" id="presetGroupsToggle" title="📚 작품/시리즈 그룹 모두 접기·펼치기 (캐릭터 카테고리)" style="border-color:rgba(162,90,31,.4);color:var(--acc)">📚 그룹 일괄 <span class="en">Groups</span></button>
-          <button class="btn ghost" id="autoClassifyBtn" title="이름 접두사로 자동 재분류 (의상_/상황_/배경_/포즈_/구도_/남녀_ 등)" style="border-color:rgba(162,90,31,.4)">🪄 자동 분류 <span class="en">Auto-classify</span></button>
+          <button class="btn ghost" id="autoClassifyBtn" title="이름 접두사로 자동 재분류 (의상·헤어·페티쉬 → 의상 / 콤보·노출·자위·백합 → 상황 / 포커스·구도 → 구도 / 하렘·남녀 → 인원 등)" style="border-color:rgba(162,90,31,.4)">🪄 자동 분류 <span class="en">Auto-classify</span></button>
           <div class="tb-grow"></div>
           <span id="presetInfo" style="font-size:12px;color:var(--t3);font-family:var(--mono)"></span>
           <button class="btn ghost" id="previewGenBtn" title="🎯 일괄 생성 — 현재 프롬프트에 시나리오를 결합하고 캐릭터별로 한 장씩 자동 생성" style="border-color:rgba(58,99,152,.4);color:var(--blue)">🎯 일괄 생성 <span class="en" style="opacity:.6">Batch</span></button>
@@ -2672,12 +2672,12 @@ const PRESET_TYPES = [
 
 // 한국어 이름 접두사 → 카테고리 매핑 (자동 분류용)
 const PREFIX_TO_TYPE = {
-  '의상':'outfit','옷':'outfit','복장':'outfit','코디':'outfit',
-  '상황':'situation','시츄':'situation','시추':'situation','노출':'situation','백합':'situation','자위':'situation','수위':'situation',
+  '의상':'outfit','옷':'outfit','복장':'outfit','코디':'outfit','페티쉬':'outfit','페티시':'outfit','헤어':'outfit','머리':'outfit',
+  '상황':'situation','시츄':'situation','시추':'situation','노출':'situation','백합':'situation','자위':'situation','수위':'situation','콤보':'situation','씬':'situation',
   '배경':'background','장소':'background','로케':'background',
   '포즈':'pose','자세':'pose','동작':'pose','액션':'pose',
-  '구도':'composition','앵글':'composition','샷':'composition',
-  '남녀':'people','커플':'people','인원':'people','성별':'people','다인':'people',
+  '구도':'composition','앵글':'composition','샷':'composition','포커스':'composition','클로즈업':'composition',
+  '남녀':'people','커플':'people','인원':'people','성별':'people','다인':'people','하렘':'people','다수':'people','그룹':'people',
   '표정':'expression','얼굴':'expression','감정':'expression','상태':'expression',
   '분위기':'mood','조명':'mood','광원':'mood','라이팅':'mood','톤':'mood','색감':'mood',
   '화풍':'style','스타일':'style','풍':'style','tone':'style',
