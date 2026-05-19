@@ -2767,13 +2767,13 @@ const PRESET_TYPES = [
   {id:'negative',   label:'네거티브',    en:'Negative',    ico:'🚫', target:'negative'},
   {id:'character',  label:'캐릭터',      en:'Character',   ico:'👤', target:'char'},
   {id:'outfit',     label:'의상',        en:'Outfit',      ico:'👗', target:'char-action'},
-  {id:'pose',       label:'포즈',        en:'Pose',        ico:'🤸', target:'append'},
+  {id:'pose',       label:'포즈',        en:'Pose',        ico:'🤸', target:'char-action'},
   {id:'composition',label:'구도·앵글',   en:'Composition', ico:'🎬', target:'append'},
   {id:'background', label:'배경',        en:'Background',  ico:'🏞️', target:'append'},
-  {id:'situation',  label:'상황',        en:'Situation',   ico:'🎭', target:'append'},
-  {id:'expression', label:'표정',        en:'Expression',  ico:'😊', target:'append'},
+  {id:'situation',  label:'상황',        en:'Situation',   ico:'🎭', target:'char-action'},
+  {id:'expression', label:'표정',        en:'Expression',  ico:'😊', target:'char-action'},
   {id:'mood',       label:'분위기·조명', en:'Mood/Light',  ico:'✨', target:'append'},
-  {id:'people',     label:'인원·성별',   en:'People',      ico:'👥', target:'append'},
+  {id:'people',     label:'인원·성별',   en:'People',      ico:'👥', target:'char-action'},
   {id:'style',      label:'화풍·설정',   en:'Style',       ico:'🎨', target:'style'},
 ];
 
@@ -4404,11 +4404,12 @@ function removeCharActionTagAt(tagIdx){
 }
 
 function renderCharPickCats(){
+  const QUICK_CATS = ['outfit','pose','expression','situation','people'];
   const items = [
-    {id:'',          label:'전체',   ico:'✨', cnt: CHAR_ACTION_TAGS.length + ['outfit','pose','expression','situation'].reduce((s,p) => s + (state.presets[p]||[]).length, 0)},
+    {id:'',          label:'전체',   ico:'✨', cnt: CHAR_ACTION_TAGS.length + QUICK_CATS.reduce((s,p) => s + (state.presets[p]||[]).length, 0)},
     {id:'action',    label:'액션',   ico:'🤝', cnt: CHAR_ACTION_TAGS.length},
   ];
-  for(const pcat of ['outfit','pose','expression','situation']){
+  for(const pcat of QUICK_CATS){
     const cnt = (state.presets[pcat]||[]).length;
     if(cnt === 0) continue;
     const def = PRESET_TYPES.find(t => t.id === pcat);
@@ -4464,7 +4465,7 @@ function renderCharPickList(){
   }
 
   // 프리셋
-  const catsToShow = (cat === '' || cat === 'action') ? ['outfit','pose','expression','situation'] : (cat === 'action' ? [] : [cat]);
+  const catsToShow = (cat === '' || cat === 'action') ? ['outfit','pose','expression','situation','people'] : (cat === 'action' ? [] : [cat]);
   // 빠른 추가 모달 안의 서브그룹 렌더 — 한 카테고리(예: 의상)를 작품별로 묶음
   const renderCpItem = p => {
     const text = (p.text||'').replace(/\s+/g, ' ').trim();
@@ -6204,6 +6205,49 @@ const TAGCAT_TO_SLOT = {
   // quality / negative / __user__ 은 별도 처리
 };
 
+// 프리셋 텍스트를 특정 캐릭터 슬롯의 액션·의상·자세에 콤마로 append
+function applyPresetToCharSlot(idx, text, defLabel, presetName){
+  const c = state.characters?.[idx];
+  if(!c) return;
+  const cur = (c.action || '').trim();
+  c.action = cur ? `${cur}, ${text}` : text;
+  const ta = $('charList')?.querySelector(`textarea[data-act="action"][data-idx="${idx}"]`);
+  if(ta) ta.value = c.action;
+  saveSettingsDebounced();
+  toast(`#${idx+1} ${(c.name||'캐릭터').slice(0,18)} ${defLabel||'액션'}에 추가: ${presetName||''}`, 'success');
+}
+
+// 2명+ 캐릭터일 때 어느 슬롯에 넣을지 선택하는 모달 (confirmModal 재사용)
+function openCharSlotPicker(enabledChars, defLabel, presetName, onPick){
+  $('confirmTitle').innerHTML = `어느 캐릭터에 추가? <span class="en">${esc(defLabel||'')} · ${esc(presetName||'')}</span>`;
+  $('confirmBody').innerHTML = `
+    <div style="margin-bottom:10px;color:var(--t2);font-size:13px"><b style="color:var(--t1)">"${esc(presetName||'')}"</b> → 어느 캐릭터의 액션·의상·자세 슬롯에 추가할까요?</div>
+    <div style="display:flex;flex-direction:column;gap:5px">
+      ${enabledChars.map(({c, i}) => `
+        <button class="btn ghost" data-slot-pick="${i}" type="button" style="justify-content:flex-start;padding:8px 11px;font-size:13px;text-align:left">
+          <span style="font-weight:700;color:var(--blue);margin-right:8px;font-family:var(--mono);flex-shrink:0">#${i+1}</span>
+          ${c.thumb ? `<span style="width:26px;height:26px;border-radius:4px;background:url('${esc(c.thumb)}') center/cover;margin-right:8px;flex-shrink:0;border:1.5px solid var(--b1)"></span>` : ''}
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name || '(이름 없음)')}</span>
+        </button>
+      `).join('')}
+      <button class="btn ghost" data-slot-pick="all" type="button" style="justify-content:center;padding:9px 11px;border-color:rgba(58,99,152,.4);color:var(--blue);margin-top:6px;font-weight:600">
+        🌐 모든 활성 슬롯에 적용 (${enabledChars.length}명 전체)
+      </button>
+    </div>`;
+  $('confirmOk').style.display = 'none';
+  $('confirmCancel').textContent = '취소';
+  $('confirmModal').classList.add('open');
+  $('confirmBody').querySelectorAll('[data-slot-pick]').forEach(btn => {
+    btn.onclick = () => {
+      const v = btn.dataset.slotPick;
+      const idx = v === 'all' ? 'all' : parseInt(v, 10);
+      $('confirmModal').classList.remove('open');
+      $('confirmOk').style.display = '';
+      onPick(idx);
+    };
+  });
+}
+
 function applyPreset(p){
   if(!p) return;
   const type = state.presetType;
@@ -6255,27 +6299,34 @@ function applyPreset(p){
       break;
     }
     case 'char-action': {
-      // 👗 의상 등 캐릭터 단위 프리셋 — 활성 캐릭터의 액션·의상·자세 슬롯에 콤마로 append
+      // 👗 의상·포즈·표정·상황·인원 등 — 캐릭터의 액션·의상·자세 슬롯에 append
+      // 캐릭터가 여러 명이면 어느 슬롯에 넣을지 모달로 선택
       const text = (p.text || '').trim();
       if(!text){ toast('빈 프리셋', 'warning'); break; }
       const chars = state.characters || [];
-      const targetIdx = chars.findIndex(c => c.enabled !== false);
-      if(targetIdx < 0){
-        // 캐릭터 슬롯이 없거나 모두 비활성 — 메인 프롬프트에 fallback
+      const enabled = chars.map((c, i) => ({c, i})).filter(x => x.c.enabled !== false);
+      if(!enabled.length){
         if($('prompt').readOnly){ toast('캐릭터 슬롯 없음 + 프롬프트 잠김 — 적용 불가', 'warning'); break; }
         appendToTextarea('prompt', text);
         toast(`${def.label} → 프롬프트에 추가 (캐릭터 슬롯 없음): ${p.name}`, 'info');
         setMainPane('preview');
         break;
       }
-      const c = chars[targetIdx];
-      const cur = (c.action || '').trim();
-      c.action = cur ? `${cur}, ${text}` : text;
-      // DOM textarea 동기화
-      const ta = $('charList')?.querySelector(`textarea[data-act="action"][data-idx="${targetIdx}"]`);
-      if(ta) ta.value = c.action;
-      toast(`#${targetIdx+1} ${(c.name||'캐릭터').slice(0,20)} 액션·의상에 추가: ${p.name}`, 'success');
-      setMainPane('edit');  // 캐릭터 영역이 있는 편집 뷰로 이동
+      if(enabled.length === 1){
+        // 1명이면 자동 적용
+        applyPresetToCharSlot(enabled[0].i, text, def.label, p.name);
+        setMainPane('edit');
+        break;
+      }
+      // 2명 이상 — 슬롯 선택 모달
+      openCharSlotPicker(enabled, def.label, p.name, slotIdx => {
+        if(slotIdx === 'all'){
+          for(const {i} of enabled) applyPresetToCharSlot(i, text, def.label, p.name);
+        } else if(slotIdx != null && slotIdx !== false){
+          applyPresetToCharSlot(slotIdx, text, def.label, p.name);
+        }
+        setMainPane('edit');
+      });
       break;
     }
   }
