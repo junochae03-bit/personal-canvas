@@ -2669,7 +2669,7 @@ const PRESET_TYPES = [
   {id:'prompt',     label:'프롬프트',    en:'Prompt',      ico:'📝', target:'prompt'},
   {id:'negative',   label:'네거티브',    en:'Negative',    ico:'🚫', target:'negative'},
   {id:'character',  label:'캐릭터',      en:'Character',   ico:'👤', target:'char'},
-  {id:'outfit',     label:'의상',        en:'Outfit',      ico:'👗', target:'append'},
+  {id:'outfit',     label:'의상',        en:'Outfit',      ico:'👗', target:'char-action'},
   {id:'pose',       label:'포즈',        en:'Pose',        ico:'🤸', target:'append'},
   {id:'composition',label:'구도·앵글',   en:'Composition', ico:'🎬', target:'append'},
   {id:'background', label:'배경',        en:'Background',  ico:'🏞️', target:'append'},
@@ -6139,6 +6139,30 @@ function applyPreset(p){
       appendToTextarea('prompt', p.text || '');
       toast(`${def.label} 추가: ${p.name}`, 'success');
       setMainPane('preview');
+      break;
+    }
+    case 'char-action': {
+      // 👗 의상 등 캐릭터 단위 프리셋 — 활성 캐릭터의 액션·의상·자세 슬롯에 콤마로 append
+      const text = (p.text || '').trim();
+      if(!text){ toast('빈 프리셋', 'warning'); break; }
+      const chars = state.characters || [];
+      const targetIdx = chars.findIndex(c => c.enabled !== false);
+      if(targetIdx < 0){
+        // 캐릭터 슬롯이 없거나 모두 비활성 — 메인 프롬프트에 fallback
+        if($('prompt').readOnly){ toast('캐릭터 슬롯 없음 + 프롬프트 잠김 — 적용 불가', 'warning'); break; }
+        appendToTextarea('prompt', text);
+        toast(`${def.label} → 프롬프트에 추가 (캐릭터 슬롯 없음): ${p.name}`, 'info');
+        setMainPane('preview');
+        break;
+      }
+      const c = chars[targetIdx];
+      const cur = (c.action || '').trim();
+      c.action = cur ? `${cur}, ${text}` : text;
+      // DOM textarea 동기화
+      const ta = $('charList')?.querySelector(`textarea[data-act="action"][data-idx="${targetIdx}"]`);
+      if(ta) ta.value = c.action;
+      toast(`#${targetIdx+1} ${(c.name||'캐릭터').slice(0,20)} 액션·의상에 추가: ${p.name}`, 'success');
+      setMainPane('edit');  // 캐릭터 영역이 있는 편집 뷰로 이동
       break;
     }
   }
