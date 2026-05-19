@@ -9711,44 +9711,42 @@ function tplRenderRoll(){
 // 현재 조합을 메인 폼에 적용
 function tplApplyRoll(){
   if(!_tplCurrentRoll.length){ toast('조합이 비어있습니다 — 먼저 🎲 랜덤 생성', 'warning'); return; }
-  let appliedChar = false;
-  const appendParts = [];
-  for(const r of _tplCurrentRoll){
-    if(r.cat === 'character'){
-      // 캐릭터 — 새 슬롯에 추가
-      const p = r.preset;
-      const derived = [p.appearance, p.action].map(s=>(s||'').trim()).filter(Boolean).join(', ');
-      addCharacter({
-        name: p.name || '',
-        prompt: derived || (p.text || p.prompt || ''),
-        thumb: p.thumb || null,
-      });
-      appliedChar = true;
-    } else if(r.cat === 'outfit'){
-      // 의상 — 첫 활성 캐릭터의 액션 슬롯에 append
-      const idx = (state.characters || []).findIndex(c => c.enabled !== false);
-      if(idx >= 0){
-        const c = state.characters[idx];
-        const cur = (c.action || '').trim();
-        c.action = cur ? `${cur}, ${r.preset.text || ''}` : (r.preset.text || '');
-        const ta = $('charList')?.querySelector(`textarea[data-act="action"][data-idx="${idx}"]`);
-        if(ta) ta.value = c.action;
-      } else {
-        appendParts.push(r.preset.text || '');
-      }
-    } else {
-      // 그 외 (pose/expression/situation/background/composition/mood/people/style) → 메인 프롬프트 append
-      appendParts.push(r.preset.text || '');
-    }
+  // 1) character 항목 먼저 — 새 캐릭터 슬롯 추가
+  const charRolls = _tplCurrentRoll.filter(r => r.cat === 'character');
+  const otherRolls = _tplCurrentRoll.filter(r => r.cat !== 'character');
+  for(const r of charRolls){
+    const p = r.preset;
+    const derived = [p.appearance, p.action].map(s=>(s||'').trim()).filter(Boolean).join(', ');
+    addCharacter({
+      name: p.name || '',
+      prompt: derived || (p.text || p.prompt || ''),
+      thumb: p.thumb || null,
+    });
   }
+  if(charRolls.length && typeof renderCharacters === 'function') renderCharacters();
+
+  // 2) 나머지 모든 카테고리(의상·포즈·표정·상황·배경·구도·분위기·인원·스타일)
+  //    → 첫 번째 활성 캐릭터의 액션·의상·자세 슬롯에 콤마로 append
+  const appendParts = otherRolls.map(r => (r.preset.text || '').trim()).filter(Boolean);
   if(appendParts.length){
-    if(!$('prompt').readOnly){
-      appendToTextarea('prompt', appendParts.filter(Boolean).join(', '));
+    const targetIdx = (state.characters || []).findIndex(c => c.enabled !== false);
+    if(targetIdx >= 0){
+      const c = state.characters[targetIdx];
+      const cur = (c.action || '').trim();
+      const add = appendParts.join(', ');
+      c.action = cur ? `${cur}, ${add}` : add;
+      const ta = $('charList')?.querySelector(`textarea[data-act="action"][data-idx="${targetIdx}"]`);
+      if(ta) ta.value = c.action;
     } else {
-      toast('프롬프트 잠금 상태 — 일부 항목 적용 실패', 'warning');
+      // 캐릭터 슬롯 없음 — 메인 프롬프트 fallback (안전망)
+      if($('prompt')?.readOnly){
+        toast('캐릭터 슬롯 없음 + 프롬프트 잠김 — 일부 항목 적용 실패', 'warning');
+      } else {
+        appendToTextarea('prompt', appendParts.join(', '));
+        toast('캐릭터 슬롯 없어서 메인 프롬프트로 적용 (캐릭터 슬롯 만들면 거기로 가요)', 'info');
+      }
     }
   }
-  if(appliedChar && typeof renderCharacters === 'function') renderCharacters();
   saveSettingsDebounced();
   toast(`✅ 템플릿 ${_tplCurrentRoll.length}개 적용 — 편집 탭에서 확인`, 'success');
   setMainPane('edit');
