@@ -2086,30 +2086,14 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
         <select id="pgPreset" class="inp" style="margin-bottom:6px"></select>
         <textarea id="pgPromptText" class="ta tiny" style="min-height:64px;font-family:var(--mono);font-size:12.5px" placeholder="(선택) 프리셋 골라 자동 채우거나 직접 입력 — 현재 프롬프트 뒤에 결합됩니다. 비워두면 캐릭터 외형만으로 생성"></textarea>
       </div>
-      <!-- 시나리오별 모드: 시나리오 N개 -->
-      <div class="field" style="margin-bottom:12px;display:none" id="pgScenesField">
-        <span class="lbl">🎬 시나리오 목록 <span class="en">Scenes</span> <span id="pgScenesCount" style="color:var(--t3);font-weight:500;margin-left:4px"></span></span>
-        <div style="font-size:11px;color:var(--t3);margin-bottom:6px;line-height:1.5">
-          <code style="background:var(--card);padding:1px 5px;border-radius:3px">## 라벨</code> 헤더로 블록 분리. 라벨은 선택 (없으면 자동 번호). 한 블록 = 한 장 생성.
-        </div>
-        <select id="pgScenePreset" class="inp" style="margin-bottom:6px"></select>
-        <textarea id="pgScenesText" class="ta" style="min-height:140px;font-family:var(--mono);font-size:12.5px" placeholder="## 학교
-classroom, sitting at desk
-
-## 카페
-coffee shop, latte art
-
-## 야외
-beach, summer afternoon"></textarea>
-      </div>
       <!-- 캐릭터별 모드: 캐릭터 체크리스트 -->
       <div class="field" style="margin-bottom:12px" id="pgCharListField">
         <span class="lbl">👥 대상 캐릭터 <span class="en">Targets</span> <span id="pgCharCount" style="color:var(--t3);font-weight:500;margin-left:4px"></span></span>
         <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
-          <button class="btn ghost" id="pgSelectAll" style="padding:5px 10px;font-size:11.5px">☑ 전체 선택</button>
-          <button class="btn ghost" id="pgDeselectAll" style="padding:5px 10px;font-size:11.5px">☐ 전체 해제</button>
-          <button class="btn ghost" id="pgSelectNoThumb" style="padding:5px 10px;font-size:11.5px" title="썸네일이 없는 캐릭터만 선택 (썸네일 일괄 만들기 용도)">🆕 썸네일 없는 것만</button>
-          <button class="btn ghost" id="pgCollapseAll" style="padding:5px 10px;font-size:11.5px" title="모든 그룹을 한 번에 접거나 펼침">▸ 전체 접기</button>
+          <button class="btn ghost" id="pgSelectAll" type="button" style="padding:5px 10px;font-size:11.5px">☑ 전체 선택</button>
+          <button class="btn ghost" id="pgDeselectAll" type="button" style="padding:5px 10px;font-size:11.5px">☐ 전체 해제</button>
+          <button class="btn ghost" id="pgSelectNoThumb" type="button" style="padding:5px 10px;font-size:11.5px" title="썸네일이 없는 캐릭터만 선택 (썸네일 일괄 만들기 용도)">🆕 썸네일 없는 것만</button>
+          <button class="btn ghost" id="pgCollapseAll" type="button" style="padding:5px 10px;font-size:11.5px" title="모든 그룹을 한 번에 접거나 펼침">▸ 전체 접기</button>
         </div>
         <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center">
           <span style="font-size:11.5px;color:var(--t3)">그룹 필터:</span>
@@ -2119,13 +2103,39 @@ beach, summer afternoon"></textarea>
         </div>
         <div id="pgCharList" style="max-height:38vh;overflow-y:auto;border:1.5px solid var(--b1);border-radius:6px;background:var(--card);padding:6px"></div>
       </div>
-      <!-- 시나리오별 모드: 사용할 캐릭터 (프리셋 선택 또는 현재 폼) -->
+      <!-- 시나리오별 모드: 캐릭터 1명 선택 + 시나리오 체크리스트 -->
       <div class="field" style="margin-bottom:12px;display:none" id="pgFormCharInfo">
         <span class="lbl">👤 사용할 캐릭터 <span class="en">Character</span></span>
         <select id="pgSceneChar" class="inp" style="margin-bottom:6px">
           <option value="">— 현재 폼 캐릭터 그대로 사용 —</option>
         </select>
         <div id="pgFormCharSummary" style="padding:10px 12px;background:var(--card);border:1.5px solid var(--b1);border-radius:6px;font-size:12.5px;color:var(--t2);line-height:1.6"></div>
+      </div>
+      <div class="field" style="margin-bottom:12px;display:none" id="pgScenesField">
+        <span class="lbl">🎬 대상 시나리오 <span class="en">Targets</span> <span id="pgScenesCount" style="color:var(--t3);font-weight:500;margin-left:4px"></span></span>
+        <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+          <button class="btn ghost" id="pgSceneSelectAll" type="button" style="padding:5px 10px;font-size:11.5px">☑ 전체 선택</button>
+          <button class="btn ghost" id="pgSceneDeselectAll" type="button" style="padding:5px 10px;font-size:11.5px">☐ 전체 해제</button>
+          <button class="btn ghost" id="pgSceneCollapseAll" type="button" style="padding:5px 10px;font-size:11.5px" title="모든 카테고리를 한 번에 접거나 펼침">▸ 전체 접기</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:11.5px;color:var(--t3)">카테고리 필터:</span>
+          <select id="pgSceneCatFilter" class="inp" style="font-size:11.5px;padding:4px 7px;flex:1;min-width:120px">
+            <option value="">— 모든 카테고리 표시 —</option>
+          </select>
+        </div>
+        <div id="pgSceneList" style="max-height:38vh;overflow-y:auto;border:1.5px solid var(--b1);border-radius:6px;background:var(--card);padding:6px"></div>
+        <details style="margin-top:8px">
+          <summary style="cursor:pointer;font-size:11.5px;color:var(--t3);padding:4px 0">➕ 직접 입력 추가 <span class="en">Custom scenes</span> (선택)</summary>
+          <div style="font-size:11px;color:var(--t3);margin:6px 0 4px;line-height:1.5">
+            <code style="background:var(--card);padding:1px 5px;border-radius:3px">## 라벨</code> 헤더로 블록 분리. 위 체크리스트와 합쳐서 큐에 추가됩니다.
+          </div>
+          <textarea id="pgScenesText" class="ta" style="min-height:80px;font-family:var(--mono);font-size:12.5px" placeholder="## 학교
+classroom, sitting at desk
+
+## 카페
+coffee shop, latte art"></textarea>
+        </details>
       </div>
       <div style="background:rgba(58,99,152,.06);border:1.5px solid rgba(58,99,152,.18);border-radius:6px;padding:9px 12px;margin-bottom:10px">
         <label class="chk" style="margin-bottom:5px"><input type="checkbox" id="pgUpdateThumb"> 결과를 각 캐릭터 프리셋 썸네일로 자동 저장 <span class="en" style="color:var(--t3);opacity:.7">(카탈로그 만들기용)</span></label>
@@ -7126,8 +7136,11 @@ function pgSetMode(mode){
   // 안내 박스 문구
   $('pgIntro').innerHTML = isChars
     ? '💡 현재 프롬프트(그림체·품질 태그 포함) + 아래 시나리오를 합쳐서, 선택한 <b>캐릭터들 각자로 한 장씩</b> 생성합니다.'
-    : '💡 현재 폼에 설정된 <b>캐릭터를 그대로 유지</b>하고, 아래 <b>시나리오 목록만 차례로 적용</b>해서 한 장씩 생성합니다. 같은 캐릭터의 다양한 상황·연출 비교에 활용.';
-  if(!isChars) pgUpdateFormCharSummary();
+    : '💡 캐릭터 1명을 골라 <b>고정</b>하고, 아래 <b>시나리오 목록에서 체크한 것마다 한 장씩</b> 생성합니다. 같은 캐릭터의 다양한 상황·연출 비교에 활용.';
+  if(!isChars){
+    pgUpdateFormCharSummary();
+    pgRenderSceneList();
+  }
   pgRefreshCost();
 }
 
@@ -7175,6 +7188,114 @@ function pgUpdateFormCharSummary(){
   `;
 }
 
+// 🎬 시나리오별 모드의 체크리스트 렌더 — 카테고리별 그룹화 (캐릭터별 모드의 거울 구조)
+function pgRenderSceneList(){
+  const wrap = $('pgSceneList');
+  if(!wrap) return;
+  const scenes = pgAllScenes();
+  if(!scenes.length){
+    wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3);font-size:12.5px;font-style:italic">시나리오 프리셋이 없습니다 — 프리셋 탭의 action/situation/background 등에서 먼저 추가하세요</div>';
+    if($('pgScenesCount')) $('pgScenesCount').textContent = '';
+    return;
+  }
+  // 카테고리별 묶음 + 그룹 헤더 + 그룹 단위 선택/해제
+  const byCat = new Map();
+  for(let i=0;i<scenes.length;i++){
+    const s = scenes[i];
+    if(!byCat.has(s.cat)) byCat.set(s.cat, []);
+    byCat.get(s.cat).push({...s, _idx: i});
+  }
+  const catLabel = id => {
+    const def = (typeof PRESET_TYPES !== 'undefined') ? PRESET_TYPES.find(t => t.id === id) : null;
+    return def ? `${def.ico||'•'} ${def.label||id}` : id;
+  };
+  const renderItem = s => {
+    const head = (s.text || '').replace(/\s+/g, ' ').slice(0, 90);
+    // 라벨에서 '아이콘 카테고리 · 이름' 중 이름 부분만 추출
+    const name = s.label.split('·').pop().trim();
+    return `
+      <label class="chk pg-scene" style="padding:7px 9px;border-radius:5px;display:flex;align-items:flex-start;gap:9px;cursor:pointer;border-bottom:1px solid var(--b1)">
+        <input type="checkbox" data-act="pick-scene" data-idx="${s._idx}" checked>
+        <span style="flex:1;min-width:0">
+          <span style="font-size:12.5px;font-weight:600;color:var(--t1);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</span>
+          ${head ? `<span style="font-family:var(--mono);font-size:11px;color:var(--t3);display:block;margin-top:2px;line-height:1.4">${esc(head)}${head.length === 90 ? '…' : ''}</span>` : ''}
+        </span>
+      </label>`;
+  };
+  wrap.innerHTML = [...byCat.entries()].map(([cat, items]) => `
+    <div class="pg-scene-group" data-cat="${esc(cat)}" style="border-bottom:2px solid var(--b1)">
+      <div class="pg-scene-head" style="display:flex;align-items:center;gap:6px;padding:8px 9px;background:var(--card2);position:sticky;top:0;z-index:1;cursor:pointer">
+        <span class="pg-scene-mark" style="font-size:11px;color:var(--t3);transition:transform .15s">▾</span>
+        <span style="font-weight:700;font-size:13px;color:var(--t1);flex:1">${esc(catLabel(cat))} <span style="color:var(--t3);font-weight:500;font-size:11.5px">${items.length}개</span></span>
+        <button type="button" class="btn ghost" data-act="scene-group-all" style="padding:3px 8px;font-size:11px" title="이 카테고리만 선택">☑ 그룹</button>
+        <button type="button" class="btn ghost" data-act="scene-group-none" style="padding:3px 8px;font-size:11px" title="이 카테고리 해제">☐ 그룹</button>
+      </div>
+      <div class="pg-scene-body">${items.map(renderItem).join('')}</div>
+    </div>`).join('');
+
+  // 시나리오 인덱스 → scene 객체 매핑 캐시 (pgStartScenes에서 사용)
+  wrap.dataset.scenes = JSON.stringify(scenes);
+
+  // 개별 체크 → 비용 갱신
+  wrap.querySelectorAll('input[data-act="pick-scene"]').forEach(i => i.addEventListener('change', pgRefreshCost));
+
+  // 카테고리 헤더 클릭 → 접기/펼치기 (그룹 버튼 클릭 제외)
+  wrap.querySelectorAll('.pg-scene-head').forEach(head => {
+    head.addEventListener('click', e => {
+      if(e.target.closest('button')) return;
+      const body = head.parentElement.querySelector('.pg-scene-body');
+      const mark = head.querySelector('.pg-scene-mark');
+      const collapsed = body.style.display === 'none';
+      body.style.display = collapsed ? '' : 'none';
+      if(mark) mark.style.transform = collapsed ? '' : 'rotate(-90deg)';
+    });
+  });
+
+  // 카테고리별 일괄 선택/해제
+  wrap.querySelectorAll('button[data-act="scene-group-all"], button[data-act="scene-group-none"]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const checked = btn.dataset.act === 'scene-group-all';
+      const body = btn.closest('.pg-scene-group').querySelector('.pg-scene-body');
+      body.querySelectorAll('input[data-act="pick-scene"]').forEach(c => c.checked = checked);
+      pgRefreshCost();
+    });
+  });
+
+  // 카테고리 필터 동기화
+  const filter = $('pgSceneCatFilter');
+  if(filter){
+    const prev = filter.value;
+    filter.innerHTML = '<option value="">— 모든 카테고리 표시 —</option>'
+      + [...byCat.keys()].map(c => `<option value="${esc(c)}">${esc(catLabel(c))} (${byCat.get(c).length}개)</option>`).join('');
+    if(prev && [...filter.options].some(o => o.value === prev)) filter.value = prev;
+    pgApplySceneCatFilter();
+  }
+  pgRefreshCost();
+}
+
+function pgApplySceneCatFilter(){
+  const wrap = $('pgSceneList');
+  const filter = $('pgSceneCatFilter');
+  if(!wrap || !filter) return;
+  const target = filter.value;
+  wrap.querySelectorAll('.pg-scene-group').forEach(g => {
+    g.style.display = (!target || g.dataset.cat === target) ? '' : 'none';
+  });
+}
+
+function pgToggleSceneCollapseAll(){
+  const wrap = $('pgSceneList');
+  const btn = $('pgSceneCollapseAll');
+  if(!wrap || !btn) return;
+  const bodies = wrap.querySelectorAll('.pg-scene-body');
+  if(!bodies.length) return;
+  const anyOpen = [...bodies].some(b => b.style.display !== 'none');
+  bodies.forEach(b => b.style.display = anyOpen ? 'none' : '');
+  wrap.querySelectorAll('.pg-scene-mark').forEach(m => m.style.transform = anyOpen ? 'rotate(-90deg)' : '');
+  btn.textContent = anyOpen ? '▾ 전체 펼치기' : '▸ 전체 접기';
+}
+
 function pgParseScenes(text){
   // parseSeqInput과 동일 규칙 활용 — `## 라벨` 헤더 없으면 'A' 라벨 단일 블록
   if(typeof parseSeqInput === 'function'){
@@ -7204,23 +7325,6 @@ function openPreviewGenModal(){
     }
   };
   $('pgPromptText').oninput = pgRefreshCost;
-  // 시나리오별 모드의 프리셋 → 시나리오 텍스트로 한 블록씩 append
-  $('pgScenePreset').innerHTML = opts.join('');
-  $('pgScenePreset').dataset.scenes = JSON.stringify(scenes.map(s => s.text));
-  $('pgScenePreset').dataset.labels = JSON.stringify(scenes.map(s => s.label));
-  $('pgScenePreset').onchange = () => {
-    const idx = parseInt($('pgScenePreset').value, 10);
-    if(!isNaN(idx)){
-      const arr = JSON.parse($('pgScenePreset').dataset.scenes || '[]');
-      const labels = JSON.parse($('pgScenePreset').dataset.labels || '[]');
-      const ta = $('pgScenesText');
-      const sep = ta.value && !ta.value.endsWith('\n') ? '\n\n' : '';
-      ta.value += `${sep}## ${labels[idx] || `Scene${idx+1}`}\n${arr[idx] || ''}`;
-      $('pgScenePreset').value = '';
-      pgRefreshCost();
-    }
-  };
-  $('pgScenesText').oninput = pgRefreshCost;
 
   // 사용할 캐릭터 드롭다운 — 시나리오별 모드용. 그룹 단위로 묶어서 표시
   if($('pgSceneChar')){
@@ -7359,9 +7463,11 @@ function pgRefreshCost(){
   const per = anlasCostFor(o);
   let total;
   if(_pgMode === 'scenes'){
-    const scenes = pgParseScenes($('pgScenesText')?.value || '');
-    total = scenes.length;
-    if($('pgScenesCount')) $('pgScenesCount').textContent = `(${scenes.length}개)`;
+    const checked = [...document.querySelectorAll('#pgSceneList input[data-act="pick-scene"]:checked')].length;
+    const custom = pgParseScenes($('pgScenesText')?.value || '').length;
+    total = checked + custom;
+    const totalScenes = document.querySelectorAll('#pgSceneList input[data-act="pick-scene"]').length;
+    if($('pgScenesCount')) $('pgScenesCount').textContent = `(${checked}/${totalScenes} 선택${custom ? ` + 직접 ${custom}개` : ''})`;
   } else {
     const picked = [...document.querySelectorAll('#pgCharList input[data-act="pick"]:checked')].length;
     total = picked;
@@ -7376,8 +7482,20 @@ async function pgStartScenes(){
   if(_pgRunning) return;
   const apiKey = (state.apiKey || $('apiKey').value || '').trim();
   if(!apiKey){ toast('API 키(pst-...)를 먼저 입력하세요 — 설정 → 보안', 'error'); return; }
-  const scenes = pgParseScenes($('pgScenesText').value);
-  if(!scenes.length){ toast('시나리오를 1개 이상 입력하세요', 'warning'); return; }
+  // 큐 구성: 체크된 시나리오 프리셋 + 직접 입력 (## 블록)
+  const allScenes = pgAllScenes();
+  const checkedIdx = [...document.querySelectorAll('#pgSceneList input[data-act="pick-scene"]:checked')]
+    .map(i => parseInt(i.dataset.idx, 10))
+    .filter(n => !isNaN(n));
+  const fromChecklist = checkedIdx.map(i => {
+    const s = allScenes[i];
+    if(!s) return null;
+    const name = s.label.split('·').pop().trim();
+    return {label: name || `Scene${i+1}`, prompt: s.text || ''};
+  }).filter(Boolean);
+  const fromCustom = pgParseScenes($('pgScenesText')?.value || '');
+  const scenes = [...fromChecklist, ...fromCustom];
+  if(!scenes.length){ toast('시나리오를 1개 이상 선택하거나 입력하세요', 'warning'); return; }
 
   // 사용할 캐릭터 — 프리셋 선택 시 그 1명, 아니면 현재 폼 그대로
   const selIdx = parseInt($('pgSceneChar')?.value, 10);
@@ -10444,6 +10562,18 @@ function wireGalleryEvents(){
   // 🗂 전체 접기·펼치기 + 그룹 필터 (캐릭터별 모드)
   $('pgCollapseAll')?.addEventListener('click', pgToggleCollapseAll);
   $('pgGroupFilter')?.addEventListener('change', pgApplyGroupFilter);
+  // 🎬 시나리오별 모드 — 전체 선택/해제/접기 + 카테고리 필터
+  $('pgSceneSelectAll')?.addEventListener('click', () => {
+    document.querySelectorAll('#pgSceneList input[data-act="pick-scene"]').forEach(c => c.checked = true);
+    pgRefreshCost();
+  });
+  $('pgSceneDeselectAll')?.addEventListener('click', () => {
+    document.querySelectorAll('#pgSceneList input[data-act="pick-scene"]').forEach(c => c.checked = false);
+    pgRefreshCost();
+  });
+  $('pgSceneCollapseAll')?.addEventListener('click', pgToggleSceneCollapseAll);
+  $('pgSceneCatFilter')?.addEventListener('change', pgApplySceneCatFilter);
+  $('pgScenesText')?.addEventListener('input', pgRefreshCost);
   // ☑ 선택 모드 토글 (수동 진입)
   $('galSelectModeBtn').addEventListener('click', () => setSelectionMode(!_selectionMode));
   // ☰ 전체 선택 (보이는 모든 이미지)
