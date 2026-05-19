@@ -497,6 +497,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .preset-tab{background:var(--card);border:1.5px solid var(--b1);color:var(--t2);padding:6px 11px;font-size:12.5px;font-weight:600;border-radius:5px;cursor:pointer;transition:all .15s;font-family:inherit;display:inline-flex;align-items:center;gap:6px;line-height:1}
 .preset-tab:hover{color:var(--t1);background:var(--panel);border-color:var(--b2)}
 .preset-tab.act{background:var(--acc);color:#fff8ec;border-color:var(--acc)}
+.pg-mode-tab{font-weight:600}
+.pg-mode-tab.act{background:var(--acc);color:#fff8ec;border-color:var(--acc)}
+.pg-mode-tab.act .en{color:#fff8ec;opacity:.85}
 .preset-tab .ico{font-size:14px}
 .preset-tab .en{opacity:.6;font-weight:400;font-size:.85em;margin-left:1px}
 .preset-tab.act .en{opacity:.8}
@@ -2069,15 +2072,38 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   <div class="modal" style="max-width:680px">
     <h3 id="previewGenTitle">🎯 일괄 생성 <span class="en">Batch Generate</span></h3>
     <div class="modal-body">
-      <div style="font-size:11.5px;color:var(--t3);margin-bottom:10px;line-height:1.55;padding:8px 11px;background:var(--card);border-radius:5px;border-left:3px solid var(--blue)">
-        💡 현재 프롬프트(그림체·품질 태그 포함) + 아래 시나리오를 합쳐서, 선택한 캐릭터들 각자로 한 장씩 생성합니다. 캐릭터 카탈로그·연속 변주·캐릭터 비교 등 어디든 활용 가능.
+      <!-- 모드 탭 -->
+      <div style="display:flex;gap:4px;margin-bottom:10px;background:var(--card);padding:4px;border-radius:6px;border:1.5px solid var(--b1)">
+        <button type="button" id="pgModeChars" class="btn ghost pg-mode-tab act" data-pgmode="chars" style="flex:1;padding:7px 8px;font-size:12.5px" title="여러 캐릭터에 같은 시나리오를 하나씩 적용">👥 캐릭터별 <span class="en" style="opacity:.6">By Character</span></button>
+        <button type="button" id="pgModeScenes" class="btn ghost pg-mode-tab" data-pgmode="scenes" style="flex:1;padding:7px 8px;font-size:12.5px" title="현재 폼 캐릭터를 유지하고 여러 시나리오를 차례로 적용">🎬 시나리오별 <span class="en" style="opacity:.6">By Scene</span></button>
       </div>
-      <div class="field" style="margin-bottom:12px">
+      <div id="pgIntro" style="font-size:11.5px;color:var(--t3);margin-bottom:10px;line-height:1.55;padding:8px 11px;background:var(--card);border-radius:5px;border-left:3px solid var(--blue)">
+        💡 현재 프롬프트(그림체·품질 태그 포함) + 아래 시나리오를 합쳐서, 선택한 캐릭터들 각자로 한 장씩 생성합니다.
+      </div>
+      <!-- 캐릭터별 모드: 시나리오 1개 -->
+      <div class="field" style="margin-bottom:12px" id="pgCharsSceneField">
         <span class="lbl">🎭 추가할 시나리오 <span class="en">Scene</span> (선택)</span>
         <select id="pgPreset" class="inp" style="margin-bottom:6px"></select>
         <textarea id="pgPromptText" class="ta tiny" style="min-height:64px;font-family:var(--mono);font-size:12.5px" placeholder="(선택) 프리셋 골라 자동 채우거나 직접 입력 — 현재 프롬프트 뒤에 결합됩니다. 비워두면 캐릭터 외형만으로 생성"></textarea>
       </div>
-      <div class="field" style="margin-bottom:12px">
+      <!-- 시나리오별 모드: 시나리오 N개 -->
+      <div class="field" style="margin-bottom:12px;display:none" id="pgScenesField">
+        <span class="lbl">🎬 시나리오 목록 <span class="en">Scenes</span> <span id="pgScenesCount" style="color:var(--t3);font-weight:500;margin-left:4px"></span></span>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:6px;line-height:1.5">
+          <code style="background:var(--card);padding:1px 5px;border-radius:3px">## 라벨</code> 헤더로 블록 분리. 라벨은 선택 (없으면 자동 번호). 한 블록 = 한 장 생성.
+        </div>
+        <select id="pgScenePreset" class="inp" style="margin-bottom:6px"></select>
+        <textarea id="pgScenesText" class="ta" style="min-height:140px;font-family:var(--mono);font-size:12.5px" placeholder="## 학교
+classroom, sitting at desk
+
+## 카페
+coffee shop, latte art
+
+## 야외
+beach, summer afternoon"></textarea>
+      </div>
+      <!-- 캐릭터별 모드: 캐릭터 체크리스트 -->
+      <div class="field" style="margin-bottom:12px" id="pgCharListField">
         <span class="lbl">👥 대상 캐릭터 <span class="en">Targets</span> <span id="pgCharCount" style="color:var(--t3);font-weight:500;margin-left:4px"></span></span>
         <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
           <button class="btn ghost" id="pgSelectAll" style="padding:5px 10px;font-size:11.5px">☑ 전체 선택</button>
@@ -2085,6 +2111,11 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <button class="btn ghost" id="pgSelectNoThumb" style="padding:5px 10px;font-size:11.5px" title="썸네일이 없는 캐릭터만 선택 (썸네일 일괄 만들기 용도)">🆕 썸네일 없는 것만</button>
         </div>
         <div id="pgCharList" style="max-height:38vh;overflow-y:auto;border:1.5px solid var(--b1);border-radius:6px;background:var(--card);padding:6px"></div>
+      </div>
+      <!-- 시나리오별 모드: 현재 폼 캐릭터 안내 -->
+      <div class="field" style="margin-bottom:12px;display:none" id="pgFormCharInfo">
+        <span class="lbl">👤 사용할 캐릭터 <span class="en">From Form</span></span>
+        <div id="pgFormCharSummary" style="padding:10px 12px;background:var(--card);border:1.5px solid var(--b1);border-radius:6px;font-size:12.5px;color:var(--t2);line-height:1.6"></div>
       </div>
       <div style="background:rgba(58,99,152,.06);border:1.5px solid rgba(58,99,152,.18);border-radius:6px;padding:9px 12px;margin-bottom:10px">
         <label class="chk" style="margin-bottom:5px"><input type="checkbox" id="pgUpdateThumb"> 결과를 각 캐릭터 프리셋 썸네일로 자동 저장 <span class="en" style="color:var(--t3);opacity:.7">(카탈로그 만들기용)</span></label>
@@ -7070,8 +7101,59 @@ function pgAllScenes(){
   return items;
 }
 
+// 현재 모드: 'chars' = 캐릭터별 / 'scenes' = 시나리오별
+let _pgMode = 'chars';
+
+function pgSetMode(mode){
+  _pgMode = mode === 'scenes' ? 'scenes' : 'chars';
+  $$('.pg-mode-tab').forEach(b => b.classList.toggle('act', b.dataset.pgmode === _pgMode));
+  // 영역 표시 토글
+  const isChars = _pgMode === 'chars';
+  $('pgCharsSceneField').style.display = isChars ? '' : 'none';
+  $('pgCharListField').style.display = isChars ? '' : 'none';
+  $('pgScenesField').style.display = isChars ? 'none' : '';
+  $('pgFormCharInfo').style.display = isChars ? 'none' : '';
+  // 안내 박스 문구
+  $('pgIntro').innerHTML = isChars
+    ? '💡 현재 프롬프트(그림체·품질 태그 포함) + 아래 시나리오를 합쳐서, 선택한 <b>캐릭터들 각자로 한 장씩</b> 생성합니다.'
+    : '💡 현재 폼에 설정된 <b>캐릭터를 그대로 유지</b>하고, 아래 <b>시나리오 목록만 차례로 적용</b>해서 한 장씩 생성합니다. 같은 캐릭터의 다양한 상황·연출 비교에 활용.';
+  if(!isChars) pgUpdateFormCharSummary();
+  pgRefreshCost();
+}
+
+function pgUpdateFormCharSummary(){
+  const el = $('pgFormCharSummary');
+  if(!el) return;
+  const chars = (state.characters || []).filter(c => c.enabled !== false);
+  const promptHead = ($('prompt')?.value || '').trim().slice(0, 80);
+  if(!chars.length){
+    el.innerHTML = `<div style="color:var(--t3);font-style:italic">캐릭터 슬롯 없음 — 메인 프롬프트만 사용됩니다.</div>
+      <div style="margin-top:6px;font-family:var(--mono);font-size:11.5px;color:var(--t2)">${esc(promptHead || '(빈 프롬프트)')}${promptHead.length === 80 ? '…' : ''}</div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div style="font-weight:600;color:var(--t1);margin-bottom:4px">${chars.length}명 사용 중</div>
+    ${chars.map((c, i) => {
+      const name = c.name || `슬롯 ${i+1}`;
+      const desc = [c.appearance, c.action].map(s => (s||'').trim()).filter(Boolean).join(' · ').slice(0, 60);
+      return `<div style="font-size:12px;color:var(--t2);margin-top:2px">• <b>${esc(name)}</b>${desc ? ` <span style="color:var(--t3)">— ${esc(desc)}${desc.length >= 60 ? '…' : ''}</span>` : ''}</div>`;
+    }).join('')}
+  `;
+}
+
+function pgParseScenes(text){
+  // parseSeqInput과 동일 규칙 활용 — `## 라벨` 헤더 없으면 'A' 라벨 단일 블록
+  if(typeof parseSeqInput === 'function'){
+    const items = parseSeqInput(text || '');
+    if(items.length) return items;
+  }
+  // fallback: 줄바꿈 없는 단일 블록
+  const t = (text || '').trim();
+  return t ? [{label: 'A', prompt: t}] : [];
+}
+
 function openPreviewGenModal(){
-  // 시나리오 드롭다운
+  // 시나리오 드롭다운 — 두 모드 공용
   const scenes = pgAllScenes();
   const opts = ['<option value="">— 직접 입력만 사용 —</option>'];
   for(let i=0;i<scenes.length;i++){
@@ -7088,10 +7170,35 @@ function openPreviewGenModal(){
     }
   };
   $('pgPromptText').oninput = pgRefreshCost;
+  // 시나리오별 모드의 프리셋 → 시나리오 텍스트로 한 블록씩 append
+  $('pgScenePreset').innerHTML = opts.join('');
+  $('pgScenePreset').dataset.scenes = JSON.stringify(scenes.map(s => s.text));
+  $('pgScenePreset').dataset.labels = JSON.stringify(scenes.map(s => s.label));
+  $('pgScenePreset').onchange = () => {
+    const idx = parseInt($('pgScenePreset').value, 10);
+    if(!isNaN(idx)){
+      const arr = JSON.parse($('pgScenePreset').dataset.scenes || '[]');
+      const labels = JSON.parse($('pgScenePreset').dataset.labels || '[]');
+      const ta = $('pgScenesText');
+      const sep = ta.value && !ta.value.endsWith('\n') ? '\n\n' : '';
+      ta.value += `${sep}## ${labels[idx] || `Scene${idx+1}`}\n${arr[idx] || ''}`;
+      $('pgScenePreset').value = '';
+      pgRefreshCost();
+    }
+  };
+  $('pgScenesText').oninput = pgRefreshCost;
 
-  // 캐릭터 체크리스트
+  // 모드 탭 핸들러 (1회 등록)
+  if(!$('pgModeChars')._wired){
+    $('pgModeChars')._wired = true;
+    $('pgModeChars').addEventListener('click', () => pgSetMode('chars'));
+    $('pgModeScenes').addEventListener('click', () => pgSetMode('scenes'));
+  }
+
+  // 캐릭터 체크리스트 (캐릭터별 모드 영역)
   pgRenderCharList();
-  pgRefreshCost();
+  // 기본 모드는 캐릭터별 (이전 동작 유지)
+  pgSetMode(_pgMode);
 
   // 액션 버튼 초기 상태
   $('pgStart').style.display = '';
@@ -7163,19 +7270,114 @@ function pgRenderCharList(){
 }
 
 function pgRefreshCost(){
-  const picked = [...document.querySelectorAll('#pgCharList input[data-act="pick"]:checked')].length;
-  $('pgTotalCount').textContent = picked;
-  $('pgCharCount').textContent = `(${picked}/${state.presets.character?.length || 0} 선택)`;
-  // 비용: 현재 폼 설정 기준 1장 비용 × picked
   const o = currentPromptOpts();
   const per = anlasCostFor(o);
-  $('pgCost').textContent = `${(per * picked).toLocaleString()} Anlas`;
+  let total;
+  if(_pgMode === 'scenes'){
+    const scenes = pgParseScenes($('pgScenesText')?.value || '');
+    total = scenes.length;
+    if($('pgScenesCount')) $('pgScenesCount').textContent = `(${scenes.length}개)`;
+  } else {
+    const picked = [...document.querySelectorAll('#pgCharList input[data-act="pick"]:checked')].length;
+    total = picked;
+    $('pgCharCount').textContent = `(${picked}/${state.presets.character?.length || 0} 선택)`;
+  }
+  $('pgTotalCount').textContent = total;
+  $('pgCost').textContent = `${(per * total).toLocaleString()} Anlas`;
+}
+
+// 🎬 시나리오별 일괄 — 현재 폼 캐릭터 유지, 시나리오만 차례로 적용
+async function pgStartScenes(){
+  if(_pgRunning) return;
+  const apiKey = (state.apiKey || $('apiKey').value || '').trim();
+  if(!apiKey){ toast('API 키(pst-...)를 먼저 입력하세요 — 설정 → 보안', 'error'); return; }
+  const scenes = pgParseScenes($('pgScenesText').value);
+  if(!scenes.length){ toast('시나리오를 1개 이상 입력하세요', 'warning'); return; }
+
+  const useNewSession = $('pgNewSession').checked;
+  if(useNewSession && typeof DB.newSession === 'function'){
+    await DB.newSession(`🎬 시나리오 — ${new Date().toLocaleString().slice(5,16)}`);
+  }
+  _pgRunning = true;
+  _pgAbort = new AbortController();
+  $('pgStart').style.display = 'none';
+  $('pgStop').style.display = '';
+  $('pgProgress').style.display = '';
+  let done = 0, errors = 0;
+  const total = scenes.length;
+  const updateProg = () => {
+    $('pgProgCount').textContent = `${done}/${total}`;
+    $('pgProgBar').style.width = `${(done/total)*100}%`;
+  };
+  updateProg();
+
+  for(const s of scenes){
+    if(!_pgRunning) break;
+    $('pgProgLabel').textContent = `생성 중: ${s.label}`;
+    updateBgProgress(`🎬 ${done+1}/${total} · ${s.label}`);
+    try {
+      const baseOpts = currentPromptOpts();
+      // 현재 폼 프롬프트 + 시나리오 텍스트를 결합 (캐릭터·useCoords·characters는 그대로)
+      const userBase = (baseOpts.prompt || '').trim();
+      const combinedBase = [userBase, s.prompt].filter(Boolean).join(', ');
+      const opts = {
+        ...baseOpts,
+        seed: Math.floor(Math.random() * 0xffffffff),
+        prompt: combinedBase || s.prompt,
+      };
+      const body = buildGenBody({...opts, action: 'generate'});
+      const blob = await naiGenerate(apiKey, body, _pgAbort.signal);
+      const fname = `scene_${s.label}_${opts.seed}.png`;
+      const meta = {
+        prompt: opts.prompt,
+        neg: opts.neg,
+        model: opts.model,
+        seed: opts.seed,
+        steps: opts.steps,
+        cfg: opts.cfg,
+        sampler: opts.sampler,
+        schedule: opts.schedule,
+        w: opts.w, h: opts.h,
+        characters: (state.characters || []).map(c => c.name).filter(Boolean),
+        sceneBatch: true,
+        sceneLabel: s.label,
+      };
+      await DB.saveImage(blob, fname, s.label, opts.prompt, meta);
+      recordSeedHistory(opts.seed);
+      // 미리보기 갱신
+      if(state.lastImage?.url) URL.revokeObjectURL(state.lastImage.url);
+      state.lastImage = {blob, url: URL.createObjectURL(blob), meta};
+      const pi = $('previewImg');
+      if(pi){ pi.src = state.lastImage.url; pi.style.display = ''; }
+      const pe = $('previewEmpty'); if(pe) pe.style.display = 'none';
+      done++;
+    } catch(e){
+      errors++;
+      console.warn('[pg-scene]', s.label, e);
+      if(e?.name === 'AbortError') break;
+      toast(`${s.label}: ${e?.message || e}`, 'error');
+    }
+    updateProg();
+  }
+  _pgRunning = false;
+  _pgAbort = null;
+  $('pgStart').style.display = '';
+  $('pgStop').style.display = 'none';
+  $('pgProgLabel').textContent = errors ? `완료 (성공 ${done}, 실패 ${errors})` : `✅ 완료 ${done}장`;
+  updateBgProgress(null);
+  if(done){
+    if(state.mainPane === 'gallery') await loadGallery();
+    await refreshGallerySize();
+    toast(`🎬 시나리오 ${done}장 생성됨${errors?` (실패 ${errors})`:''}`, 'success');
+  }
 }
 
 async function pgStart(){
   if(_pgRunning) return;
+  // 🎬 시나리오별 모드는 별도 함수로 분기 (캐릭터는 현재 폼 그대로 유지)
+  if(_pgMode === 'scenes') return pgStartScenes();
   const apiKey = (state.apiKey || $('apiKey').value || '').trim();
-  if(!apiKey){ toast('상단바에 API 키(pst-...)를 먼저 입력하세요', 'error'); return; }
+  if(!apiKey){ toast('API 키(pst-...)를 먼저 입력하세요 — 설정 → 보안', 'error'); return; }
   const sceneText = $('pgPromptText').value.trim();
   const picked = [...document.querySelectorAll('#pgCharList input[data-act="pick"]:checked')]
     .map(i => state.presets.character[parseInt(i.dataset.idx, 10)])
