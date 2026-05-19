@@ -1949,9 +1949,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
         <span class="cp-mode-hint" id="cpModeHint">선택한 항목을 기존 태그 뒤에 콤마로 이어 붙입니다</span>
       </div>
 
-      <div class="cp-search-row" style="display:flex;gap:6px;align-items:center">
-        <input id="charPickSearch" class="inp" placeholder="🔍 영문 태그·한글 이름으로 검색…" autocomplete="off" spellcheck="false" style="flex:1">
-        <button class="btn ghost" id="charPickRandom" type="button" title="🎲 현재 카테고리·그룹에서 랜덤 1개를 액션 슬롯에 추가" style="padding:6px 11px;font-size:12.5px;flex-shrink:0">🎲 랜덤 <span class="en">Random</span></button>
+      <div class="cp-search-row" style="display:flex;gap:5px;align-items:center">
+        <div style="position:relative;flex:1 1 50%;min-width:0">
+          <input id="charPickSearch" class="inp" placeholder="🔍 검색…" autocomplete="off" spellcheck="false" style="width:100%;padding-right:28px">
+          <button type="button" id="charPickSearchClear" title="검색어 비우기" aria-label="검색 비우기" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:transparent;border:0;color:var(--t3);opacity:.55;cursor:pointer;font-size:13px;line-height:1;padding:4px 6px;border-radius:4px">✕</button>
+        </div>
+        <button class="btn ghost" id="charPickRandom" type="button" title="🎲 현재 카테고리·그룹에서 랜덤 1개를 슬롯에 적용 (변경 모드)" style="padding:6px 9px;font-size:12px;flex-shrink:0">🎲 랜덤</button>
+        <button class="btn ghost" id="charPickClearAction" type="button" title="🧹 현재 캐릭터 슬롯의 액션·의상 비우기 (실행 취소 가능)" style="padding:6px 9px;font-size:12px;flex-shrink:0">🧹 비움</button>
       </div>
       <div class="cp-cats" id="charPickCats"></div>
       <div class="cp-cats" id="charPickSubgroups" style="margin-top:-2px"></div>
@@ -2105,6 +2109,11 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <!-- 캐릭터별 모드: 캐릭터 체크리스트 -->
       <div class="field" style="margin-bottom:12px" id="pgCharListField">
         <span class="lbl">👥 대상 캐릭터 <span class="en">Targets</span> <span id="pgCharCount" style="color:var(--t3);font-weight:500;margin-left:4px"></span></span>
+        <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center;padding:4px 8px;background:var(--card);border:1.5px solid var(--b1);border-radius:5px">
+          <span style="font-size:11.5px;color:var(--t3);font-weight:600">출연 방식:</span>
+          <label class="chk" style="font-size:12px"><input type="radio" name="pgCharMode" value="solo" checked>👤 각자 (1명씩 한 장)</label>
+          <label class="chk" style="font-size:12px" title="선택된 캐릭터들이 한 장에 모두 동시 출연 (최대 6명, V4 모델)"><input type="radio" name="pgCharMode" value="together">👥 같이 (선택 N명 동시 출연)</label>
+        </div>
         <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
           <button class="btn ghost" id="pgSelectAll" type="button" style="padding:5px 10px;font-size:11.5px">☑ 전체 선택</button>
           <button class="btn ghost" id="pgDeselectAll" type="button" style="padding:5px 10px;font-size:11.5px">☐ 전체 해제</button>
@@ -2162,16 +2171,6 @@ coffee shop, latte art"></textarea>
         </details>
       </div>
       <div style="background:rgba(58,99,152,.06);border:1.5px solid rgba(58,99,152,.18);border-radius:6px;padding:9px 12px;margin-bottom:10px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
-          <span style="font-size:12px;font-weight:600;color:var(--t1)">👥 한 장에 캐릭터 수</span>
-          <select id="pgCharsPerImage" class="inp" style="font-size:12px;padding:3px 8px;width:auto">
-            <option value="1" selected>1명 (기본)</option>
-            <option value="2">2명 동시</option>
-            <option value="3">3명 동시</option>
-            <option value="4">4명 동시</option>
-          </select>
-          <span style="font-size:11px;color:var(--t3)" id="pgCharsPerImageHint">선택한 캐릭터를 N명씩 묶어서 같은 장에 출연</span>
-        </div>
         <label class="chk" style="margin-bottom:5px"><input type="checkbox" id="pgUpdateThumb"> <span id="pgUpdateThumbLabel">결과를 각 캐릭터 프리셋 썸네일로 자동 저장</span> <span class="en" style="color:var(--t3);opacity:.7">(카탈로그 만들기용)</span></label>
         <label class="chk" style="display:block;margin-bottom:5px"><input type="checkbox" id="pgNewSession" checked>📂 새 세션에 모아 저장</label>
         <label class="chk" style="display:block"><input type="checkbox" id="pgLockSeed">🌱 시드 고정 <span class="en" style="color:var(--t3);opacity:.7">(Lock seed — 모든 생성에 동일 시드 적용)</span></label>
@@ -8278,11 +8277,14 @@ async function pgStart(){
   $('pgStop').style.display = '';
   $('pgProgress').style.display = '';
   let done = 0, errors = 0;
-  // 👥 한 장에 K명 — picked를 K명씩 chunk로 묶어 같이 출연시킴 (V4 멀티 캐릭터)
-  const charsPerImage = clamp(parseInt($('pgCharsPerImage')?.value, 10) || 1, 1, 6);
-  const chunks = [];
-  for(let i = 0; i < picked.length; i += charsPerImage){
-    chunks.push(picked.slice(i, i + charsPerImage));
+  // 👥 출연 방식 — '각자' = 1명씩 한 장 / '같이' = 선택한 N명을 한 장에 동시 (최대 6명)
+  const charMode = document.querySelector('input[name="pgCharMode"]:checked')?.value || 'solo';
+  let chunks;
+  if(charMode === 'together'){
+    if(picked.length > 6){ toast('동시 출연은 최대 6명 — 처음 6명만 사용', 'warning'); }
+    chunks = [picked.slice(0, 6)];
+  } else {
+    chunks = picked.map(c => [c]);
   }
   const total = chunks.length;
   // 🌱 시드 고정 — 체크 시 한 번 결정하고 모든 큐에 동일 적용 (폼 시드 우선, 비어있으면 랜덤)
@@ -9599,17 +9601,68 @@ const _expandedPresets = new Set();   // key = "type:name"
 const _expandedGallery = new Set();   // key = image.id (number)
 let _userTagIndex = [];               // [{tag, count, sources:[]}] — 유저 프리셋에서 추출
 
+// 🪄 사용자 태그를 의미별 카테고리로 자동 분류 — classifyTagToSlot 활용
+// sp_appearance/outfit/pose → 각각 별도 가상 카테고리로, 나머지는 미분류로 한 곳에 모음
+function classifyUserTags(entries){
+  const buckets = {
+    appearance: [],   // body·hair·eyes·skin
+    outfit: [],       // 의상
+    pose: [],         // 포즈·표정·액션
+    background: [],   // 배경·장소
+    composition: [],  // 구도·앵글
+    style: [],        // 화풍
+    people: [],       // 인원·성별
+    other: [],        // 미분류
+  };
+  const SLOT_TO_BUCKET = {
+    sp_appearance: 'appearance',
+    sp_outfit: 'outfit',
+    sp_pose: 'pose',
+    sp_background: 'background',
+    sp_composition: 'composition',
+    sp_style: 'style',
+    sp_people: 'people',
+  };
+  for(const v of entries){
+    const slot = (typeof classifyTagToSlot === 'function') ? classifyTagToSlot(v.tag) : null;
+    const b = SLOT_TO_BUCKET[slot] || 'other';
+    buckets[b].push(v);
+  }
+  return buckets;
+}
+
 function getAllCategories(){
   // 가상 "내 라이브러리" + "갤러리 태그" — 동적 추출 카테고리
   const cats = [...TAG_CATEGORIES];
+  // 🪄 사용자 라이브러리는 의미별로 자동 분류해서 여러 가상 카테고리로 보여줌
   if(_userTagIndex.length){
-    cats.unshift({
-      id: '__user__',
-      label: '내 라이브러리',
-      ico: '📚',
-      tags: _userTagIndex.map(v => [v.tag, v.ko || `${v.count}회 사용`]),
-      isUser: true,
-    });
+    const buckets = classifyUserTags(_userTagIndex);
+    const bucketDefs = [
+      {key:'appearance', label:'내 — 외형', ico:'👤'},
+      {key:'outfit',     label:'내 — 의상', ico:'👗'},
+      {key:'pose',       label:'내 — 포즈·표정·액션', ico:'🤸'},
+      {key:'background', label:'내 — 배경·장소', ico:'🏞️'},
+      {key:'composition',label:'내 — 구도·앵글', ico:'🎬'},
+      {key:'style',      label:'내 — 화풍·설정', ico:'🎨'},
+      {key:'people',     label:'내 — 인원·성별', ico:'👥'},
+      {key:'other',      label:'내 — 기타 (미분류)', ico:'📚'},
+    ];
+    // 빈도순으로 추가 (큰 것부터, 빈 버킷은 스킵)
+    const userCats = bucketDefs
+      .map(d => ({...d, items: buckets[d.key] || []}))
+      .filter(d => d.items.length > 0)
+      .sort((a,b) => b.items.length - a.items.length);
+    // 가장 큰 N개를 도감 앞에 unshift (역순으로 추가)
+    for(let i = userCats.length - 1; i >= 0; i--){
+      const d = userCats[i];
+      cats.unshift({
+        id: `__user_${d.key}__`,
+        label: d.label,
+        ico: d.ico,
+        tags: d.items.map(v => [v.tag, v.ko || `${v.count}회 사용`]),
+        isUser: true,
+      });
+    }
   }
   if(state.galleryTagIndex && state.galleryTagIndex.length){
     cats.unshift({
@@ -10835,6 +10888,12 @@ function wireCharacterEvents(){
     try { selectCharPickItem(pick); }
     finally { _cpMode = prevMode; }
     pick.scrollIntoView({block:'nearest', behavior:'smooth'});
+  });
+  $('charPickSearchClear')?.addEventListener('click', () => {
+    if($('charPickSearch')){ $('charPickSearch').value = ''; renderCharPickList(); $('charPickSearch').focus(); }
+  });
+  $('charPickClearAction')?.addEventListener('click', () => {
+    if($('cpClearBtn')) $('cpClearBtn').click();   // 기존 액션 슬롯 비우기 핸들러 재사용
   });
   $('charPickList').addEventListener('click', e => {
     // ➕ 서브그룹 일괄 추가 버튼 우선 처리
