@@ -1940,6 +1940,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
         <input id="charPickSearch" class="inp" placeholder="🔍 영문 태그·한글 이름으로 검색…" autocomplete="off" spellcheck="false">
       </div>
       <div class="cp-cats" id="charPickCats"></div>
+      <div class="cp-cats" id="charPickSubgroups" style="margin-top:-2px"></div>
       <div class="cp-list" id="charPickList"></div>
     </div>
     <div class="modal-foot">
@@ -4165,11 +4166,13 @@ const CHAR_ACTION_TAGS = [
 // 🪄 빠른 추가 — 큰 모달 (검색 + 카테고리 필터 + 시원한 가독성)
 let _charPickIdx = -1;
 let _cpCat = '';     // '' = 전체, 'action' / 'outfit' / 'pose' / 'expression' / 'situation'
+let _cpSubGroup = ''; // 현재 선택된 카테고리 안의 작품/시리즈 그룹 ('' = 전체)
 let _cpMode = 'merge';  // 'merge' = 기존에 추가, 'replace' = 통째로 교체
 
 function openCharPickModal(idx){
   _charPickIdx = idx;
   _cpCat = '';
+  _cpSubGroup = '';
   _cpMode = 'merge';  // 매번 안전한 기본값(병합)으로 시작 — replace는 명시적 선택일 때만
   $('charPickTitle').innerHTML = `🪄 빠른 추가 — 캐릭터 #${idx+1} <span class="en">Quick Add</span>`;
   $('charPickSearch').value = '';
@@ -4300,6 +4303,31 @@ function renderCharPickCats(){
     const isAct = _cpCat === c.id;
     return `<button class="cp-cat ${isAct?'act':''}" data-cat="${esc(c.id)}">${c.ico} ${esc(c.label)} <span class="cp-cnt">${c.cnt.toLocaleString()}</span></button>`;
   }).join('');
+  renderCharPickSubgroups();
+}
+
+// 📚 선택된 카테고리가 그룹화 지원이면 그룹 칩 표시 (의상_, 헤어_, 자위_ 등)
+function renderCharPickSubgroups(){
+  const wrap = $('charPickSubgroups');
+  if(!wrap) return;
+  // 그룹 칩은 단일 그룹화 카테고리에서만. 전체·액션·포즈·표정 등에선 숨김.
+  if(!GROUPABLE_PRESET_TYPES.has(_cpCat)){
+    wrap.innerHTML = '';
+    wrap.style.display = 'none';
+    return;
+  }
+  const list = state.presets[_cpCat] || [];
+  if(!list.length){ wrap.innerHTML = ''; wrap.style.display = 'none'; return; }
+  const groups = groupCharsByWork(list);
+  if(groups.length <= 1){ wrap.innerHTML = ''; wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  const chips = [{id:'', label:'전체', cnt: list.length, isAll:true}];
+  for(const g of groups){ chips.push({id:g.group, label:g.group, cnt:g.items.length}); }
+  wrap.innerHTML = chips.map(c => {
+    const isAct = _cpSubGroup === c.id;
+    const ico = c.isAll ? '📚' : '📁';
+    return `<button class="cp-cat ${isAct?'act':''}" data-subgrp="${esc(c.id)}" title="${esc(c.label)} 그룹만 보기">${ico} ${esc(c.label)} <span class="cp-cnt">${c.cnt.toLocaleString()}</span></button>`;
+  }).join('');
 }
 
 function renderCharPickList(){
@@ -4329,8 +4357,13 @@ function renderCharPickList(){
     return `<div class="cp-item" data-val="${esc(p.text||'')}" data-name="${esc(p.name||'')}"><div class="cp-name">${esc(p.name || '(이름 없음)')}</div><div class="cp-sub">${esc(sub || '(내용 없음)')}</div></div>`;
   };
   for(const pcat of catsToShow){
-    const list = state.presets[pcat] || [];
+    let list = state.presets[pcat] || [];
     if(!list.length) continue;
+    // 📚 서브그룹 칩 필터 — 카테고리가 그룹화 지원이고 _cpSubGroup이 설정된 경우만
+    if(_cpSubGroup && _cpCat === pcat && GROUPABLE_PRESET_TYPES.has(pcat)){
+      list = list.filter(p => getCharGroup(p.name) === _cpSubGroup);
+      if(!list.length) continue;
+    }
     const def = PRESET_TYPES.find(t => t.id === pcat);
     const filtered = q ? list.filter(p => (p.name + ' ' + (p.text||'')).toLowerCase().includes(q)) : list;
     if(!filtered.length) continue;
@@ -10479,7 +10512,16 @@ function wireCharacterEvents(){
     const b = e.target.closest('.cp-cat');
     if(!b) return;
     _cpCat = b.dataset.cat || '';
+    _cpSubGroup = '';  // 카테고리 변경 시 서브그룹 리셋
     renderCharPickCats();
+    renderCharPickList();
+  });
+  // 📚 서브그룹 칩 (의상_·자위_·노출_ 등)
+  $('charPickSubgroups').addEventListener('click', e => {
+    const b = e.target.closest('.cp-cat');
+    if(!b) return;
+    _cpSubGroup = b.dataset.subgrp || '';
+    renderCharPickSubgroups();
     renderCharPickList();
   });
   $('charPickList').addEventListener('click', e => {
