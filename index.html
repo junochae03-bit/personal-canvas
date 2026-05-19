@@ -1771,10 +1771,26 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           </div>
 
           <div class="set-card">
+            <h3>보안 <span class="en">Security</span></h3>
+            <div class="set-row">
+              <div class="label">API 키 PIN 보호 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">PIN Lock</span>
+                <div class="desc">활성화 시 4~12자리 PIN으로 API 키를 추가 암호화. 매 세션마다 PIN 입력 필요.</div>
+              </div>
+              <button class="btn ghost" id="pinToggleBtn" aria-pressed="false">🔓 PIN 설정 <span class="en">Enable</span></button>
+            </div>
+            <div class="set-row" id="pinStatusRow" style="display:none">
+              <div class="label">PIN 상태 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Status</span>
+                <div class="desc" id="pinStatusDesc">잠금 활성화됨</div>
+              </div>
+              <button class="btn ghost" id="pinChangeBtn">PIN 변경 <span class="en">Change</span></button>
+            </div>
+          </div>
+
+          <div class="set-card">
             <h3>정보 <span class="en">About</span></h3>
             <div class="set-row">
               <div class="label">NAI Studio</div>
-              <span style="font-family:var(--mono);font-size:12px;color:var(--t3);font-weight:600">v1.2</span>
+              <span style="font-family:var(--mono);font-size:12px;color:var(--t3);font-weight:600">v1.3</span>
             </div>
           </div>
         </div>
@@ -8859,12 +8875,78 @@ const KEY_STORE_KEY = 'nai_apikey_enc';   // {iv, ct}
 const KEY_CRYPTOKEY = 'nai_apikey_cryptokey';  // CryptoKey (non-extractable)
 const LEGACY_LS_KEY = 'nai_apikey';        // 마이그레이션용
 
+// 🔐 PIN 보호 — 활성화 시 사용자 PIN으로 유도한 키로 API 키 암호화
+// PIN 미설정: 디바이스 고유 키(IDB의 KEY_CRYPTOKEY) 사용
+// PIN 설정 시: PBKDF2(PIN, salt) → AES-GCM 키, 메모리에만 보관
+const KEY_PIN_SALT = 'nai_apikey_pin_salt';   // PIN 모드 활성화 표시 + salt 저장
+const PIN_ITER = 250000;
+let _pinDerivedKey = null;   // 메모리 캐시 (탭 세션 내 재사용)
+
+async function _deriveKeyFromPin(pin, salt){
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey(
+    'raw', enc.encode(pin), {name:'PBKDF2'}, false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2', salt, iterations: PIN_ITER, hash:'SHA-256'},
+    baseKey,
+    {name:'AES-GCM', length:256},
+    false,
+    ['encrypt','decrypt']
+  );
+}
+
 async function _getOrCreateCryptoKey(){
+  // 1) PIN 모드 활성화면 메모리의 유도키 우선 (없으면 호출자에서 promptForPin 후 재시도)
+  const saltRec = await DB.getFlag(KEY_PIN_SALT);
+  if(saltRec){
+    if(_pinDerivedKey) return _pinDerivedKey;
+    throw new Error('PIN_REQUIRED');
+  }
+  // 2) 기본 디바이스 키
   let k = await DB.getFlag(KEY_CRYPTOKEY);
   if(k && k.type === 'secret') return k;
   k = await crypto.subtle.generateKey({name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
   await DB.setFlag(KEY_CRYPTOKEY, k);  // structured clone으로 CryptoKey 저장 가능
   return k;
+}
+
+// PIN 모드 ON: 새 salt 생성 + PIN으로 유도한 키로 기존 API 키 재암호화
+async function enablePinLock(pin){
+  if(!pin || pin.length < 4 || pin.length > 12) throw new Error('PIN은 4~12자');
+  const currentApiKey = state.apiKey || '';
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const derived = await _deriveKeyFromPin(pin, salt);
+  _pinDerivedKey = derived;
+  await DB.setFlag(KEY_PIN_SALT, Array.from(salt));
+  if(currentApiKey){
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, derived, new TextEncoder().encode(currentApiKey));
+    await DB.setFlag(KEY_STORE_KEY, {iv: Array.from(iv), ct: Array.from(new Uint8Array(ct))});
+  }
+  await DB.setFlag(KEY_CRYPTOKEY, null);  // 디바이스 키 폐기
+}
+
+// PIN 모드 OFF: 현재 API 키를 디바이스 키로 다시 암호화 후 salt 제거
+async function disablePinLock(){
+  const currentApiKey = state.apiKey || '';
+  await DB.setFlag(KEY_PIN_SALT, null);
+  _pinDerivedKey = null;
+  // 디바이스 키 재생성 + API 키 재암호화 (saveApiKey가 _getOrCreateCryptoKey 통해 처리)
+  if(currentApiKey) await saveApiKey(currentApiKey);
+}
+
+// 사용자 PIN 입력 → 유도키 메모리에 적재. salt는 IDB에 있어야 함.
+async function unlockWithPin(pin){
+  const saltArr = await DB.getFlag(KEY_PIN_SALT);
+  if(!saltArr) throw new Error('PIN 모드 비활성');
+  const salt = new Uint8Array(saltArr);
+  _pinDerivedKey = await _deriveKeyFromPin(pin, salt);
+  return _pinDerivedKey;
+}
+
+async function isPinLockEnabled(){
+  return !!(await DB.getFlag(KEY_PIN_SALT));
 }
 
 async function _encryptApiKey(plain){
@@ -8909,11 +8991,55 @@ async function loadApiKey(){
     } catch(e){ console.warn('[apikey] migrate fail', e); }
   } else {
     const rec = await DB.getFlag(KEY_STORE_KEY);
-    k = await _decryptApiKey(rec);
+    // PIN 모드 활성 + 메모리 키 없으면 사용자에게 PIN 요청
+    try {
+      k = await _decryptApiKey(rec);
+    } catch(e){
+      if(e?.message === 'PIN_REQUIRED'){
+        const pin = await promptForPin('🔐 API 키 잠금 해제 PIN을 입력하세요');
+        if(pin){
+          try {
+            await unlockWithPin(pin);
+            k = await _decryptApiKey(rec);
+          } catch(e2){
+            console.warn('[apikey] PIN 잘못됨', e2?.message);
+            try { toast('PIN이 잘못되었습니다 — 키를 불러오지 못함', 'error'); } catch(_){}
+          }
+        }
+      } else { throw e; }
+    }
   }
   if($('apiKey')) $('apiKey').value = k;
   state.apiKey = k;
   updateKeyMiniState();
+  refreshPinUI();
+}
+
+// 간단한 PIN 입력 — 모달이 무거우니 prompt() 활용 (마스킹 안 됨은 한계)
+async function promptForPin(msg){
+  const v = window.prompt(msg + ' (4~12자)');
+  if(v === null) return '';
+  return String(v).trim();
+}
+
+async function refreshPinUI(){
+  const enabled = await isPinLockEnabled();
+  const btn = $('pinToggleBtn');
+  const row = $('pinStatusRow');
+  if(!btn) return;
+  btn.setAttribute('aria-pressed', String(enabled));
+  btn.innerHTML = enabled
+    ? '🔒 PIN 해제 <span class="en">Disable</span>'
+    : '🔓 PIN 설정 <span class="en">Enable</span>';
+  if(row) row.style.display = enabled ? '' : 'none';
+  const desc = $('pinStatusDesc');
+  if(desc){
+    if(enabled){
+      desc.textContent = _pinDerivedKey
+        ? '🔓 잠금 해제됨 (이번 세션) — 매 페이지 로드 시 PIN 재입력'
+        : '🔒 잠겨있음 — API 키 사용 시 PIN 입력 필요';
+    }
+  }
 }
 
 async function saveApiKey(k){
@@ -10330,6 +10456,65 @@ function wireMiscEvents(){
     let total = 0;
     for(const s of sessions) total += s.count || 0;
     $('storageDesc').textContent = `이미지 ${total.toLocaleString()}장 · 세션 ${sessions.length}개${sz ? ' · ' + fmtBytes(sz) + ' 사용 중' : ''}`;
+  });
+
+  // 🔐 API 키 PIN 보호 토글
+  $('pinToggleBtn')?.addEventListener('click', async () => {
+    const enabled = await isPinLockEnabled();
+    if(enabled){
+      // 해제 — 다른 사람이 누른 게 아닌지 PIN으로 인증
+      if(!_pinDerivedKey){
+        const pin = await promptForPin('PIN 보호를 해제하려면 현재 PIN을 입력하세요');
+        if(!pin) return;
+        try { await unlockWithPin(pin); }
+        catch(e){ toast('PIN 확인 실패', 'error'); return; }
+        // 복호화로 PIN 정확성 검증
+        const rec = await DB.getFlag(KEY_STORE_KEY);
+        if(rec){
+          const test = await _decryptApiKey(rec);
+          if(!test && state.apiKey){ toast('PIN이 잘못되었습니다', 'error'); _pinDerivedKey = null; return; }
+        }
+      }
+      await safeAsync(() => disablePinLock(), 'PIN 해제');
+      toast('🔓 PIN 보호 해제됨 — 기기 고유 키로 복귀', 'success');
+    } else {
+      // 활성화 — 새 PIN 입력 + 확인
+      const pin = await promptForPin('새 PIN을 입력하세요');
+      if(!pin) return;
+      if(pin.length < 4 || pin.length > 12){ toast('PIN은 4~12자', 'warning'); return; }
+      const pin2 = await promptForPin('확인용으로 PIN을 다시 입력하세요');
+      if(pin !== pin2){ toast('PIN이 일치하지 않습니다', 'error'); return; }
+      try {
+        await enablePinLock(pin);
+        toast('🔒 PIN 보호 활성화됨 — 다음 페이지 로드 시 PIN 입력 필요', 'success');
+      } catch(e){ toast('PIN 설정 실패: ' + (e.message||e), 'error'); }
+    }
+    refreshPinUI();
+  });
+
+  // PIN 변경 — 현재 PIN 확인 → 새 PIN 설정
+  $('pinChangeBtn')?.addEventListener('click', async () => {
+    if(!_pinDerivedKey){
+      const old = await promptForPin('현재 PIN을 입력하세요');
+      if(!old) return;
+      try { await unlockWithPin(old); }
+      catch(e){ toast('현재 PIN 확인 실패', 'error'); return; }
+      const rec = await DB.getFlag(KEY_STORE_KEY);
+      if(rec){
+        const test = await _decryptApiKey(rec);
+        if(!test && state.apiKey){ toast('현재 PIN이 잘못되었습니다', 'error'); _pinDerivedKey = null; return; }
+      }
+    }
+    const np = await promptForPin('새 PIN을 입력하세요');
+    if(!np) return;
+    if(np.length < 4 || np.length > 12){ toast('PIN은 4~12자', 'warning'); return; }
+    const np2 = await promptForPin('확인용으로 새 PIN을 다시 입력하세요');
+    if(np !== np2){ toast('PIN이 일치하지 않습니다', 'error'); return; }
+    try {
+      await enablePinLock(np);  // 같은 함수로 재설정 = 새 salt + 재암호화
+      toast('🔒 PIN 변경됨', 'success');
+      refreshPinUI();
+    } catch(e){ toast('PIN 변경 실패: ' + (e.message||e), 'error'); }
   });
 
   // 📁 갤러리 저장 위치 (세션 + 앨범)

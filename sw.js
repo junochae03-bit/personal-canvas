@@ -7,7 +7,7 @@
 //   4. NovelAI API 등 동적 요청 = 캐시 우회
 //   5. file:// 환경에선 SW 자체가 등록되지 않으므로 영향 없음
 
-const CACHE_NAME = 'nai-studio-v4';
+const CACHE_NAME = 'nai-studio-v5';
 const CORE = [
   './',
   './index.html',
