@@ -1647,9 +1647,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
             <div style="display:flex;flex-direction:column;gap:5px;margin-top:5px">
               <div class="row" style="gap:5px;align-items:stretch">
                 <select id="targetSession" class="inp tiny" style="flex:1;font-size:11px">
-                  <option value="current">현재 세션에 추가 (기본)</option>
+                  <option value="auto-ip" selected>🎴 캐릭터 IP별 자동 분류 (기본)</option>
+                  <option value="current">현재 세션에 계속 추가</option>
                   <option value="new">새 세션 시작</option>
-                  <option value="auto-ip">🎴 캐릭터 IP별 자동 분류 (Auto by group)</option>
                 </select>
                 <input id="targetSessionName" class="inp tiny" placeholder="새 세션 이름 (선택)" style="flex:1;font-size:11px;display:none">
               </div>
@@ -5908,9 +5908,9 @@ function refreshTargetSessionDropdown(){
   if(!sel) return;
   const prev = sel.value;
   const sessions = state.gallerySessions || [];
-  let html = '<option value="current">현재 세션에 추가 (기본)</option>';
+  let html = '<option value="auto-ip">🎴 캐릭터 IP별 자동 분류 (기본)</option>';
+  html += '<option value="current">현재 세션에 계속 추가</option>';
   html += '<option value="new">새 세션 시작</option>';
-  html += '<option value="auto-ip">🎴 캐릭터 IP별 자동 분류 (Auto by group)</option>';
   if(sessions.length){
     html += '<optgroup label="── 기존 세션 ──">';
     for(const ses of sessions.slice(0, 50)){
@@ -7257,10 +7257,10 @@ async function runOne(q, apiKey){
   }
   q.prompt = opts.prompt;
   q.seed = body.parameters.seed;
-  // 활성 캐릭터 이름 — 스냅이 있으면 그 시점의 캐릭터 목록을 우선 사용
-  const charsSrc = snap ? (snap.opts.characters || []) : (state.characters || []);
-  const charNames = charsSrc
-    .filter(c => c.enabled && (c.name||'').trim() && (c.prompt||'').trim())
+  // 활성 캐릭터 이름 — opts.characters는 derived prompt(appearance+action 합)를 가짐
+  //   ↳ 라이브 state.characters[i].prompt는 프리셋 적용 직후엔 비어있어 필터 누락되므로 opts 사용
+  const charNames = (opts.characters || [])
+    .filter(c => c.enabled && (c.name||'').trim() && ((c.prompt||'').trim() || (c.appearance||'').trim()))
     .map(c => c.name.trim());
   // 라벨 결정 우선순위:
   //   1) 시퀀셜 블록 라벨(_fromSeqBlock=true) → 의미있는 이름이므로 보존 (단, imgLabel과 결합)
@@ -11261,7 +11261,8 @@ async function saveSettings(){
     targetSession:     $('targetSession')?.value || 'current',
     targetSessionName: $('targetSessionName')?.value || '',
     targetAlbum:       $('targetAlbum')?.value || '',
-    migration_v2_done: true,  // 마이그레이션 1회 완료 표시 — 재실행 방지
+    migration_v2_done: true,  // 마이그레이션 v2 1회 완료 표시 — 재실행 방지
+    migration_v3_done: true,  // 마이그레이션 v3 (targetSession 기본 auto-ip) 1회 완료 표시
     seqInput: $('seqInput').value,
     seqLabelFname: $('seqLabelFname').checked,
     inpAddOrig: $('inpAddOrig').checked,
@@ -11355,7 +11356,14 @@ async function loadSettings(){
   }
   apply('fnamePattern', s.fnamePattern);
   apply('imgLabel', s.imgLabel);
-  apply('targetSession', s.targetSession);
+  // 🎴 마이그레이션 v3 — targetSession 기본값을 'current' → 'auto-ip'로 1회만 변경
+  //   (옛 기본을 명시적으로 다른 값으로 바꿔둔 사용자는 영향 없음)
+  if(!s.migration_v3_done && (s.targetSession === undefined || s.targetSession === 'current')){
+    apply('targetSession', 'auto-ip');
+    state._needMigrationV3Mark = true;
+  } else {
+    apply('targetSession', s.targetSession);
+  }
   apply('targetSessionName', s.targetSessionName);
   apply('targetAlbum', s.targetAlbum);
   if($('targetSession')) $('targetSessionName').style.display = $('targetSession').value === 'new' ? '' : 'none';
