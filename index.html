@@ -2877,21 +2877,32 @@ const PREFIX_TO_TYPE = {
   '의상':'outfit','옷':'outfit','복장':'outfit','코디':'outfit',
   '페티쉬':'fetish','페티시':'fetish',
   '헤어':'hair','머리':'hair',
-  '상황':'situation','시츄':'situation','시추':'situation','씬':'situation',
+  '상황':'situation','시츄':'situation','시추':'situation','씬':'situation','관계':'situation',
   '자위':'masturbation',
   '노출':'exposure',
   '백합':'yuri',
   '콤보':'combo',
-  '상태':'state',
+  '상태':'state','체형':'state',
   '표정':'expression','얼굴':'expression','감정':'expression',
   '남녀':'gender','성별':'gender',
   '하렘':'harem',
   '포즈':'pose','자세':'pose','동작':'pose','액션':'pose',
   // 환경·구도
   '구도':'composition','앵글':'composition','샷':'composition','포커스':'composition','클로즈업':'composition',
-  '배경':'background','장소':'background','로케':'background',
+  '배경':'background','장소':'background','로케':'background','시간':'background','날씨':'background',
   '분위기':'mood','톤':'mood','색감':'mood',
   '조명':'lighting','광원':'lighting','라이팅':'lighting',
+};
+
+// 🔁 백업/외부 도구가 다른 이름으로 내보낸 카테고리 → 우리 PRESET_TYPES id 매핑
+//   복원 시 unknown 키를 무시하지 않고 대응 카테고리에 합쳐서 가져옴
+const PRESET_CATEGORY_ALIASES = {
+  people:      ['people_count'],
+  composition: ['angle'],
+  mood:        ['atmosphere'],
+  background:  ['time_weather'],
+  state:       ['body_type'],
+  situation:   ['dynamic'],
 };
 function detectTypeByName(name){
   if(!name) return null;
@@ -5636,7 +5647,12 @@ function renderRestoreOptions(filename, data){
     if(t.id === 'outfit' && (Array.isArray(data.presets_outfit) || Array.isArray(data.presets_outfitquick))){
       fromLegacy = (data.presets_outfit?.length||0) + (data.presets_outfitquick?.length||0);
     }
-    has.presets[t.id] = fromNew + fromLegacy;
+    // 🔁 외부 백업 별칭 키도 합산
+    let fromAlias = 0;
+    for(const a of (PRESET_CATEGORY_ALIASES[t.id] || [])){
+      if(Array.isArray(data[a])) fromAlias += data[a].length;
+    }
+    has.presets[t.id] = fromNew + fromLegacy + fromAlias;
     totalPresets += has.presets[t.id];
   }
   if(!has.settings && !has.apikey && !has.albums && totalPresets === 0){
@@ -5726,6 +5742,12 @@ async function doSelectiveRestore(){
           if(Array.isArray(data[k])){
             for(const p of data[k]) combined.push({name:p.name, text:p.text||'', thumb:p.thumb||null});
           }
+        }
+      }
+      // 🔁 외부 백업 별칭 키 — people_count → people, angle → composition 등
+      for(const a of (PRESET_CATEGORY_ALIASES[t] || [])){
+        if(Array.isArray(data[a])){
+          for(const p of data[a]) combined.push({name:p.name, text:p.text||'', thumb:p.thumb||null});
         }
       }
       for(let i=0; i<combined.length; i++){
