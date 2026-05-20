@@ -1622,9 +1622,10 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <!-- 이미지 라벨 — 갤러리 카드에 표시 + {label} 치환자에도 사용 -->
           <div class="field" style="margin-bottom:10px;padding:8px 10px;background:rgba(58,99,152,.06);border:1.5px solid rgba(58,99,152,.25);border-radius:5px">
             <span class="lbl" style="color:var(--blue);font-weight:700">📁 이미지 이름 <span class="en">Image Label</span></span>
-            <input type="text" id="imgLabel" class="inp" placeholder="예: 학교제복_세션1 · 갤러리·파일명에 사용됨" style="margin-top:3px">
+            <input type="text" id="imgLabel" class="inp" placeholder="비우면 캐릭터 프리셋 이름#N 자동 (예: 코노스바_아쿠아#3)" style="margin-top:3px">
             <div style="font-size:10.5px;color:var(--t3);margin-top:4px;line-height:1.5">
-              이 칸에 적은 이름이 <b style="color:var(--blue)">갤러리 카드 라벨</b>·<b style="color:var(--blue)">파일명의 <code style="font-family:var(--mono);background:var(--card);padding:1px 4px;border-radius:2px">{label}</code></b>로 들어갑니다
+              이 칸에 적은 이름이 <b style="color:var(--blue)">갤러리 카드 라벨</b>·<b style="color:var(--blue)">파일명의 <code style="font-family:var(--mono);background:var(--card);padding:1px 4px;border-radius:2px">{label}</code></b>로 들어갑니다<br>
+              <span style="opacity:.85">비워두면 <b>활성 캐릭터 프리셋 이름#카운터</b>가 자동 적용 (e.g. <code style="font-family:var(--mono)">코노스바_아쿠아#1</code>)</span>
             </div>
           </div>
           <div class="g2" style="margin-bottom:8px">
@@ -1648,6 +1649,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
                 <select id="targetSession" class="inp tiny" style="flex:1;font-size:11px">
                   <option value="current">현재 세션에 추가 (기본)</option>
                   <option value="new">새 세션 시작</option>
+                  <option value="auto-ip">🎴 캐릭터 IP별 자동 분류 (Auto by group)</option>
                 </select>
                 <input id="targetSessionName" class="inp tiny" placeholder="새 세션 이름 (선택)" style="flex:1;font-size:11px;display:none">
               </div>
@@ -1676,7 +1678,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
             <input type="text" id="fnamePattern" class="inp mono" placeholder="nai_{date}_{seed}" value="">
             <div style="font-size:10.5px;color:var(--t3);margin-top:3px;line-height:1.5">
               치환: <code style="color:var(--acc);font-family:var(--mono)">{seed} {model} {date} {time} {index} {label} {prompt}</code><br>
-              비워두면 기본값 <code style="font-family:var(--mono)">nai_{시각}.png</code>
+              비우고 이미지 이름이 있으면 <b style="color:var(--blue)">이미지 이름</b>으로 파일 저장. 둘 다 없으면 <code style="font-family:var(--mono)">nai_{시각}.png</code>
             </div>
           </div>
           <button class="btn ghost" id="openXyzBtn" style="width:100%;justify-content:center;padding:8px;margin-bottom:8px;border-color:rgba(162,90,31,.4)" title="X·Y·Z 축의 파라미터를 변화시켜 비교 그리드 생성">🧪 XYZ 비교 그리드 <span class="en">XYZ Plot</span></button>
@@ -5869,6 +5871,7 @@ function refreshTargetSessionDropdown(){
   const sessions = state.gallerySessions || [];
   let html = '<option value="current">현재 세션에 추가 (기본)</option>';
   html += '<option value="new">새 세션 시작</option>';
+  html += '<option value="auto-ip">🎴 캐릭터 IP별 자동 분류 (Auto by group)</option>';
   if(sessions.length){
     html += '<optgroup label="── 기존 세션 ──">';
     for(const ses of sessions.slice(0, 50)){
@@ -5897,6 +5900,7 @@ async function applyTargetSession(){
   if(!sel) return;
   const mode = sel.value;
   if(mode === 'current') return;
+  if(mode === 'auto-ip') return;   // 🎴 per-image 동적 전환 — afterImage에서 처리
   if(mode === 'new'){
     DB.currentSessionId = null;
     const name = ($('targetSessionName').value || '').trim();
@@ -5911,6 +5915,33 @@ async function applyTargetSession(){
     const sid = parseInt(mode.slice(4));
     if(!isNaN(sid)) DB.currentSessionId = sid;
   }
+}
+
+// 🎴 캐릭터 IP(작품 그룹)별 세션을 자동 보장 — 라벨 형식 "{group}_"
+// 같은 그룹의 이전 세션이 있으면 재사용, 없으면 생성. 그룹 추출 실패(기타) 시 null.
+async function ensureIpSessionForChar(charName){
+  const grp = (typeof getCharGroup === 'function') ? getCharGroup(charName) : '';
+  if(!grp || grp === '기타') return null;
+  const targetLabel = `${grp}_`;
+  // 캐시(state.gallerySessions)에서 먼저 — 빠른 경로
+  let ses = (state.gallerySessions || []).find(s => s.label === targetLabel);
+  if(!ses){
+    // 캐시가 비었거나 다른 탭에서 만든 세션 — DB에서 새로 조회
+    const fresh = await DB.getSessions();
+    state.gallerySessions = fresh;
+    ses = fresh.find(s => s.label === targetLabel);
+  }
+  if(ses){
+    DB.currentSessionId = ses.id;
+    return ses.id;
+  }
+  // 새로 생성
+  if(typeof DB.newSession === 'function'){
+    const sid = await DB.newSession(targetLabel);
+    state.gallerySessions = await DB.getSessions();
+    return sid;
+  }
+  return null;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -6932,14 +6963,14 @@ function buildQueue(){
   const seqText = $('seqInput').value.trim();
   const seqItems = seqText ? parseSeqInput(seqText) : [];
   if(seqItems.length > 0){
-    // Sequential mode
+    // Sequential mode — seq block label은 의미있는 라벨이므로 보존
     for(let r = 0; r < count; r++){
       for(const s of seqItems){
-        items.push({id: _qSeq++, status:'wait', label: s.label, promptOverride: s.prompt});
+        items.push({id: _qSeq++, status:'wait', label: s.label, promptOverride: s.prompt, _fromSeqBlock: true});
       }
     }
   } else {
-    // Simple batch
+    // Simple batch — label은 단순 큐 번호(placeholder), 라벨 자동화 로직이 덮어씀
     for(let i = 0; i < count; i++){
       items.push({id: _qSeq++, status:'wait', label: String(i+1)});
     }
@@ -7020,6 +7051,8 @@ async function startGeneration(){
   if(!state.queue.length){ toast('생성할 항목이 없습니다', 'warning'); return; }
   // 📁 갤러리 저장 위치 — 세션 선택 적용 (생성 직전 1회)
   await applyTargetSession();
+  // 🔢 자동 라벨 카운터 리셋 — 이번 배치만의 캐릭터별 #1, #2 …
+  state._autoLabelCounters = {};
   state.queueIdx = 0;
   state.running = true;
   state.paused = false;
@@ -7148,15 +7181,32 @@ async function runOne(q, apiKey){
   }
   q.prompt = opts.prompt;
   q.seed = body.parameters.seed;
-  // 라벨 결정: 시퀀셜 블록 라벨 > 사용자 입력한 이미지 이름
-  if(!q.label){
-    const userLabel = ($('imgLabel')?.value || '').trim();
-    if(userLabel) q.label = userLabel;
-  }
   // 활성 캐릭터 이름 (이름 있는 것만) — 갤러리 앨범 그룹화에 사용
   const charNames = (state.characters||[])
     .filter(c => c.enabled && (c.name||'').trim() && (c.prompt||'').trim())
     .map(c => c.name.trim());
+  // 라벨 결정 우선순위:
+  //   1) 시퀀셜 블록 라벨(_fromSeqBlock=true) → 의미있는 이름이므로 보존 (단, imgLabel과 결합)
+  //   2) 사용자가 imgLabel 입력 → 그대로 사용
+  //   3) 활성 캐릭터 프리셋 있으면 → "{이름}#{N}" 자동
+  //   4) 위 조건 모두 미충족 → 큐 인덱스("1","2"…) 유지
+  if(!q._labelFinalized){
+    const userLabel = ($('imgLabel')?.value || '').trim();
+    if(q._fromSeqBlock){
+      if(userLabel) q.label = `${userLabel}_${q.label}`;
+      q._labelIsName = true;
+    } else if(userLabel){
+      q.label = userLabel;
+      q._labelIsName = true;
+    } else if(charNames.length){
+      const primary = charNames[0];
+      if(!state._autoLabelCounters) state._autoLabelCounters = {};
+      state._autoLabelCounters[primary] = (state._autoLabelCounters[primary] || 0) + 1;
+      q.label = `${primary}#${state._autoLabelCounters[primary]}`;
+      q._labelIsName = true;
+    }
+    q._labelFinalized = true;
+  }
   q.meta = {
     prompt: opts.prompt, neg: opts.neg, model: opts.model,
     seed: q.seed, steps: opts.steps, cfg: opts.cfg, sampler: opts.sampler,
@@ -8732,29 +8782,46 @@ async function runDirector(apiKey){
 }
 
 function makeFilename(q){
-  const pattern = ($('fnamePattern')?.value || '').trim();
-  if(!pattern) return `nai_${Date.now()}.png`;
-  const now = new Date();
-  const pad = n => String(n).padStart(2,'0');
-  const date = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}`;
-  const time = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-  const m = q.meta || {};
-  const model = (m.model||'').replace('nai-diffusion-','v').replace('-full','f').replace('-curated','c').replace('-preview','').replace('-inpainting','+inp') || 'unk';
-  const promptStart = (m.prompt||'').slice(0,80).replace(/[\s,]+/g,'_').replace(/[^a-zA-Z0-9가-힣_-]/g,'').slice(0,40);
-  const idx = String((state.queueIdx||0)+1).padStart(3,'0');
   const safe = s => String(s||'').replace(/[\\\/:*?"<>|]/g,'_').slice(0,80);
-  let out = pattern
-    .replaceAll('{seed}', safe(q.seed ?? 'noseed'))
-    .replaceAll('{model}', safe(model))
-    .replaceAll('{date}', date)
-    .replaceAll('{time}', time)
-    .replaceAll('{index}', idx)
-    .replaceAll('{label}', safe(q.label || ''))
-    .replaceAll('{prompt}', safe(promptStart));
-  out = out.replace(/[\\\/:*?"<>|]/g,'_').replace(/_+/g,'_').replace(/^_+|_+$/g,'');
-  if(!out) out = 'nai_'+Date.now();
-  if(!/\.(png|jpe?g)$/i.test(out)) out += '.png';
-  return out;
+  const defaultName = () => `nai_${Date.now()}.png`;
+  try {
+    const pattern = ($('fnamePattern')?.value || '').trim();
+    // 📁 라벨 우선 — 패턴이 비어있고 의미있는 라벨이면 라벨로 파일명
+    //    (의미있음 = userLabel 입력 또는 캐릭터 프리셋 자동 라벨; 단순 큐 인덱스는 제외)
+    if(!pattern){
+      if(q._labelIsName && q.label){
+        let out = safe(q.label).replace(/_+/g,'_').replace(/^_+|_+$/g,'');
+        if(out){
+          if(!/\.(png|jpe?g)$/i.test(out)) out += '.png';
+          return out;
+        }
+      }
+      return defaultName();
+    }
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const date = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}`;
+    const time = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const m = q.meta || {};
+    const model = (m.model||'').replace('nai-diffusion-','v').replace('-full','f').replace('-curated','c').replace('-preview','').replace('-inpainting','+inp') || 'unk';
+    const promptStart = (m.prompt||'').slice(0,80).replace(/[\s,]+/g,'_').replace(/[^a-zA-Z0-9가-힣_-]/g,'').slice(0,40);
+    const idx = String((state.queueIdx||0)+1).padStart(3,'0');
+    let out = pattern
+      .replaceAll('{seed}', safe(q.seed ?? 'noseed'))
+      .replaceAll('{model}', safe(model))
+      .replaceAll('{date}', date)
+      .replaceAll('{time}', time)
+      .replaceAll('{index}', idx)
+      .replaceAll('{label}', safe(q.label || ''))
+      .replaceAll('{prompt}', safe(promptStart));
+    out = out.replace(/[\\\/:*?"<>|]/g,'_').replace(/_+/g,'_').replace(/^_+|_+$/g,'');
+    if(!out) return defaultName();
+    if(!/\.(png|jpe?g)$/i.test(out)) out += '.png';
+    return out;
+  } catch(_){
+    // 🛡 어떤 이유로든 파일명 생성 실패 시 안전한 기본값
+    return defaultName();
+  }
 }
 
 async function afterImage(blob, q){
@@ -8770,6 +8837,11 @@ async function afterImage(blob, q){
   const fname = makeFilename(q);
   const label = q.label || '';
   const prompt = q.meta?.prompt || '';
+  // 🎴 캐릭터 IP별 자동 분류 모드 — 저장 직전 매번 적절한 세션으로 전환
+  if($('targetSession')?.value === 'auto-ip'){
+    const primary = (q.meta?.characters || [])[0];
+    if(primary){ try { await ensureIpSessionForChar(primary); } catch(_){} }
+  }
   const id = await DB.saveImage(blob, fname, label, prompt, q.meta);
   // 📂 출력 폴더가 설정돼 있으면 파일로도 저장
   if(state.outputDirHandle){
