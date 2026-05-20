@@ -3854,7 +3854,9 @@ async function naiUpscale(apiKey, opts){
     width: opts.width,
     height: opts.height,
   };
-  const resp = await fetch(NAI_API_BASE + '/ai/upscale', {
+  // image.novelai.net 우선 (CORS 허용) → 실패 시 api.novelai.net으로 폴백
+  // NAI는 두 도메인에서 동일 엔드포인트 지원하지만 api.* 는 CORS 차단되어 fetch 실패
+  const tryFetch = async (base) => fetch(base + '/ai/upscale', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -3863,6 +3865,14 @@ async function naiUpscale(apiKey, opts){
     },
     body: JSON.stringify(body)
   });
+  let resp;
+  try {
+    resp = await tryFetch(NAI_BASE);
+  } catch(e){
+    // image.novelai.net에서 네트워크 실패 → api.novelai.net 폴백
+    console.warn('[upscale] image.novelai.net 실패, api 폴백:', e?.message);
+    resp = await tryFetch(NAI_API_BASE);
+  }
   if(!resp.ok){
     let detail = '';
     try { const t = await resp.text(); const j = JSON.parse(t); detail = j.message || j.error || t.slice(0,120); } catch(e){}
