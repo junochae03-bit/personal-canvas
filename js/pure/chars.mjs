@@ -22,11 +22,13 @@ export function getCharGroup(name){
 }
 
 /**
- * 캐릭터 목록을 작품별로 묶음. 3명 미만 그룹은 "기타"로 통합.
+ * 캐릭터 목록을 작품별로 묶음. minSize 미만 그룹은 "기타"로 통합.
+ * 기본 minSize=3 (작품 단위 묶음). 비-캐릭터 카테고리에선 더 작게(2 등) 호출 가능.
  * 그룹 정렬: 항목수 내림차순, 동률 시 한글 가나다순. "기타"는 항상 마지막.
  * 그룹 내부: 이름순.
  */
-export function groupCharsByWork(list){
+export function groupCharsByWork(list, minSize){
+  const threshold = (typeof minSize === 'number' && minSize >= 1) ? minSize : MIN_GROUP_SIZE;
   const map = new Map();
   for(const p of list){
     const g = getCharGroup(p.name);
@@ -36,7 +38,7 @@ export function groupCharsByWork(list){
   const misc = map.get(MISC) || [];
   for(const [g, items] of [...map.entries()]){
     if(g === MISC) continue;
-    if(items.length < MIN_GROUP_SIZE){
+    if(items.length < threshold){
       misc.push(...items);
       map.delete(g);
     }

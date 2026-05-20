@@ -4518,7 +4518,8 @@ function renderCharPickSubgroups(){
   }
   const list = state.presets[_cpCat] || [];
   if(!list.length){ wrap.innerHTML = ''; wrap.style.display = 'none'; return; }
-  const groups = groupCharsByWork(list);
+  const minSize = (_cpCat === 'character') ? 3 : NON_CHAR_GROUP_MINSIZE;
+  const groups = groupCharsByWork(list, minSize);
   if(groups.length <= 1){ wrap.innerHTML = ''; wrap.style.display = 'none'; return; }
   wrap.style.display = '';
   const chips = [{id:'', label:'전체', cnt: list.length, isAll:true}];
@@ -4568,9 +4569,10 @@ function renderCharPickList(){
     const filtered = q ? list.filter(p => (p.name + ' ' + (p.text||'')).toLowerCase().includes(q)) : list;
     if(!filtered.length) continue;
     parts.push(`<div class="cp-list-grp">${def.ico} ${esc(def.label)} 프리셋 <span style="font-weight:400;color:var(--t3);font-size:11px;margin-left:auto;font-family:var(--mono)">${filtered.length} / ${list.length}</span></div>`);
-    // 그룹화 지원 카테고리(의상·상황·인원 등)는 작품/시리즈별로 또 묶음
+    // 그룹화 지원 카테고리(모든 카테고리) — 작품/prefix별로 또 묶음
     if(GROUPABLE_PRESET_TYPES.has(pcat)){
-      const groups = groupCharsByWork(filtered);
+      const minSize = (pcat === 'character') ? 3 : NON_CHAR_GROUP_MINSIZE;
+      const groups = groupCharsByWork(filtered, minSize);
       for(const g of groups){
         // 검색 중이거나 그룹이 1개뿐이면 서브헤더 생략 (잡음 줄이기)
         const showSub = !q && groups.length > 1;
@@ -4853,19 +4855,24 @@ function getCharGroup(name){
 }
 
 // 그룹 표시를 지원하는 프리셋 카테고리 — 의상/상황/인원·성별도 같은 prefix 규칙으로 묶음
-const GROUPABLE_PRESET_TYPES = new Set(['character', 'outfit', 'situation', 'people']);
+// 모든 프리셋 카테고리에서 prefix(이름의 첫 _ 앞 토큰)별 그룹화 활성
+// 캐릭터는 minSize=3(작품 단위), 그 외는 minSize=2(prefix별 세분화) — renderPresets/renderCharPickList에서 분기
+const GROUPABLE_PRESET_TYPES = new Set(PRESET_TYPES.map(t => t.id));
+// 비-캐릭터 카테고리에서 group 임계치 — 2개 이상 모이면 별도 그룹
+const NON_CHAR_GROUP_MINSIZE = 2;
 
 // 그룹별로 묶고, 그룹은 항목수 내림차순(기타는 항상 마지막)으로 정렬
-// 3명 미만 그룹은 "기타"로 통합 — 의미있는 작품 묶음만 별도 표시
-function groupCharsByWork(list){
-  const MIN_GROUP_SIZE = 3;
+// minSize 미만 그룹은 "기타"로 통합 — 의미있는 묶음만 별도 표시
+//   character는 기본 3 (작품 단위 묶음), 그 외 카테고리는 더 작게(2) 호출해 prefix별 세분화
+function groupCharsByWork(list, minSize){
+  const MIN_GROUP_SIZE = (typeof minSize === 'number' && minSize >= 1) ? minSize : 3;
   const map = new Map();
   for(const p of list){
     const g = getCharGroup(p.name);
     if(!map.has(g)) map.set(g, []);
     map.get(g).push(p);
   }
-  // 3명 미만 그룹은 기타로 흡수
+  // 임계치 미만 그룹은 기타로 흡수
   const misc = map.get('기타') || [];
   for(const [g, items] of [...map.entries()]){
     if(g === '기타') continue;
@@ -5116,7 +5123,8 @@ function togglePresetGroupsCollapseAll(){
   const type = state.presetType;
   if(!GROUPABLE_PRESET_TYPES.has(type)) return;
   const list = state.presets[type] || [];
-  const groups = groupCharsByWork(list);
+  const minSize = (type === 'character') ? 3 : NON_CHAR_GROUP_MINSIZE;
+  const groups = groupCharsByWork(list, minSize);
   const allKeys = groups.map(g => `g:${type}:${g.group}`);
   const allCollapsed = allKeys.length > 0 && allKeys.every(k => _collapsedPresetGroups.has(k));
   if(allCollapsed){
@@ -5187,9 +5195,11 @@ function renderPresets(){
       </div>`;
   };
 
-  // 그룹화 지원 카테고리(캐릭터·의상·상황·인원·성별) — 이름 prefix로 자동 묶음
+  // 그룹화 — 모든 카테고리에서 이름 prefix(첫 _ 앞 토큰)로 자동 묶음
+  //   캐릭터: minSize=3 (작품 단위), 그 외: minSize=2 (사용자가 정리한 prefix별 세분화)
   if(GROUPABLE_PRESET_TYPES.has(type) && list.length > 0){
-    const groups = groupCharsByWork(list);
+    const minSize = (type === 'character') ? 3 : NON_CHAR_GROUP_MINSIZE;
+    const groups = groupCharsByWork(list, minSize);
     const renameTitle = type === 'character'
       ? '작품명 일괄 수정 — 이 그룹의 모든 캐릭터 이름 prefix가 함께 바뀝니다'
       : `그룹명 일괄 수정 — 이 그룹의 모든 ${def.label||'프리셋'} 이름 prefix가 함께 바뀝니다`;
@@ -8230,8 +8240,9 @@ function pgRenderSceneSubGroupChips(){
   }
   const list = state.presets[cat] || [];
   if(!list.length){ wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
-  // groupCharsByWork 규칙으로 작품 묶기
-  const groups = groupCharsByWork(list);
+  // groupCharsByWork 규칙으로 prefix 묶기 (캐릭터는 minSize=3, 나머지는 2)
+  const minSize = (cat === 'character') ? 3 : NON_CHAR_GROUP_MINSIZE;
+  const groups = groupCharsByWork(list, minSize);
   if(groups.length <= 1){ wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
   wrap.style.display = '';
   const chips = [{id:'', label:'전체', cnt: list.length, isAll:true}];
@@ -12494,12 +12505,8 @@ function wireGenerationAndPresetEvents(){
       ? '⤡ 전체 접기 <span class="en">Collapse All</span>'
       : '⤢ 전체 펼침 <span class="en">Expand All</span>';
   });
-  // 📚 그룹 일괄 접기/펼치기 — 캐릭터·의상·상황·인원에서 모두 지원
+  // 📚 그룹 일괄 접기/펼치기 — 모든 카테고리에서 prefix 그룹 지원
   $('presetGroupsToggle').addEventListener('click', () => {
-    if(!GROUPABLE_PRESET_TYPES.has(state.presetType)){
-      toast('그룹은 캐릭터·의상·상황·인원 카테고리에서만 표시됩니다', 'info');
-      return;
-    }
     togglePresetGroupsCollapseAll();
   });
   $('autoClassifyBtn').addEventListener('click', autoClassifyByPrefix);
