@@ -1808,6 +1808,17 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <div class="main-pane" data-pane="templates">
         <div class="tpl-body">
           <div class="set-card">
+            <h3>🪄 자연어 → 템플릿 <span class="en">Natural Language</span></h3>
+            <div style="font-size:11.5px;color:var(--t3);margin-bottom:6px;line-height:1.5">
+              자연어로 문장을 입력하면 그 문장에 해당하는 프리셋을 자동으로 매칭해서 조합을 만듭니다.<br>
+              예: "유니가 카페에서 책을 읽음", "푸리나 의상 OL정장 포즈 달리기"
+            </div>
+            <div style="display:flex;gap:6px;align-items:stretch">
+              <textarea id="tplNlInput" class="ta tiny" placeholder="문장 입력…" style="flex:1;min-height:54px;font-size:13px"></textarea>
+              <button class="btn ghost" id="tplNlBtn" type="button" title="문장 분석 → 매칭되는 프리셋을 현재 조합에 채움" style="padding:8px 12px;font-size:13px;border-color:rgba(58,99,152,.4);color:var(--blue);flex-shrink:0">🪄 분석</button>
+            </div>
+          </div>
+          <div class="set-card">
             <h3>🎨 템플릿 — 프리셋 랜덤 조합 <span class="en">Templates</span></h3>
             <div style="font-size:12px;color:var(--t3);margin-bottom:10px;line-height:1.55">
               체크한 카테고리에서 랜덤 1개씩 골라서 조합을 만듭니다. 마음에 들면 적용해서 즉시 생성하거나, 이름 붙여 저장하세요.
@@ -9893,6 +9904,90 @@ function tplRenderCatChips(){
   }).filter(Boolean).join('');
 }
 
+// 🪄 자연어 문장 → 프리셋 자동 매칭 (현재 조합에 채움)
+// 알고리즘: 한글 조사 제거 → 토큰 분리 → 각 카테고리에서 이름·내용 매치 점수 최고 1개 픽
+const _TPL_KO_PARTICLE_RE = /(?:이가|는것|이라고|라고|이라|이|가|은|는|을|를|에서|에게|에|의|로|으로|와|과|도|만|뿐|라|함|한다|했다|해|하는|중|중인|중이|중에|에는|에도|에서는|로는|으로는|입니다|이다|예요|이에요)$/;
+
+function tplExtractTokens(text){
+  if(!text) return [];
+  // 구두점·공백으로 분리 → 한글 조사 제거 → 2자 이상만
+  return text.split(/[\s,.!?…\(\)\[\]\-—~"'、。··]+/)
+    .map(t => t.trim())
+    .filter(Boolean)
+    .map(t => {
+      // 반복적으로 조사 제거 (예: "유니가는" → "유니가" → "유니")
+      let s = t;
+      for(let i = 0; i < 3; i++){
+        const next = s.replace(_TPL_KO_PARTICLE_RE, '');
+        if(next === s) break;
+        s = next;
+      }
+      return s.trim();
+    })
+    .filter(t => t.length >= 2);
+}
+
+function tplMatchFromText(text){
+  const tokens = tplExtractTokens(text);
+  if(!tokens.length) return {found:[], tokens:[]};
+  const tokensLow = tokens.map(t => t.toLowerCase());
+  const categories = ['character','outfit','pose','expression','situation','people','background','composition','mood','style'];
+  const found = [];
+  for(const cat of categories){
+    const list = state.presets[cat] || [];
+    if(!list.length) continue;
+    let best = null;
+    let bestScore = 0;
+    let bestTok = '';
+    for(const p of list){
+      const nameLow = (p.name||'').toLowerCase();
+      if(!nameLow) continue;
+      // prefix 제거 — "캐릭터_유니" → "유니", "[원신] 푸리나" → "푸리나"
+      const nameStrip = nameLow.replace(/^[가-힣A-Za-z]+_/, '').replace(/^\[[^\]]+\]\s*/, '');
+      const ptextLow = (p.text||'').toLowerCase();
+      let score = 0;
+      let hitTok = '';
+      for(let i = 0; i < tokensLow.length; i++){
+        const tl = tokensLow[i];
+        if(tl.length < 2) continue;
+        // 이름 매치 — 가장 강함
+        if(nameStrip === tl){ score += 30; hitTok = tokens[i]; }       // 완전 일치
+        else if(nameStrip.includes(tl) || tl.includes(nameStrip)){ score += 15; hitTok = tokens[i]; }  // 부분 일치 (이름)
+        else if(nameLow.includes(tl)){ score += 10; hitTok = tokens[i]; }  // prefix 포함 매치
+        else if(ptextLow && ptextLow.includes(tl) && tl.length >= 3){ score += 2; }  // 내용 매치 — 약함
+      }
+      if(score > bestScore){
+        bestScore = score;
+        best = p;
+        bestTok = hitTok;
+      }
+    }
+    if(best && bestScore >= 10){  // 최소 이름 매치 1번
+      found.push({cat, preset: best, score: bestScore, token: bestTok});
+    }
+  }
+  return {found, tokens};
+}
+
+function tplApplyNaturalLanguage(){
+  const input = ($('tplNlInput')?.value || '').trim();
+  if(!input){ toast('문장을 입력하세요', 'warning'); $('tplNlInput')?.focus(); return; }
+  const {found, tokens} = tplMatchFromText(input);
+  if(!tokens.length){
+    toast('의미 있는 단어를 찾지 못했어요 (조사 제거 후 비었음)', 'warning');
+    return;
+  }
+  if(!found.length){
+    toast(`🤷 매칭되는 프리셋 없음 — 토큰: ${tokens.slice(0,5).join(', ')}${tokens.length>5?'…':''}`, 'warning');
+    return;
+  }
+  // 현재 조합을 매칭 결과로 교체
+  _tplCurrentRoll = found.map(f => ({cat: f.cat, preset: f.preset}));
+  tplRenderRoll();
+  const names = found.map(f => `${f.preset.name||'?'}`).slice(0, 4).join(', ');
+  toast(`🪄 ${found.length}개 매칭: ${names}${found.length>4?'…':''}`, 'success');
+}
+
 function tplRoll(){
   _tplCurrentRoll = [];
   for(const cid of TPL_AVAILABLE_CATS){
@@ -12830,6 +12925,11 @@ function wireMiscEvents(){
     if(_tplActiveCats.has(cat)) _tplActiveCats.delete(cat);
     else _tplActiveCats.add(cat);
     tplRenderCatChips();
+  });
+  $('tplNlBtn')?.addEventListener('click', tplApplyNaturalLanguage);
+  $('tplNlInput')?.addEventListener('keydown', e => {
+    // Ctrl+Enter or Cmd+Enter → 분석 (Enter 단독은 줄바꿈)
+    if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){ e.preventDefault(); tplApplyNaturalLanguage(); }
   });
   $('tplRollBtn')?.addEventListener('click', tplRoll);
   $('tplApplyBtn')?.addEventListener('click', tplApplyRoll);
