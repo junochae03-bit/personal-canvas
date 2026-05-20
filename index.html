@@ -504,7 +504,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 /* 🎨 템플릿 페인 */
 .tpl-body{padding:14px 18px;max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 @media (max-width:600px){
-  .tpl-body{padding:8px 8px;gap:8px}
+  .tpl-body{padding:8px 8px 90px;gap:8px}
   .tpl-body .set-card{padding:10px 10px}
   .tpl-body .set-card h3{font-size:13px}
   .tpl-cat-chip{padding:4px 8px !important;font-size:11px !important}
@@ -1812,13 +1812,22 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
               <div class="label">사용할 카테고리 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Sources</span></div>
               <div id="tplCatChips" style="display:flex;flex-wrap:wrap;gap:6px"></div>
             </div>
-            <div class="set-row" style="margin-top:10px">
-              <button class="btn primary" id="tplRollBtn" type="button" style="flex:1;padding:11px;font-size:14px">🎲 랜덤 조합 생성 <span class="en">Roll</span></button>
-              <button class="btn ghost" id="tplApplyBtn" type="button" title="현재 조합을 메인 폼에 적용 (프롬프트·캐릭터 슬롯 채움)" style="flex:1;padding:11px;font-size:13px;border-color:rgba(58,99,152,.4);color:var(--blue)">✅ 폼에 적용</button>
+            <div class="set-row" style="margin-top:10px;flex-direction:column;align-items:stretch;gap:8px">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:4px 8px;background:var(--card);border:1.5px solid var(--b1);border-radius:5px">
+                <span style="font-size:11.5px;color:var(--t3);font-weight:600">적용 방식:</span>
+                <label class="chk" style="font-size:12px" title="첫 캐릭터 슬롯의 액션·의상에 콤마로 이어 붙임 (기존 내용 유지)"><input type="radio" name="tplApplyMode" value="merge" checked>＋ 병합</label>
+                <label class="chk" style="font-size:12px" title="첫 캐릭터 슬롯의 액션·의상을 통째로 교체 (기존 내용 덮어씀)"><input type="radio" name="tplApplyMode" value="replace">↻ 변경</label>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button class="btn primary" id="tplRollBtn" type="button" style="flex:1;padding:11px;font-size:14px">🎲 랜덤 조합 생성 <span class="en">Roll</span></button>
+                <button class="btn ghost" id="tplApplyBtn" type="button" title="현재 조합을 메인 폼에 적용 (위 적용 방식대로)" style="flex:1;padding:11px;font-size:13px;border-color:rgba(58,99,152,.4);color:var(--blue)">✅ 폼에 적용</button>
+              </div>
             </div>
           </div>
           <div class="set-card">
-            <h3>현재 조합 <span class="en">Current Roll</span> <span id="tplRollStatus" style="font-size:11px;color:var(--t3);font-weight:500;margin-left:6px"></span></h3>
+            <h3>현재 조합 <span class="en">Current Roll</span> <span id="tplRollStatus" style="font-size:11px;color:var(--t3);font-weight:500;margin-left:6px"></span>
+              <button class="btn ghost" id="tplAddCharSlotBtn" type="button" title="메인 폼에 빈 캐릭터 슬롯 1개 추가" style="float:right;padding:4px 9px;font-size:11.5px;border-color:rgba(58,99,152,.4);color:var(--blue)">➕ 캐릭터 슬롯 추가</button>
+            </h3>
             <div id="tplRollList" style="display:flex;flex-direction:column;gap:6px"></div>
             <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
               <input id="tplSaveName" class="inp" placeholder="이름 (비우면 캐릭터·의상에서 자동 추출 예: 아이마스_미키 의상_서큐버스)" style="flex:1;min-width:120px;font-size:13px">
@@ -9928,6 +9937,8 @@ function tplRenderRoll(){
 // 현재 조합을 메인 폼에 적용
 function tplApplyRoll(){
   if(!_tplCurrentRoll.length){ toast('조합이 비어있습니다 — 먼저 🎲 랜덤 생성', 'warning'); return; }
+  // 적용 방식: 'merge' (콤마로 추가) / 'replace' (action 통째 교체)
+  const applyMode = document.querySelector('input[name="tplApplyMode"]:checked')?.value || 'merge';
   // 1) character 항목 먼저 — 새 캐릭터 슬롯 추가
   const charRolls = _tplCurrentRoll.filter(r => r.cat === 'character');
   const otherRolls = _tplCurrentRoll.filter(r => r.cat !== 'character');
@@ -9942,8 +9953,8 @@ function tplApplyRoll(){
   }
   if(charRolls.length && typeof renderCharacters === 'function') renderCharacters();
 
-  // 2) 나머지 모든 카테고리(의상·포즈·표정·상황·배경·구도·분위기·인원·스타일)
-  //    → 첫 번째 활성 캐릭터의 액션·의상·자세 슬롯에 콤마로 append
+  // 2) 나머지 카테고리 → 첫 번째 활성 캐릭터의 액션·의상·자세 슬롯에
+  //    병합: 콤마로 append / 변경: 통째 교체
   const appendParts = otherRolls.map(r => (r.preset.text || '').trim()).filter(Boolean);
   if(appendParts.length){
     const targetIdx = (state.characters || []).findIndex(c => c.enabled !== false);
@@ -9951,11 +9962,10 @@ function tplApplyRoll(){
       const c = state.characters[targetIdx];
       const cur = (c.action || '').trim();
       const add = appendParts.join(', ');
-      c.action = cur ? `${cur}, ${add}` : add;
+      c.action = (applyMode === 'replace') ? add : (cur ? `${cur}, ${add}` : add);
       const ta = $('charList')?.querySelector(`textarea[data-act="action"][data-idx="${targetIdx}"]`);
       if(ta) ta.value = c.action;
     } else {
-      // 캐릭터 슬롯 없음 — 메인 프롬프트 fallback (안전망)
       if($('prompt')?.readOnly){
         toast('캐릭터 슬롯 없음 + 프롬프트 잠김 — 일부 항목 적용 실패', 'warning');
       } else {
@@ -9965,7 +9975,8 @@ function tplApplyRoll(){
     }
   }
   saveSettingsDebounced();
-  toast(`✅ 템플릿 ${_tplCurrentRoll.length}개 적용 — 편집 탭에서 확인`, 'success');
+  const modeLbl = applyMode === 'replace' ? '변경' : '병합';
+  toast(`✅ 템플릿 ${_tplCurrentRoll.length}개 ${modeLbl} 적용 — 편집 탭에서 확인`, 'success');
   setMainPane('edit');
 }
 
@@ -12713,6 +12724,14 @@ function wireMiscEvents(){
   });
   $('tplRollBtn')?.addEventListener('click', tplRoll);
   $('tplApplyBtn')?.addEventListener('click', tplApplyRoll);
+  // ➕ 템플릿 페인 — 캐릭터 슬롯 직접 추가 (모바일에서 사이드바 안 거치고 빠르게)
+  $('tplAddCharSlotBtn')?.addEventListener('click', () => {
+    if((state.characters||[]).length >= 6){ toast('캐릭터 슬롯은 최대 6명까지', 'warning'); return; }
+    addCharacter({name:'', prompt:'', thumb:null});
+    if(typeof renderCharacters === 'function') renderCharacters();
+    saveSettingsDebounced();
+    toast(`➕ 빈 캐릭터 슬롯 추가됨 (#${state.characters.length}) — 편집 탭에서 채워주세요`, 'success');
+  });
   $('tplRollList')?.addEventListener('click', e => {
     const b = e.target.closest('[data-tpl-roll-act]');
     if(!b) return;
