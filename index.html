@@ -2837,34 +2837,61 @@ const THEMES = [
 //         char (add as character) | style (load full params)
 // ═══════════════════════════════════════════════════════════
 const PRESET_TYPES = [
-  {id:'prompt',     label:'프롬프트',    en:'Prompt',      ico:'📝', target:'prompt'},
-  {id:'negative',   label:'네거티브',    en:'Negative',    ico:'🚫', target:'negative'},
-  {id:'character',  label:'캐릭터',      en:'Character',   ico:'👤', target:'char'},
-  {id:'outfit',     label:'의상',        en:'Outfit',      ico:'👗', target:'char-action'},
-  {id:'pose',       label:'포즈',        en:'Pose',        ico:'🤸', target:'char-action'},
-  {id:'composition',label:'구도·앵글',   en:'Composition', ico:'🎬', target:'append'},
-  {id:'background', label:'배경',        en:'Background',  ico:'🏞️', target:'append'},
-  {id:'situation',  label:'상황',        en:'Situation',   ico:'🎭', target:'char-action'},
-  {id:'expression', label:'표정',        en:'Expression',  ico:'😊', target:'char-action'},
-  {id:'mood',       label:'분위기·조명', en:'Mood/Light',  ico:'✨', target:'append'},
-  {id:'people',     label:'인원·성별',   en:'People',      ico:'👥', target:'char-action'},
-  {id:'style',      label:'화풍·설정',   en:'Style',       ico:'🎨', target:'style'},
+  {id:'prompt',      label:'프롬프트',  en:'Prompt',       ico:'📝', target:'prompt'},
+  {id:'negative',    label:'네거티브',  en:'Negative',     ico:'🚫', target:'negative'},
+  {id:'style',       label:'화풍',      en:'Style',        ico:'🎨', target:'style'},
+  {id:'setting',     label:'설정',      en:'Setting',      ico:'⚙', target:'style'},
+  {id:'rating',      label:'수위',      en:'Rating',       ico:'🔥', target:'append'},
+  {id:'character',   label:'캐릭터',    en:'Character',    ico:'👤', target:'char'},
+  {id:'people',      label:'인원',      en:'People',       ico:'👥', target:'char-action'},
+  {id:'outfit',      label:'의상',      en:'Outfit',       ico:'👗', target:'char-action'},
+  {id:'fetish',      label:'페티쉬',    en:'Fetish',       ico:'🔗', target:'char-action'},
+  {id:'hair',        label:'헤어',      en:'Hair',         ico:'💇', target:'char-action'},
+  {id:'situation',   label:'상황',      en:'Situation',    ico:'🎭', target:'char-action'},
+  {id:'composition', label:'구도·앵글', en:'Composition',  ico:'🎬', target:'append'},
+  {id:'masturbation',label:'자위',      en:'Masturbation', ico:'🍑', target:'char-action'},
+  {id:'exposure',    label:'노출',      en:'Exposure',     ico:'💋', target:'char-action'},
+  {id:'yuri',        label:'백합',      en:'Yuri',         ico:'🌸', target:'char-action'},
+  {id:'combo',       label:'콤보',      en:'Combo',        ico:'🔀', target:'char-action'},
+  {id:'state',       label:'상태',      en:'State',        ico:'💗', target:'char-action'},
+  {id:'expression',  label:'표정',      en:'Expression',   ico:'😊', target:'char-action'},
+  {id:'gender',      label:'남녀',      en:'Gender',       ico:'⚥', target:'char-action'},
+  {id:'harem',       label:'하렘',      en:'Harem',        ico:'💞', target:'char-action'},
+  {id:'background',  label:'배경',      en:'Background',   ico:'🏞', target:'append'},
+  {id:'pose',        label:'포즈',      en:'Pose',         ico:'🤸', target:'char-action'},
+  {id:'mood',        label:'분위기',    en:'Mood',         ico:'✨', target:'append'},
+  {id:'lighting',    label:'조명',      en:'Lighting',     ico:'💡', target:'append'},
 ];
 
 // 한국어 이름 접두사 → 카테고리 매핑 (자동 분류용)
 const PREFIX_TO_TYPE = {
-  '의상':'outfit','옷':'outfit','복장':'outfit','코디':'outfit','페티쉬':'outfit','페티시':'outfit','헤어':'outfit','머리':'outfit',
-  '상황':'situation','시츄':'situation','시추':'situation','노출':'situation','백합':'situation','자위':'situation','수위':'situation','콤보':'situation','씬':'situation',
-  '배경':'background','장소':'background','로케':'background',
-  '포즈':'pose','자세':'pose','동작':'pose','액션':'pose',
-  '구도':'composition','앵글':'composition','샷':'composition','포커스':'composition','클로즈업':'composition',
-  '남녀':'people','커플':'people','인원':'people','성별':'people','다인':'people','하렘':'people','다수':'people','그룹':'people',
-  '표정':'expression','얼굴':'expression','감정':'expression','상태':'expression',
-  '분위기':'mood','조명':'mood','광원':'mood','라이팅':'mood','톤':'mood','색감':'mood',
-  '화풍':'style','스타일':'style','풍':'style','tone':'style',
-  '캐릭터':'character','인물':'character','캐':'character',
+  // 글로벌
   '프롬프트':'prompt','prompt':'prompt',
   '네거티브':'negative','neg':'negative','negative':'negative',
+  '화풍':'style','스타일':'style','풍':'style','tone':'style',
+  '설정':'setting',
+  '수위':'rating','등급':'rating','rating':'rating',
+  // 캐릭터 관련
+  '캐릭터':'character','인물':'character','캐':'character',
+  '인원':'people','다인':'people','다수':'people','그룹':'people','커플':'people',
+  '의상':'outfit','옷':'outfit','복장':'outfit','코디':'outfit',
+  '페티쉬':'fetish','페티시':'fetish',
+  '헤어':'hair','머리':'hair',
+  '상황':'situation','시츄':'situation','시추':'situation','씬':'situation',
+  '자위':'masturbation',
+  '노출':'exposure',
+  '백합':'yuri',
+  '콤보':'combo',
+  '상태':'state',
+  '표정':'expression','얼굴':'expression','감정':'expression',
+  '남녀':'gender','성별':'gender',
+  '하렘':'harem',
+  '포즈':'pose','자세':'pose','동작':'pose','액션':'pose',
+  // 환경·구도
+  '구도':'composition','앵글':'composition','샷':'composition','포커스':'composition','클로즈업':'composition',
+  '배경':'background','장소':'background','로케':'background',
+  '분위기':'mood','톤':'mood','색감':'mood',
+  '조명':'lighting','광원':'lighting','라이팅':'lighting',
 };
 function detectTypeByName(name){
   if(!name) return null;
@@ -4488,7 +4515,8 @@ function removeCharActionTagAt(tagIdx){
 }
 
 function renderCharPickCats(){
-  const QUICK_CATS = ['outfit','pose','expression','situation','people'];
+  // 캐릭터 슬롯에 추가할 수 있는 모든 카테고리 (target=char-action)
+  const QUICK_CATS = PRESET_TYPES.filter(t => t.target === 'char-action').map(t => t.id);
   const items = [
     {id:'',          label:'전체',   ico:'✨', cnt: CHAR_ACTION_TAGS.length + QUICK_CATS.reduce((s,p) => s + (state.presets[p]||[]).length, 0)},
     {id:'action',    label:'액션',   ico:'🤝', cnt: CHAR_ACTION_TAGS.length},
@@ -4549,8 +4577,9 @@ function renderCharPickList(){
     }
   }
 
-  // 프리셋
-  const catsToShow = (cat === '' || cat === 'action') ? ['outfit','pose','expression','situation','people'] : (cat === 'action' ? [] : [cat]);
+  // 프리셋 — 전체 모드에선 char-action 카테고리만 표시 (외형 외 캐릭터 슬롯에 들어갈 수 있는 것들)
+  const allCharActionCats = PRESET_TYPES.filter(t => t.target === 'char-action').map(t => t.id);
+  const catsToShow = (cat === '' || cat === 'action') ? allCharActionCats : (cat === 'action' ? [] : [cat]);
   // 빠른 추가 모달 안의 서브그룹 렌더 — 한 카테고리(예: 의상)를 작품별로 묶음
   const renderCpItem = p => {
     const text = (p.text||'').replace(/\s+/g, ' ').trim();
@@ -7840,8 +7869,8 @@ function updateBgProgress(label, force){
 let _pgAbort = null;
 
 function pgAllScenes(){
-  // 시나리오로 쓸 만한 카테고리들 (외형이 아닌 것)
-  const cats = ['action','outfit','pose','expression','situation','background','composition','lighting','style'];
+  // 시나리오로 쓸 만한 카테고리들 (캐릭터/프롬프트/네거티브 제외 — 외형·동작·상황·조명·배경 등)
+  const cats = PRESET_TYPES.filter(t => !['character','prompt','negative'].includes(t.id)).map(t => t.id);
   const items = [];
   for(const cat of cats){
     const list = state.presets[cat] || [];
@@ -10033,7 +10062,7 @@ function setMode(mode){
 // ═══════════════════════════════════════════════════════════
 // 사용할 카테고리 — 기본값: 캐릭터·의상·포즈·표정·상황 (가장 흔한 5개)
 const TPL_DEFAULT_CATS = ['character','outfit','pose','expression','situation'];
-const TPL_AVAILABLE_CATS = ['character','outfit','pose','expression','situation','background','composition','mood','people','style'];
+const TPL_AVAILABLE_CATS = ['character','people','outfit','fetish','hair','situation','composition','masturbation','exposure','yuri','combo','state','expression','gender','harem','background','pose','mood','lighting','style','setting','rating'];
 let _tplActiveCats = new Set(TPL_DEFAULT_CATS);
 let _tplCurrentRoll = [];   // [{cat, preset:{name,text,thumb}}, ...]
 // 🔒 잠금된 카테고리 — 랜덤 조합 시 이 카테고리는 그대로 유지
@@ -10078,7 +10107,7 @@ function tplMatchFromText(text){
   const tokens = tplExtractTokens(text);
   if(!tokens.length) return {found:[], tokens:[]};
   const tokensLow = tokens.map(t => t.toLowerCase());
-  const categories = ['character','outfit','pose','expression','situation','people','background','composition','mood','style'];
+  const categories = TPL_AVAILABLE_CATS;
   const found = [];
   for(const cat of categories){
     const list = state.presets[cat] || [];
@@ -10342,7 +10371,7 @@ function tplApplyRoll(){
 function tplGenerateAutoName(){
   if(!_tplCurrentRoll.length) return '';
   // 캐릭터·의상 등 카테고리 우선순위 — 가장 식별성 높은 것부터
-  const priority = ['character','outfit','pose','expression','situation','people','background','composition','mood','style'];
+  const priority = TPL_AVAILABLE_CATS;
   const parts = priority
     .map(cat => _tplCurrentRoll.find(r => r.cat === cat))
     .filter(Boolean)
