@@ -10015,6 +10015,49 @@ function tplRemoveOne(cid){
   tplRenderRoll();
 }
 
+// ✏ 조합 항목의 텍스트를 임시 수정 — 원본 프리셋엔 영향 없음 (깊은 복사로 분리)
+function tplEditRollItem(cid){
+  const i = _tplCurrentRoll.findIndex(r => r.cat === cid);
+  if(i < 0) return;
+  const r = _tplCurrentRoll[i];
+  const def = PRESET_TYPES.find(t => t.id === cid) || {label:cid, ico:'•'};
+  // confirmModal에 큰 textarea
+  $('confirmTitle').innerHTML = `✏ 임시 수정 — ${def.ico} ${esc(def.label)} <span class="en" style="opacity:.6;font-weight:500;font-size:11.5px">원본 프리셋은 안 바뀝니다</span>`;
+  $('confirmBody').innerHTML = `
+    <div style="font-size:12px;color:var(--t2);margin-bottom:8px"><b style="color:var(--t1)">${esc(r.preset.name||'(이름 없음)')}</b> 의 텍스트만 이 조합에서 임시로 변경합니다.</div>
+    <textarea id="tplEditTa" class="ta" style="min-height:140px;font-family:var(--mono);font-size:12.5px;width:100%">${esc(r.preset.text||'')}</textarea>
+    <div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end">
+      <button class="btn ghost" id="tplEditReset" type="button" style="padding:6px 11px;font-size:12px">↺ 원본으로 되돌리기</button>
+      <button class="btn primary" id="tplEditSave" type="button" style="padding:6px 14px;font-size:13px">✅ 적용</button>
+    </div>`;
+  $('confirmOk').style.display = 'none';
+  $('confirmCancel').textContent = '취소';
+  $('confirmModal').classList.add('open');
+  setTimeout(() => $('tplEditTa')?.focus(), 50);
+  $('tplEditSave').onclick = () => {
+    const newText = ($('tplEditTa')?.value || '').trim();
+    // 원본 보호 — 깊은 복사로 preset 객체 분리
+    _tplCurrentRoll[i] = {cat: cid, preset: {...r.preset, text: newText, _edited: true}};
+    tplRenderRoll();
+    $('confirmModal').classList.remove('open');
+    $('confirmOk').style.display = '';
+    toast(`✏ ${def.label} 임시 수정됨 (원본 프리셋은 그대로)`, 'success');
+  };
+  $('tplEditReset').onclick = () => {
+    // 원본 프리셋에서 다시 가져옴
+    const orig = (state.presets[cid] || []).find(p => p.name === r.preset.name);
+    if(orig){
+      _tplCurrentRoll[i] = {cat: cid, preset: orig};
+      tplRenderRoll();
+      $('confirmModal').classList.remove('open');
+      $('confirmOk').style.display = '';
+      toast('↺ 원본 텍스트로 되돌림', 'info');
+    } else {
+      toast('원본 프리셋을 찾을 수 없음 (삭제됐을 수 있음)', 'warning');
+    }
+  };
+}
+
 function tplRenderRoll(){
   const wrap = $('tplRollList');
   if(!wrap) return;
@@ -10035,6 +10078,7 @@ function tplRenderRoll(){
         ${sub ? `<div class="tri-text">${esc(sub)}</div>` : ''}
       </div>
       <div class="tri-act">
+        <button type="button" data-tpl-roll-act="edit" data-cat="${esc(r.cat)}" title="이 항목 텍스트만 임시 수정 (원본 프리셋은 그대로)">✏</button>
         <button type="button" data-tpl-roll-act="reroll" data-cat="${esc(r.cat)}" title="이 항목만 다시 랜덤">🎲</button>
         <button type="button" data-tpl-roll-act="remove" data-cat="${esc(r.cat)}" title="이 항목 빼기">✕</button>
       </div>
@@ -10046,11 +10090,57 @@ function tplRenderRoll(){
 // 현재 조합을 메인 폼에 적용
 function tplApplyRoll(){
   if(!_tplCurrentRoll.length){ toast('조합이 비어있습니다 — 먼저 🎲 랜덤 생성', 'warning'); return; }
-  // 적용 방식: 'merge' (콤마로 추가) / 'replace' (action 통째 교체)
   const applyMode = document.querySelector('input[name="tplApplyMode"]:checked')?.value || 'merge';
-  // 1) character 항목 먼저 — 새 캐릭터 슬롯 추가
   const charRolls = _tplCurrentRoll.filter(r => r.cat === 'character');
   const otherRolls = _tplCurrentRoll.filter(r => r.cat !== 'character');
+
+  if(applyMode === 'replace'){
+    // ↻ 변경 모드 — 첫 활성 캐릭터 슬롯을 통째로 교체 (이름·외형·액션·의상 모두)
+    // 캐릭터 슬롯이 없으면 새로 추가, 있으면 첫 활성 슬롯 덮어씀
+    const enabledIdx = (state.characters || []).findIndex(c => c.enabled !== false);
+    const newAction = otherRolls.map(r => (r.preset.text||'').trim()).filter(Boolean).join(', ');
+    const charPick = charRolls[0];  // 첫 character 항목만 사용 (여러 개면 첫 번째)
+    if(charPick){
+      const p = charPick.preset;
+      const derivedAppearance = [p.appearance, p.action].map(s=>(s||'').trim()).filter(Boolean).join(', ') || (p.text || p.prompt || '');
+      if(enabledIdx >= 0){
+        // 기존 첫 활성 슬롯 덮어쓰기
+        const c = state.characters[enabledIdx];
+        c.name = p.name || '';
+        c.appearance = derivedAppearance;
+        c.action = newAction;
+        c.neg = '';
+        // 풀(pool) 정보 초기화
+        c.pool = null;
+        c.poolIdx = 0;
+      } else {
+        addCharacter({name: p.name || '', prompt: derivedAppearance, thumb: p.thumb || null});
+        const last = state.characters.length - 1;
+        if(last >= 0) state.characters[last].action = newAction;
+      }
+      // 나머지 캐릭터 항목들은 새 슬롯으로 추가 (각자)
+      for(let i = 1; i < charRolls.length; i++){
+        const r = charRolls[i];
+        const p2 = r.preset;
+        const der = [p2.appearance, p2.action].map(s=>(s||'').trim()).filter(Boolean).join(', ');
+        addCharacter({name: p2.name || '', prompt: der || (p2.text || p2.prompt || ''), thumb: p2.thumb || null});
+      }
+    } else {
+      // character 항목 없음 — 첫 활성 슬롯의 action만 통째 교체
+      if(enabledIdx >= 0){
+        state.characters[enabledIdx].action = newAction;
+      } else if(newAction && !$('prompt')?.readOnly){
+        appendToTextarea('prompt', newAction);
+      }
+    }
+    if(typeof renderCharacters === 'function') renderCharacters();
+    saveSettingsDebounced();
+    toast(`✅ 템플릿 ${_tplCurrentRoll.length}개 변경 적용 (캐릭터 슬롯·액션 모두 교체)`, 'success');
+    setMainPane('edit');
+    return;
+  }
+
+  // ＋ 병합 모드 (기본): character 항목 새 슬롯 추가 + 나머지는 첫 활성 슬롯의 action에 콤마 append
   for(const r of charRolls){
     const p = r.preset;
     const derived = [p.appearance, p.action].map(s=>(s||'').trim()).filter(Boolean).join(', ');
@@ -10062,8 +10152,6 @@ function tplApplyRoll(){
   }
   if(charRolls.length && typeof renderCharacters === 'function') renderCharacters();
 
-  // 2) 나머지 카테고리 → 첫 번째 활성 캐릭터의 액션·의상·자세 슬롯에
-  //    병합: 콤마로 append / 변경: 통째 교체
   const appendParts = otherRolls.map(r => (r.preset.text || '').trim()).filter(Boolean);
   if(appendParts.length){
     const targetIdx = (state.characters || []).findIndex(c => c.enabled !== false);
@@ -10071,7 +10159,7 @@ function tplApplyRoll(){
       const c = state.characters[targetIdx];
       const cur = (c.action || '').trim();
       const add = appendParts.join(', ');
-      c.action = (applyMode === 'replace') ? add : (cur ? `${cur}, ${add}` : add);
+      c.action = cur ? `${cur}, ${add}` : add;
       const ta = $('charList')?.querySelector(`textarea[data-act="action"][data-idx="${targetIdx}"]`);
       if(ta) ta.value = c.action;
     } else {
@@ -10084,8 +10172,7 @@ function tplApplyRoll(){
     }
   }
   saveSettingsDebounced();
-  const modeLbl = applyMode === 'replace' ? '변경' : '병합';
-  toast(`✅ 템플릿 ${_tplCurrentRoll.length}개 ${modeLbl} 적용 — 편집 탭에서 확인`, 'success');
+  toast(`✅ 템플릿 ${_tplCurrentRoll.length}개 병합 적용`, 'success');
   setMainPane('edit');
 }
 
@@ -10207,8 +10294,12 @@ function tplRenderSavedList(){
     const checked = _tplSelected.has(tid) ? 'checked' : '';
     const checkbox = _tplSelectMode ? `<input type="checkbox" data-tpl-bulk="${esc(tid)}" data-idx="${i}" ${checked} style="margin-right:6px;flex-shrink:0">` : '';
     const albumBadge = (t.album||'').trim() ? `<span style="font-size:10.5px;color:var(--t3);background:var(--card2);border:1px solid var(--b1);border-radius:8px;padding:1px 7px;margin-right:5px">📁 ${esc(t.album)}</span>` : '';
+    const thumbHtml = t.thumb
+      ? `<span class="tsi-thumb" data-tpl-saved-act="setthumb" data-idx="${i}" title="미리보기 변경" style="width:36px;height:36px;border-radius:5px;background:url('${esc(t.thumb)}') center/cover var(--card2);flex-shrink:0;border:1.5px solid var(--b1);cursor:pointer"></span>`
+      : `<span class="tsi-thumb" data-tpl-saved-act="setthumb" data-idx="${i}" title="미리보기 설정" style="width:36px;height:36px;border-radius:5px;background:var(--card2);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:16px;cursor:pointer;border:1.5px dashed var(--b1)">🖼</span>`;
     return `<div class="tpl-saved-item">
       ${checkbox}
+      ${thumbHtml}
       <span class="tsi-name" data-tpl-saved-act="load" data-idx="${i}" title="조합 영역에 불러와서 수정·재롤">${albumBadge}${esc(t.name)}</span>
       <span class="tsi-cats">${cats} · ${t.roll.length}개</span>
       <button type="button" data-tpl-saved-act="apply" data-idx="${i}" title="✅ 캐릭터 슬롯에 즉시 적용 + 편집 탭 이동" style="color:var(--blue);border-color:rgba(58,99,152,.4)">✅</button>
@@ -10428,6 +10519,54 @@ function tplApplyDirect(i){
   tplRenderRoll();
   tplApplyRoll();   // 캐릭터 슬롯에 적용 + 편집 탭 이동
   if(missing) setTimeout(() => toast(`(${missing}개 프리셋 누락 — 삭제됐거나 이름 변경됨)`, 'warning'), 80);
+}
+
+// 🖼 저장된 템플릿 미리보기 설정 — 갤러리에서 이미지 선택 (또는 제거)
+function tplSetThumbnail(i){
+  const t = state.templates?.[i];
+  if(!t) return;
+  // 기존 썸이 있으면 '제거' 옵션도 제공
+  if(t.thumb){
+    $('confirmTitle').innerHTML = `🖼 "${esc(t.name)}" 미리보기`;
+    $('confirmBody').innerHTML = `
+      <div style="text-align:center;margin-bottom:12px">
+        <img src="${esc(t.thumb)}" style="max-width:100%;max-height:200px;border-radius:6px;border:1.5px solid var(--b1)">
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn ghost" data-tpl-thumb-act="pick" style="flex:1;padding:8px 12px;font-size:12.5px;border-color:rgba(58,99,152,.4);color:var(--blue)">🖼 갤러리에서 변경</button>
+        <button class="btn ghost" data-tpl-thumb-act="remove" style="padding:8px 12px;font-size:12.5px;color:var(--red);border-color:rgba(181,67,56,.3)">🗑 제거</button>
+      </div>`;
+    $('confirmOk').style.display = 'none';
+    $('confirmCancel').textContent = '닫기';
+    $('confirmModal').classList.add('open');
+    $('confirmBody').querySelector('[data-tpl-thumb-act="pick"]').onclick = () => {
+      $('confirmModal').classList.remove('open');
+      $('confirmOk').style.display = '';
+      _tplPickThumb(i);
+    };
+    $('confirmBody').querySelector('[data-tpl-thumb-act="remove"]').onclick = async () => {
+      t.thumb = null;
+      await DB.setFlag('templates', state.templates);
+      $('confirmModal').classList.remove('open');
+      $('confirmOk').style.display = '';
+      tplRenderSavedList();
+      toast('🗑 미리보기 제거됨', 'info');
+    };
+  } else {
+    _tplPickThumb(i);
+  }
+}
+
+function _tplPickThumb(i){
+  openGalleryPicker(async (dataURL) => {
+    if(!dataURL) return;
+    const t = state.templates?.[i];
+    if(!t) return;
+    t.thumb = dataURL;
+    await DB.setFlag('templates', state.templates);
+    tplRenderSavedList();
+    toast(`🖼 "${t.name}" 미리보기 설정됨`, 'success');
+  });
 }
 
 async function tplDelSaved(i){
@@ -12944,6 +13083,7 @@ function wireMiscEvents(){
     const cat = b.dataset.cat;
     if(act === 'reroll') tplRerollOne(cat);
     else if(act === 'remove') tplRemoveOne(cat);
+    else if(act === 'edit') tplEditRollItem(cat);
   });
   $('tplSaveBtn')?.addEventListener('click', tplSaveCurrent);
   $('tplSaveName')?.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); tplSaveCurrent(); } });
@@ -12965,6 +13105,7 @@ function wireMiscEvents(){
     if(act === 'load') tplLoadSaved(i);
     else if(act === 'apply') tplApplyDirect(i);
     else if(act === 'album') tplMoveToAlbum(i);
+    else if(act === 'setthumb') tplSetThumbnail(i);
     else if(act === 'del'){
       const t = state.templates?.[i];
       if(!t) return;
