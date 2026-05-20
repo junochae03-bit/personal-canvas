@@ -8433,7 +8433,7 @@ function pgRenderCharList(){
   const groups = groupCharsByWork(indexed);
   const renderChar = (c) => `
     <label class="chk pg-char" data-idx="${c._idx}" style="padding:7px 9px;border-radius:5px;display:flex;align-items:center;gap:9px;cursor:pointer;border-bottom:1px solid var(--b1)">
-      <input type="checkbox" data-act="pick" data-idx="${c._idx}" checked>
+      <input type="checkbox" data-act="pick" data-idx="${c._idx}">
       ${c.thumb
         ? `<span class="pg-thumb" style="width:32px;height:32px;border-radius:4px;background:url('${esc(c.thumb)}') center/cover var(--card2);flex-shrink:0;border:1.5px solid var(--b1)"></span>`
         : `<span class="pg-thumb" style="width:32px;height:32px;border-radius:4px;background:var(--card2);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:14px">👤</span>`}
@@ -10352,7 +10352,9 @@ function tplApplyRoll(){
     return;
   }
 
-  // ＋ 병합 모드 (기본): character 항목 새 슬롯 추가 + 나머지는 첫 활성 슬롯의 action에 콤마 append
+  // ＋ 병합 모드 (기본): character 항목 새 슬롯 추가 + 나머지(액션·의상·포즈 등)는
+  //   템플릿이 새 캐릭터를 만들었으면 새 슬롯에, 아니면 기존 첫 슬롯에 콤마로 append
+  const newSlotStartIdx = (state.characters || []).length;
   for(const r of charRolls){
     const p = r.preset;
     const derived = [p.appearance, p.action].map(s=>(s||'').trim()).filter(Boolean).join(', ');
@@ -10366,7 +10368,14 @@ function tplApplyRoll(){
 
   const appendParts = otherRolls.map(r => (r.preset.text || '').trim()).filter(Boolean);
   if(appendParts.length){
-    const targetIdx = (state.characters || []).findIndex(c => c.enabled !== false);
+    // 🆕 새로 추가된 캐릭터 슬롯이 있으면 그 첫 번째(=이번 템플릿이 만든 캐릭터)에 적용
+    //    없으면 기존 첫 활성 슬롯에 fallback
+    let targetIdx = -1;
+    if(charRolls.length > 0 && newSlotStartIdx < state.characters.length){
+      targetIdx = newSlotStartIdx;
+    } else {
+      targetIdx = (state.characters || []).findIndex(c => c.enabled !== false);
+    }
     if(targetIdx >= 0){
       const c = state.characters[targetIdx];
       const cur = (c.action || '').trim();
