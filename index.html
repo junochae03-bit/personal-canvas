@@ -1830,7 +1830,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           </div>
           <div class="set-card">
             <h3>현재 조합 <span class="en">Current Roll</span> <span id="tplRollStatus" style="font-size:11px;color:var(--t3);font-weight:500;margin-left:6px"></span>
-              <button class="btn ghost" id="tplAddCharSlotBtn" type="button" title="메인 폼에 빈 캐릭터 슬롯 1개 추가" style="float:right;padding:4px 9px;font-size:11.5px;border-color:rgba(58,99,152,.4);color:var(--blue)">➕ 캐릭터 슬롯 추가</button>
+              <button class="btn ghost" id="tplAddCharSlotBtn" type="button" title="현재 조합에 캐릭터 항목 추가 (선택 또는 랜덤)" style="float:right;padding:4px 9px;font-size:11.5px;border-color:rgba(58,99,152,.4);color:var(--blue)">➕ 캐릭터 추가</button>
             </h3>
             <div id="tplRollList" style="display:flex;flex-direction:column;gap:6px"></div>
             <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
@@ -10220,6 +10220,100 @@ function tplLoadSaved(i){
 }
 
 // ✅ 저장된 템플릿을 캐릭터 슬롯에 즉시 적용 (조합 영역 거치지 않고)
+// 🎨 현재 조합에 캐릭터 항목 추가 — confirmModal로 검색·선택·랜덤 제공
+function openTplCharPicker(){
+  const chars = state.presets.character || [];
+  if(!chars.length){ toast('등록된 캐릭터 프리셋이 없어요', 'warning'); return; }
+  let q = '';
+  const renderList = () => {
+    const ql = q.toLowerCase().trim();
+    const indexed = chars.map((c, i) => ({c, i}));
+    const matched = ql ? indexed.filter(({c}) => {
+      const name = (c.name||'').toLowerCase();
+      const grp = (typeof getCharGroup === 'function' ? getCharGroup(c.name) : '').toLowerCase();
+      return name.includes(ql) || grp.includes(ql);
+    }) : indexed;
+    const shown = matched.slice(0, 200);
+    return `
+      <div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <input id="tplCharPickSearch" class="inp" type="text" placeholder="🔎 캐릭터·작품 이름…" value="${esc(q)}" autocomplete="off" style="flex:1;min-width:120px">
+        <button class="btn ghost" id="tplCharPickRandom" type="button" style="padding:6px 10px;font-size:12px;flex-shrink:0">🎲 랜덤 추가</button>
+      </div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:6px">${matched.length.toLocaleString()}명 매치 (최대 200 표시)</div>
+      <div style="max-height:42vh;overflow-y:auto;border:1.5px solid var(--b1);border-radius:5px;background:var(--card)">
+        ${shown.length ? shown.map(({c, i}) => `
+          <button type="button" data-tcp-pick="${i}" style="display:flex;align-items:center;gap:9px;width:100%;padding:7px 10px;background:transparent;border:0;border-bottom:1px solid var(--b1);cursor:pointer;text-align:left;font-family:inherit">
+            ${c.thumb
+              ? `<span style="width:32px;height:32px;border-radius:4px;background:url('${esc(c.thumb)}') center/cover var(--card2);flex-shrink:0;border:1.5px solid var(--b1)"></span>`
+              : `<span style="width:32px;height:32px;border-radius:4px;background:var(--card2);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:14px">👤</span>`}
+            <span style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name||'(이름 없음)')}</span>
+          </button>
+        `).join('') : '<div style="padding:18px;text-align:center;color:var(--t3);font-style:italic">매치 없음</div>'}
+      </div>`;
+  };
+  $('confirmTitle').innerHTML = `➕ 캐릭터 항목 추가 <span class="en">to current roll</span>`;
+  $('confirmBody').innerHTML = renderList();
+  $('confirmOk').style.display = 'none';
+  $('confirmCancel').textContent = '닫기';
+  $('confirmModal').classList.add('open');
+  const rerender = () => {
+    $('confirmBody').innerHTML = renderList();
+    wire();
+    $('tplCharPickSearch')?.focus();
+  };
+  const addChar = (idx) => {
+    const p = chars[idx];
+    if(!p) return;
+    _tplCurrentRoll.push({cat:'character', preset: p});
+    tplRenderRoll();
+    toast(`➕ ${p.name || '(이름 없음)'} 추가됨`, 'success');
+  };
+  const wire = () => {
+    $('tplCharPickSearch')?.addEventListener('input', e => {
+      q = e.target.value;
+      // debounce 없이 가벼움 — chars 1500이라도 filter 빠름
+      const wrap = $('confirmBody').querySelector('div[style*="max-height:42vh"]');
+      if(wrap){
+        // 결과만 다시 그리기 (입력 포커스 유지)
+        const newHtml = renderList();
+        const tmp = document.createElement('div');
+        tmp.innerHTML = newHtml;
+        const newList = tmp.querySelector('div[style*="max-height:42vh"]');
+        const newCount = tmp.querySelector('div[style*="font-size:11px"]');
+        if(newList) wrap.replaceWith(newList);
+        const oldCount = $('confirmBody').querySelector('div[style*="font-size:11px"]');
+        if(newCount && oldCount) oldCount.replaceWith(newCount);
+        wireListClicks();
+      }
+    });
+    $('tplCharPickRandom')?.addEventListener('click', () => {
+      const ql = q.toLowerCase().trim();
+      const pool = ql
+        ? chars.filter(c => (c.name||'').toLowerCase().includes(ql) || (typeof getCharGroup==='function' ? getCharGroup(c.name).toLowerCase() : '').includes(ql))
+        : chars;
+      if(!pool.length){ toast('매치되는 캐릭터 없음', 'warning'); return; }
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      _tplCurrentRoll.push({cat:'character', preset: pick});
+      tplRenderRoll();
+      $('confirmModal').classList.remove('open');
+      $('confirmOk').style.display = '';
+      toast(`🎲 ${pick.name || '(이름 없음)'} 랜덤 추가`, 'success');
+    });
+    wireListClicks();
+  };
+  const wireListClicks = () => {
+    $('confirmBody').querySelectorAll('[data-tcp-pick]').forEach(btn => {
+      btn.onclick = () => {
+        const i = parseInt(btn.dataset.tcpPick, 10);
+        addChar(i);
+        $('confirmModal').classList.remove('open');
+        $('confirmOk').style.display = '';
+      };
+    });
+  };
+  wire();
+}
+
 function tplApplyDirect(i){
   const t = (state.templates || [])[i];
   if(!t) return;
@@ -11456,7 +11550,8 @@ function wireCharacterEvents(){
   // Character section
   $('addCharBtn').addEventListener('click', () => addCharacter());
   $('charList').addEventListener('click', e => {
-    const t = e.target;
+    // 클릭 타깃이 자식 span/img일 수 있으므로 data-act 가진 가장 가까운 조상 사용
+    const t = e.target.closest('[data-act]') || e.target;
     const idx = parseInt(t.dataset.idx);
     if(isNaN(idx)) return;
     const act = t.dataset.act;
@@ -12738,13 +12833,9 @@ function wireMiscEvents(){
   });
   $('tplRollBtn')?.addEventListener('click', tplRoll);
   $('tplApplyBtn')?.addEventListener('click', tplApplyRoll);
-  // ➕ 템플릿 페인 — 캐릭터 슬롯 직접 추가 (모바일에서 사이드바 안 거치고 빠르게)
+  // ➕ 현재 조합에 캐릭터 항목 추가 — 캐릭터 선택 모달 (검색 + 랜덤)
   $('tplAddCharSlotBtn')?.addEventListener('click', () => {
-    if((state.characters||[]).length >= 6){ toast('캐릭터 슬롯은 최대 6명까지', 'warning'); return; }
-    addCharacter({name:'', prompt:'', thumb:null});
-    if(typeof renderCharacters === 'function') renderCharacters();
-    saveSettingsDebounced();
-    toast(`➕ 빈 캐릭터 슬롯 추가됨 (#${state.characters.length}) — 편집 탭에서 채워주세요`, 'success');
+    openTplCharPicker();
   });
   $('tplRollList')?.addEventListener('click', e => {
     const b = e.target.closest('[data-tpl-roll-act]');
