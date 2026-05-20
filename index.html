@@ -1140,6 +1140,10 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .wf-prompt{font-size:11.5px;color:var(--t2);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono)}
 .wf-actions{display:flex;gap:5px;flex-shrink:0}
 .wf-actions .btn{padding:6px 11px;font-size:11.5px;min-height:32px;font-weight:600}
+.wf-fav{padding:6px 9px !important;color:var(--t3)}
+.wf-fav.act{color:var(--yellow);border-color:rgba(184,136,32,.45);background:rgba(184,136,32,.10)}
+.wf-row-fav{background:linear-gradient(90deg, rgba(184,136,32,.08), transparent 60%)}
+.wf-row-fav:hover{background:linear-gradient(90deg, rgba(184,136,32,.14), rgba(162,90,31,.06) 60%)}
 
 /* iOS standalone 모드 — 상단 safe-area */
 @supports(padding:max(0px)){
@@ -7423,6 +7427,14 @@ async function workflowRename(id, newName){
   return true;
 }
 
+async function workflowToggleFav(id){
+  const wf = state.workflows.find(w => w.id === id);
+  if(!wf) return false;
+  wf.fav = !wf.fav;
+  await saveWorkflows();
+  return wf.fav;
+}
+
 function openWorkflowModal(){
   renderWorkflowList();
   $('wfSaveName').value = '';
@@ -7437,7 +7449,13 @@ function renderWorkflowList(){
     list.innerHTML = '<div style="padding:30px;text-align:center;color:var(--t3);font-size:12.5px;font-style:italic">저장된 워크플로우 없음 — 위 입력칸에 이름 적고 💾 저장</div>';
     return;
   }
-  list.innerHTML = state.workflows.map(wf => {
+  // ⭐ 즐겨찾기 우선, 그다음 최근(ts) 내림차순
+  const sorted = [...state.workflows].sort((a, b) => {
+    const af = a.fav ? 1 : 0, bf = b.fav ? 1 : 0;
+    if(af !== bf) return bf - af;
+    return (b.ts || 0) - (a.ts || 0);
+  });
+  list.innerHTML = sorted.map(wf => {
     const dt = new Date(wf.ts);
     const dateStr = `${dt.getFullYear()}.${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
     const thumbHtml = wf.thumb
@@ -7445,7 +7463,11 @@ function renderWorkflowList(){
       : `<div class="wf-thumb wf-thumb-empty">💾</div>`;
     const charCount = (wf.data?.characters || []).length;
     const promptPreview = (wf.data?.prompt || '').slice(0, 80).replace(/\s+/g,' ');
-    return `<div class="wf-row" data-id="${esc(wf.id)}">
+    const favCls = wf.fav ? ' wf-row-fav' : '';
+    const favBtn = wf.fav
+      ? `<button class="btn ghost wf-fav act" data-act="fav" data-id="${esc(wf.id)}" title="즐겨찾기 해제 (상단 고정 해제)">⭐</button>`
+      : `<button class="btn ghost wf-fav" data-act="fav" data-id="${esc(wf.id)}" title="즐겨찾기 (상단 고정)">☆</button>`;
+    return `<div class="wf-row${favCls}" data-id="${esc(wf.id)}">
       ${thumbHtml}
       <div class="wf-info">
         <div class="wf-name" data-act="rename" title="더블클릭으로 이름 변경">${esc(wf.name)}</div>
@@ -7457,6 +7479,7 @@ function renderWorkflowList(){
         <div class="wf-prompt" title="${esc(wf.data?.prompt || '')}">${esc(promptPreview || '(빈 프롬프트)')}</div>
       </div>
       <div class="wf-actions">
+        ${favBtn}
         <button class="btn primary" data-act="apply" data-id="${esc(wf.id)}" title="이 워크플로우를 현재 폼에 적용">↻ 적용</button>
         <button class="btn ghost" data-act="del" data-id="${esc(wf.id)}" title="삭제" style="color:var(--red);border-color:rgba(181,67,56,.35)">🗑</button>
       </div>
@@ -9891,6 +9914,8 @@ const TPL_DEFAULT_CATS = ['character','outfit','pose','expression','situation'];
 const TPL_AVAILABLE_CATS = ['character','outfit','pose','expression','situation','background','composition','mood','people','style'];
 let _tplActiveCats = new Set(TPL_DEFAULT_CATS);
 let _tplCurrentRoll = [];   // [{cat, preset:{name,text,thumb}}, ...]
+// 🔒 잠금된 카테고리 — 랜덤 조합 시 이 카테고리는 그대로 유지
+const _tplLockedCats = new Set();
 
 function tplRenderCatChips(){
   const wrap = $('tplCatChips');
@@ -9989,9 +10014,19 @@ function tplApplyNaturalLanguage(){
 }
 
 function tplRoll(){
+  // 🔒 잠금된 카테고리는 현재 조합에서 보존 (cat → 기존 roll entry)
+  const lockedEntries = new Map();
+  for(const r of _tplCurrentRoll){
+    if(_tplLockedCats.has(r.cat)) lockedEntries.set(r.cat, r);
+  }
   _tplCurrentRoll = [];
   for(const cid of TPL_AVAILABLE_CATS){
     if(!_tplActiveCats.has(cid)) continue;
+    // 잠금된 카테고리는 기존 항목 그대로
+    if(lockedEntries.has(cid)){
+      _tplCurrentRoll.push(lockedEntries.get(cid));
+      continue;
+    }
     const list = state.presets[cid] || [];
     if(!list.length) continue;
     const pick = list[Math.floor(Math.random() * list.length)];
@@ -10001,6 +10036,7 @@ function tplRoll(){
 }
 
 function tplRerollOne(cid){
+  if(_tplLockedCats.has(cid)){ toast('🔒 잠긴 항목 — 잠금 해제 후 재시도', 'info'); return; }
   const list = state.presets[cid] || [];
   if(!list.length) return;
   const pick = list[Math.floor(Math.random() * list.length)];
@@ -10070,14 +10106,17 @@ function tplRenderRoll(){
     const def = PRESET_TYPES.find(t => t.id === r.cat) || {label:r.cat, ico:'•'};
     const text = (r.preset.text || '').replace(/\s+/g,' ').trim();
     const sub = text.length > 70 ? text.slice(0,70)+'…' : text;
-    return `<div class="tpl-roll-item" data-cat="${esc(r.cat)}">
+    const locked = _tplLockedCats.has(r.cat);
+    const lockStyle = locked ? 'background:rgba(58,99,152,.08);border-color:rgba(58,99,152,.4)' : '';
+    return `<div class="tpl-roll-item" data-cat="${esc(r.cat)}" style="${lockStyle}">
       <span class="tri-ico">${def.ico}</span>
       <div class="tri-body">
-        <div class="tri-cat">${esc(def.label)}</div>
+        <div class="tri-cat">${locked ? '🔒 ' : ''}${esc(def.label)}</div>
         <div class="tri-name">${esc(r.preset.name || '(이름 없음)')}</div>
         ${sub ? `<div class="tri-text">${esc(sub)}</div>` : ''}
       </div>
       <div class="tri-act">
+        <button type="button" data-tpl-roll-act="lock" data-cat="${esc(r.cat)}" title="${locked?'🔓 잠금 해제 — 다음 랜덤에 다시 변경됨':'🔒 잠금 — 다음 랜덤 조합 생성 시 이 항목은 그대로 유지'}" ${locked?'style="color:var(--blue);border-color:rgba(58,99,152,.4);background:rgba(58,99,152,.08)"':''}>${locked?'🔒':'🔓'}</button>
         <button type="button" data-tpl-roll-act="edit" data-cat="${esc(r.cat)}" title="이 항목 텍스트만 임시 수정 (원본 프리셋은 그대로)">✏</button>
         <button type="button" data-tpl-roll-act="reroll" data-cat="${esc(r.cat)}" title="이 항목만 다시 랜덤">🎲</button>
         <button type="button" data-tpl-roll-act="remove" data-cat="${esc(r.cat)}" title="이 항목 빼기">✕</button>
@@ -11643,6 +11682,10 @@ function wireTopbarAndFormEvents(){
           renderWorkflowList();
           toast('삭제됨', 'info');
         }, '워크플로우 삭제');
+      } else if(btn.dataset.act === 'fav'){
+        const nowFav = await workflowToggleFav(id);
+        renderWorkflowList();
+        toast(nowFav ? '⭐ 상단 고정됨' : '고정 해제됨', 'info');
       }
       return;
     }
@@ -13084,6 +13127,11 @@ function wireMiscEvents(){
     if(act === 'reroll') tplRerollOne(cat);
     else if(act === 'remove') tplRemoveOne(cat);
     else if(act === 'edit') tplEditRollItem(cat);
+    else if(act === 'lock'){
+      if(_tplLockedCats.has(cat)){ _tplLockedCats.delete(cat); toast('🔓 잠금 해제', 'info'); }
+      else { _tplLockedCats.add(cat); toast('🔒 잠금 — 다음 랜덤에 유지됨', 'success'); }
+      tplRenderRoll();
+    }
   });
   $('tplSaveBtn')?.addEventListener('click', tplSaveCurrent);
   $('tplSaveName')?.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); tplSaveCurrent(); } });
