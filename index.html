@@ -183,9 +183,12 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .char-body.open{display:block}
 .char-body .ta{min-height:66px;margin-bottom:5px}
 .char-ta-wrap{position:relative}
-.char-ta-wrap .ta{padding-right:26px}
-.char-ta-clear{position:absolute;top:5px;right:5px;background:transparent;border:0;color:var(--t3);opacity:.45;cursor:pointer;font-size:13px;line-height:1;padding:3px 6px;border-radius:4px;font-family:inherit;transition:opacity .15s,color .15s}
-.char-ta-clear:hover{opacity:.95;color:var(--red);background:rgba(181,67,56,.07)}
+.char-ta-wrap .ta{padding-right:42px}
+.char-ta-clear{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.04);border:0;color:var(--t3);opacity:.6;cursor:pointer;font-size:15px;line-height:1;padding:5px 9px;border-radius:5px;font-family:inherit;transition:opacity .15s,color .15s,background .15s;min-width:30px;min-height:28px;display:flex;align-items:center;justify-content:center}
+.char-ta-clear:hover{opacity:1;color:var(--red);background:rgba(181,67,56,.1)}
+@media (max-width:600px){
+  .char-ta-clear{font-size:16px;padding:6px 10px;min-width:34px;min-height:32px;top:3px;right:3px}
+}
 .char-section-label{font-size:11px;color:var(--t2);font-weight:700;margin:8px 0 3px;display:flex;align-items:center;gap:5px;letter-spacing:0}
 .char-tagcodex-btn{background:transparent;border:1.25px solid rgba(58,99,152,.4);color:var(--blue);padding:3px 8px;font-size:10.5px;font-weight:700;border-radius:4px;cursor:pointer;margin-left:auto;font-family:inherit;transition:all .12s}
 .char-tagcodex-btn:hover{background:rgba(58,99,152,.1);border-color:var(--blue)}
@@ -862,7 +865,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   .char-pos{padding:5px 7px;font-size:11px;height:28px;min-width:42px}
   .char-actions{gap:3px;padding-top:1px}
   .char-act-btn{min-height:30px;font-size:11px;padding:5px 6px;flex:1 0 30%;border-radius:3px}
-  .char-act-btn.del{min-width:0}
+  .char-act-btn.del{min-width:36px;flex:0 0 auto;padding:5px 8px;font-size:14px}
+  .char-act-btn.del .del-lbl{display:none}   /* 모바일에선 🗑 아이콘만 */
   .char-body{padding:8px}
   .char-body .ta{margin-bottom:4px}
   .char-quick-btn{padding:8px 10px;font-size:12px;margin:3px 0 2px}
@@ -4662,7 +4666,7 @@ function renderCharacters(){
           <button class="char-act-btn browse" data-act="browse" data-idx="${i}" title="🎴 캐릭터 둘러보기 — 썸네일 그리드로 보고 단일/후보 풀 선택">🎴 둘러보기 <span class="en" style="opacity:.55;font-weight:400">Browse</span></button>
           <button class="char-act-btn ${c.enabled?'act':''}" data-act="toggle" data-idx="${i}">${c.enabled?'✓ 활성':'⭕ 비활성'} <span class="en" style="opacity:.55;font-weight:400">${c.enabled?'On':'Off'}</span></button>
           <button class="char-act-btn edit" data-act="expand" data-idx="${i}">✏ 프롬프트 <span class="en" style="opacity:.55;font-weight:400">Edit</span></button>
-          <button class="char-act-btn del" data-act="del" data-idx="${i}" title="이 캐릭터 슬롯 삭제">🗑 삭제</button>
+          <button class="char-act-btn del" data-act="del" data-idx="${i}" title="이 캐릭터 슬롯 삭제"><span class="del-ico">🗑</span><span class="del-lbl"> 삭제</span></button>
         </div>
         ${poolBadge}
       </div>
