@@ -6992,9 +6992,10 @@ function renderQueue(){
     const retryBtn = q.status === 'err'
       ? `<button class="iconbtn" data-act="qi-retry" data-qi="${i}" title="이 항목만 다시 시도 (${esc(q.error||'')})" style="padding:2px 7px;font-size:11px;line-height:1.2;border-radius:4px;flex-shrink:0">↻</button>`
       : '';
+    const snapMark = q.snapshot ? ` <span title="추가 시점 프리셋 고정" style="color:var(--blue);font-size:10px">📸</span>` : '';
     return `
     <div class="qi ${q.status==='run'?'run':q.status==='done'?'done':q.status==='err'?'err':''}" data-qi="${i}">
-      <span class="lbl">#${i+1}</span>
+      <span class="lbl">#${i+1}${snapMark}</span>
       <span class="txt" title="${esc(q.promptOverride||q.prompt||'')}">${esc(q.label)} · ${esc((q.promptOverride||q.prompt||'').slice(0,60))}</span>
       <span class="st st-${q.status}">${QSTAT[q.status]||q.status}</span>
       ${retryBtn}
@@ -7080,7 +7081,8 @@ async function startGeneration(){
     state.queueIdx = state.queue.indexOf(q);
     q.status = 'run';
     // 🔄 후보 풀이 있는 캐릭터들은 다음 캐릭터로 자동 교체 (첫 번째는 그대로 사용)
-    if(processedCount > 0) advanceCharPoolsBeforeGenerate();
+    //   ↳ 스냅 항목(추가 버튼으로 들어온 것)은 자체 캐릭터를 가지므로 풀 어드밴스 스킵
+    if(processedCount > 0 && !q.snapshot) advanceCharPoolsBeforeGenerate();
     renderQueue();
     $('previewStatus').textContent = `생성 중 (${processedCount+1}/${state.queue.length})`;
     try {
@@ -7123,13 +7125,41 @@ function stopGeneration(){
   toast('중단됨', 'info');
 }
 
+// 📸 대기열 추가 시점의 폼·캐릭터·미디어 상태를 통째로 캡처 — runOne이 이걸 우선 사용
+// 이후 사용자가 다른 프리셋으로 바꿔도, 추가됐던 항목은 당시 설정 그대로 실행됨
+function snapshotGenState(){
+  return {
+    opts: currentPromptOpts(),   // prompt·neg·model·characters(shallow copy로 이미 격리)·sampler 등
+    mode: state.mode,
+    seedLocked: !!state.seedLocked,
+    seedRaw: ($('seed')?.value || '').trim(),
+    i2iStrength: parseFloat($('i2iStrength')?.value) || 0.7,
+    i2iNoise: parseFloat($('i2iNoise')?.value) || 0,
+    inpAddOrig: !!$('inpAddOrig')?.checked,
+    imgLabel: ($('imgLabel')?.value || '').trim(),
+    fnamePattern: ($('fnamePattern')?.value || '').trim(),
+    // 미디어는 참조 유지 — b64/dataURL은 문자열(불변), 사용자 갈아끼우면 새 객체로 교체되니 스냅 안전
+    baseImage: state.baseImage,
+    inpaintMask: state.inpaintMask,
+    vibeRefs: Array.isArray(state.vibeRefs) ? state.vibeRefs.map(v => ({...v})) : [],
+  };
+}
+
 async function runOne(q, apiKey){
-  const opts = currentPromptOpts();
+  // 📸 스냅샷이 있으면 그것을 소스로 사용 — 사용자가 이후 다른 프리셋으로 바꿔도 영향 없음
+  const snap = q.snapshot || null;
+  const opts = snap ? {...snap.opts} : currentPromptOpts();
+  if(snap){
+    // currentPromptOpts에서 매번 새 seed가 굴러갔으므로, 스냅 당시 값을 그대로 쓰지 않고
+    // 아래의 "락 아니면 재롤" 로직을 거치게 함 — seed 입력값/락 상태는 스냅에서 가져옴
+  }
   if(q.promptOverride) opts.prompt = q.promptOverride;
   // Each iteration: roll a new seed unless locked
-  if(!state.seedLocked){
-    const seedRaw = ($('seed').value || '').trim();
+  const seedLocked = snap ? snap.seedLocked : state.seedLocked;
+  const seedRaw = snap ? snap.seedRaw : (($('seed')?.value || '').trim());
+  if(!seedLocked){
     if(seedRaw === '' || seedRaw === '-1') opts.seed = Math.floor(Math.random() * 0xffffffff);
+    else { const n = parseInt(seedRaw); if(!isNaN(n)) opts.seed = n; }
   }
   // XYZ 오버라이드 적용 — 축별 파라미터 치환
   if(q.xyzOverrides){
@@ -7140,49 +7170,57 @@ async function runOne(q, apiKey){
   if(q.xyzSeed !== undefined && q.xyzSeed !== null){
     opts.seed = q.xyzSeed;
   }
+  const mode = snap ? snap.mode : state.mode;
+  const baseImage = snap ? snap.baseImage : state.baseImage;
+  const inpaintMask = snap ? snap.inpaintMask : state.inpaintMask;
+  const vibeRefs = snap ? snap.vibeRefs : state.vibeRefs;
+  const i2iStrength = snap ? snap.i2iStrength : (parseFloat($('i2iStrength').value) || 0.7);
+  const i2iNoise = snap ? snap.i2iNoise : (parseFloat($('i2iNoise').value) || 0);
+  const inpAddOrig = snap ? snap.inpAddOrig : !!$('inpAddOrig').checked;
   // Build body based on mode
   let body;
-  if(state.mode === 't2i'){
+  if(mode === 't2i'){
     body = buildGenBody({...opts, action: 'generate'});
-  } else if(state.mode === 'i2i'){
-    if(!state.baseImage){ throw new Error('베이스 이미지가 필요합니다'); }
+  } else if(mode === 'i2i'){
+    if(!baseImage){ throw new Error('베이스 이미지가 필요합니다'); }
     body = buildGenBody({
       ...opts,
       action: 'img2img',
-      baseImageB64: state.baseImage.b64,
-      strength: parseFloat($('i2iStrength').value) || 0.7,
-      noise: parseFloat($('i2iNoise').value) || 0
+      baseImageB64: baseImage.b64,
+      strength: i2iStrength,
+      noise: i2iNoise
     });
-    body.parameters.width = state.baseImage.w;
-    body.parameters.height = state.baseImage.h;
-  } else if(state.mode === 'inpaint'){
-    if(!state.baseImage){ throw new Error('베이스 이미지가 필요합니다'); }
-    if(!state.inpaintMask){ throw new Error('마스크가 필요합니다'); }
+    body.parameters.width = baseImage.w;
+    body.parameters.height = baseImage.h;
+  } else if(mode === 'inpaint'){
+    if(!baseImage){ throw new Error('베이스 이미지가 필요합니다'); }
+    if(!inpaintMask){ throw new Error('마스크가 필요합니다'); }
     body = buildGenBody({
       ...opts,
       action: 'infill',
-      baseImageB64: state.baseImage.b64,
-      maskB64: state.inpaintMask,
-      addOrig: $('inpAddOrig').checked
+      baseImageB64: baseImage.b64,
+      maskB64: inpaintMask,
+      addOrig: inpAddOrig
     });
-    body.parameters.width = state.baseImage.w;
-    body.parameters.height = state.baseImage.h;
-  } else if(state.mode === 'vibe'){
-    if(!state.vibeRefs.length){ throw new Error('Vibe 참조 이미지가 필요합니다'); }
+    body.parameters.width = baseImage.w;
+    body.parameters.height = baseImage.h;
+  } else if(mode === 'vibe'){
+    if(!vibeRefs?.length){ throw new Error('Vibe 참조 이미지가 필요합니다'); }
     body = buildGenBody({
       ...opts,
       action: 'generate',
-      vibeRefs: state.vibeRefs
+      vibeRefs: vibeRefs
     });
-  } else if(state.mode === 'director'){
+  } else if(mode === 'director'){
     return await runDirector(apiKey);
   } else {
     body = buildGenBody({...opts, action: 'generate'});
   }
   q.prompt = opts.prompt;
   q.seed = body.parameters.seed;
-  // 활성 캐릭터 이름 (이름 있는 것만) — 갤러리 앨범 그룹화에 사용
-  const charNames = (state.characters||[])
+  // 활성 캐릭터 이름 — 스냅이 있으면 그 시점의 캐릭터 목록을 우선 사용
+  const charsSrc = snap ? (snap.opts.characters || []) : (state.characters || []);
+  const charNames = charsSrc
     .filter(c => c.enabled && (c.name||'').trim() && (c.prompt||'').trim())
     .map(c => c.name.trim());
   // 라벨 결정 우선순위:
@@ -7191,7 +7229,7 @@ async function runOne(q, apiKey){
   //   3) 활성 캐릭터 프리셋 있으면 → "{이름}#{N}" 자동
   //   4) 위 조건 모두 미충족 → 큐 인덱스("1","2"…) 유지
   if(!q._labelFinalized){
-    const userLabel = ($('imgLabel')?.value || '').trim();
+    const userLabel = snap ? snap.imgLabel : (($('imgLabel')?.value || '').trim());
     if(q._fromSeqBlock){
       if(userLabel) q.label = `${userLabel}_${q.label}`;
       q._labelIsName = true;
@@ -7211,7 +7249,7 @@ async function runOne(q, apiKey){
     prompt: opts.prompt, neg: opts.neg, model: opts.model,
     seed: q.seed, steps: opts.steps, cfg: opts.cfg, sampler: opts.sampler,
     schedule: opts.schedule, w: body.parameters.width, h: body.parameters.height,
-    mode: state.mode,
+    mode: mode,
     characters: charNames,
   };
   state.lastSeed = q.seed;
@@ -8785,7 +8823,8 @@ function makeFilename(q){
   const safe = s => String(s||'').replace(/[\\\/:*?"<>|]/g,'_').slice(0,80);
   const defaultName = () => `nai_${Date.now()}.png`;
   try {
-    const pattern = ($('fnamePattern')?.value || '').trim();
+    // 📸 스냅샷이 있으면 그 시점의 파일명 패턴 사용 (사용자 변경 영향 없음)
+    const pattern = q.snapshot ? q.snapshot.fnamePattern : (($('fnamePattern')?.value || '').trim());
     // 📁 라벨 우선 — 패턴이 비어있고 의미있는 라벨이면 라벨로 파일명
     //    (의미있음 = userLabel 입력 또는 캐릭터 프리셋 자동 라벨; 단순 큐 인덱스는 제외)
     if(!pattern){
@@ -12172,19 +12211,22 @@ function wireGenerationAndPresetEvents(){
   // ＋ 대기열 추가 — 진행 중인 큐에 현재 설정으로 한 장 더 추가 (생성 흐름 유지)
   $('genQueueAddBtn')?.addEventListener('click', () => {
     if(!state.running){ toast('생성 중일 때만 대기열에 추가할 수 있습니다', 'info'); return; }
-    // 현재 buildQueue 1개를 추출해 끝에 push (간단한 항목 1개)
+    // 📸 추가 시점의 폼·캐릭터·미디어 상태 스냅샷 — 나중에 다른 프리셋으로 바꿔도 영향 X
+    const snapshot = snapshotGenState();
     const seqText = ($('seqInput')?.value || '').trim();
     let extra;
     if(seqText){
       const items = parseSeqInput(seqText);
       const last = items[items.length - 1];
-      extra = last ? {id: _qSeq++, status:'wait', label: last.label, promptOverride: last.prompt} : {id: _qSeq++, status:'wait', label: 'Add'};
+      extra = last
+        ? {id: _qSeq++, status:'wait', label: last.label, promptOverride: last.prompt, _fromSeqBlock: true, snapshot}
+        : {id: _qSeq++, status:'wait', label: 'Add', snapshot};
     } else {
-      extra = {id: _qSeq++, status:'wait', label: `+${state.queue.length+1}`};
+      extra = {id: _qSeq++, status:'wait', label: `+${state.queue.length+1}`, snapshot};
     }
     state.queue.push(extra);
     renderQueue();
-    toast(`＋ 대기열에 추가됨 (#${state.queue.length})`, 'success');
+    toast(`＋ 대기열에 추가됨 (#${state.queue.length}) · 당시 프리셋 고정`, 'success');
   });
   $('pauseBtn').addEventListener('click', () => {
     if(!state.running) return;
