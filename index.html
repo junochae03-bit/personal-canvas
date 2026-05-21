@@ -12870,11 +12870,11 @@ function wireTopbarAndFormEvents(){
       const cleaned = (e.target.value || '').replace(/[\s​‌‍﻿]/g, '');
       if(cleaned !== e.target.value) e.target.value = cleaned;
       saveApiKey(cleaned);
-      if(cleaned) refreshAnlas();  // 붙여넣기 직후 자동 검증
+      if(cleaned) refreshAnlas({silent: true});  // 붙여넣기 자동 — silent (CORS 토스트 안 띄움)
     }, 10);
   });
   $('apiKey').addEventListener('blur', () => {
-    if($('apiKey').value && !state.anlas) refreshAnlas();
+    if($('apiKey').value && !state.anlas) refreshAnlas({silent: true});
   });
   $('keyToggleBtn').addEventListener('click', () => toggleApiKeyExpanded());
   // 키 입력칸 blur 시 자동 접기 (모바일에서만 의미 있음 — 데스크탑은 key-group 항상 표시)
@@ -12904,7 +12904,7 @@ function wireTopbarAndFormEvents(){
         if(cleaned !== e.target.value) e.target.value = cleaned;
         if($('apiKey')) $('apiKey').value = cleaned;
         saveApiKey(cleaned);
-        if(cleaned) refreshAnlas();
+        if(cleaned) refreshAnlas({silent: true});
       }, 10);
     });
     $('toggleKeySettings')?.addEventListener('click', () => {
@@ -14955,7 +14955,12 @@ function setupImageDrop(wrapId, fileId, handler){
 // ═══════════════════════════════════════════════════════════
 // ANLAS REFRESH
 // ═══════════════════════════════════════════════════════════
-async function refreshAnlas(){
+// 한 세션당 CORS 차단 안내 토스트 한 번만 (반복 noise 억제)
+let _anlasCorsToastShown = false;
+async function refreshAnlas(opts){
+  // opts.silent === true → 토스트 억제 (페이지 로드·붙여넣기·blur 자동 호출용).
+  //                       사용자가 ⟳ 명시적으로 누른 경우는 verbose (기본).
+  const silent = opts?.silent === true;
   // 자동 trim — 공백/줄바꿈/제로폭 문자 제거
   let key = ($('apiKey').value || '').replace(/[\s​‌‍﻿]/g, '');
   if(key !== $('apiKey').value){
@@ -14984,15 +14989,20 @@ async function refreshAnlas(){
     // 헤더 fallback이 이미 들어와 있으면 그대로 유지
     if(state.anlas && state.anlas.fromHeader && !state.anlas.error){
       setAnlasPill();
-      toast('💡 잔량 조회 API는 차단됐지만 생성 응답 헤더에서 잔량을 받아옵니다', 'info');
+      if(!silent) toast('💡 잔량 조회 API는 차단됐지만 생성 응답 헤더에서 잔량을 받아옵니다', 'info');
     } else {
       state.anlas = {error: a?.error || statusText, errorText: statusText};
       setAnlasPill();
-      // 자세한 토스트
-      const hint = a?.status === 401 ? '\n\nNovelAI 사이트 → User Settings → Account → API → "Get Persistent API Token"에서 새로 복사하세요.\n키는 pst-... 로 시작합니다.' :
-                   a?.status === 403 ? '\n\n계정 권한 또는 Tier가 부족합니다.' :
-                   !a?.status ? '\n\n구독 API가 CORS로 차단됐을 수 있어요. 한 번 이미지를 생성하면 응답 헤더에서 잔량을 자동 추출합니다.' : '';
-      toast(`잔량 조회 실패 — ${statusText}${hint}`, a?.status === 401 || a?.status === 403 ? 'error' : 'warning');
+      // 자세한 토스트 — silent 모드면 표시 안 함.
+      // CORS 차단 (status=0) 안내는 한 세션당 1회만 (반복 noise 억제).
+      const isCorsBlock = !a?.status;
+      if(!silent && !(isCorsBlock && _anlasCorsToastShown)){
+        const hint = a?.status === 401 ? '\n\nNovelAI 사이트 → User Settings → Account → API → "Get Persistent API Token"에서 새로 복사하세요.\n키는 pst-... 로 시작합니다.' :
+                     a?.status === 403 ? '\n\n계정 권한 또는 Tier가 부족합니다.' :
+                     isCorsBlock ? '\n\n구독 API가 CORS로 차단됐을 수 있어요. 한 번 이미지를 생성하면 응답 헤더에서 잔량을 자동 추출합니다.' : '';
+        toast(`잔량 조회 실패 — ${statusText}${hint}`, a?.status === 401 || a?.status === 403 ? 'error' : 'warning');
+        if(isCorsBlock) _anlasCorsToastShown = true;
+      }
     }
     refreshCost();
     return;
@@ -15073,7 +15083,9 @@ async function init(){
   }
 
   // Try Anlas if key exists
-  if(state.apiKey) refreshAnlas();
+  // 페이지 로드 자동 호출은 silent — CORS 차단되더라도 토스트로 시끄럽게 알리지 않음.
+  // (사용자가 ⟳ 버튼 누르면 그때 자세히 안내, pill에는 상태 표시 유지.)
+  if(state.apiKey) refreshAnlas({silent: true});
 
   // Storage info
   $('refreshStorageBtn')?.click?.();
