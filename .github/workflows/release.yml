@@ -1,0 +1,42 @@
+name: Release prep (SRI + SW cache)
+
+# 수동 트리거 — 외부 CDN 의존성 업데이트 후, 배포 직전에 한 번 실행.
+# 변경 사항이 있으면 main 브랜치에 자동 커밋.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Update CDN SRI hashes
+        run: npm run sri
+
+      - name: Bump SW cache name (SHA8 of index.html)
+        run: npm run bump-sw-cache
+
+      - name: Verify build (check + lint + test)
+        run: |
+          npm run check
+          npm run lint
+          npm test
+
+      - name: Commit & push if changed
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "🔒 Auto-update SRI hashes + SW cache version (workflow_dispatch)"
+            git push
+          else
+            echo "No changes."
+          fi

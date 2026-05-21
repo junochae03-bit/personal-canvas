@@ -38,13 +38,14 @@ const htmlFiles = allFiles.filter(p => p.endsWith('.html'));
 const pureFiles = allFiles.filter(p => p.includes('/js/pure/') && p.endsWith('.mjs'));
 
 // 1. eval / new Function (소스 코드에서만 — 문자열 컨텐츠도 포함되니 보수적)
+// 정규식: 'eval(' 단어 경계 + 직전에 '.' '$' '_' '`' '#' 이 없어야 함 (Playwright $$eval, queryEval 등 제외).
 for(const f of [...jsFiles, ...htmlFiles]){
   const src = readFileSync(f, 'utf8');
-  // 정규식 안의 'eval' 같은 false positive 방지: 단어 경계 + (
-  if(/\beval\s*\(/.test(src.replace(/<!--[\s\S]*?-->/g, ''))){
+  const cleaned = src.replace(/<!--[\s\S]*?-->/g, '');
+  if(/(?<![.$_`#a-zA-Z0-9])\beval\s*\(/.test(cleaned)){
     fail(f, 'eval( 사용 금지');
   }
-  if(/\bnew\s+Function\s*\(/.test(src)){
+  if(/\bnew\s+Function\s*\(/.test(cleaned)){
     fail(f, 'new Function( 사용 금지');
   }
 }

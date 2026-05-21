@@ -12,6 +12,7 @@ import { getCharGroup, groupCharsByWork } from '../js/pure/chars.mjs';
 import { RAND_SEED_MAX, randomSeed, parseSeedInput } from '../js/pure/seed.mjs';
 import { MEGAPIXEL, isSmallTier, aspectRatio, snapTo8 } from '../js/pure/image.mjs';
 import { toChosung, isAllChosung, koMatch, highlightMatch } from '../js/pure/korean.mjs';
+import { pickFirst, sanitizeCharacter, sanitizeCharacters, extractNaiFields } from '../js/pure/naiMeta.mjs';
 
 // ────────────── utils ──────────────
 test('esc: HTML 특수문자 5종 이스케이프', () => {
@@ -256,4 +257,95 @@ test('highlightMatch: HTML escape 적용', () => {
 });
 test('highlightMatch: 빈 쿼리는 escape만', () => {
   assert.equal(highlightMatch('a<b', ''), 'a&lt;b');
+});
+
+// ────────────── naiMeta ──────────────
+test('pickFirst: 후보 키 중 null/빈문자 아닌 첫 값', () => {
+  const obj = {prompt: 'hi', neg: '', uc: 'ng', extra: null};
+  assert.equal(pickFirst(obj, 'missing', 'prompt'), 'hi');
+  assert.equal(pickFirst(obj, 'neg', 'uc'), 'ng');   // 빈문자 스킵
+  assert.equal(pickFirst(obj, 'extra', 'missing'), null);
+  assert.equal(pickFirst(null, 'a'), null);
+});
+
+test('sanitizeCharacter: 모든 문자열 slice + pos clamp', () => {
+  const long = 'x'.repeat(5000);
+  const c = sanitizeCharacter({
+    name: long, appearance: long, action: long, neg: long, prompt: long,
+    pos: {x: 5, y: -2},
+  });
+  assert.equal(c.name.length, 80);
+  assert.equal(c.appearance.length, 2000);
+  assert.equal(c.prompt.length, 4000);
+  assert.equal(c.pos.x, 1);
+  assert.equal(c.pos.y, 0);
+  assert.equal(c.enabled, true);
+});
+
+test('sanitizeCharacter: pool 50개 cap + 항목 정제', () => {
+  const pool = Array.from({length: 100}, (_, i) => ({name: `p${i}`, appearance: 'a'.repeat(3000)}));
+  const c = sanitizeCharacter({pool});
+  assert.equal(c.pool.length, 50);
+  assert.equal(c.pool[0].appearance.length, 2000);
+});
+
+test('sanitizeCharacter: 결손/null 안전', () => {
+  const c1 = sanitizeCharacter(null);
+  assert.equal(c1.name, '');
+  assert.deepEqual(c1.pos, {x: 0.5, y: 0.5});
+  assert.deepEqual(c1.pool, []);
+  const c2 = sanitizeCharacter({enabled: false});
+  assert.equal(c2.enabled, false);
+});
+
+test('sanitizeCharacters: 6명 cap', () => {
+  const arr = Array.from({length: 10}, (_, i) => ({name: `c${i}`}));
+  const out = sanitizeCharacters(arr);
+  assert.equal(out.length, 6);
+  const out2 = sanitizeCharacters(arr, 3);
+  assert.equal(out2.length, 3);
+});
+
+test('sanitizeCharacters: 비배열 → 빈배열', () => {
+  assert.deepEqual(sanitizeCharacters(null), []);
+  assert.deepEqual(sanitizeCharacters('x'), []);
+});
+
+test('extractNaiFields: NAI 내부 + 공식 포맷 모두 커버', () => {
+  const v1 = extractNaiFields({prompt: 'A', neg: 'B', seed: 42, steps: '28', cfg: '5.5', model: 'nai-diffusion-4', sampler: 'k_euler', w: 1024, h: 1024});
+  assert.equal(v1.prompt, 'A');
+  assert.equal(v1.neg, 'B');
+  assert.equal(v1.seed, 42);
+  assert.equal(v1.steps, 28);
+  assert.equal(v1.cfg, 5.5);
+  assert.equal(v1.model, 'nai-diffusion-4');
+  assert.equal(v1.width, 1024);
+  assert.equal(v1.height, 1024);
+});
+
+test('extractNaiFields: A1111 호환 (negative_prompt/width)', () => {
+  const v = extractNaiFields({prompt: 'A', negative_prompt: 'N', width: 768, height: 1024});
+  assert.equal(v.neg, 'N');
+  assert.equal(v.width, 768);
+});
+
+test('extractNaiFields: characters 자동 정제', () => {
+  const v = extractNaiFields({
+    prompt: 'P',
+    characters: [{name: 'C1', appearance: 'x'.repeat(3000)}, {name: 'C2'}],
+  });
+  assert.equal(v.characters.length, 2);
+  assert.equal(v.characters[0].appearance.length, 2000);
+});
+
+test('extractNaiFields: 잘못된 값 무시 (NaN seed, 빈 모델)', () => {
+  const v = extractNaiFields({seed: 'abc', model: '', cfg: 'oops'});
+  assert.equal(v.seed, undefined);
+  assert.equal(v.model, undefined);
+  assert.equal(v.cfg, undefined);
+});
+
+test('extractNaiFields: null/non-object 안전', () => {
+  assert.deepEqual(extractNaiFields(null), {});
+  assert.deepEqual(extractNaiFields('x'), {});
 });
