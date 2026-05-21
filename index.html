@@ -642,6 +642,10 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .p-group-edit:hover,.cb-group-edit:hover{border-color:var(--acc);color:var(--acc);background:rgba(162,90,31,.08)}
 .p-item{background:var(--card);border:1.5px solid var(--b1);border-radius:8px;overflow:hidden;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s;display:flex;flex-direction:column}
 .p-item:hover{border-color:var(--acc);box-shadow:0 6px 16px rgba(74,52,20,.15)}
+.p-item.fav{border-color:#f5b80a;box-shadow:0 0 0 1px rgba(245,184,10,.25), 0 4px 12px rgba(245,184,10,.12)}
+.p-item.fav:hover{border-color:#f5b80a;box-shadow:0 0 0 2px rgba(245,184,10,.35), 0 8px 18px rgba(245,184,10,.18)}
+.p-item .p-fav-btn{flex-shrink:0;transition:color .15s,transform .12s}
+.p-item .p-fav-btn:hover{transform:scale(1.18)}
 .p-item .p-thumb{max-height:0;overflow:hidden;transition:max-height .25s ease;position:relative}
 .p-item.expanded .p-thumb{max-height:300px;border-bottom:1.5px solid var(--b1)}
 .p-item .p-thumb img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:var(--card2)}
@@ -1418,6 +1422,34 @@ mark{
   font-weight: 700;
 }
 [data-theme="dark"] mark{ background: rgba(255, 200, 60, .35); }
+
+/* ♿ 고대비 모드 — OS/브라우저에서 prefers-contrast: more 활성 시 */
+@media (prefers-contrast: more){
+  :root{
+    --b1: #000;         /* 모든 보더를 진한 검정으로 */
+    --t1: #000;         /* 본문 텍스트 최대 명도 대비 */
+    --t2: #1a1a1a;
+    --t3: #333;
+  }
+  [data-theme="dark"]:root{
+    --b1: #fff;
+    --t1: #fff;
+    --t2: #ddd;
+    --t3: #aaa;
+  }
+  /* 보더·outline 굵기 +1px — 시각 약자 인지 보조 */
+  .btn, .iconbtn, .inp, .ta, select, .modal, .modal-bg .modal, .p-item, .g-item, fieldset{
+    border-width: 2px !important;
+  }
+  *:focus-visible{
+    outline-width: 3px !important;
+    outline-offset: 3px !important;
+  }
+  /* 토스트·뱃지 등 의미 정보가 색으로만 전달되지 않도록 검정 보더 강조 */
+  .toast, mark, .danger{
+    border: 2px solid currentColor !important;
+  }
+}
 </style>
 </head>
 <body>
@@ -1944,6 +1976,10 @@ mark{
               <div class="label">갤러리 용량 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Gallery Size</span><div class="desc" id="storageDesc">계산 중...</div></div>
               <button class="btn ghost" id="refreshStorageBtn">새로고침 <span class="en">Refresh</span></button>
             </div>
+            <div class="set-row" style="align-items:stretch;flex-direction:column;gap:6px">
+              <div class="label">Anlas 사용량 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Usage</span><div class="desc">NAI 응답 헤더 cost 누적 — 90일 보관</div></div>
+              <div id="anlasStatsBox" style="width:100%;padding:2px 0"></div>
+            </div>
             <div class="set-row">
               <div class="label">데이터 백업 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Backup</span><div class="desc">설정+프리셋을 JSON 파일로 저장</div></div>
               <button class="btn ghost" id="exportAllBtn">백업 내보내기 <span class="en">Export</span></button>
@@ -2461,11 +2497,14 @@ coffee shop, latte art"></textarea>
 <div id="toastBox" role="region" aria-label="알림" aria-live="polite" aria-atomic="false"></div>
 
 <!-- 🎯 백그라운드 일괄 생성 진행 위젯 — 모달 닫아도 떠 있음 -->
-<button id="bgProgress" class="bg-progress" type="button" hidden aria-live="polite" title="진행 중인 일괄 생성 — 탭하면 모달 다시 열기">
+<button id="bgProgress" class="bg-progress" type="button" hidden title="진행 중인 일괄 생성 — 탭하면 모달 다시 열기">
   <span class="bg-pulse"></span>
   <span class="bg-label">🎯 일괄 생성</span>
   <span class="bg-count">0/0</span>
 </button>
+<!-- ♿ 스크린리더 전용 라이브 영역 — 큐 진행/완료/에러를 비시각적으로 통지.
+     시각 UI(bgProgress)는 hidden 처리될 수 있으므로 별도 항상-표시 라이브 영역 필요. -->
+<div id="srLive" role="status" aria-live="polite" aria-atomic="true" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0"></div>
 
 <!-- HIDDEN FILE INPUT + CHARACTER PRESET DATALIST -->
 <input type="file" id="hiddenFile" accept="*" style="display:none">
@@ -2883,7 +2922,32 @@ function showInstallInstructions(){
       {src: png512, sizes: '512x512', type: 'image/png', purpose: 'maskable'},
       // SVG 폴백 — 고해상도 지원
       {src: svgURL192, sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable'},
-    ]
+    ],
+    // 📱 PWA shortcuts — Android 12+/일부 데스크탑에서 앱 아이콘 길게 누르면 표시.
+    // url 의 해시는 부트 시점에 setMainPane(...) 으로 라우팅.
+    shortcuts: [
+      {
+        name: '새 이미지 생성',
+        short_name: '생성',
+        description: '미리보기 페인 열기 — 바로 생성',
+        url: './?source=pwa-shortcut#pane=preview',
+        icons: [{src: png192, sizes: '192x192', type: 'image/png'}],
+      },
+      {
+        name: '갤러리 열기',
+        short_name: '갤러리',
+        description: '저장된 이미지 보기',
+        url: './?source=pwa-shortcut#pane=gallery',
+        icons: [{src: png192, sizes: '192x192', type: 'image/png'}],
+      },
+      {
+        name: '템플릿',
+        short_name: '템플릿',
+        description: '저장된 템플릿 / 자연어 매칭',
+        url: './?source=pwa-shortcut#pane=templates',
+        icons: [{src: png192, sizes: '192x192', type: 'image/png'}],
+      },
+    ],
   };
   const manifestURL = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
   document.getElementById('manifestLink').href = manifestURL;
@@ -3890,6 +3954,86 @@ function extractAnlasFromHeaders(headers){
     state.anlas.estimated = true;
     setAnlasPill();
   }
+  // 📊 사용량 누적 — 일/주/월 통계용. cost 가 0 이상일 때만.
+  if(cost != null && cost >= 0) recordAnlasUsage(cost);
+}
+
+// 📊 ANLAS USAGE LOG — 일자별 누적, 최근 90일 유지
+const _LS_ANLAS_LOG = 'nai_anlas_log';
+let _anlasLogCache = null;
+function _loadAnlasLog(){
+  if(_anlasLogCache) return _anlasLogCache;
+  try {
+    const raw = JSON.parse(localStorage.getItem(_LS_ANLAS_LOG) || '{}');
+    _anlasLogCache = (raw && typeof raw === 'object') ? raw : {};
+  } catch(e){ _anlasLogCache = {}; }
+  return _anlasLogCache;
+}
+function _saveAnlasLog(){
+  if(!_anlasLogCache) return;
+  try { localStorage.setItem(_LS_ANLAS_LOG, JSON.stringify(_anlasLogCache)); } catch(e){ _swallow(e, 'anlasLog:save'); }
+}
+function _todayKey(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function recordAnlasUsage(cost){
+  if(!Number.isFinite(cost) || cost < 0) return;
+  const log = _loadAnlasLog();
+  const k = _todayKey();
+  log[k] = (log[k] || 0) + cost;
+  // 90일 초과는 prune
+  const keys = Object.keys(log).sort();
+  if(keys.length > 90){
+    const old = keys.slice(0, keys.length - 90);
+    for(const k2 of old) delete log[k2];
+  }
+  _saveAnlasLog();
+}
+function getAnlasStats(){
+  const log = _loadAnlasLog();
+  const now = new Date();
+  const today = _todayKey();
+  let dailyToday = log[today] || 0;
+  let week = 0, month = 0;
+  const oneDay = 86400000;
+  for(const k of Object.keys(log)){
+    const d = new Date(k);
+    if(isNaN(d)) continue;
+    const ageDays = Math.floor((now - d) / oneDay);
+    if(ageDays >= 0 && ageDays < 7) week += log[k];
+    if(ageDays >= 0 && ageDays < 30) month += log[k];
+  }
+  // 최근 30일 데이터를 sparkline 용 시리즈로
+  const series = [];
+  for(let i = 29; i >= 0; i--){
+    const d = new Date(now); d.setDate(now.getDate() - i);
+    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    series.push({day: k, cost: log[k] || 0});
+  }
+  return {today: dailyToday, week, month, series};
+}
+function renderAnlasStatsInto(containerEl){
+  if(!containerEl) return;
+  const s = getAnlasStats();
+  const max = Math.max(...s.series.map(x => x.cost), 1);
+  const bars = s.series.map(x => {
+    const h = Math.round(x.cost / max * 28);
+    const isToday = x.day === _todayKey();
+    return `<div title="${x.day}: ${x.cost.toLocaleString()} Anlas" style="flex:1;display:flex;align-items:flex-end;min-width:0">
+      <div style="width:100%;height:${Math.max(2, h)}px;background:${isToday?'var(--acc)':'rgba(162,90,31,.45)'};border-radius:2px 2px 0 0"></div>
+    </div>`;
+  }).join('');
+  containerEl.innerHTML = `
+    <div style="display:flex;gap:8px;font-size:11.5px;color:var(--t2);margin-bottom:6px;font-family:var(--mono)">
+      <span>오늘 <b style="color:var(--acc)">${s.today.toLocaleString()}</b></span>
+      <span>7일 <b style="color:var(--t1)">${s.week.toLocaleString()}</b></span>
+      <span>30일 <b style="color:var(--t1)">${s.month.toLocaleString()}</b></span>
+    </div>
+    <div style="display:flex;gap:1px;height:32px;align-items:flex-end;background:var(--card);padding:2px 4px;border:1px solid var(--b1);border-radius:4px" title="최근 30일 일별 사용량 (오른쪽이 오늘)">
+      ${bars}
+    </div>
+    <div style="font-size:10.5px;color:var(--t3);margin-top:4px">📊 NAI 응답 헤더의 cost 값 누적 — 무료 생성은 0으로 기록</div>`;
 }
 
 // 중앙 pill 갱신 — state.anlas만 참조
@@ -5547,7 +5691,9 @@ function renderPresets(){
   let list = state.presets[type] || [];
   // 🇰🇷 koMatch — 초성 검색 ("ㅂㅅ" → "붕스타") 지원
   if(search) list = list.filter(p => koMatch(p.name||'', search).match || koMatch(p.text||'', search).match);
-  $('presetInfo').textContent = `${list.length}개 표시 / 전체 ${(state.presets[type]?.length||0).toLocaleString()}개`;
+  // ⭐ 즐겨찾기 우선 정렬 (그룹화 안 되는 카테고리에서만 의미. 그룹화 카테고리는 groupCharsByWork 내부 정렬 유지)
+  const favCount = list.filter(p => p.fav).length;
+  $('presetInfo').textContent = `${list.length}개 표시 / 전체 ${(state.presets[type]?.length||0).toLocaleString()}개${favCount?` · ⭐ ${favCount}`:''}`;
   const grid = $('presetGrid');
   const def = PRESET_TYPES.find(t => t.id === type) || {ico:'⚙'};
   const ico = def.ico;
@@ -5561,6 +5707,7 @@ function renderPresets(){
     const key = `${type}:${p.name||''}`;
     const expanded = _expandedPresets.has(key);
     const hasThumb = !!p.thumb;
+    const isFav = !!p.fav;
     let previewBody;
     if(hasThumb){
       previewBody = `<img src="${esc(p.thumb)}" alt="${esc(p.name||'')}" loading="lazy" decoding="async" onerror="this.parentElement.innerHTML='<div class=ph-icon>${ico}</div>'">`;
@@ -5570,7 +5717,7 @@ function renderPresets(){
       previewBody = `<div class="ph-icon">${ico}</div>`;
     }
     return `
-      <div class="p-item${expanded?' expanded':''}${hasThumb?' has-thumb':''}" data-name="${esc(p.name||'')}" data-key="${esc(key)}">
+      <div class="p-item${expanded?' expanded':''}${hasThumb?' has-thumb':''}${isFav?' fav':''}" data-name="${esc(p.name||'')}" data-key="${esc(key)}">
         <div class="p-thumb">
           ${hasThumb ? '<span class="img-tag">미리보기</span>' : ''}
           ${previewBody}
@@ -5579,6 +5726,7 @@ function renderPresets(){
           <span class="expand-mark">▶</span>
           <span class="ico-mini">${ico}</span>
           <span class="pname" title="${esc(p.name||'')}">${highlightMatch(p.name||'(이름 없음)', search)}</span>
+          <button class="p-fav-btn" data-act="fav" title="즐겨찾기${isFav?' 해제':' 추가'} (상단 고정)" aria-pressed="${isFav}" style="background:transparent;border:0;color:${isFav?'#f5b80a':'var(--t3)'};cursor:pointer;font-size:14px;padding:0 4px;margin-left:auto;line-height:1">${isFav?'★':'☆'}</button>
         </div>
         <div class="psub${subEmpty}" title="${esc(subText)}">${highlightMatch(subDisplay, search)}</div>
         <div class="pact">
@@ -5590,11 +5738,21 @@ function renderPresets(){
       </div>`;
   };
 
+  // ⭐ 즐겨찾기 우선 정렬 — 그룹화 안 된 평면 리스트에서만 적용
+  // (그룹화는 작품/prefix 단위 의미 보존을 위해 fav 무시. 그룹 내부에서는 별도 정렬 후 fav 정렬)
+  const sortByFav = (arr) => {
+    const fav = arr.filter(p => p.fav);
+    const rest = arr.filter(p => !p.fav);
+    return fav.concat(rest);
+  };
+
   // 그룹화 — 모든 카테고리에서 이름 prefix(첫 _ 앞 토큰)로 자동 묶음
   //   캐릭터: minSize=3 (작품 단위), 그 외: minSize=2 (사용자가 정리한 prefix별 세분화)
   if(GROUPABLE_PRESET_TYPES.has(type) && list.length > 0){
     const minSize = (type === 'character') ? 3 : NON_CHAR_GROUP_MINSIZE;
     const groups = groupCharsByWork(list, minSize);
+    // 그룹 내부에서 fav 우선
+    for(const g of groups) g.items = sortByFav(g.items);
     const renameTitle = type === 'character'
       ? '작품명 일괄 수정 — 이 그룹의 모든 캐릭터 이름 prefix가 함께 바뀝니다'
       : `그룹명 일괄 수정 — 이 그룹의 모든 ${def.label||'프리셋'} 이름 prefix가 함께 바뀝니다`;
@@ -5615,7 +5773,7 @@ function renderPresets(){
     return;
   }
 
-  grid.innerHTML = list.map(renderItem).join('');
+  grid.innerHTML = sortByFav(list).map(renderItem).join('');
 }
 
 function showImportProgress(msg){
@@ -8470,6 +8628,17 @@ function advanceCharPoolsBeforeGenerate(){
 let _pgRunning = false;
 
 // 백그라운드 진행 위젯 — 모달이 닫혀 있을 때만 노출
+// ♿ 스크린리더 라이브 영역에 메시지 — debounce 로 폭주 방지 (큐 1장당 한 번이면 충분).
+let _srLastAnnounce = 0;
+function announceSr(msg, minIntervalMs = 1500){
+  const el = document.getElementById('srLive');
+  if(!el || !msg) return;
+  const now = Date.now();
+  if(now - _srLastAnnounce < minIntervalMs) return;
+  _srLastAnnounce = now;
+  el.textContent = msg;
+}
+
 function updateBgProgress(label, force){
   const el = $('bgProgress');
   if(!el) return;
@@ -8484,10 +8653,18 @@ function updateBgProgress(label, force){
       const main = parts[0]?.trim() || '🎯 일괄 생성';
       const sub = parts.slice(1).join('·').trim();
       const m = /(\d+)\s*\/\s*(\d+)/.exec(main);
-      if(m){ cnt.textContent = `${m[1]}/${m[2]}`; }
+      if(m){
+        cnt.textContent = `${m[1]}/${m[2]}`;
+        // ♿ 진행 통지 — 매 장이 아닌 5장마다 / 시작·끝 (debounce)
+        const cur = parseInt(m[1], 10), total = parseInt(m[2], 10);
+        if(cur === 1 || cur === total || cur % 5 === 0){
+          announceSr(`일괄 생성 진행 ${cur}/${total}${sub?' — '+sub:''}`);
+        }
+      }
       if(lbl) lbl.textContent = sub ? `🎯 ${sub}` : '🎯 일괄 생성';
     }
   } else {
+    if(!el.hidden) announceSr('일괄 생성 완료');
     el.hidden = true;
   }
 }
@@ -13237,6 +13414,13 @@ function wireGenerationAndPresetEvents(){
       if(act === 'use'){ applyPreset(p); }
       else if(act === 'edit'){ openPresetEdit(state.presetType, p); }
       else if(act === 'move'){ openPresetMove(state.presetType, p); }
+      else if(act === 'fav'){
+        // ⭐ 즐겨찾기 토글 — 즉시 DB 저장 + 재렌더 (상단 고정)
+        p.fav = !p.fav;
+        await DB.presetPut(state.presetType, p);
+        renderPresets();
+        toast(p.fav ? `⭐ "${name}" 즐겨찾기 추가 (상단 고정)` : `☆ "${name}" 즐겨찾기 해제`, 'info');
+      }
       else if(act === 'del'){
         confirmDialog(`"${name}" 프리셋을 삭제하시겠습니까?`, async () => {
           await DB.presetDelete(state.presetType, name);
@@ -14518,6 +14702,10 @@ async function init(){
 
   // Storage info
   $('refreshStorageBtn')?.click?.();
+  // 📊 Anlas 사용량 통계 렌더
+  renderAnlasStatsInto($('anlasStatsBox'));
+  // 설정 → 저장소 새로고침 클릭 시 함께 갱신
+  $('refreshStorageBtn')?.addEventListener('click', () => renderAnlasStatsInto($('anlasStatsBox')));
 
   // ℹ 상세정보 토글 — 메타 패널 펼치기/접기 (데스크탑·모바일 공통)
   $('lbInfoBtn').addEventListener('click', e => {
@@ -14561,6 +14749,19 @@ async function init(){
 
   // 📱 모바일 — 좌우 스와이프로 탭 전환 (편집 ↔ 미리보기 ↔ 갤러리 ↔ 프리셋 ↔ 도감 ↔ 설정)
   setupMobileSwipe();
+
+  // 🔗 PWA shortcut/직접 URL — '#pane=...' 해시로 초기 탭 라우팅 (manifest shortcuts 와 호환).
+  // 허용 값: preview / gallery / presets / tags / settings / edit / templates
+  const m = /^#pane=([a-z]+)/.exec(location.hash || '');
+  if(m){
+    const target = m[1];
+    const allowed = ['preview','gallery','presets','tags','settings','edit','templates'];
+    if(allowed.includes(target)){
+      setMainPane(target);
+      // 한 번 사용 후 해시 정리 — 새로고침 시 같은 단축 반복 방지
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
