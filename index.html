@@ -747,10 +747,19 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 /* TOAST — 알림 */
 #toastBox{position:fixed;bottom:22px;right:22px;z-index:9200;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-.toast{background:var(--panel);border:1.5px solid var(--b2);border-left:4px solid var(--acc);color:var(--t1);padding:12px 16px;border-radius:6px;font-size:13.5px;font-weight:500;box-shadow:0 8px 20px rgba(74,52,20,.2);min-width:260px;animation:slidein .25s ease;pointer-events:all}
+.toast{background:var(--panel);border:1.5px solid var(--b2);border-left:4px solid var(--acc);color:var(--t1);padding:12px 16px;border-radius:6px;font-size:13.5px;font-weight:500;box-shadow:0 8px 20px rgba(74,52,20,.2);min-width:260px;animation:slidein .25s ease;pointer-events:all;transition:opacity .2s, transform .2s}
 .toast.ok{border-left-color:var(--green)}
 .toast.warn{border-left-color:var(--yellow)}
 .toast.err{border-left-color:var(--red)}
+
+/* 🔔 접힘 상태 — 가장 최근 1개만 보이고 나머지는 숨김 (헤더의 카운터로 갯수 표시) */
+#toastBox.collapsed .toast:not(:last-child){
+  display: none;
+}
+/* 헤더는 항상 보임 */
+#toastBox .toast-hdr{ pointer-events: all; }
+#toastBox.collapsed .toast-hdr [data-act="close-all"]{ display: none; }
+#toastBox .toast-hdr button:hover{ background: var(--card); border-radius: 4px; }
 @keyframes slidein{from{transform:translateX(24px);opacity:0}to{transform:translateX(0);opacity:1}}
 
 /* INPAINT CANVAS — 마스크 그리기 */
@@ -3516,11 +3525,19 @@ const blobToDataURL = blob => new Promise((res,rej)=>{ const r=new FileReader();
 const dataURLtoBlob = url => fetch(url).then(r=>r.blob());
 
 /**
- * 토스트 알림. 액션 버튼(예: 실행 취소)을 옵션으로 받을 수 있음.
+ * 토스트 알림 — 접힘/펼침 + 일괄 닫기 지원, 자동 닫힘 0.5초.
+ *  - info/success: 0.5초 (사용자 요청)
+ *  - warning: 1.5초 (안전 마진)
+ *  - error: 자동 닫힘 안 함 (사용자가 명시적으로 닫음)
+ *  - action 있음: 3초 (실행 취소 시간 확보)
+ *  - 호버 / 접힘 펼침 상태에선 타이머 일시정지
  * @param {string} msg
  * @param {'info'|'success'|'warning'|'error'} [kind]
  * @param {{label:string, onClick:()=>void, timeoutMs?:number}} [action]
  */
+const TOAST_TTL = {info: 500, success: 500, warning: 1500, error: 0, action: 3000};
+const _toastState = {collapsed: false, pinned: false};
+
 function toast(msg, kind, action){
   kind = kind || 'info';
   const el = document.createElement('div');
@@ -3540,12 +3557,37 @@ function toast(msg, kind, action){
   el.style.gap = '10px';
   el.appendChild(span);
   let timeoutId = null;
+  let remainingMs = 0;
+  let startedAt = 0;
+  const ttl = action?.timeoutMs ?? (action ? TOAST_TTL.action : (TOAST_TTL[kind] ?? TOAST_TTL.info));
+  el.dataset.kind = kind;
+  el.dataset.ttl = String(ttl);
   const remove = () => {
     if(timeoutId) clearTimeout(timeoutId);
     el.style.opacity = '0';
     el.style.transform = 'translateX(20px)';
-    setTimeout(() => el.remove(), 200);
+    setTimeout(() => { el.remove(); updateToastBoxHeader(); }, 200);
   };
+  const startTimer = (ms) => {
+    if(ms <= 0) return;
+    if(timeoutId) clearTimeout(timeoutId);
+    remainingMs = ms;
+    startedAt = Date.now();
+    timeoutId = setTimeout(remove, ms);
+  };
+  const pauseTimer = () => {
+    if(!timeoutId) return;
+    clearTimeout(timeoutId); timeoutId = null;
+    remainingMs = Math.max(0, remainingMs - (Date.now() - startedAt));
+  };
+  const resumeTimer = () => {
+    if(remainingMs > 0 && !timeoutId && !_toastState.pinned){
+      startedAt = Date.now();
+      timeoutId = setTimeout(remove, remainingMs);
+    }
+  };
+  el._pause = pauseTimer;
+  el._resume = resumeTimer;
   if(action && action.label && typeof action.onClick === 'function'){
     const btn = document.createElement('button');
     btn.className = 'toast-act';
@@ -3558,7 +3600,7 @@ function toast(msg, kind, action){
     });
     el.appendChild(btn);
   }
-  // 🗙 닫기 버튼 — 모든 토스트에 추가 (에러는 자동 종료 X, 사용자가 명시적으로 닫게)
+  // 🗙 개별 닫기
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
   closeBtn.setAttribute('aria-label', '토스트 닫기');
@@ -3566,10 +3608,66 @@ function toast(msg, kind, action){
   closeBtn.style.cssText = 'background:transparent;border:0;color:inherit;opacity:.6;cursor:pointer;font-size:14px;padding:2px 6px;flex-shrink:0;line-height:1;font-family:inherit';
   closeBtn.addEventListener('click', remove);
   el.appendChild(closeBtn);
+  // 호버 시 타이머 일시정지 (모바일에서도 pointerenter 작동)
+  el.addEventListener('pointerenter', pauseTimer);
+  el.addEventListener('pointerleave', resumeTimer);
   $('toastBox').appendChild(el);
-  // 지속시간: info/success/warning은 4.5s (가독성 ↑), error는 자동 종료 X, action은 6s
-  const ttl = action?.timeoutMs ?? (kind === 'error' ? 0 : action ? 6000 : 4500);
-  if(ttl > 0) timeoutId = setTimeout(remove, ttl);
+  updateToastBoxHeader();
+  // 접힘 상태이거나 다른 토스트 호버 중이면 타이머 시작 안 함
+  if(!_toastState.pinned) startTimer(ttl);
+}
+
+// 🔔 토스트 박스 헤더 — 카운터 + 접기/펼치기 + 모두 닫기.
+function updateToastBoxHeader(){
+  const box = $('toastBox');
+  if(!box) return;
+  let header = box.querySelector('.toast-hdr');
+  const items = [...box.querySelectorAll('.toast')];
+  if(items.length === 0){
+    if(header) header.remove();
+    return;
+  }
+  if(!header){
+    header = document.createElement('div');
+    header.className = 'toast-hdr';
+    header.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--panel);border:1.5px solid var(--b2);border-radius:6px;box-shadow:0 6px 14px rgba(74,52,20,.18);font-size:11.5px;pointer-events:all;margin-bottom:2px';
+    box.insertBefore(header, box.firstChild);
+  }
+  const collapsed = _toastState.collapsed;
+  // 종류별 카운트
+  const counts = {info:0, ok:0, warn:0, err:0};
+  for(const t of items){
+    if(t.classList.contains('err')) counts.err++;
+    else if(t.classList.contains('warn')) counts.warn++;
+    else if(t.classList.contains('ok')) counts.ok++;
+    else counts.info++;
+  }
+  const badges = [];
+  if(counts.err) badges.push(`<span style="color:var(--red);font-weight:700">✕${counts.err}</span>`);
+  if(counts.warn) badges.push(`<span style="color:var(--yellow);font-weight:700">⚠${counts.warn}</span>`);
+  if(counts.ok) badges.push(`<span style="color:var(--green);font-weight:700">✓${counts.ok}</span>`);
+  if(counts.info) badges.push(`<span style="color:var(--t2);font-weight:600">ℹ${counts.info}</span>`);
+  header.innerHTML = `
+    <button type="button" data-act="toggle" title="${collapsed ? '펼치기' : '접기'} (E)" aria-pressed="${collapsed}" aria-label="알림 ${collapsed?'펼치기':'접기'}" style="background:transparent;border:0;color:var(--t1);cursor:pointer;padding:3px 4px;font-size:13px;line-height:1;font-family:inherit">${collapsed ? '▸' : '▾'}</button>
+    <span style="color:var(--t2);font-weight:600">🔔 ${items.length}</span>
+    <span style="display:flex;gap:4px;align-items:center;font-family:var(--mono)">${badges.join(' ')}</span>
+    <div style="flex:1"></div>
+    ${items.length > 1 ? `<button type="button" data-act="close-all" title="모두 닫기" aria-label="모든 알림 닫기" style="background:transparent;border:1px solid var(--b1);color:var(--t2);cursor:pointer;padding:2px 8px;border-radius:4px;font-size:11px;font-family:inherit">🗑 모두 닫기</button>` : ''}
+  `;
+  header.querySelector('[data-act="toggle"]').onclick = () => {
+    _toastState.collapsed = !_toastState.collapsed;
+    _toastState.pinned = _toastState.collapsed ? false : true;   // 펼치면 자동 닫힘 일시정지
+    box.classList.toggle('collapsed', _toastState.collapsed);
+    // 펼침 시 타이머 멈추고, 접힘 시 재개
+    items.forEach(t => { if(_toastState.pinned) t._pause?.(); else t._resume?.(); });
+    updateToastBoxHeader();
+  };
+  const closeAll = header.querySelector('[data-act="close-all"]');
+  if(closeAll) closeAll.onclick = () => {
+    items.forEach(t => { t._pause?.(); t.style.opacity = '0'; t.style.transform = 'translateX(20px)'; });
+    setTimeout(() => { box.querySelectorAll('.toast').forEach(el => el.remove()); updateToastBoxHeader(); }, 200);
+  };
+  box.classList.toggle('collapsed', _toastState.collapsed);
 }
 
 // ↶ 실행 취소 헬퍼 — 위험한 작업 직후 호출하면 자동으로 undo 토스트 띄움
@@ -14655,6 +14753,12 @@ function showShortcutsHelp(){
       ['Esc', '모달 닫기 / 라이트박스 닫기'],
       ['Alt+1..9', '워크플로 슬롯 N 복원 (즐겨찾기 우선)'],
       ['Alt+Shift+1..9', '워크플로 슬롯 N 에 현재 상태 덮어쓰기'],
+    ]},
+    {title: '🔔 알림 (Toast)', items: [
+      ['우상단 ▾/▸', '접기 / 펼치기'],
+      ['🗑 모두 닫기', '활성 알림 일괄 제거 (2개 이상일 때)'],
+      ['호버', '자동 닫힘 일시정지'],
+      ['기본', 'info/success 0.5초, warning 1.5초, error 무한 (수동 닫기)'],
     ]},
     {title: '🖼 갤러리', items: [
       ['/', '검색 포커스'],
