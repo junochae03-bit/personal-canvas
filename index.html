@@ -2845,18 +2845,10 @@ const PRESET_TYPES = [
   {id:'character',   label:'캐릭터',    en:'Character',    ico:'👤', target:'char'},
   {id:'people',      label:'인원',      en:'People',       ico:'👥', target:'char-action'},
   {id:'outfit',      label:'의상',      en:'Outfit',       ico:'👗', target:'char-action'},
-  {id:'fetish',      label:'페티쉬',    en:'Fetish',       ico:'🔗', target:'char-action'},
   {id:'hair',        label:'헤어',      en:'Hair',         ico:'💇', target:'char-action'},
   {id:'situation',   label:'상황',      en:'Situation',    ico:'🎭', target:'char-action'},
   {id:'composition', label:'구도·앵글', en:'Composition',  ico:'🎬', target:'append'},
-  {id:'masturbation',label:'자위',      en:'Masturbation', ico:'🍑', target:'char-action'},
-  {id:'exposure',    label:'노출',      en:'Exposure',     ico:'💋', target:'char-action'},
-  {id:'yuri',        label:'백합',      en:'Yuri',         ico:'🌸', target:'char-action'},
   {id:'combo',       label:'콤보',      en:'Combo',        ico:'🔀', target:'char-action'},
-  {id:'state',       label:'상태',      en:'State',        ico:'💗', target:'char-action'},
-  {id:'expression',  label:'표정',      en:'Expression',   ico:'😊', target:'char-action'},
-  {id:'gender',      label:'남녀',      en:'Gender',       ico:'⚥', target:'char-action'},
-  {id:'harem',       label:'하렘',      en:'Harem',        ico:'💞', target:'char-action'},
   {id:'background',  label:'배경',      en:'Background',   ico:'🏞', target:'append'},
   {id:'pose',        label:'포즈',      en:'Pose',         ico:'🤸', target:'char-action'},
   {id:'mood',        label:'분위기',    en:'Mood',         ico:'✨', target:'append'},
@@ -2875,22 +2867,24 @@ const PREFIX_TO_TYPE = {
   '캐릭터':'character','인물':'character','캐':'character',
   '인원':'people','다인':'people','다수':'people','그룹':'people','커플':'people',
   '의상':'outfit','옷':'outfit','복장':'outfit','코디':'outfit',
-  '페티쉬':'fetish','페티시':'fetish',
   '헤어':'hair','머리':'hair',
+  // 🆕 상황 통합 — 자위·노출·백합·남녀·하렘은 상황의 서브그룹
   '상황':'situation','시츄':'situation','시추':'situation','씬':'situation','관계':'situation',
-  '자위':'masturbation',
-  '노출':'exposure',
-  '백합':'yuri',
+  '자위':'situation',
+  '노출':'situation',
+  '백합':'situation',
+  '남녀':'situation','성별':'situation','커플':'situation',
+  '하렘':'situation',
   '콤보':'combo',
-  '상태':'state','체형':'state',
-  '표정':'expression','얼굴':'expression','감정':'expression',
-  '남녀':'gender','성별':'gender',
-  '하렘':'harem',
-  '포즈':'pose','자세':'pose','동작':'pose','액션':'pose',
-  // 환경·구도
-  '구도':'composition','앵글':'composition','샷':'composition','포커스':'composition','클로즈업':'composition',
-  '배경':'background','장소':'background','로케':'background','시간':'background','날씨':'background',
+  // 🆕 분위기 통합 — 상태·표정·체형은 분위기의 서브그룹
+  '상태':'mood','체형':'mood',
+  '표정':'mood','얼굴':'mood','감정':'mood',
   '분위기':'mood','톤':'mood','색감':'mood',
+  '포즈':'pose','자세':'pose','동작':'pose','액션':'pose',
+  // 환경·구도 — 페티쉬는 구도·앵글의 서브그룹
+  '구도':'composition','앵글':'composition','샷':'composition','포커스':'composition','클로즈업':'composition',
+  '페티쉬':'composition','페티시':'composition',
+  '배경':'background','장소':'background','로케':'background','시간':'background','날씨':'background',
   '조명':'lighting','광원':'lighting','라이팅':'lighting',
 };
 
@@ -2898,11 +2892,11 @@ const PREFIX_TO_TYPE = {
 //   복원 시 unknown 키를 무시하지 않고 대응 카테고리에 합쳐서 가져옴
 const PRESET_CATEGORY_ALIASES = {
   people:      ['people_count'],
-  composition: ['angle'],
-  mood:        ['atmosphere'],
+  // 🆕 페티쉬·body_type 등 옛 카테고리들을 새 부모로 머지
+  composition: ['angle', 'fetish'],
+  mood:        ['atmosphere', 'state', 'expression', 'body_type'],
   background:  ['time_weather'],
-  state:       ['body_type'],
-  situation:   ['dynamic'],
+  situation:   ['dynamic', 'exposure', 'yuri', 'masturbation', 'gender', 'harem'],
 };
 function detectTypeByName(name){
   if(!name) return null;
@@ -4812,11 +4806,47 @@ async function loadPresetsFromDB(){
   for(const t of PRESET_TYPES){
     state.presets[t.id] = await DB.presetGetAll(t.id);
   }
+  await migrateDeprecatedPresetCategories();
   buildUserTagIndex();
   refreshCharNameDatalist();
   refreshCharTagSelects();  // 캐릭터 드롭다운에 의상/포즈/표정 프리셋 동기화
   renderPresetTabs();
   renderPresets();
+}
+
+// 🔄 옛 카테고리(fetish·state·expression·exposure·yuri·masturbation·gender·harem)에 남아있는
+//    사용자 데이터를 새 부모(composition·mood·situation)로 1회성 이전
+//    이전 후 _origTarget 마커를 남겨 적용 시 원래 동작 복원
+const DEPRECATED_CAT_MAP = {
+  fetish:       { parent:'composition', origTarget:'char-action' },
+  state:        { parent:'mood',        origTarget:'char-action' },
+  expression:   { parent:'mood',        origTarget:'char-action' },
+  exposure:     { parent:'situation',   origTarget:'char-action' },
+  yuri:         { parent:'situation',   origTarget:'char-action' },
+  masturbation: { parent:'situation',   origTarget:'char-action' },
+  gender:       { parent:'situation',   origTarget:'char-action' },
+  harem:        { parent:'situation',   origTarget:'char-action' },
+};
+async function migrateDeprecatedPresetCategories(){
+  let migrated = 0;
+  for(const [oldCat, {parent, origTarget}] of Object.entries(DEPRECATED_CAT_MAP)){
+    const oldList = await DB.presetGetAll(oldCat).catch(()=>[]);
+    if(!oldList || !oldList.length) continue;
+    state.presets[parent] = state.presets[parent] || [];
+    const existingNames = new Set(state.presets[parent].map(p => p.name));
+    for(const p of oldList){
+      if(existingNames.has(p.name)) continue;
+      const moved = {...p, _origTarget: p._origTarget || origTarget};
+      state.presets[parent].push(moved);
+      await DB.presetPut(parent, moved).catch(()=>{});
+      await DB.presetDelete(oldCat, p.name).catch(()=>{});
+      migrated++;
+    }
+  }
+  if(migrated > 0){
+    console.log(`[preset migration] ${migrated}개 프리셋을 새 부모 카테고리로 이전`);
+    if(typeof toast === 'function') toast(`프리셋 구조 정리 — ${migrated}개를 새 카테고리로 이전`, 'info');
+  }
 }
 
 function refreshCharNameDatalist(){
@@ -6431,11 +6461,64 @@ function openCharSlotPicker(enabledChars, defLabel, presetName, onPick){
   });
 }
 
-function applyPreset(p){
+// 🆕 머지된 카테고리(composition·mood)는 자식 카테고리별로 원래 적용처가 달라서
+//    적용 시 사용자에게 선택 토글 노출 (캐릭터 슬롯 vs 메인 프롬프트)
+const MERGED_PARENT_CATS = new Set(['composition','mood']);
+
+// 두 가지 적용처 중 사용자 선택 — confirm/toast 대신 작은 모달
+function askApplyTargetChoice(p, def, suggestedTarget){
+  // 이미 떠 있는 모달 있으면 닫고 새로
+  document.getElementById('applyTargetChoice')?.remove();
+  const isCharSuggested = suggestedTarget === 'char-action';
+  const choiceA = isCharSuggested ? '🎭 캐릭터 슬롯에' : '📝 메인 프롬프트에';
+  const choiceB = isCharSuggested ? '📝 메인 프롬프트에' : '🎭 캐릭터 슬롯에';
+  const targetA = suggestedTarget;
+  const targetB = isCharSuggested ? 'append' : 'char-action';
+  const wrap = document.createElement('div');
+  wrap.id = 'applyTargetChoice';
+  wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px)';
+  wrap.innerHTML = `
+    <div style="background:var(--card,#fff);border:1.5px solid var(--b1,#ddd);border-radius:8px;padding:18px 18px 14px;max-width:340px;width:calc(100% - 32px);box-shadow:0 10px 40px rgba(0,0,0,.3)">
+      <div style="font-weight:600;font-size:14px;margin-bottom:6px">어디에 적용할까요?</div>
+      <div style="font-size:12px;color:var(--t2,#666);margin-bottom:14px;line-height:1.5">
+        <b>${esc(p.name||'')}</b><br>
+        <span style="opacity:.8">${esc(def.label)} 카테고리 — 원래 ${isCharSuggested?'캐릭터 슬롯':'메인 프롬프트'}용 프리셋</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <button class="btn primary" data-choice="A" style="text-align:left;padding:9px 12px;font-size:13px">${choiceA} <span style="opacity:.65;font-size:11px;margin-left:4px">(추천)</span></button>
+        <button class="btn ghost" data-choice="B" style="text-align:left;padding:9px 12px;font-size:13px">${choiceB}</button>
+        <button class="btn ghost" data-choice="cancel" style="padding:6px;font-size:11.5px;opacity:.7;margin-top:2px">취소</button>
+      </div>
+    </div>`;
+  wrap.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-choice]');
+    if(!btn && e.target !== wrap) return;
+    const c = btn?.dataset.choice;
+    wrap.remove();
+    if(c === 'A') applyPreset(p, targetA);
+    else if(c === 'B') applyPreset(p, targetB);
+    // cancel·bg click — 그냥 닫기
+  });
+  document.body.appendChild(wrap);
+}
+
+function applyPreset(p, overrideTarget){
   if(!p) return;
   const type = state.presetType;
   const def = PRESET_TYPES.find(t => t.id === type) || {target:'append', label:'프리셋'};
-  switch(def.target){
+  // override가 명시되면 그걸 사용, 아니면 머지 부모 카테고리에서 사용자 선택, 그 외엔 카테고리 기본
+  let resolvedTarget = def.target;
+  if(overrideTarget){
+    resolvedTarget = overrideTarget;
+  } else if(MERGED_PARENT_CATS.has(type)){
+    // _origTarget 힌트가 있고 부모와 다르면 선택 모달 띄움
+    const orig = p._origTarget;
+    if(orig && orig !== def.target){
+      askApplyTargetChoice(p, def, orig);
+      return;
+    }
+  }
+  switch(resolvedTarget){
     case 'char':
       addCharacter({name: p.name, prompt: p.text || '', thumb: p.thumb || null});
       toast(`캐릭터 추가: ${p.name}`, 'success');
@@ -10083,8 +10166,8 @@ function setMode(mode){
 // 🎨 TEMPLATES — 프리셋 랜덤 조합 (메인 탭)
 // ═══════════════════════════════════════════════════════════
 // 사용할 카테고리 — 기본값: 캐릭터·의상·포즈·표정·상황 (가장 흔한 5개)
-const TPL_DEFAULT_CATS = ['character','outfit','pose','expression','situation'];
-const TPL_AVAILABLE_CATS = ['character','people','outfit','fetish','hair','situation','composition','masturbation','exposure','yuri','combo','state','expression','gender','harem','background','pose','mood','lighting','style','setting','rating'];
+const TPL_DEFAULT_CATS = ['character','outfit','pose','mood','situation'];
+const TPL_AVAILABLE_CATS = ['character','people','outfit','hair','situation','composition','combo','background','pose','mood','lighting','style','setting','rating'];
 let _tplActiveCats = new Set(TPL_DEFAULT_CATS);
 let _tplCurrentRoll = [];   // [{cat, preset:{name,text,thumb}}, ...]
 // 🔒 잠금된 카테고리 — 랜덤 조합 시 이 카테고리는 그대로 유지
