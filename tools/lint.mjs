@@ -124,6 +124,9 @@ function extractFn(src, name){
 const MIRRORED = [
   {mod: 'js/pure/prompt.mjs', fn: 'parseFreePromptTokens'},
   {mod: 'js/pure/prompt.mjs', fn: 'dedupePromptTags'},
+  {mod: 'js/pure/korean.mjs', fn: 'toChosung'},
+  {mod: 'js/pure/korean.mjs', fn: 'isAllChosung'},
+  {mod: 'js/pure/korean.mjs', fn: 'koMatch'},
 ];
 const inlineSrc = readFileSync(join(ROOT, 'index.html'), 'utf8');
 for(const {mod, fn} of MIRRORED){

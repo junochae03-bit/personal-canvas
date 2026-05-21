@@ -1408,6 +1408,16 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   outline: 2px solid var(--blue, #3a6398);
   outline-offset: 2px;
 }
+
+/* 🔍 검색 결과 하이라이트 — highlightMatch() 가 <mark> 로 감싼 부분 */
+mark{
+  background: rgba(255, 220, 90, .55);
+  color: inherit;
+  padding: 0 1px;
+  border-radius: 2px;
+  font-weight: 700;
+}
+[data-theme="dark"] mark{ background: rgba(255, 200, 60, .35); }
 </style>
 </head>
 <body>
@@ -2519,6 +2529,61 @@ function _dbErrToast(e, op){
   } else if(op){
     toast(`💾 저장 실패: ${err?.message || name || '알 수 없는 오류'} (${op})`, 'error');
   }
+}
+
+// 🇰🇷 한국어 검색 유틸 — 초성 매칭 + 검색어 하이라이트.
+// 단일 소스: js/pure/korean.mjs (Node 테스트). 인라인은 tools/lint.mjs 가 정합성 검증.
+const HANGUL_CHO = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+const HANGUL_SYL_START = 0xAC00;
+const HANGUL_SYL_END = 0xD7A3;
+const HANGUL_SYL_PER_CHO = 588;
+function toChosung(s){
+  if(!s) return '';
+  let out = '';
+  for(let i = 0; i < s.length; i++){
+    const c = s.charCodeAt(i);
+    if(c >= HANGUL_SYL_START && c <= HANGUL_SYL_END){
+      const idx = Math.floor((c - HANGUL_SYL_START) / HANGUL_SYL_PER_CHO);
+      out += HANGUL_CHO[idx];
+    } else {
+      out += s[i];
+    }
+  }
+  return out;
+}
+function isAllChosung(s){
+  if(!s) return false;
+  return /^[ㄱ-ㅎ\s]+$/.test(s);
+}
+function koMatch(target, query){
+  if(!query) return {match: true, kind: 'exact'};
+  if(!target) return {match: false, kind: 'none'};
+  const t = String(target).toLowerCase();
+  const q = String(query).toLowerCase();
+  if(t.includes(q)) return {match: true, kind: 'exact'};
+  if(isAllChosung(q)){
+    if(toChosung(t).includes(q)) return {match: true, kind: 'chosung'};
+  }
+  return {match: false, kind: 'none'};
+}
+function highlightMatch(text, query){
+  const escHtml = s => String(s||'').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const safe = escHtml(text);
+  if(!query || !text) return safe;
+  const q = String(query).trim();
+  if(!q) return safe;
+  const lower = String(text).toLowerCase();
+  const idx = lower.indexOf(q.toLowerCase());
+  if(idx >= 0){
+    return escHtml(text.slice(0, idx))
+      + '<mark>' + escHtml(text.slice(idx, idx + q.length)) + '</mark>'
+      + escHtml(text.slice(idx + q.length));
+  }
+  if(isAllChosung(q) && toChosung(text).toLowerCase().includes(q.toLowerCase())){
+    return '<mark>' + safe + '</mark>';
+  }
+  return safe;
 }
 
 // 🎲 시드 상수 — uint32 max. NovelAI seed는 0..0xFFFFFFFF 범위.
@@ -4786,18 +4851,18 @@ function renderCharPickSubgroups(){
 }
 
 function renderCharPickList(){
-  const q = ($('charPickSearch').value || '').toLowerCase().trim();
+  const q = ($('charPickSearch').value || '').trim();
   const cat = _cpCat;
   const parts = [];
   let totalShown = 0;
 
-  // 액션 태그
+  // 액션 태그 — koMatch 로 한글 초성 검색 지원
   if(cat === '' || cat === 'action'){
-    const acts = CHAR_ACTION_TAGS.filter(([v, ko]) => !q || (v + ' ' + ko).toLowerCase().includes(q));
+    const acts = CHAR_ACTION_TAGS.filter(([v, ko]) => !q || koMatch(v + ' ' + ko, q).match);
     if(acts.length){
       parts.push(`<div class="cp-list-grp">🤝 상호작용 액션 <span style="font-weight:400;color:var(--t3);font-size:11px;margin-left:auto;font-family:var(--mono)">${acts.length} / ${CHAR_ACTION_TAGS.length}</span></div>`);
       for(const [v, ko] of acts){
-        parts.push(`<div class="cp-item" data-val="${esc(v)}"><div class="cp-name">${esc(v)}</div><div class="cp-sub">${esc(ko)}</div></div>`);
+        parts.push(`<div class="cp-item" data-val="${esc(v)}"><div class="cp-name">${highlightMatch(v, q)}</div><div class="cp-sub">${highlightMatch(ko, q)}</div></div>`);
       }
       totalShown += acts.length;
     }
@@ -4810,7 +4875,7 @@ function renderCharPickList(){
   const renderCpItem = p => {
     const text = (p.text||'').replace(/\s+/g, ' ').trim();
     const sub = text.length > 100 ? text.slice(0, 100) + '…' : text;
-    return `<div class="cp-item" data-val="${esc(p.text||'')}" data-name="${esc(p.name||'')}"><div class="cp-name">${esc(p.name || '(이름 없음)')}</div><div class="cp-sub">${esc(sub || '(내용 없음)')}</div></div>`;
+    return `<div class="cp-item" data-val="${esc(p.text||'')}" data-name="${esc(p.name||'')}"><div class="cp-name">${highlightMatch(p.name || '(이름 없음)', q)}</div><div class="cp-sub">${highlightMatch(sub || '(내용 없음)', q)}</div></div>`;
   };
   for(const pcat of catsToShow){
     let list = state.presets[pcat] || [];
@@ -4821,7 +4886,8 @@ function renderCharPickList(){
       if(!list.length) continue;
     }
     const def = PRESET_TYPES.find(t => t.id === pcat);
-    const filtered = q ? list.filter(p => (p.name + ' ' + (p.text||'')).toLowerCase().includes(q)) : list;
+    // 🇰🇷 koMatch — 초성 검색 ("ㅍㄹㄴ" → "푸리나") 지원
+    const filtered = q ? list.filter(p => koMatch((p.name||'') + ' ' + (p.text||''), q).match) : list;
     if(!filtered.length) continue;
     parts.push(`<div class="cp-list-grp">${def.ico} ${esc(def.label)} 프리셋 <span style="font-weight:400;color:var(--t3);font-size:11px;margin-left:auto;font-family:var(--mono)">${filtered.length} / ${list.length}</span></div>`);
     // 그룹화 지원 카테고리(모든 카테고리) — 작품/prefix별로 또 묶음
@@ -5440,9 +5506,10 @@ function toggleCbGroupsCollapseAll(){
 
 function renderPresets(){
   const type = state.presetType;
-  const search = ($('presetSearch').value||'').toLowerCase().trim();
+  const search = ($('presetSearch').value||'').trim();
   let list = state.presets[type] || [];
-  if(search) list = list.filter(p => (p.name||'').toLowerCase().includes(search) || (p.text||'').toLowerCase().includes(search));
+  // 🇰🇷 koMatch — 초성 검색 ("ㅂㅅ" → "붕스타") 지원
+  if(search) list = list.filter(p => koMatch(p.name||'', search).match || koMatch(p.text||'', search).match);
   $('presetInfo').textContent = `${list.length}개 표시 / 전체 ${(state.presets[type]?.length||0).toLocaleString()}개`;
   const grid = $('presetGrid');
   const def = PRESET_TYPES.find(t => t.id === type) || {ico:'⚙'};
@@ -5474,9 +5541,9 @@ function renderPresets(){
         <div class="p-head">
           <span class="expand-mark">▶</span>
           <span class="ico-mini">${ico}</span>
-          <span class="pname" title="${esc(p.name||'')}">${esc(p.name||'(이름 없음)')}</span>
+          <span class="pname" title="${esc(p.name||'')}">${highlightMatch(p.name||'(이름 없음)', search)}</span>
         </div>
-        <div class="psub${subEmpty}" title="${esc(subText)}">${esc(subDisplay)}</div>
+        <div class="psub${subEmpty}" title="${esc(subText)}">${highlightMatch(subDisplay, search)}</div>
         <div class="pact">
           <button data-act="use" title="이 프리셋 적용">사용</button>
           <button data-act="edit" title="편집">편집</button>
@@ -9343,17 +9410,19 @@ function renderGalleryItemHtml(img, sesId){
     || fmtDate(img.ts || 0)
     || '(이름 없음)';
   const expanded = _expandedGallery.has(img.id);
+  // 🔍 갤러리 검색 하이라이트 — 라벨에 매칭된 부분 강조
+  const search = ($('gallerySearch')?.value || '').trim();
   // 자세한 메타는 lightbox(🔍)에서만 — 카드는 깨끗하게
   return `<div class="g-item${expanded?' expanded':''}" data-id="${img.id}" data-sid="${sesId}" data-url="${url}">
     <div class="g-thumb">
-      <img src="${url}" loading="lazy" decoding="async" alt="">
+      <img src="${url}" loading="lazy" decoding="async" alt="${esc(label)}">
       <button class="g-album-btn" data-act="album" title="앨범에 추가/제거">📁</button>
       <button class="g-exif-btn" data-act="exif" title="↻ EXIF로 폼 복원 (프롬프트·시드·모델 등)">↻</button>
       <button class="open-lb" data-act="lb" title="크게 보기 (Lightbox)">🔍</button>
     </div>
     <div class="g-head" title="펼치기/접기">
       <span class="expand-mark">▶</span>
-      <span class="head-label">${esc(label)}</span>
+      <span class="head-label">${highlightMatch(label, search)}</span>
     </div>
   </div>`;
 }
@@ -9424,7 +9493,7 @@ async function loadGallery(){
     return;
   }
   const viewMode = grid.dataset.view || 'detail';
-  const search = ($('gallerySearch').value || '').toLowerCase().trim();
+  const search = ($('gallerySearch').value || '').trim();
   const filter = $('galleryFilter').value;
   // 필터된 모든 이미지 수집
   let allImages = []; // {img, sesId, sesLabel, ts}
@@ -9450,9 +9519,10 @@ async function loadGallery(){
     let filtered = imgs;
     if(selWork) filtered = filtered.filter(matchesWork);
     if(search){
+      // 🇰🇷 koMatch — 한국어 초성 검색 지원
       filtered = filtered.filter(i => {
-        const t = ((i.prompt||'') + ' ' + (i.label||'') + ' ' + (i.meta?.prompt||'') + ' ' + (i.meta?.characters||[]).join(' ') + ' ' + (i.meta?.sceneLabel||'') + ' ' + (i.meta?.sceneCharPreset||'') + ' ' + (i.meta?.seed!=null?i.meta.seed:'') ).toLowerCase();
-        return t.includes(search);
+        const t = (i.prompt||'') + ' ' + (i.label||'') + ' ' + (i.meta?.prompt||'') + ' ' + (i.meta?.characters||[]).join(' ') + ' ' + (i.meta?.sceneLabel||'') + ' ' + (i.meta?.sceneCharPreset||'') + ' ' + (i.meta?.seed!=null?i.meta.seed:'');
+        return koMatch(t, search).match;
       });
     }
     if(!filtered.length) continue;
@@ -13940,6 +14010,132 @@ function wireMiscEvents(){
       else if($('xyzModal').classList.contains('open')) $('xyzModal').classList.remove('open');
       else if($('charPickModal').classList.contains('open')) $('charPickModal').classList.remove('open');
       else closePosGrid();
+    }
+  });
+
+  // ⌨️ 통합 키보드 단축키 — 갤러리·라이트박스·워크플로
+  // 입력 필드 포커스 시 비활성 (단, '/' 는 입력 필드 외부에서 검색 포커스용)
+  installShortcutHandlers();
+}
+
+function installShortcutHandlers(){
+  const isTypingTarget = el => {
+    if(!el) return false;
+    if(el.matches('input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]), textarea, select, [contenteditable=""], [contenteditable=true]')) return true;
+    return false;
+  };
+  const anyModalOpen = () => !!document.querySelector('.modal-bg.open');
+
+  document.addEventListener('keydown', e => {
+    // 워크플로 — Alt+1..9: 슬롯 적용 (브라우저 탭과 충돌 X)
+    // Alt+Shift+1..9: 현재 상태를 슬롯에 덮어쓰기 저장 (확인 후)
+    if(e.altKey && !e.ctrlKey && !e.metaKey && /^[1-9]$/.test(e.key)){
+      const idx = parseInt(e.key, 10) - 1;
+      const wfs = (state.workflows || []);
+      // 즐겨찾기 우선, 그 다음 일반 순서
+      const sorted = [...wfs].sort((a, b) => (b.fav?1:0) - (a.fav?1:0));
+      const wf = sorted[idx];
+      if(!wf){ if(typeof toast === 'function') toast(`📭 슬롯 ${idx+1}이 비어있습니다`, 'info'); return; }
+      e.preventDefault();
+      if(e.shiftKey){
+        // 덮어쓰기 — 안전을 위해 confirm
+        if(!confirm(`슬롯 ${idx+1} "${wf.name}" 을 현재 상태로 덮어쓸까요?`)) return;
+        if(typeof captureWorkflowState === 'function' && typeof saveWorkflows === 'function'){
+          wf.data = captureWorkflowState();
+          wf.ts = Date.now();
+          saveWorkflows().then(() => toast(`💾 슬롯 ${idx+1} "${wf.name}" 덮어씀`, 'success'));
+        }
+      } else {
+        if(typeof workflowApply === 'function'){
+          workflowApply(wf.id).then(ok => {
+            if(ok && typeof toast === 'function') toast(`📂 슬롯 ${idx+1} "${wf.name}" 복원됨`, 'success');
+          });
+        }
+      }
+      return;
+    }
+
+    // ── 라이트박스 단축키 ──
+    if($('lightbox')?.classList.contains('open')){
+      if(isTypingTarget(e.target)) return;
+      if(e.key === ' ' || e.code === 'Space'){
+        // 스페이스 = prev/next (방향키 대신 한 손 조작)
+        e.preventDefault();
+        if(e.shiftKey) lbPrev(); else lbNext();
+      } else if(e.key === 'Home'){
+        e.preventDefault();
+        if(typeof showLightboxAt === 'function') showLightboxAt(0);
+      } else if(e.key === 'End'){
+        e.preventDefault();
+        if(typeof showLightboxAt === 'function' && _lbList?.length) showLightboxAt(_lbList.length - 1);
+      } else if(e.key === 'Delete' || (e.key === 'Backspace' && (e.ctrlKey || e.metaKey))){
+        e.preventDefault();
+        // 라이트박스 안의 삭제 버튼 클릭 위임 (확인 모달 그대로 유지)
+        const delBtn = document.querySelector('#lightbox [data-act="del"], #lightbox .del-btn, #lbDelBtn');
+        if(delBtn) delBtn.click();
+        else if(_lbCurrent?.id != null && typeof DB?.deleteImage === 'function'){
+          if(confirm('현재 이미지를 삭제할까요? (되돌릴 수 없음)')){
+            DB.deleteImage(_lbCurrent.id).then(() => {
+              if(typeof loadGallery === 'function') loadGallery();
+              if(typeof closeLightbox === 'function') closeLightbox();
+            });
+          }
+        }
+      }
+      return;
+    }
+
+    // ── 갤러리 페인 단축키 (모달 닫혀있을 때만) ──
+    if(state.mainPane === 'gallery' && !anyModalOpen()){
+      // '/' 검색 포커스 — 입력 중이 아닐 때만
+      if(e.key === '/' && !isTypingTarget(e.target)){
+        e.preventDefault();
+        const inp = $('gallerySearch');
+        if(inp){ inp.focus(); inp.select(); }
+        return;
+      }
+      if(isTypingTarget(e.target)) return;
+      // Ctrl/Cmd+A — 보이는 모든 이미지 선택
+      if((e.ctrlKey || e.metaKey) && e.key === 'a'){
+        e.preventDefault();
+        const ids = [...$('galleryGrid').querySelectorAll('.g-item')]
+          .map(el => parseInt(el.dataset.id, 10)).filter(n => !isNaN(n));
+        if(!ids.length) return;
+        // 선택 모드 꺼져있으면 켜기
+        if(typeof setSelectionMode === 'function' && !_selectionMode) setSelectionMode(true);
+        ids.forEach(id => _gallerySel.add(id));
+        if(typeof applySelStyles === 'function') applySelStyles();
+        if(typeof toast === 'function') toast(`☰ ${ids.length}장 모두 선택됨`, 'info');
+        return;
+      }
+      // 'e' / 'c' — 전체 펼침 / 접기
+      if(e.key === 'e' || e.key === 'E'){ e.preventDefault(); $('galExpandAll')?.click(); return; }
+      if(e.key === 'c' || e.key === 'C'){
+        // 펼침 상태면 한 번 더 누르면 접힘 (toggle)
+        const grid = $('galleryGrid');
+        if(grid?.classList.contains('all-expanded')){ e.preventDefault(); $('galExpandAll')?.click(); }
+        return;
+      }
+      // 'l' — 첫 선택 또는 첫 가시 이미지의 라이트박스
+      if(e.key === 'l' || e.key === 'L'){
+        e.preventDefault();
+        const firstId = [..._gallerySel][0];
+        let target = firstId
+          ? document.querySelector(`#galleryGrid .g-item[data-id="${firstId}"]`)
+          : document.querySelector('#galleryGrid .g-item');
+        if(target){
+          const id = parseInt(target.dataset.id, 10);
+          const sid = parseInt(target.dataset.sid, 10);
+          if(!isNaN(id) && !isNaN(sid) && typeof openLightbox === 'function') openLightbox(id, sid);
+        }
+        return;
+      }
+      // Delete — 선택된 이미지 일괄 삭제 (기존 버튼 흐름 사용 → 확인 모달 + undo)
+      if(e.key === 'Delete' && _gallerySel.size > 0){
+        e.preventDefault();
+        const delBtn = $('galSelDelete');
+        if(delBtn){ delBtn.click(); return; }
+      }
     }
   });
 }

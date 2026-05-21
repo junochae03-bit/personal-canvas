@@ -11,6 +11,7 @@ import { parseFreePromptTokens, dedupePromptTags, parseSeqInput } from '../js/pu
 import { getCharGroup, groupCharsByWork } from '../js/pure/chars.mjs';
 import { RAND_SEED_MAX, randomSeed, parseSeedInput } from '../js/pure/seed.mjs';
 import { MEGAPIXEL, isSmallTier, aspectRatio, snapTo8 } from '../js/pure/image.mjs';
+import { toChosung, isAllChosung, koMatch, highlightMatch } from '../js/pure/korean.mjs';
 
 // ────────────── utils ──────────────
 test('esc: HTML 특수문자 5종 이스케이프', () => {
@@ -203,4 +204,56 @@ test('snapTo8: 8의 배수로 반올림 + 최소 64', () => {
   assert.equal(snapTo8(96), 96);
   assert.equal(snapTo8(10), 64);   // floor
   assert.equal(snapTo8(0), 64);
+});
+
+// ────────────── korean ──────────────
+test('toChosung: 한글 음절 → 초성', () => {
+  assert.equal(toChosung('푸리나'), 'ㅍㄹㄴ');
+  assert.equal(toChosung('마스터'), 'ㅁㅅㅌ');
+  assert.equal(toChosung('붕스타'), 'ㅂㅅㅌ');
+  assert.equal(toChosung('가'), 'ㄱ');
+  assert.equal(toChosung('나비아'), 'ㄴㅂㅇ');
+});
+test('toChosung: 비한글은 그대로', () => {
+  assert.equal(toChosung('Naga'), 'Naga');
+  assert.equal(toChosung('hi 푸리나'), 'hi ㅍㄹㄴ');
+  assert.equal(toChosung(''), '');
+  assert.equal(toChosung(null), '');
+});
+test('isAllChosung: ㄱ-ㅎ + 공백만 true', () => {
+  assert.equal(isAllChosung('ㅍㄹㄴ'), true);
+  assert.equal(isAllChosung('ㅁㅅ'), true);
+  assert.equal(isAllChosung('ㅍㄹㄴ '), true);
+  assert.equal(isAllChosung('푸리나'), false);
+  assert.equal(isAllChosung('hi'), false);
+  assert.equal(isAllChosung('ㅍㅏ'), false);   // 모음 포함
+  assert.equal(isAllChosung(''), false);
+});
+test('koMatch: 직접 매칭 우선', () => {
+  assert.deepEqual(koMatch('푸리나', '푸리'), {match: true, kind: 'exact'});
+  assert.deepEqual(koMatch('Furina', 'fur'), {match: true, kind: 'exact'});
+});
+test('koMatch: 초성 매칭은 쿼리가 전부 자음일 때만', () => {
+  assert.deepEqual(koMatch('푸리나', 'ㅍㄹㄴ'), {match: true, kind: 'chosung'});
+  assert.deepEqual(koMatch('마스터피스', 'ㅁㅅ'), {match: true, kind: 'chosung'});
+  assert.deepEqual(koMatch('푸리나', 'ㄱㄴ'), {match: false, kind: 'none'});
+  // 쿼리가 완성형 한글이면 초성 검색 안 함 (정확 매칭만)
+  assert.deepEqual(koMatch('푸리나', '리나'), {match: true, kind: 'exact'});
+});
+test('koMatch: 빈 쿼리는 항상 매칭', () => {
+  assert.deepEqual(koMatch('whatever', ''), {match: true, kind: 'exact'});
+  assert.deepEqual(koMatch('', 'q'), {match: false, kind: 'none'});
+});
+test('highlightMatch: 직접 매칭 부분만 <mark>', () => {
+  assert.equal(highlightMatch('푸리나', '리'), '푸<mark>리</mark>나');
+  assert.equal(highlightMatch('Furina', 'rin'), 'Fu<mark>rin</mark>a');
+});
+test('highlightMatch: 초성 매칭은 전체 <mark>', () => {
+  assert.equal(highlightMatch('푸리나', 'ㅍㄹㄴ'), '<mark>푸리나</mark>');
+});
+test('highlightMatch: HTML escape 적용', () => {
+  assert.equal(highlightMatch('<script>', 'cr'), '&lt;s<mark>cr</mark>ipt&gt;');
+});
+test('highlightMatch: 빈 쿼리는 escape만', () => {
+  assert.equal(highlightMatch('a<b', ''), 'a&lt;b');
 });
