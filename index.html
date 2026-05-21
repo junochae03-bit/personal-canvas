@@ -1414,6 +1414,28 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   outline-offset: 2px;
 }
 
+/* ✱ 필수 입력 마커 — sec-title / .lbl 옆에 표시 */
+.req{
+  color: var(--red);
+  font-weight: 700;
+  margin-left: 3px;
+  font-size: .92em;
+  cursor: help;
+  user-select: none;
+  vertical-align: baseline;
+}
+/* 필수 input 이 비어있으면 부드러운 빨강 보더 (사용자가 입력 시작하면 사라짐) */
+input[aria-required="true"]:placeholder-shown:not(:focus),
+textarea[aria-required="true"]:placeholder-shown:not(:focus){
+  border-left-width: 3px;
+  border-left-color: rgba(181, 67, 56, .35);
+}
+input[aria-required="true"]:focus,
+textarea[aria-required="true"]:focus{
+  border-left-width: 1.5px;
+  border-left-color: var(--acc);
+}
+
 /* 🔍 검색 결과 하이라이트 — highlightMatch() 가 <mark> 로 감싼 부분 */
 mark{
   background: rgba(255, 220, 90, .55);
@@ -1464,8 +1486,8 @@ mark{
   <div class="logo">NAI STUDIO <span class="sub">이미지 생성</span></div>
   <button class="iconbtn key-mini" id="keyToggleBtn" title="API 키 입력/수정" aria-label="API 키 입력 열기" aria-pressed="false">🔑</button>
   <div class="tb-group key-group">
-    <span class="lbl">키 <span class="en">API</span></span>
-    <input id="apiKey" class="inp pw" placeholder="pst-... NovelAI Persistent Token" autocomplete="off" spellcheck="false">
+    <span class="lbl">키 <span class="en">API</span> <span class="req" aria-hidden="true" title="필수 입력">✱</span></span>
+    <input id="apiKey" class="inp pw" aria-required="true" aria-label="NovelAI API 키 (필수, pst- 로 시작)" placeholder="pst-... NovelAI Persistent Token" autocomplete="off" spellcheck="false">
     <!-- 🟢 실시간 형식 검증 인디케이터 (입력 즉시 갱신) -->
     <span id="apiKeyDot" class="api-key-dot" title="API 키 상태" aria-live="polite" style="display:inline-flex;align-items:center;width:18px;height:18px;border-radius:50%;flex-shrink:0;font-size:10px;justify-content:center"></span>
     <button class="iconbtn" id="toggleKey" title="키 보이기/숨기기 (Show/Hide)">👁</button>
@@ -1574,7 +1596,7 @@ mark{
       <!-- ━━━ 프롬프트 작성 (단순화) ━━━ -->
       <div class="sec mode-show t2i i2i inpaint vibe" id="promptSec">
         <div class="sec-title">
-          📝 프롬프트 <span class="en">Prompt</span>
+          📝 프롬프트 <span class="en">Prompt</span> <span class="req" aria-hidden="true" title="필수 입력">✱</span>
           <!-- 유틸 아이콘들 — 섹션 헤더로 옮겨 본문 액션 행을 단순화 -->
           <span class="sec-utils" onclick="event.stopPropagation()">
             <button class="iconbtn sec-util-btn" id="importExifBtn" title="📁 EXIF 복원 — NAI PNG에서 프롬프트·파라미터 가져오기">📁</button>
@@ -1585,7 +1607,7 @@ mark{
           <span class="caret">▾</span>
         </div>
         <div class="sec-body">
-          <textarea id="prompt" class="ta" placeholder="원하는 그림을 영어 태그로 자유롭게 입력  예) 1girl, masterpiece, best quality, long blonde hair, school uniform, smile, ..."></textarea>
+          <textarea id="prompt" class="ta" aria-required="true" aria-label="프롬프트 (필수) — 원하는 그림을 영어 태그로 입력" placeholder="원하는 그림을 영어 태그로 자유롭게 입력  예) 1girl, masterpiece, best quality, long blonde hair, school uniform, smile, ..."></textarea>
           <input type="file" id="exifFile" accept="image/png,image/*" style="display:none">
           <div class="row" style="margin-top:7px;justify-content:space-between;flex-wrap:wrap;gap:6px">
             <span class="lbl" id="promptTokens">0 글자</span>
@@ -2000,11 +2022,11 @@ mark{
           <div class="set-card">
             <h3>보안 <span class="en">Security</span></h3>
             <div class="set-row" style="flex-direction:column;align-items:stretch;gap:8px">
-              <div class="label">NovelAI API 키 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">API Key</span>
+              <div class="label">NovelAI API 키 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">API Key</span> <span class="req" aria-hidden="true" title="필수 입력">✱</span>
                 <div class="desc">상단바 🔑 버튼이 안 보이면 여기서 입력하세요. <code style="background:var(--card);padding:1px 5px;border-radius:3px;font-size:.9em">pst-</code> 로 시작하는 NovelAI Persistent Token.</div>
               </div>
               <div style="display:flex;gap:6px;align-items:center">
-                <input id="apiKeySettings" class="inp pw" type="password" placeholder="pst-..." autocomplete="off" spellcheck="false" style="flex:1;min-width:0">
+                <input id="apiKeySettings" class="inp pw" type="password" aria-required="true" aria-label="NovelAI API 키 (필수)" placeholder="pst-..." autocomplete="off" spellcheck="false" style="flex:1;min-width:0">
                 <button class="iconbtn" id="toggleKeySettings" title="키 보이기/숨기기" type="button">👁</button>
                 <button class="btn ghost" id="saveKeyBtn" type="button" title="설정 후 잔량 확인">💾 저장 <span class="en">Save</span></button>
               </div>
@@ -7625,6 +7647,78 @@ function openAlbumManager(){
 }
 
 // 이미지의 앨범 선택 모달
+// 📁 인라인 앨범 dropdown — 데스크탑 hover 환경 최적화 (모바일은 openImageAlbumPicker 사용).
+// 갤러리 카드 📁 버튼 옆에 작은 popover 로 띄움. 외부 클릭/Esc 시 닫힘.
+let _albumDropdownEl = null;
+let _albumDropdownScope = null;
+function _closeInlineAlbumDropdown(){
+  if(_albumDropdownEl){ _albumDropdownEl.remove(); _albumDropdownEl = null; }
+  if(_albumDropdownScope){ _albumDropdownScope.dispose(); _albumDropdownScope = null; }
+}
+function openInlineAlbumDropdown(imgId, anchorBtn){
+  _closeInlineAlbumDropdown();   // 같은 카드 두 번 클릭 = 토글 닫기
+  if(!anchorBtn) return;
+  const current = new Set(getImageAlbums(imgId));
+  const albums = state.userAlbums || [];
+  const wrap = document.createElement('div');
+  wrap.className = 'alb-dropdown';
+  wrap.setAttribute('role', 'menu');
+  wrap.setAttribute('aria-label', '앨범 선택');
+  wrap.style.cssText = `position:fixed;background:var(--panel);border:1.5px solid var(--b1);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:9100;padding:6px 4px;min-width:200px;max-width:280px;max-height:60vh;overflow-y:auto;font-size:12.5px`;
+  const itemsHtml = albums.map(a => {
+    const checked = current.has(a.id);
+    return `<label class="alb-dd-row" data-aid="${esc(a.id)}" style="display:flex;align-items:center;gap:7px;padding:6px 10px;cursor:pointer;border-radius:4px;line-height:1.4">
+      <input type="checkbox" data-act="toggle-alb" ${checked?'checked':''} data-aid="${esc(a.id)}" style="flex-shrink:0">
+      <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(a.name)}">${esc(a.name)}</span>
+    </label>`;
+  }).join('');
+  wrap.innerHTML = `
+    <div style="font-size:11px;color:var(--t3);padding:4px 10px 6px;font-weight:600;border-bottom:1px solid var(--b1);margin-bottom:4px">📁 앨범 (즉시 적용)</div>
+    ${itemsHtml}
+    <div style="border-top:1px solid var(--b1);margin-top:4px;padding-top:4px">
+      <button type="button" data-act="alb-manage" style="display:block;width:100%;text-align:left;padding:6px 10px;background:transparent;border:0;color:var(--acc);cursor:pointer;font-size:12px;font-family:inherit;font-weight:600;border-radius:4px">⚙ 앨범 관리…</button>
+    </div>
+  `;
+  // hover 강조
+  const style = document.createElement('style');
+  style.textContent = `.alb-dropdown .alb-dd-row:hover{background:var(--card)} .alb-dropdown button[data-act="alb-manage"]:hover{background:var(--card)}`;
+  wrap.appendChild(style);
+  document.body.appendChild(wrap);
+  _albumDropdownEl = wrap;
+  // 위치 — 앵커 버튼 우하단 (화면 밖 안 나오게 clamp)
+  const r = anchorBtn.getBoundingClientRect();
+  const dw = wrap.offsetWidth, dh = wrap.offsetHeight;
+  let left = r.right - dw;       // 우측 정렬
+  let top = r.bottom + 4;
+  if(left < 6) left = 6;
+  if(left + dw > window.innerWidth - 6) left = window.innerWidth - dw - 6;
+  if(top + dh > window.innerHeight - 6) top = r.top - dh - 4;  // 위로 뒤집기
+  wrap.style.left = left + 'px';
+  wrap.style.top = top + 'px';
+  // 인터랙션 — _listenerScope 로 묶어서 한 번에 cleanup
+  _albumDropdownScope = _listenerScope();
+  _albumDropdownScope.on(wrap, 'change', async e => {
+    const cb = e.target.closest('input[data-act="toggle-alb"]');
+    if(!cb) return;
+    const aid = cb.dataset.aid;
+    const next = new Set(getImageAlbums(imgId));
+    if(cb.checked) next.add(aid); else next.delete(aid);
+    await setImageAlbums(imgId, [...next]);
+    const album = state.userAlbums.find(a => a.id === aid);
+    if(album) toast(`📁 "${album.name}" ${cb.checked?'추가':'제거'}`, 'info');
+  });
+  _albumDropdownScope.on(wrap, 'click', e => {
+    const mng = e.target.closest('[data-act="alb-manage"]');
+    if(mng){ _closeInlineAlbumDropdown(); openAlbumManager(); }
+  });
+  _albumDropdownScope.on(document, 'mousedown', e => {
+    if(!wrap.contains(e.target) && e.target !== anchorBtn) _closeInlineAlbumDropdown();
+  });
+  _albumDropdownScope.on(document, 'keydown', e => {
+    if(e.key === 'Escape') _closeInlineAlbumDropdown();
+  });
+}
+
 function openImageAlbumPicker(imgId){
   const current = new Set(getImageAlbums(imgId));
   if(state.userAlbums.length === 0){
@@ -7872,19 +7966,61 @@ async function retryQueueItem(qi){
   renderQueue();
 }
 
-async function startGeneration(){
-  if(state.running){ stopGeneration(); return; }
-  const apiKey = $('apiKey').value.trim();
-  if(!apiKey){ toast('API 키를 입력하세요', 'error'); return; }
-
-  // 🛡 빈 프롬프트·캐릭터·시퀀스 모두 비었으면 생성 차단 (자원 낭비 방지)
-  const promptText = ($('prompt').value || '').trim();
+// 🛡 통합 생성 전 검증 — 실패 사유를 모두 모아 사용자에게 친절히 안내.
+// 반환: {ok: true} 또는 {ok: false, errors: [...], firstFocus: '#id'}
+function validateForGeneration(){
+  const errors = [];
+  let firstFocus = null;
+  const apiKey = ($('apiKey')?.value || '').trim();
+  if(!apiKey){
+    errors.push({field: 'API 키', msg: '미설정 — 상단 🔑 또는 설정→보안에서 입력', anchor: '#apiKey'});
+    firstFocus = firstFocus || '#apiKey';
+  } else if(!apiKey.startsWith('pst-')){
+    errors.push({field: 'API 키', msg: '형식 의심 — pst- 로 시작해야 정상 (계속 진행 가능)', warn: true});
+  }
+  const promptText = ($('prompt')?.value || '').trim();
   const seqText = ($('seqInput')?.value || '').trim();
   const enabledChars = (state.characters || []).filter(c => c.enabled !== false && ((c.appearance||'').trim() || (c.action||'').trim() || (c.prompt||'').trim()));
   if(!promptText && !seqText && !enabledChars.length){
-    toast('프롬프트가 비어있습니다 — 메인 프롬프트·시퀀스·캐릭터 중 하나 이상 입력하세요', 'warning');
+    errors.push({field: '프롬프트', msg: '메인 프롬프트·시퀀스·캐릭터 중 하나 이상 입력하세요', anchor: '#prompt'});
+    firstFocus = firstFocus || '#prompt';
+  }
+  // 해상도/스텝 비정상 범위
+  const steps = parseInt($('steps')?.value || '0', 10);
+  if(!Number.isFinite(steps) || steps < 1 || steps > 50){
+    errors.push({field: '스텝', msg: '1~50 사이 정수여야 합니다 (NAI 한도)', anchor: '#steps'});
+    firstFocus = firstFocus || '#steps';
+  }
+  // 시드 — 명시적으로 입력했고 음수/너무 큰 값이면 경고
+  const seedRaw = ($('seed')?.value || '').trim();
+  if(seedRaw && seedRaw !== '-1'){
+    const n = parseInt(seedRaw, 10);
+    if(!Number.isFinite(n) || n < 0 || n > RAND_SEED_MAX){
+      errors.push({field: '시드', msg: `0~${RAND_SEED_MAX} 사이여야 합니다 (비우거나 -1 은 랜덤)`, anchor: '#seed', warn: true});
+    }
+  }
+  const hardErrors = errors.filter(e => !e.warn);
+  return {ok: hardErrors.length === 0, errors, firstFocus};
+}
+
+async function startGeneration(){
+  if(state.running){ stopGeneration(); return; }
+  // 🛡 통합 검증 — 실패 시 모든 사유를 한 토스트에 모아 안내 + 첫 입력 포커스
+  const v = validateForGeneration();
+  if(!v.ok){
+    const lines = v.errors.map(e => `• ${e.field}: ${e.msg}`).join('\n');
+    toast(`생성을 시작할 수 없습니다\n${lines}`, 'error');
+    if(v.firstFocus){
+      const el = document.querySelector(v.firstFocus);
+      if(el){ try { el.focus({preventScroll: false}); el.scrollIntoView({block:'center', behavior:'smooth'}); } catch(_){} }
+    }
     return;
   }
+  // 경고만 있으면 통과하되 한 번 알림 (예: API 키 형식 의심)
+  for(const w of v.errors.filter(e => e.warn)){
+    toast(`⚠ ${w.field}: ${w.msg}`, 'warning');
+  }
+  const apiKey = $('apiKey').value.trim();
 
   // 커스텀 큐(예: XYZ)가 이미 세팅되어 있으면 그대로 사용
   if(state._customQueue && state.queue.length){
@@ -13935,11 +14071,16 @@ function wireGalleryEvents(){
       e.stopPropagation();
       return;
     }
-    // 📁 앨범 버튼
+    // 📁 앨범 버튼 — 데스크탑은 인라인 dropdown, 모바일은 기존 모달
     const albumBtn = e.target.closest('[data-act="album"]');
     if(albumBtn){
       e.stopPropagation();
-      openImageAlbumPicker(id);
+      const isTouch = window.matchMedia('(hover: none)').matches;
+      if(isTouch || !state.userAlbums?.length){
+        openImageAlbumPicker(id);
+      } else {
+        openInlineAlbumDropdown(id, albumBtn);
+      }
       return;
     }
     // ↻ EXIF 복원 버튼 — 이 이미지의 메타로 폼 채우기 (현재 폼 덮어쓰므로 확인)
