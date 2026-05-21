@@ -2505,6 +2505,25 @@ function _swallow(e, context){
   try { console.debug(`[swallow:${context||'?'}]`, e?.message || e); } catch(_){}
 }
 
+// ⚓ AbortController 묶음 리스너 — 동적으로 만든 다이얼로그·드래그 상호작용 등에서
+// 한 번에 cleanup. 사용 예:
+//   const scope = _listenerScope();
+//   scope.on(document, 'mousemove', handler);
+//   scope.on(modal, 'click', backdropClick);
+//   // 작업 끝나면:
+//   scope.dispose();
+function _listenerScope(){
+  const ctrl = new AbortController();
+  return {
+    signal: ctrl.signal,
+    on(target, type, handler, opts){
+      target.addEventListener(type, handler, {...(opts||{}), signal: ctrl.signal});
+      return this;
+    },
+    dispose(){ ctrl.abort(); },
+  };
+}
+
 // 💾 IndexedDB 트랜잭션 에러 — quota·invalid state 등 사용자 가시 케이스 토스트.
 // 같은 종류 에러가 짧은 시간 안에 폭주하지 않도록 op 키 단위 dedupe.
 const _dbErrLastShown = new Map();
@@ -3699,13 +3718,27 @@ const DB = {
   },
   async getSessionImages(sessionId){
     if(!this.db) return [];
+    // 🚀 C1: 인메모리 캐시 — 검색 키타이핑마다 IDB 재조회 회피.
+    //    saveImage/deleteImage/deleteSession/clearAll 가 _invalidateImgCache 호출.
+    if(this._imgCache?.has(sessionId)) return this._imgCache.get(sessionId);
     return new Promise(res => {
       const tx = this.tx(this.IMG, 'readonly');
       const idx = tx.objectStore(this.IMG).index('sessionId');
       const req = idx.getAll(sessionId);
-      req.onsuccess = () => res(req.result || []);
+      req.onsuccess = () => {
+        const imgs = req.result || [];
+        if(!this._imgCache) this._imgCache = new Map();
+        this._imgCache.set(sessionId, imgs);
+        res(imgs);
+      };
       req.onerror = () => res([]);
     });
+  },
+  // 캐시 무효화 — sid=null 이면 전체 비우기.
+  _invalidateImgCache(sid){
+    if(!this._imgCache) return;
+    if(sid == null) this._imgCache.clear();
+    else this._imgCache.delete(sid);
   },
   async saveImage(blob, fname, label, prompt, meta){
     if(!this.db) return null;
@@ -3735,7 +3768,7 @@ const DB = {
         const ses = getReq.result;
         if(ses){ ses.count = (ses.count||0)+1; ses.thumb = blob; sesStore.put(ses); }
       };
-      tx.oncomplete = () => res(newId);
+      tx.oncomplete = () => { this._invalidateImgCache(sid); res(newId); };
       tx.onerror = e => rej(e);
     });
   },
@@ -3745,9 +3778,11 @@ const DB = {
       const tx = this.tx([this.IMG, this.SES], 'readwrite');
       const imgStore = tx.objectStore(this.IMG);
       const getReq = imgStore.get(imgId);
+      let affectedSid = null;
       getReq.onsuccess = () => {
         const img = getReq.result;
         if(!img){ res(null); return; }
+        affectedSid = img.sessionId;
         imgStore.delete(imgId);
         const sesStore = tx.objectStore(this.SES);
         const sReq = sesStore.get(img.sessionId);
@@ -3757,6 +3792,7 @@ const DB = {
         };
       };
       tx.oncomplete = () => {
+        if(affectedSid != null) this._invalidateImgCache(affectedSid);
         // 🧹 앨범 멤버십 orphan 정리 — fire-and-forget
         pruneAlbumMembership([imgId]).catch(() => {});
         res();
@@ -3774,6 +3810,7 @@ const DB = {
       imgs.forEach(i => imgStore.delete(i.id));
       tx.objectStore(this.SES).delete(sid);
       tx.oncomplete = () => {
+        this._invalidateImgCache(sid);
         // 🧹 세션 내 모든 이미지에 대한 albumMembership orphan 정리
         pruneAlbumMembership(deletedIds).catch(() => {});
         res();
@@ -3799,7 +3836,7 @@ const DB = {
       const tx = this.tx([this.IMG, this.SES], 'readwrite');
       tx.objectStore(this.IMG).clear();
       tx.objectStore(this.SES).clear();
-      tx.oncomplete = () => { this.currentSessionId = null; res(); };
+      tx.oncomplete = () => { this.currentSessionId = null; this._invalidateImgCache(null); res(); };
       tx.onerror = (e) => { _dbErrToast(e, 'clearAll'); res(); };
     });
   },
@@ -7341,7 +7378,7 @@ function openPresetEdit(type, existing){
   $('presetName').value = existing?.name || '';
   $('presetText').value = existing?.text || '';
   $('presetThumbInner').innerHTML = existing?.thumb
-    ? `<img src="${esc(existing.thumb)}" alt="썸네일" style="max-height:120px">`
+    ? `<img src="${esc(existing.thumb)}" alt="썸네일" loading="lazy" decoding="async" style="max-height:120px">`
     : '📁 클릭/드롭으로 이미지';
   _editingPreset.thumb = existing?.thumb || null;
   $('presetDel').style.display = existing ? '' : 'none';
@@ -11124,7 +11161,7 @@ function tplSetThumbnail(i){
     $('confirmTitle').innerHTML = `🖼 "${esc(t.name)}" 미리보기`;
     $('confirmBody').innerHTML = `
       <div style="text-align:center;margin-bottom:12px">
-        <img src="${esc(t.thumb)}" alt="템플릿 미리보기" style="max-width:100%;max-height:200px;border-radius:6px;border:1.5px solid var(--b1)">
+        <img src="${esc(t.thumb)}" alt="템플릿 미리보기" loading="lazy" decoding="async" style="max-width:100%;max-height:200px;border-radius:6px;border:1.5px solid var(--b1)">
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn ghost" data-tpl-thumb-act="pick" style="flex:1;padding:8px 12px;font-size:12.5px;border-color:rgba(58,99,152,.4);color:var(--blue)">🖼 갤러리에서 변경</button>
@@ -12871,7 +12908,7 @@ function wireGenerationAndPresetEvents(){
     const w = Math.round(img.naturalWidth / 64) * 64;
     const h = Math.round(img.naturalHeight / 64) * 64;
     state.directorImage = { blob: f, dataURL, b64, w, h };
-    $('directorImgInner').innerHTML = `<img src="${dataURL}" alt="디렉터 참조 이미지" style="max-height:140px">`;
+    $('directorImgInner').innerHTML = `<img src="${dataURL}" alt="디렉터 참조 이미지" decoding="async" style="max-height:140px">`;
   });
   $('directorAction').addEventListener('change', () => {
     $('emotionOpts').style.display = $('directorAction').value === 'emotion' ? '' : 'none';
@@ -13050,13 +13087,13 @@ function wireGenerationAndPresetEvents(){
   setupImageDrop('presetThumbDrop', 'presetThumbFile', async f => {
     const dataURL = await blobToCompressedThumb(f, 240);
     _editingPreset.thumb = dataURL;
-    $('presetThumbInner').innerHTML = `<img src="${dataURL}" alt="프리셋 썸네일" style="max-height:120px">`;
+    $('presetThumbInner').innerHTML = `<img src="${dataURL}" alt="프리셋 썸네일" decoding="async" style="max-height:120px">`;
   });
   $('pickGalleryThumb').addEventListener('click', () => {
     if(!_editingPreset){ toast('프리셋 편집 중이 아닙니다', 'warning'); return; }
     openGalleryPicker(dataURL => {
       _editingPreset.thumb = dataURL;
-      $('presetThumbInner').innerHTML = `<img src="${dataURL}" alt="프리셋 썸네일" style="max-height:120px">`;
+      $('presetThumbInner').innerHTML = `<img src="${dataURL}" alt="프리셋 썸네일" decoding="async" style="max-height:120px">`;
       toast('갤러리 이미지로 썸네일 지정됨', 'success');
     });
   });

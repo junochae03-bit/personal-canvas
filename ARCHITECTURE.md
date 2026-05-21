@@ -89,8 +89,17 @@ personal-canvas/
 ## 6. 성능 가이드
 
 - 갤러리 가상 스크롤: `IntersectionObserver` 기반 청크 렌더(80개씩, `~9100`).
-- 새 리스너는 가능한 한 `AbortController { signal }` 로 묶어 한 번에 해제.
+- 갤러리 세션 이미지: `DB._imgCache` 인메모리 캐시 — 검색 키타이핑마다 IDB 재조회 없음. `saveImage/deleteImage/deleteSession/clearAll` 가 `_invalidateImgCache(sid)` 자동 호출.
+- 새 리스너는 `_listenerScope()` 유틸로 묶어 한 번에 해제:
+  ```js
+  const scope = _listenerScope();
+  scope.on(document, 'mousemove', onMove);
+  scope.on(modal, 'click', onBackdrop);
+  // 완료/취소 시:
+  scope.dispose();   // 모든 리스너 즉시 해제 (AbortController 기반)
+  ```
 - innerHTML 대량 갱신 대신 `<template>` 클론 + DocumentFragment 권장.
+- 이미지 태그는 가능하면 `loading="lazy" decoding="async"` (라이트박스/베이스 입력처럼 즉시 필요한 경우 제외).
 - Service Worker 는 NovelAI API 를 명시적으로 우회 (`sw.js:48`).
 
 ## 7. 신규 기능 추가 체크리스트
