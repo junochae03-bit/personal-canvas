@@ -1848,6 +1848,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <div class="set-card">
             <h3>현재 조합 <span class="en">Current Roll</span> <span id="tplRollStatus" style="font-size:11px;color:var(--t3);font-weight:500;margin-left:6px"></span>
               <button class="btn ghost" id="tplAddCharSlotBtn" type="button" title="현재 조합에 캐릭터 항목 추가 (선택 또는 랜덤)" style="float:right;padding:4px 9px;font-size:11.5px;border-color:rgba(58,99,152,.4);color:var(--blue)">➕ 캐릭터 추가</button>
+              <button class="btn ghost" id="tplAddMobMaleBtn" type="button" title="ㄱ.모브 캐릭터를 현재 조합에 바로 추가" style="float:right;padding:4px 9px;font-size:11.5px;margin-right:6px;border-color:rgba(58,99,152,.4);color:var(--blue)">👨 남자 추가</button>
             </h3>
             <div id="tplRollList" style="display:flex;flex-direction:column;gap:6px"></div>
             <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
@@ -13390,6 +13391,19 @@ function wireMiscEvents(){
   // ➕ 현재 조합에 캐릭터 항목 추가 — 캐릭터 선택 모달 (검색 + 랜덤)
   $('tplAddCharSlotBtn')?.addEventListener('click', () => {
     openTplCharPicker();
+  });
+  $('tplAddMobMaleBtn')?.addEventListener('click', () => {
+    const chars = state.presets.character || [];
+    // 정확 매치 우선 → 없으면 "모브" 포함 첫 항목 폴백
+    let target = chars.find(c => (c.name||'').trim() === 'ㄱ.모브');
+    if(!target) target = chars.find(c => (c.name||'').includes('모브'));
+    if(!target){
+      toast('"ㄱ.모브" 캐릭터 프리셋이 없어요 — 먼저 캐릭터 프리셋으로 저장해 주세요', 'warning');
+      return;
+    }
+    _tplCurrentRoll.push({cat:'character', preset: target});
+    tplRenderRoll();
+    toast(`👨 ${target.name} 추가됨`, 'success');
   });
   $('tplRollList')?.addEventListener('click', e => {
     const b = e.target.closest('[data-tpl-roll-act]');
