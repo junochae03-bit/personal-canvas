@@ -98,6 +98,45 @@ for(const f of htmlFiles){
   }
 }
 
+// 6. 단일 소스 강제 — index.html 인라인이 js/pure/* 의 핵심 함수와 시그니처/로직 일치해야.
+//    .mjs 의 export 제거 + 공백 정규화 후 인라인 본문에 substring 포함되는지 확인.
+function normalizeFn(src){
+  return src
+    .replace(/^\s*export\s+/gm, '')
+    .replace(/\/\/[^\n]*/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function extractFn(src, name){
+  // function name(...){ ... } 의 본문 추출 (단순 brace balance)
+  const re = new RegExp(`function\\s+${name}\\s*\\(([^)]*)\\)\\s*\\{`);
+  const m = src.match(re);
+  if(!m) return null;
+  let depth = 1, i = m.index + m[0].length;
+  while(i < src.length && depth > 0){
+    if(src[i] === '{') depth++;
+    else if(src[i] === '}') depth--;
+    i++;
+  }
+  return src.slice(m.index, i);
+}
+const MIRRORED = [
+  {mod: 'js/pure/prompt.mjs', fn: 'parseFreePromptTokens'},
+  {mod: 'js/pure/prompt.mjs', fn: 'dedupePromptTags'},
+];
+const inlineSrc = readFileSync(join(ROOT, 'index.html'), 'utf8');
+for(const {mod, fn} of MIRRORED){
+  const modSrc = readFileSync(join(ROOT, mod), 'utf8');
+  const modFn = extractFn(modSrc, fn);
+  const inlineFn = extractFn(inlineSrc, fn);
+  if(!modFn) { fail(mod, `${fn} 함수를 찾을 수 없음`); continue; }
+  if(!inlineFn) { fail('index.html', `${fn} 인라인 미러 누락 — ${mod} 와 동기화 필요`); continue; }
+  if(normalizeFn(modFn) !== normalizeFn(inlineFn)){
+    fail('index.html', `${fn} 인라인이 ${mod} 와 불일치 — 단일 소스 위반`);
+  }
+}
+
 // 6. 결과 요약
 if(failures === 0){
   ok(`lint passed — ${jsFiles.length} JS files, ${htmlFiles.length} HTML files`);
