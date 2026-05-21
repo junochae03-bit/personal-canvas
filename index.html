@@ -62,11 +62,12 @@
 /* 리넨 (Linen) — 거의 흰색 */
 [data-theme="linen"]{--bg:#f6f1e3;--panel:#fdfaef;--card:#efe8d4;--card2:#e6deca;--b1:#ccc0a4;--b2:#aea283;--b3:#8d8265;--acc:#a06030;--acc2:#7e4820;--t1:#332919;--t2:#5a4b30;--t3:#8c7a5c;}
 /* 다크 — 미드나잇 (Midnight) — 원본 네이비 */
-[data-theme="midnight"]{--bg:#0d0d1a;--panel:#131326;--card:#181830;--card2:#1c1c38;--b1:#30305c;--b2:#3e3e70;--b3:#4e4e84;--acc:#ff6b35;--acc2:#e8541d;--t1:#efefff;--t2:#a8a8d0;--t3:#6060a0;--shadow:0 4px 16px rgba(0,0,0,.4);}
-/* 다크 — 틸 (Teal) */
-[data-theme="teal"]{--bg:#0c1a20;--panel:#112228;--card:#162c34;--card2:#1a333c;--b1:#2a4e60;--b2:#346272;--b3:#407888;--acc:#00c9a7;--acc2:#00a98c;--t1:#e8faf8;--t2:#90cac6;--t3:#3a6068;--shadow:0 4px 16px rgba(0,0,0,.4);}
-/* 다크 — 로즈 (Rose) */
-[data-theme="rose"]{--bg:#1a1015;--panel:#221620;--card:#2a1e26;--card2:#30222c;--b1:#523040;--b2:#663c50;--b3:#7c4c64;--acc:#f06292;--acc2:#d44f7a;--t1:#fceef4;--t2:#cc9aac;--t3:#6a3a48;--shadow:0 4px 16px rgba(0,0,0,.4);}
+/* ♿ 가독성 개선: t3 #6060a0 → #8585b8 — WCAG AA 4.5:1 만족 (bg 대비) */
+[data-theme="midnight"]{--bg:#0d0d1a;--panel:#131326;--card:#181830;--card2:#1c1c38;--b1:#30305c;--b2:#3e3e70;--b3:#4e4e84;--acc:#ff6b35;--acc2:#e8541d;--t1:#efefff;--t2:#a8a8d0;--t3:#8585b8;--shadow:0 4px 16px rgba(0,0,0,.4);}
+/* 다크 — 틸 (Teal) — t3 명도 +12% */
+[data-theme="teal"]{--bg:#0c1a20;--panel:#112228;--card:#162c34;--card2:#1a333c;--b1:#2a4e60;--b2:#346272;--b3:#407888;--acc:#00c9a7;--acc2:#00a98c;--t1:#e8faf8;--t2:#90cac6;--t3:#5a8088;--shadow:0 4px 16px rgba(0,0,0,.4);}
+/* 다크 — 로즈 (Rose) — t3 명도 +14% */
+[data-theme="rose"]{--bg:#1a1015;--panel:#221620;--card:#2a1e26;--card2:#30222c;--b1:#523040;--b2:#663c50;--b3:#7c4c64;--acc:#f06292;--acc2:#d44f7a;--t1:#fceef4;--t2:#cc9aac;--t3:#8a5a70;--shadow:0 4px 16px rgba(0,0,0,.4);}
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;overflow:hidden}
@@ -1465,6 +1466,8 @@ mark{
   <div class="tb-group key-group">
     <span class="lbl">키 <span class="en">API</span></span>
     <input id="apiKey" class="inp pw" placeholder="pst-... NovelAI Persistent Token" autocomplete="off" spellcheck="false">
+    <!-- 🟢 실시간 형식 검증 인디케이터 (입력 즉시 갱신) -->
+    <span id="apiKeyDot" class="api-key-dot" title="API 키 상태" aria-live="polite" style="display:inline-flex;align-items:center;width:18px;height:18px;border-radius:50%;flex-shrink:0;font-size:10px;justify-content:center"></span>
     <button class="iconbtn" id="toggleKey" title="키 보이기/숨기기 (Show/Hide)">👁</button>
   </div>
   <div class="tb-group">
@@ -5187,6 +5190,7 @@ function renderCharacters(){
           <button class="char-act-btn browse" data-act="browse" data-idx="${i}" title="🎴 캐릭터 둘러보기 — 썸네일 그리드로 보고 단일/후보 풀 선택">🎴 둘러보기 <span class="en" style="opacity:.55;font-weight:400">Browse</span></button>
           <button class="char-act-btn ${c.enabled?'act':''}" data-act="toggle" data-idx="${i}">${c.enabled?'✓ 활성':'⭕ 비활성'} <span class="en" style="opacity:.55;font-weight:400">${c.enabled?'On':'Off'}</span></button>
           <button class="char-act-btn edit" data-act="expand" data-idx="${i}">✏ 프롬프트 <span class="en" style="opacity:.55;font-weight:400">Edit</span></button>
+          <button class="char-act-btn" data-act="clear-char-all" data-idx="${i}" title="이 캐릭터의 외형·액션·네거티브 3개 텍스트를 한 번에 비웁니다 (실행 취소 6초)">🧹 비우기 <span class="en" style="opacity:.55;font-weight:400">Clear</span></button>
           <button class="char-act-btn del" data-act="del" data-idx="${i}" title="이 캐릭터 슬롯 삭제"><span class="del-ico">🗑</span><span class="del-lbl"> 삭제</span></button>
         </div>
         ${poolBadge}
@@ -5773,6 +5777,22 @@ function renderPresets(){
     return;
   }
 
+  // 🪧 빈 상태 / 검색 결과 없음 안내
+  if(!list.length){
+    const total = (state.presets[type]||[]).length;
+    if(search && total > 0){
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--t3);padding:48px 20px;font-size:13.5px;line-height:1.7">
+        🔍 <b style="color:var(--t2)">"${esc(search)}"</b> 검색 결과 없음<br>
+        <span style="font-size:11.5px">${total.toLocaleString()}개 ${esc(def.label||'프리셋')} 중 일치 없음 — 한글 초성(예: ㅍㄹㄴ)도 시도해보세요</span>
+      </div>`;
+    } else {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--t3);padding:60px 20px;font-size:13.5px;line-height:1.8">
+        ${ico} <b style="color:var(--t2);font-size:14px">아직 등록된 ${esc(def.label||'프리셋')}이 없습니다</b><br>
+        <span style="font-size:11.5px">상단 <b>＋ 추가</b> 버튼 또는 EXIF 가 있는 PNG를 끌어다 놓아 생성하세요</span>
+      </div>`;
+    }
+    return;
+  }
   grid.innerHTML = sortByFav(list).map(renderItem).join('');
 }
 
@@ -9760,7 +9780,20 @@ function renderGalleryTokens(grid, tokens){
   // 이전 observer 정리
   if(_galObserver){ _galObserver.disconnect(); _galObserver = null; }
   if(!tokens.length){
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--t3);padding:40px">검색 결과 없음</div>';
+    const search = ($('gallerySearch')?.value || '').trim();
+    const filterVal = $('galleryFilter')?.value;
+    const hasFilter = filterVal && filterVal !== 'all';
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--t3);padding:48px 20px;font-size:13.5px;line-height:1.7">
+      🔍 ${search ? `<b style="color:var(--t2)">"${esc(search)}"</b> ` : ''}검색 결과 없음<br>
+      <span style="font-size:11.5px">${search ? '한글 초성(예: ㅍㄹㄴ) 또는 시드 숫자도 시도해보세요' : '필터를 바꾸거나 검색어를 비워보세요'}</span>
+      ${(search || hasFilter) ? `<div style="margin-top:14px"><button class="btn ghost" id="galClearFilters" style="font-size:12px;padding:6px 12px">✕ 검색·필터 모두 초기화</button></div>` : ''}
+    </div>`;
+    const clearBtn = document.getElementById('galClearFilters');
+    if(clearBtn) clearBtn.onclick = () => {
+      const inp = $('gallerySearch'); if(inp) inp.value = '';
+      const sel = $('galleryFilter'); if(sel) sel.value = 'all';
+      loadGallery();
+    };
     applySelStyles();
     return;
   }
@@ -12466,7 +12499,7 @@ function updateSettingsKeyStatus(){
   if(!el) return;
   const k = (state.apiKey || $('apiKey')?.value || '').trim();
   if(!k){ el.innerHTML = '<span style="color:var(--red)">⚠ 미설정 — 생성 시작 시 401 에러</span>'; return; }
-  if(!k.startsWith('pst-')){ el.innerHTML = '<span style="color:var(--orange,#a25a1f)">⚠ 형식 의심 — pst-로 시작해야 정상</span>'; return; }
+  if(!k.startsWith('pst-')){ el.innerHTML = '<span style="color:var(--yellow)">⚠ 형식 의심 — pst-로 시작해야 정상</span>'; return; }
   el.innerHTML = `<span style="color:var(--green)">✅ 저장됨 (${k.slice(0,7)}…${k.slice(-4)})</span>`;
 }
 
@@ -12515,11 +12548,27 @@ async function saveApiKey(k){
 // 🔑 모바일 상단바의 미니 키 버튼 상태 표시 (set: 녹색 / empty: 빨강 펄스)
 function updateKeyMiniState(){
   const btn = $('keyToggleBtn');
-  if(!btn) return;
-  const has = !!(state.apiKey || $('apiKey').value || '').trim();
-  btn.classList.toggle('key-set', has);
-  btn.classList.toggle('key-empty', !has);
-  btn.title = has ? 'API 키 입력/수정 (저장됨)' : 'API 키 미설정 — 탭하여 입력';
+  const k = (state.apiKey || $('apiKey')?.value || '').trim();
+  const has = !!k;
+  if(btn){
+    btn.classList.toggle('key-set', has);
+    btn.classList.toggle('key-empty', !has);
+    btn.title = has ? 'API 키 입력/수정 (저장됨)' : 'API 키 미설정 — 탭하여 입력';
+  }
+  // 🟢 상단바 인라인 인디케이터 — 미설정(빨강)/형식 의심(노랑)/저장됨(초록)
+  const dot = $('apiKeyDot');
+  if(dot){
+    let bg, title, mark;
+    if(!has){ bg = 'var(--red)'; title = '⚠ 미설정 — 생성 시 401 에러'; mark = ''; }
+    else if(!k.startsWith('pst-')){ bg = 'var(--yellow)'; title = '⚠ 형식 의심 — pst-로 시작해야 정상'; mark = '!'; }
+    else { bg = 'var(--green)'; title = `✅ 저장됨 (${k.slice(0,7)}…${k.slice(-4)})`; mark = '✓'; }
+    dot.style.background = bg;
+    dot.style.color = '#fff8ec';
+    dot.style.fontWeight = '700';
+    dot.title = title;
+    dot.textContent = mark;
+    dot.setAttribute('aria-label', title);
+  }
 }
 function toggleApiKeyExpanded(force){
   const tb = document.querySelector('.topbar');
@@ -12912,6 +12961,27 @@ function wireCharacterEvents(){
       toastUndo(`#${idx+1} ${labelMap[field]||field} 비움`, () => {
         c[field] = prev;
         if(ta) ta.value = prev;
+        saveSettingsDebounced();
+      });
+    }
+    else if(act === 'clear-char-all'){
+      // 🧹 외형·액션·네거티브 3개 한 번에 비우기 — 실행 취소 가능 (snapshot)
+      const c = state.characters[idx];
+      if(!c) return;
+      const snap = {appearance: c.appearance || '', action: c.action || '', neg: c.neg || ''};
+      if(!snap.appearance.trim() && !snap.action.trim() && !snap.neg.trim()) return;
+      c.appearance = ''; c.action = ''; c.neg = '';
+      for(const f of ['appearance','action','neg']){
+        const ta = $('charList').querySelector(`textarea[data-act="${f}"][data-idx="${idx}"]`);
+        if(ta) ta.value = '';
+      }
+      saveSettingsDebounced();
+      toastUndo(`🧹 #${idx+1} 캐릭터 텍스트 3개 모두 비움`, () => {
+        c.appearance = snap.appearance; c.action = snap.action; c.neg = snap.neg;
+        for(const f of ['appearance','action','neg']){
+          const ta = $('charList').querySelector(`textarea[data-act="${f}"][data-idx="${idx}"]`);
+          if(ta) ta.value = snap[f];
+        }
         saveSettingsDebounced();
       });
     }
@@ -14435,6 +14505,60 @@ function wireMiscEvents(){
   installShortcutHandlers();
 }
 
+// ⌨️ 키보드 단축키 도움말 — '?' 키로 호출. confirmModal 재사용.
+function showShortcutsHelp(){
+  const groups = [
+    {title: '🌐 전역', items: [
+      ['?', '이 도움말 표시'],
+      ['Ctrl+Enter', '생성 시작'],
+      ['Esc', '모달 닫기 / 라이트박스 닫기'],
+      ['Alt+1..9', '워크플로 슬롯 N 복원 (즐겨찾기 우선)'],
+      ['Alt+Shift+1..9', '워크플로 슬롯 N 에 현재 상태 덮어쓰기'],
+    ]},
+    {title: '🖼 갤러리', items: [
+      ['/', '검색 포커스'],
+      ['Ctrl/⌘+A', '보이는 모든 이미지 선택'],
+      ['E', '전체 펼침'],
+      ['C', '전체 접기'],
+      ['L', '첫 선택 또는 첫 가시 이미지의 라이트박스'],
+      ['Del', '선택된 이미지 일괄 삭제'],
+    ]},
+    {title: '🔍 라이트박스', items: [
+      ['← / →', '이전 / 다음'],
+      ['Space', '다음 (Shift+Space = 이전)'],
+      ['Home / End', '처음 / 마지막'],
+      ['Del / Ctrl+⌫', '현재 이미지 삭제'],
+      ['더블탭', '확대/원래대로 (핀치줌 토글)'],
+    ]},
+    {title: '📱 모바일', items: [
+      ['좌우 스와이프', '메인 페인 전환 (편집 ↔ 미리보기 ↔ 갤러리…)'],
+      ['길게 누름', '갤러리 선택 모드 진입'],
+    ]},
+  ];
+  const html = `
+    <div style="font-size:12.5px;color:var(--t2);margin-bottom:14px;line-height:1.65">
+      파워유저 단축키 모음. <b style="color:var(--t1)">?</b> 키 또는 도움말 메뉴로 다시 열 수 있습니다.
+    </div>
+    ${groups.map(g => `
+      <fieldset style="border:1.5px solid var(--b1);border-radius:6px;padding:10px 14px 12px;margin-bottom:10px">
+        <legend style="font-weight:700;color:var(--acc);padding:0 6px;font-size:13px">${g.title}</legend>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:baseline">
+          ${g.items.map(([key, desc]) => `
+            <kbd style="display:inline-block;padding:2px 8px;background:var(--card);border:1.5px solid var(--b1);border-radius:4px;font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--t1);white-space:nowrap">${esc(key)}</kbd>
+            <span style="font-size:12.5px;color:var(--t2);line-height:1.55">${esc(desc)}</span>
+          `).join('')}
+        </div>
+      </fieldset>
+    `).join('')}
+  `;
+  $('confirmTitle').innerHTML = '⌨️ 키보드 단축키 <span class="en">Shortcuts</span>';
+  $('confirmBody').innerHTML = html;
+  $('confirmOk').style.display = 'none';
+  $('confirmCancel').innerHTML = '닫기 <span class="en">Close</span>';
+  $('confirmModal').classList.add('open');
+  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
+}
+
 function installShortcutHandlers(){
   const isTypingTarget = el => {
     if(!el) return false;
@@ -14444,6 +14568,12 @@ function installShortcutHandlers(){
   const anyModalOpen = () => !!document.querySelector('.modal-bg.open');
 
   document.addEventListener('keydown', e => {
+    // ? 또는 Shift+/ — 키보드 단축키 cheat sheet 표시 (어디서나)
+    if(e.key === '?' && !isTypingTarget(e.target)){
+      e.preventDefault();
+      showShortcutsHelp();
+      return;
+    }
     // 워크플로 — Alt+1..9: 슬롯 적용 (브라우저 탭과 충돌 X)
     // Alt+Shift+1..9: 현재 상태를 슬롯에 덮어쓰기 저장 (확인 후)
     if(e.altKey && !e.ctrlKey && !e.metaKey && /^[1-9]$/.test(e.key)){
