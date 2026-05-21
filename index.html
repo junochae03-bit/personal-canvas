@@ -2531,8 +2531,12 @@ let _mobilePreviewOn = false;
 // iOS Safari: standalone 모드일 때만 의미 있음 (Fullscreen API 제한적)
 function toggleFullscreen(){
   const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const handle = p => {
+    // 🐛 fix: fullscreenchange 이벤트가 늦게 발생하는 브라우저 대응 — 직접 갱신 후 이벤트도 처리.
+    Promise.resolve(p).then(() => updateFullscreenBtn()).catch(e => _swallow(e, 'fullscreen:toggle'));
+  };
   if(isFs){
-    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    handle((document.exitFullscreen || document.webkitExitFullscreen).call(document));
   } else {
     const el = document.documentElement;
     const req = el.requestFullscreen || el.webkitRequestFullscreen;
@@ -2541,9 +2545,9 @@ function toggleFullscreen(){
       return;
     }
     try {
-      req.call(el, {navigationUI: 'hide'});  // 옵션은 브라우저가 무시할 수도 있음
+      handle(req.call(el, {navigationUI: 'hide'}));
     } catch(e){
-      try { req.call(el); } catch(_) { toast('전체화면 진입 실패: ' + (e.message||e), 'error'); }
+      try { handle(req.call(el)); } catch(e2){ toast('전체화면 진입 실패: ' + (e2.message||e2), 'error'); }
     }
   }
 }
@@ -2704,12 +2708,18 @@ function showInstallInstructions(){
         → <code style="font-family:var(--mono);background:var(--card);padding:1px 5px;border-radius:3px">http://localhost:8000/index.html</code> 접속
       </div>`;
   }
+  // 🐛 fix: diagnoseInstallability() 가 dead code 였음 — 안내 모달 하단에 진단 링크 노출.
+  html += `<div style="margin-top:14px;text-align:right">
+    <button type="button" id="_diagInstallBtn" class="btn ghost" style="font-size:12px">🔍 설치 진단 보기</button>
+  </div>`;
   $('confirmTitle').innerHTML = '📱 앱으로 설치 안내 <span class="en">Install</span>';
   $('confirmBody').innerHTML = html;
   $('confirmOk').style.display = 'none';
   $('confirmCancel').innerHTML = '닫기 <span class="en">Close</span>';
   $('confirmModal').classList.add('open');
   $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
+  const diagBtn = document.getElementById('_diagInstallBtn');
+  if(diagBtn) diagBtn.onclick = () => diagnoseInstallability();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2796,11 +2806,27 @@ function showInstallInstructions(){
       if(e.data?.type === 'NEW_VERSION_AVAILABLE'){
         const showUpdate = () => {
           if(typeof toast === 'function'){
-            toast('🔄 새 버전이 준비됐어요 — 새로고침하면 적용됩니다', 'info');
+            // 🆕 한 번 클릭에 즉시 적용 옵션 — skipWaiting + 새로고침
+            toast('🔄 새 버전이 준비됐어요', 'info', {
+              label: '지금 적용',
+              onClick: () => {
+                navigator.serviceWorker.controller?.postMessage('SKIP_WAITING');
+                setTimeout(() => location.reload(), 200);
+              },
+              timeoutMs: 12000,
+            });
           }
         };
         if(document.readyState === 'complete') showUpdate();
         else window.addEventListener('load', showUpdate, {once:true});
+      }
+      // 🐛 fix: CLEAR_CACHE 완료 피드백 — sw.js 가 보내는 CACHE_CLEARED 메시지 수신.
+      if(e.data?.type === 'CACHE_CLEARED'){
+        if(typeof toast === 'function'){
+          toast(`🧹 캐시 ${e.data.deletedCount}개 삭제됨 — 새로고침하면 깨끗한 상태`, 'success', {
+            label: '새로고침', onClick: () => location.reload(), timeoutMs: 12000,
+          });
+        }
       }
     });
   });
@@ -4180,7 +4206,14 @@ async function readPngMetadata(blob){
       off += 8 + len + 4;  // 길이(4) + 타입(4) + 데이터 + CRC(4)
     }
     if(meta.Comment){
-      try { meta.parsed = JSON.parse(meta.Comment); } catch(e){}
+      try {
+        // 🛡 외부 PNG의 Comment JSON — prototype pollution 방어:
+        //    reviver 로 __proto__/constructor/prototype 키는 모두 제거.
+        meta.parsed = JSON.parse(meta.Comment, (k, v) => {
+          if(k === '__proto__' || k === 'constructor' || k === 'prototype') return undefined;
+          return v;
+        });
+      } catch(e){ _swallow(e, 'exif:parse-comment'); }
     }
     // 폴백: parameters (A1111/SD WebUI 스타일) — 단순 텍스트 프롬프트로 사용 가능
     if(!meta.parsed && meta.parameters){
@@ -11047,6 +11080,29 @@ const _expandedPresets = new Set();   // key = "type:name"
 const _expandedGallery = new Set();   // key = image.id (number)
 // 🗂 갤러리 앨범 뷰 — 펼친 앨범 키 (사용자: 'u:aid' / 캐릭터: 'c:name' / 미분류: '__unsorted')
 const _galAlbumExpanded = new Set();
+
+// 💾 갤러리 펼침 상태 영구화 — 새로고침 후에도 유지
+// (이미지 ID 자체가 안정적이므로 localStorage 충분, IDB 까지는 과함)
+const _LS_GAL_EXPANDED = 'nai_gallery_expanded';
+const _LS_GAL_ALBUM_EXPANDED = 'nai_gallery_album_expanded';
+function _saveGalExpand(){
+  try {
+    localStorage.setItem(_LS_GAL_EXPANDED, JSON.stringify([..._expandedGallery]));
+    localStorage.setItem(_LS_GAL_ALBUM_EXPANDED, JSON.stringify([..._galAlbumExpanded]));
+  } catch(e){ _swallow(e, 'galExpand:save'); }
+}
+function _loadGalExpand(){
+  try {
+    const a = JSON.parse(localStorage.getItem(_LS_GAL_EXPANDED) || '[]');
+    if(Array.isArray(a)) a.forEach(id => { const n = Number(id); if(Number.isFinite(n)) _expandedGallery.add(n); });
+    const b = JSON.parse(localStorage.getItem(_LS_GAL_ALBUM_EXPANDED) || '[]');
+    if(Array.isArray(b)) b.forEach(k => { if(typeof k === 'string') _galAlbumExpanded.add(k); });
+  } catch(e){ _swallow(e, 'galExpand:load'); }
+}
+_loadGalExpand();
+// 페이지 가시성 변화/언로드 시 저장 (visibilitychange 가 unload 보다 더 신뢰)
+window.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') _saveGalExpand(); });
+window.addEventListener('pagehide', _saveGalExpand);
 // 📁 마지막 album view 렌더 시점의 모든 앨범 키 (전체 토글용)
 let _galAlbumLastKeys = [];
 let _userTagIndex = [];               // [{tag, count, sources:[]}] — 유저 프리셋에서 추출
@@ -11746,9 +11802,11 @@ async function enablePinLock(pin){
 }
 
 // PIN 모드 OFF: 현재 API 키를 디바이스 키로 다시 암호화 후 salt 제거
+// 🐛 fix: KEY_PIN_FAILS 도 함께 정리 — 비활성→재활성 시 이전 실패 카운터 잔존 방지.
 async function disablePinLock(){
   const currentApiKey = state.apiKey || '';
   await DB.setFlag(KEY_PIN_SALT, null);
+  await _resetPinFails();
   _pinDerivedKey = null;
   // 디바이스 키 재생성 + API 키 재암호화 (saveApiKey가 _getOrCreateCryptoKey 통해 처리)
   if(currentApiKey) await saveApiKey(currentApiKey);

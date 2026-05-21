@@ -46,11 +46,17 @@ self.addEventListener('activate', e => {
 self.addEventListener('message', e => {
   if(e.data === 'SKIP_WAITING') self.skipWaiting();
   if(e.data === 'CLEAR_CACHE'){
-    // 모든 캐시 일괄 삭제 + clients.claim — 트러블슈팅용
-    e.waitUntil(
-      caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
-        .then(() => self.clients.claim())
-    );
+    // 모든 캐시 일괄 삭제 + clients.claim + 완료 알림 — 트러블슈팅용.
+    // 🐛 fix: 이전엔 일방적 삭제만 하고 사용자에게 피드백 없음 → CACHE_CLEARED 메시지 보냄.
+    e.waitUntil((async () => {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+      await self.clients.claim();
+      const clients = await self.clients.matchAll({type: 'window'});
+      for(const c of clients){
+        try { c.postMessage({type: 'CACHE_CLEARED', deletedCount: keys.length}); } catch(_){}
+      }
+    })());
   }
 });
 
