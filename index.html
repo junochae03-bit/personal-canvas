@@ -5795,16 +5795,55 @@ function downloadJSON(obj, fname){
 }
 
 // 📦 이미지 다수를 ZIP으로 다운로드 (앨범·세션 일괄)
+// 📦 ZIP 다운로드 — 대량 선택 시 자동으로 N장씩 청크 분할 다운로드.
+// 한 ZIP 안에 너무 많이 들어가면 메모리 폭주 + 브라우저 다운로드 큐 한계.
+const ZIP_CHUNK_THRESHOLD = 500;        // 이 이상이면 청크 분할 안내
+const ZIP_CHUNK_SIZE = 300;             // 청크당 이미지 수
 async function downloadImagesAsZip(images, zipName, onProgress){
   if(!Array.isArray(images) || !images.length){ toast('다운로드할 이미지가 없습니다', 'warning'); return false; }
   if(typeof JSZip === 'undefined'){ toast('ZIP 라이브러리 로드 실패', 'error'); return false; }
+
+  // 대량이면 청크 분할 안내 — 사용자 confirm 후 진행
+  if(images.length > ZIP_CHUNK_THRESHOLD){
+    const chunks = Math.ceil(images.length / ZIP_CHUNK_SIZE);
+    const ok = await new Promise(res => {
+      confirmDialog(
+        `${images.length.toLocaleString()}장 → ${chunks}개 ZIP 으로 나눠 다운로드합니다.\n` +
+        `(각 ${ZIP_CHUNK_SIZE}장 단위 — 메모리 폭주 방지)\n\n계속할까요?`,
+        () => res(true), '대용량 ZIP'
+      );
+      // 취소 시
+      const onClose = setTimeout(() => res(false), 60000);   // 1분 timeout
+      const cancelBtn = $('confirmCancel');
+      if(cancelBtn){
+        const origClick = cancelBtn.onclick;
+        cancelBtn.onclick = e => { clearTimeout(onClose); res(false); if(origClick) origClick(e); };
+      }
+    });
+    if(!ok) return false;
+    let totalOk = 0;
+    for(let i = 0; i < chunks; i++){
+      const slice = images.slice(i * ZIP_CHUNK_SIZE, (i+1) * ZIP_CHUNK_SIZE);
+      const chunkName = `${zipName||'images'}_part${i+1}of${chunks}`;
+      const ok2 = await _buildSingleZip(slice, chunkName, onProgress);
+      if(ok2) totalOk++;
+      // 청크 사이 짧은 대기 — 브라우저 다운로드 큐 안정화
+      await sleep(800);
+    }
+    toast(`✅ ${totalOk}/${chunks}개 ZIP 다운로드 완료`, totalOk === chunks ? 'success' : 'warning');
+    return totalOk > 0;
+  }
+
+  return _buildSingleZip(images, zipName, onProgress);
+}
+
+async function _buildSingleZip(images, zipName, onProgress){
   const zip = new JSZip();
   const usedNames = new Set();
   let idx = 0;
   for(const img of images){
     idx++;
     if(onProgress) onProgress(idx, images.length);
-    // 파일명 안전화 + 중복 방지
     let base = (img.fname || img.label || `image_${img.id || idx}`).toString();
     base = base.replace(/[^\w가-힣ㄱ-ㅎㅏ-ㅣ.\- ]/g, '_').slice(0, 80);
     if(!/\.png$/i.test(base)) base += '.png';
@@ -5815,11 +5854,8 @@ async function downloadImagesAsZip(images, zipName, onProgress){
       n++;
     }
     usedNames.add(safe);
-    try {
-      zip.file(safe, img.blob);
-    } catch(e){
-      console.warn('[zip] skip', img.id, e);
-    }
+    try { zip.file(safe, img.blob); }
+    catch(e){ console.warn('[zip] skip', img.id, e); }
   }
   toast(`📦 ZIP 생성 중… (${images.length}장)`, 'info');
   try {
@@ -5832,7 +5868,7 @@ async function downloadImagesAsZip(images, zipName, onProgress){
     a.download = (zipName || 'images') + '.zip';
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 3000);
-    toast(`✅ ${images.length}장 ZIP 다운로드`, 'success');
+    toast(`✅ ${images.length}장 ZIP 다운로드: ${zipName}`, 'success');
     return true;
   } catch(e){
     console.error('[zip]', e);
@@ -5921,6 +5957,11 @@ function openBackupModal(){
       <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="bk_albums" ${state.userAlbums.length>0?'checked':'disabled'}>사용자 앨범 ${state.userAlbums.length>0?`(${state.userAlbums.length}개)`:'(없음)'} + 이미지 멤버십</label>
     </fieldset>
 
+    <fieldset style="border:1.5px solid var(--b1);border-radius:6px;padding:10px 14px 12px;margin-bottom:10px">
+      <legend style="font-weight:700;color:var(--acc);padding:0 6px;font-size:13px">💾 워크플로 슬롯</legend>
+      <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="bk_workflows" ${(state.workflows||[]).length>0?'checked':'disabled'}>저장된 워크플로 ${(state.workflows||[]).length>0?`(${state.workflows.length}개)`:'(없음)'} + 즐겨찾기·잠금 상태</label>
+    </fieldset>
+
     <div style="font-size:11.5px;color:var(--t3);padding:4px 4px 0;line-height:1.55">
       ℹ 갤러리 이미지 자체는 백업에 포함되지 않습니다 (용량 큼). 이미지는 라이트박스에서 개별 다운로드 가능.
     </div>`;
@@ -5957,6 +5998,10 @@ async function doSelectiveBackup(){
     out.albumMembership = state.albumMembership;
     parts.push('albums');
   }
+  if($('bk_workflows')?.checked && (state.workflows||[]).length){
+    out.workflows = state.workflows;
+    parts.push('workflows');
+  }
   if(parts.length === 0){
     toast('선택한 항목이 없습니다', 'warning');
     return;
@@ -5992,6 +6037,7 @@ function renderRestoreOptions(filename, data){
     settings: !!data.settings,
     apikey: !!data.apiKey,
     albums: !!(data.userAlbums && data.userAlbums.length),
+    workflows: !!(Array.isArray(data.workflows) && data.workflows.length),
     presets: {},
   };
   let totalPresets = 0;
@@ -6050,7 +6096,19 @@ function renderRestoreOptions(filename, data){
       <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_albums" ${has.albums?'checked':'disabled'}>사용자 앨범 ${has.albums?`(${data.userAlbums.length}개)`:'(파일에 없음)'}</label>
     </fieldset>
 
-    <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_autoclassify" checked>복원 후 이름 접두사로 자동 분류 (🪄)</label>`;
+    <fieldset style="border:1.5px solid var(--b1);border-radius:6px;padding:10px 14px 12px;margin-bottom:10px">
+      <legend style="font-weight:700;color:var(--acc);padding:0 6px;font-size:13px">💾 워크플로 슬롯</legend>
+      <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_workflows" ${has.workflows?'checked':'disabled'}>저장된 워크플로 ${has.workflows?`(${data.workflows.length}개)`:'(파일에 없음)'}</label>
+    </fieldset>
+
+    <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_autoclassify" checked>복원 후 이름 접두사로 자동 분류 (🪄)</label>
+    <label class="chk" style="display:flex;padding:5px 0;margin-top:6px;padding:8px 10px;background:rgba(58,99,152,.06);border:1.5px solid rgba(58,99,152,.25);border-radius:5px">
+      <input type="checkbox" id="rs_dryrun">
+      <div>
+        <b>🔍 미리보기 (Dry-run)</b><br>
+        <span style="font-size:11.5px;color:var(--t3);line-height:1.55">실제 적용 전에 어떤 항목이 추가/변경/삭제될지 확인합니다. 안전 검증 권장.</span>
+      </div>
+    </label>`;
   $('restoreModalBody').innerHTML = html;
   // 전체 토글
   $('rs_pre_all').onchange = e => {
@@ -6062,9 +6120,76 @@ function renderRestoreOptions(filename, data){
   $('restoreModal').classList.add('open');
 }
 
+// 🔍 Dry-run — 실제 변경 없이 어떤 항목이 추가/덮어쓰기/유지될지 요약.
+async function computeRestoreDiff(data){
+  const mode = document.querySelector('input[name=rs_mode]:checked')?.value || 'merge';
+  const diff = {mode, settings: null, apikey: null, presets: [], albums: null, workflows: null};
+  if($('rs_settings')?.checked && data.settings) diff.settings = '설정 객체 1건 적용 (기존 덮어씀)';
+  if($('rs_apikey')?.checked && data.apiKey) diff.apikey = `API 키 ${data.apiKey.slice(0,7)}…${data.apiKey.slice(-4)} 적용`;
+  const cats = [...document.querySelectorAll('.rs-pre:checked')].map(cb => cb.dataset.pre);
+  for(const t of cats){
+    const fromNew = Array.isArray(data[t]) ? data[t] : [];
+    const incoming = new Map();
+    for(const p of fromNew){ if(p?.name) incoming.set(p.name, p); }
+    if(t === 'character' && Array.isArray(data.presets_charquick)) for(const p of data.presets_charquick) if(p?.name && !incoming.has(p.name)) incoming.set(p.name, p);
+    if(t === 'outfit') for(const k of ['presets_outfit','presets_outfitquick']) if(Array.isArray(data[k])) for(const p of data[k]) if(p?.name && !incoming.has(p.name)) incoming.set(p.name, p);
+    for(const a of (PRESET_CATEGORY_ALIASES[t] || [])) if(Array.isArray(data[a])) for(const p of data[a]) if(p?.name && !incoming.has(p.name)) incoming.set(p.name, p);
+    const existing = new Set((state.presets[t]||[]).map(p => p.name));
+    let added = 0, overwrite = 0;
+    for(const name of incoming.keys()){
+      if(existing.has(name)) overwrite++; else added++;
+    }
+    const deleted = (mode === 'replace') ? (state.presets[t]||[]).length - overwrite : 0;
+    const def = PRESET_TYPES.find(t2 => t2.id === t);
+    diff.presets.push({type: t, label: def?.label || t, ico: def?.ico || '•', added, overwrite, deleted});
+  }
+  if($('rs_albums')?.checked && data.userAlbums) diff.albums = `사용자 앨범 ${data.userAlbums.length}개 전체 교체`;
+  if($('rs_workflows')?.checked && Array.isArray(data.workflows)) diff.workflows = `워크플로 ${data.workflows.length}개 전체 교체`;
+  return diff;
+}
+
+function renderRestoreDiff(diff){
+  const rows = [];
+  if(diff.settings) rows.push(`<div style="padding:6px 10px;background:rgba(58,99,152,.05);border-left:3px solid var(--blue);margin-bottom:4px;border-radius:0 4px 4px 0"><b>⚙ 설정</b> — ${diff.settings}</div>`);
+  if(diff.apikey) rows.push(`<div style="padding:6px 10px;background:rgba(184,136,32,.08);border-left:3px solid var(--yellow);margin-bottom:4px;border-radius:0 4px 4px 0"><b>🔑 API 키</b> — ${diff.apikey} <span style="color:var(--red);font-size:11px">⚠</span></div>`);
+  for(const p of diff.presets){
+    const parts = [];
+    if(p.added) parts.push(`<span style="color:var(--green);font-weight:700">+${p.added} 추가</span>`);
+    if(p.overwrite) parts.push(`<span style="color:var(--yellow,#a87c20);font-weight:700">~${p.overwrite} 덮어씀</span>`);
+    if(p.deleted) parts.push(`<span style="color:var(--red);font-weight:700">-${p.deleted} 삭제</span>`);
+    if(parts.length){
+      rows.push(`<div style="padding:6px 10px;background:var(--card);border:1px solid var(--b1);margin-bottom:3px;border-radius:4px;display:flex;gap:10px;align-items:center"><span>${p.ico} ${esc(p.label)}</span><span style="margin-left:auto;font-family:var(--mono);font-size:11.5px">${parts.join(' · ')}</span></div>`);
+    }
+  }
+  if(diff.albums) rows.push(`<div style="padding:6px 10px;background:rgba(58,99,152,.05);border-left:3px solid var(--blue);margin-bottom:4px;border-radius:0 4px 4px 0"><b>📁 앨범</b> — ${diff.albums}</div>`);
+  if(diff.workflows) rows.push(`<div style="padding:6px 10px;background:rgba(58,99,152,.05);border-left:3px solid var(--blue);margin-bottom:4px;border-radius:0 4px 4px 0"><b>💾 워크플로</b> — ${diff.workflows}</div>`);
+  if(!rows.length) return '<div style="text-align:center;color:var(--t3);padding:20px">변경될 항목 없음 (선택된 항목 없음)</div>';
+  return `<div style="font-size:12.5px">${rows.join('')}</div>`;
+}
+
 async function doSelectiveRestore(){
   const data = $('restoreModal')._data;
   if(!data){ toast('복원할 데이터 없음', 'error'); return; }
+  // 🔍 Dry-run — 미리보기만 표시 후 사용자 확인 받고 다시 호출.
+  if($('rs_dryrun')?.checked){
+    const diff = await computeRestoreDiff(data);
+    confirmDialog(
+      `다음 항목이 적용됩니다 (모드: ${diff.mode === 'replace' ? '완전 교체' : '병합'}):\n\n` +
+      diff.presets.map(p => `${p.ico} ${p.label}: ${p.added?`+${p.added} `:''}${p.overwrite?`~${p.overwrite} `:''}${p.deleted?`-${p.deleted}`:''}`).filter(Boolean).join('\n'),
+      async () => {
+        // 사용자 확인 → dryrun 체크 해제 후 재호출
+        $('rs_dryrun').checked = false;
+        await doSelectiveRestore();
+      },
+      '🔍 미리보기 확인 — 적용하시겠습니까?'
+    );
+    // 더 상세한 diff 를 confirmBody 에 미리 렌더 (위 confirmDialog 가 textContent로 덮어쓰기 때문에 innerHTML로 추가)
+    requestAnimationFrame(() => {
+      const body = $('confirmBody');
+      if(body) body.innerHTML = '<div style="font-size:12.5px;color:var(--t2);margin-bottom:10px">모드: <b>' + (diff.mode === 'replace' ? '완전 교체 ⚠' : '병합') + '</b></div>' + renderRestoreDiff(diff);
+    });
+    return;
+  }
   const mode = document.querySelector('input[name=rs_mode]:checked')?.value || 'merge';
   let restored = [];
   showImportProgress('복원 시작...');
@@ -6122,6 +6247,18 @@ async function doSelectiveRestore(){
       if(data.albumMembership) state.albumMembership = data.albumMembership;
       await saveAlbumsState();
       restored.push(`앨범 ${data.userAlbums.length}개`);
+    }
+    if($('rs_workflows')?.checked && Array.isArray(data.workflows)){
+      // ⚠ 워크플로는 전체 교체 (병합 의미가 모호함 — id 충돌, 우선순위)
+      state.workflows = data.workflows.map(w => ({
+        id: w.id || `wf-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+        name: String(w.name || '슬롯').slice(0, 80),
+        ts: Number(w.ts) || Date.now(),
+        fav: !!w.fav,
+        data: w.data || {},
+      })).slice(0, 50);
+      if(typeof saveWorkflows === 'function') await saveWorkflows();
+      restored.push(`워크플로 ${state.workflows.length}개`);
     }
     // 자동 분류
     if($('rs_autoclassify')?.checked){
@@ -7187,26 +7324,42 @@ function getImageAlbums(imgId){
   return state.albumMembership[imgId] || [];
 }
 
-// 앨범 관리 모달 — 만들기/이름변경/삭제
+// 앨범 관리 모달 — 만들기/이름변경/삭제 + 다중선택 일괄 삭제
+let _albumMgrSelMode = false;
+const _albumMgrSel = new Set();   // 선택된 album id
 function openAlbumManager(){
   const albumCounts = id => Object.values(state.albumMembership).filter(arr => arr.includes(id)).length;
+  // 데이터 변경 시 selection 정리 (없어진 앨범 id 제거)
+  const knownIds = new Set(state.userAlbums.map(a => a.id));
+  for(const id of [..._albumMgrSel]){ if(!knownIds.has(id)) _albumMgrSel.delete(id); }
+  const inSel = _albumMgrSelMode;
   const rowsHtml = state.userAlbums.length === 0
     ? `<div style="color:var(--t3);text-align:center;padding:40px 20px;font-size:13px;background:var(--card);border:1.5px dashed var(--b1);border-radius:6px">
         📭 아직 만든 앨범이 없어요<br>
         <span style="font-size:11.5px;color:var(--t3)">위 입력칸에 이름을 적고 만들기를 눌러보세요</span>
       </div>`
-    : state.userAlbums.map(a => `
-        <div class="alb-row" data-aid="${esc(a.id)}">
-          <span class="alb-ico">📁</span>
-          <input type="text" class="alb-name" data-act="rename" data-aid="${esc(a.id)}" value="${esc(a.name)}" placeholder="앨범 이름">
+    : state.userAlbums.map(a => {
+        const sel = _albumMgrSel.has(a.id);
+        return `<div class="alb-row${sel?' sel':''}" data-aid="${esc(a.id)}" style="${sel?'background:rgba(162,90,31,.10);':''}">
+          ${inSel ? `<input type="checkbox" class="alb-sel" data-aid="${esc(a.id)}" ${sel?'checked':''} style="flex-shrink:0;margin-right:6px">` : '<span class="alb-ico">📁</span>'}
+          <input type="text" class="alb-name" data-act="rename" data-aid="${esc(a.id)}" value="${esc(a.name)}" placeholder="앨범 이름" ${inSel?'disabled':''}>
           <span class="alb-count">${albumCounts(a.id).toLocaleString()}장</span>
-          <button class="iconbtn alb-del" data-act="del-album" data-aid="${esc(a.id)}" title="이 앨범 삭제 (이미지 자체는 보존)" aria-label="앨범 삭제">🗑</button>
-        </div>`).join('');
+          <button class="iconbtn alb-del" data-act="del-album" data-aid="${esc(a.id)}" title="이 앨범 삭제 (이미지 자체는 보존)" aria-label="앨범 삭제" ${inSel?'disabled':''}>🗑</button>
+        </div>`;
+      }).join('');
   const html = `
     <div class="alb-create-row">
-      <input type="text" class="inp" id="newAlbumName" placeholder="새 앨범 이름 입력 후 Enter" autocomplete="off">
-      <button class="btn primary" id="newAlbumBtn">＋ 만들기</button>
+      <input type="text" class="inp" id="newAlbumName" placeholder="새 앨범 이름 입력 후 Enter" autocomplete="off" ${inSel?'disabled':''}>
+      <button class="btn primary" id="newAlbumBtn" ${inSel?'disabled':''}>＋ 만들기</button>
     </div>
+    ${state.userAlbums.length > 0 ? `
+    <div style="display:flex;gap:6px;align-items:center;margin:8px 0 6px;font-size:12px">
+      <button class="btn ghost" id="albMgrSelToggle" type="button" style="padding:5px 10px;font-size:11.5px">${inSel ? '✕ 선택 모드 종료' : '☑ 선택 모드'}</button>
+      ${inSel ? `
+        <button class="btn ghost" id="albMgrSelAll" type="button" style="padding:5px 10px;font-size:11.5px">${_albumMgrSel.size === state.userAlbums.length ? '☐ 전체 해제' : '☑ 전체 선택'}</button>
+        <button class="btn danger" id="albMgrDelSel" type="button" style="padding:5px 10px;font-size:11.5px;margin-left:auto" ${_albumMgrSel.size===0?'disabled':''}>🗑 선택 삭제 (${_albumMgrSel.size}개)</button>
+      ` : ''}
+    </div>` : ''}
     <div id="albumListMgr" class="alb-list">${rowsHtml}</div>
     <div style="font-size:11px;color:var(--t3);margin-top:10px;line-height:1.55">
       💡 앨범 삭제는 이미지 자체를 지우지 않고 그룹핑만 해제합니다. 이름은 직접 입력해 바꿀 수 있어요.
@@ -7217,6 +7370,49 @@ function openAlbumManager(){
   $('confirmCancel').innerHTML = '닫기 <span class="en">Close</span>';
   $('confirmModal').classList.add('open');
   const refresh = () => { $('confirmModal').classList.remove('open'); $('confirmOk').style.display=''; openAlbumManager(); };
+  // 선택 모드 토글
+  const selToggleBtn = $('albMgrSelToggle');
+  if(selToggleBtn) selToggleBtn.onclick = () => {
+    _albumMgrSelMode = !_albumMgrSelMode;
+    if(!_albumMgrSelMode) _albumMgrSel.clear();
+    refresh();
+  };
+  // 전체 선택/해제
+  const selAllBtn = $('albMgrSelAll');
+  if(selAllBtn) selAllBtn.onclick = () => {
+    if(_albumMgrSel.size === state.userAlbums.length) _albumMgrSel.clear();
+    else state.userAlbums.forEach(a => _albumMgrSel.add(a.id));
+    refresh();
+  };
+  // 개별 체크박스
+  $('albumListMgr').querySelectorAll('.alb-sel').forEach(cb => {
+    cb.onchange = () => {
+      const aid = cb.dataset.aid;
+      if(cb.checked) _albumMgrSel.add(aid); else _albumMgrSel.delete(aid);
+      refresh();
+    };
+  });
+  // 일괄 삭제
+  const delSelBtn = $('albMgrDelSel');
+  if(delSelBtn) delSelBtn.onclick = () => {
+    const ids = [..._albumMgrSel];
+    if(!ids.length) return;
+    const totalImgs = ids.reduce((sum, aid) => sum + albumCounts(aid), 0);
+    const names = ids.map(aid => state.userAlbums.find(a => a.id === aid)?.name || aid).join(', ');
+    const msg = totalImgs > 0
+      ? `${ids.length}개 앨범을 삭제할까요?\n총 ${totalImgs.toLocaleString()}장의 이미지가 그룹핑에서 제외됩니다 (이미지 자체는 보존).\n\n대상: ${names}`
+      : `${ids.length}개 빈 앨범을 삭제할까요?\n\n대상: ${names}`;
+    confirmDialog(msg, async () => {
+      let done = 0;
+      for(const aid of ids){
+        try { await deleteAlbumById(aid); done++; } catch(e){ _swallow(e, 'album:bulk-del'); }
+      }
+      _albumMgrSel.clear();
+      _albumMgrSelMode = false;
+      toast(`🗑 ${done}개 앨범 삭제됨`, 'success');
+      refresh();
+    }, '앨범 일괄 삭제');
+  };
   $('newAlbumBtn').onclick = async () => {
     const n = ($('newAlbumName').value || '').trim();
     if(!n){ toast('이름을 입력하세요', 'warning'); $('newAlbumName').focus(); return; }
