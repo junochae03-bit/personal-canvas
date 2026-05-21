@@ -7,7 +7,10 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- 🛡 CSP — 외부 스크립트는 CDN 3종만 허용. 인라인은 single-file SPA 특성상 유지. -->
+<!-- SRI(integrity) 누락은 §README 보안 노트 참고: 빌드 파이프라인 도입 시 추가 예정. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://image.novelai.net https://api.novelai.net; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'">
 <meta name="theme-color" content="#a25a1f">
 <title>NAI Studio</title>
 
@@ -21,9 +24,10 @@
 <link rel="manifest" id="manifestLink">
 <link rel="apple-touch-icon" id="appleTouchIcon">
 <link rel="icon" id="favicon">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://unpkg.com/@msgpack/msgpack" crossorigin></script>
-<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+<!-- 외부 라이브러리 — 버전 고정 + crossorigin. SRI hash는 빌드 파이프라인 도입 시 추가. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://unpkg.com/@msgpack/msgpack@3.0.0-beta2/dist.es5+umd/msgpack.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
@@ -1387,9 +1391,32 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   .gallery-bar .inp{flex:1 1 100%;width:100%}
   .preset-bar .inp,.tag-bar .inp{flex:1 1 60%}
 }
+
+/* ♿ 모션 줄임 — vestibular 장애 사용자 보호 */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ♿ 키보드 포커스 가시화 — focus-visible 미지원 브라우저 폴백은 :focus 도 함께 */
+*:focus-visible{outline:2px solid var(--blue, #3a6398); outline-offset:2px}
+.btn:focus-visible, .iconbtn:focus-visible, .inp:focus-visible, .ta:focus-visible{
+  outline: 2px solid var(--blue, #3a6398);
+  outline-offset: 2px;
+}
 </style>
 </head>
 <body>
+<noscript>
+  <div style="padding:20px;font-family:sans-serif;text-align:center;background:#ebe2cd;color:#564328">
+    <h2>JavaScript 가 필요합니다</h2>
+    <p>NAI Studio 는 정적 SPA 로 모든 기능이 클라이언트 JavaScript 로 동작합니다. 브라우저 설정에서 JavaScript 를 활성화해주세요.</p>
+  </div>
+</noscript>
 <div class="topbar">
   <div class="logo">NAI STUDIO <span class="sub">이미지 생성</span></div>
   <button class="iconbtn key-mini" id="keyToggleBtn" title="API 키 입력/수정" aria-label="API 키 입력 열기" aria-pressed="false">🔑</button>
@@ -1724,7 +1751,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
             <div style="font-size:12px;color:var(--t3)">API 키를 입력하고 <b style="color:var(--acc)">생성 시작</b> 버튼을 누르세요</div>
             <div style="font-size:11.5px;color:var(--t3);margin-top:6px">단축키: <kbd style="background:var(--card);padding:2px 6px;border-radius:3px;border:1px solid var(--b1);font-family:var(--mono)">Ctrl + Enter</kbd></div>
           </div>
-          <img id="previewImg" class="preview-img" style="display:none">
+          <img id="previewImg" class="preview-img" alt="생성된 이미지 미리보기" style="display:none">
           <div id="previewStatus" class="preview-status"></div>
           <div id="previewActions" class="preview-actions">
             <button class="iconbtn" id="downloadBtn" title="다운로드 (Download)">⬇</button>
@@ -1989,7 +2016,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <!-- LIGHTBOX — 확대 보기 -->
 <div id="lightbox">
-  <img class="lb-img" id="lbImg">
+  <img class="lb-img" id="lbImg" alt="라이트박스 — 갤러리 이미지 확대 뷰">
   <button class="lb-nav lb-nav-prev" id="lbPrev" title="이전 (←)">⟨</button>
   <button class="lb-nav lb-nav-next" id="lbNext" title="다음 (→)">⟩</button>
   <div class="lb-counter" id="lbCounter"></div>
@@ -2420,8 +2447,8 @@ coffee shop, latte art"></textarea>
   </div>
 </div>
 
-<!-- TOAST -->
-<div id="toastBox"></div>
+<!-- TOAST — aria-live: 스크린리더에 토스트 자동 안내 (polite로 작업 중단 방지) -->
+<div id="toastBox" role="region" aria-label="알림" aria-live="polite" aria-atomic="false"></div>
 
 <!-- 🎯 백그라운드 일괄 생성 진행 위젯 — 모달 닫아도 떠 있음 -->
 <button id="bgProgress" class="bg-progress" type="button" hidden aria-live="polite" title="진행 중인 일괄 생성 — 탭하면 모달 다시 열기">
@@ -2436,6 +2463,48 @@ coffee shop, latte art"></textarea>
 
 <script>
 'use strict';
+
+// ═══════════════════════════════════════════════════════════
+// 🛡 전역 에러 바운더리 — 비동기 미처리 reject + 동기 throw 모두 캡처
+// ─ toast 함수가 아직 정의 안 됐을 수 있으므로 typeof 가드.
+// ─ AbortError 같은 의도적 중단은 silent 처리 (isUserAbort 정의 전엔 message 검사).
+// ═══════════════════════════════════════════════════════════
+(function installErrorBoundary(){
+  const looksLikeAbort = e => {
+    const name = e?.name || e?.reason?.name || '';
+    const msg = String(e?.message || e?.reason?.message || e?.reason || '');
+    return name === 'AbortError' || /aborted|cancelled|abort/i.test(msg);
+  };
+  const report = (label, payload) => {
+    if(looksLikeAbort(payload)) return;
+    console.error(`[${label}]`, payload);
+    if(typeof toast === 'function'){
+      const msg = payload?.message || payload?.reason?.message || String(payload?.reason || payload || '');
+      try { toast(`처리되지 않은 ${label === 'unhandledrejection' ? '비동기' : ''} 오류: ${msg.slice(0,120)}`, 'error'); } catch(_){}
+    }
+  };
+  window.addEventListener('error', e => report('error', e.error || e));
+  window.addEventListener('unhandledrejection', e => report('unhandledrejection', e));
+})();
+
+// 🤫 의도적 silent fail 헬퍼 — 빈 `catch(_){}` 대체. context는 디버그용.
+// 운영 환경에서 console.debug는 기본 숨김이라 노이즈 없이 흔적만 남김.
+function _swallow(e, context){
+  if(!e) return;
+  if(e?.name === 'AbortError') return;
+  try { console.debug(`[swallow:${context||'?'}]`, e?.message || e); } catch(_){}
+}
+
+// 🎲 시드 상수 — uint32 max. NovelAI seed는 0..0xFFFFFFFF 범위.
+// 동일 로직이 js/pure/seed.mjs 에 있음 (Node 테스트용). 브라우저는 인라인 사용.
+const RAND_SEED_MAX = 0xFFFFFFFF;
+const randomSeed = () => Math.floor(Math.random() * RAND_SEED_MAX);
+const parseSeedInput = raw => {
+  if(raw === '' || raw === '-1' || raw == null) return randomSeed();
+  const n = parseInt(raw, 10);
+  if(!Number.isFinite(n) || n < 0) return randomSeed();
+  return n;
+};
 
 // ═══════════════════════════════════════════════════════════
 // PWA — 매니페스트·아이콘 + 설치 프롬프트
@@ -2670,7 +2739,7 @@ function showInstallInstructions(){
   let png192 = svgURL192, png512 = 'data:image/svg+xml;base64,' + btoa(svg512);
   try {
     [png192, png512] = await Promise.all([svgToPng(svg192, 192), svgToPng(svg512, 512)]);
-  } catch(_){}
+  } catch(e){ _swallow(e, 'pwa:svg2png'); }
   const manifest = {
     id: '/?source=pwa',
     name: 'NAI Studio',
@@ -3302,6 +3371,66 @@ function isUserAbort(e){
   return e?.name === 'AbortError' || /aborted|cancelled|abort/i.test(e?.message || '');
 }
 
+// ♿ 모달 focus trap — `.modal-bg.open` 내부로 Tab 이동 제한 + Esc 닫기.
+// 모달 25곳에서 직접 .classList.add('open')을 호출하는 패턴을 그대로 두되,
+// MutationObserver로 'open' 클래스 추가/제거를 감지해 트랩을 자동 부착.
+(function installModalFocusTrap(){
+  if(!('MutationObserver' in window)) return;
+  const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  const lastFocused = new WeakMap();
+  const trapState = new WeakMap();   // modalEl → {keyHandler, prev}
+
+  function attach(modal){
+    if(trapState.has(modal)) return;
+    const prev = document.activeElement;
+    lastFocused.set(modal, prev);
+    // 첫 포커스 가능한 요소로 이동 (단, 모바일 자동 키보드 방지를 위해 input 우선순위 낮춤)
+    const focusables = modal.querySelectorAll(FOCUSABLE);
+    const first = [...focusables].find(el => el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') || focusables[0];
+    if(first) { try { first.focus({preventScroll: true}); } catch(_){} }
+    const keyHandler = e => {
+      if(e.key === 'Escape'){
+        // 모달이 직접 esc 처리하는 경우 위해 confirmModal 한정으로 close 클릭 트리거
+        const closeBtn = modal.querySelector('[id$="Cancel"]:not([disabled]), [data-modal-close]');
+        if(closeBtn) closeBtn.click();
+        else modal.classList.remove('open');
+        return;
+      }
+      if(e.key !== 'Tab') return;
+      const list = [...modal.querySelectorAll(FOCUSABLE)].filter(el => el.offsetParent !== null);
+      if(!list.length) return;
+      const first = list[0], last = list[list.length-1];
+      if(e.shiftKey && document.activeElement === first){ last.focus(); e.preventDefault(); }
+      else if(!e.shiftKey && document.activeElement === last){ first.focus(); e.preventDefault(); }
+    };
+    modal.addEventListener('keydown', keyHandler);
+    trapState.set(modal, {keyHandler});
+  }
+  function detach(modal){
+    const st = trapState.get(modal);
+    if(!st) return;
+    modal.removeEventListener('keydown', st.keyHandler);
+    trapState.delete(modal);
+    const prev = lastFocused.get(modal);
+    lastFocused.delete(modal);
+    if(prev && typeof prev.focus === 'function'){ try { prev.focus({preventScroll: true}); } catch(_){} }
+  }
+  function observe(modal){
+    const obs = new MutationObserver(() => {
+      if(modal.classList.contains('open')) attach(modal);
+      else detach(modal);
+    });
+    obs.observe(modal, {attributes: true, attributeFilter: ['class']});
+    if(modal.classList.contains('open')) attach(modal);
+  }
+  // 페이지 로드 후 모든 `.modal-bg`에 observer 부착 (이후 동적으로 추가되는 모달은 없음)
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', () => document.querySelectorAll('.modal-bg').forEach(observe), {once: true});
+  } else {
+    document.querySelectorAll('.modal-bg').forEach(observe);
+  }
+})();
+
 function confirmDialog(msg, onOk, title){
   $('confirmTitle').textContent = title || '확인';
   $('confirmBody').textContent = msg;
@@ -3649,7 +3778,7 @@ async function naiFetchAnlas(apiKey){
     });
     if(!r.ok){
       let detail = '';
-      try { detail = (await r.text()).slice(0, 200); } catch(_){}
+      try { detail = (await r.text()).slice(0, 200); } catch(e){ _swallow(e, 'nai:subscription:errBody'); }
       const err = new Error(`HTTP ${r.status} — ${errMsgFor(r.status)}${detail ? ' · ' + detail : ''}`);
       err.status = r.status;
       throw err;
@@ -3771,7 +3900,7 @@ function buildGenBody(opts){
       n_chars: params.v4_prompt?.caption?.char_captions?.length || 0,
     });
     console.log('[NAI request:body]', JSON.parse(JSON.stringify(body)));
-  } catch(_){}
+  } catch(e){ _swallow(e, 'nai:debug-log'); }
   return body;
 }
 
@@ -3872,7 +4001,7 @@ async function naiGenerate(apiKey, body, signal){
         console.log('[NAI] ZIP 디코드 OK (재시도)', files.length, 'files, picked', pngName);
         return blob;
       }
-    } catch(_){}
+    } catch(e){ _swallow(e, 'nai:zip-retry'); }
   }
 
   // 둘 다 실패 — 헤드 바이트와 함께 명확한 에러
@@ -4017,7 +4146,7 @@ async function readPngMetadata(blob){
               const text = dec.decode(pako.inflate(compressed));
               meta[key] = text;
             }
-          } catch(_){}
+          } catch(e){ _swallow(e, 'exif:zTXt:inflate'); }
         }
       } else if(type === 'iTXt'){
         // iTXt: keyword\0 compressionFlag(1B) compressionMethod(1B) languageTag\0 translatedKeyword\0 text
@@ -4043,7 +4172,7 @@ async function readPngMetadata(blob){
                 if(typeof pako !== 'undefined' && pako?.inflate){
                   meta[key] = dec.decode(pako.inflate(data.slice(textStart)));
                 }
-              } catch(_){}
+              } catch(e){ _swallow(e, 'exif:iTXt:inflate'); }
             }
           }
         }
@@ -4256,10 +4385,7 @@ function currentPromptOpts(){
   const model = $('model').value;
   const mi = modelInfo(model);
   const [w, h] = currentRes();
-  const seedRaw = ($('seed').value || '').trim();
-  let seed;
-  if(seedRaw === '' || seedRaw === '-1') seed = Math.floor(Math.random() * 0xffffffff);
-  else seed = parseInt(seedRaw) || Math.floor(Math.random() * 0xffffffff);
+  const seed = parseSeedInput(($('seed').value || '').trim());
   const ucPreset = parseInt($('ucPreset').value) || 0;
   const ucBase = UC_PRESETS[ucPreset] || '';
   // 단순화: 자유 입력만 그대로 사용
@@ -4318,8 +4444,10 @@ function refreshCost(){
   let cost = Math.ceil(base);
   if(o.smea) cost = Math.ceil(cost * 1.4);
   if(o.smeaDyn) cost = Math.ceil(cost * 1.4);
-  // Free for tier 3 if small (<= 1024x1024, <= 28 steps)
-  const isSmall = o.w * o.h <= 1048576 && o.steps <= 28;
+  // Free for tier 3 if small (<= 1024x1024, <= 28 steps) — js/pure/image.mjs:isSmallTier 와 동일.
+  const NAI_SMALL_MP = 1024 * 1024;
+  const NAI_MAX_STEPS_SMALL = 28;
+  const isSmall = o.w * o.h <= NAI_SMALL_MP && o.steps <= NAI_MAX_STEPS_SMALL;
   const tier = state.anlas?.tier || 0;
   const free = isSmall && tier >= 3;
   $('costEstimate').textContent = free ? '비용: 무료 (Opus 무제한)' : `비용: 약 ${cost} Anlas`;
@@ -5912,7 +6040,7 @@ async function startXyzGeneration(){
   if(total > 100){
     if(!confirm(`${total}개를 순차 생성합니다 (수십 분 소요 가능). 계속할까요?`)) return;
   }
-  const fixedSeed = $('xyz_fix_seed').checked ? Math.floor(Math.random() * 0xffffffff) : null;
+  const fixedSeed = $('xyz_fix_seed').checked ? randomSeed() : null;
   const newSession = $('xyz_new_session').checked;
   // 큐 구성 — XYZ_PARAMS.find가 undefined를 반환할 가능성 방어 (잘못된 옵션값 등)
   const queue = [];
@@ -7054,7 +7182,7 @@ function openPresetEdit(type, existing){
   $('presetName').value = existing?.name || '';
   $('presetText').value = existing?.text || '';
   $('presetThumbInner').innerHTML = existing?.thumb
-    ? `<img src="${esc(existing.thumb)}" style="max-height:120px">`
+    ? `<img src="${esc(existing.thumb)}" alt="썸네일" style="max-height:120px">`
     : '📁 클릭/드롭으로 이미지';
   _editingPreset.thumb = existing?.thumb || null;
   $('presetDel').style.display = existing ? '' : 'none';
@@ -7303,8 +7431,7 @@ async function runOne(q, apiKey){
   const seedLocked = snap ? snap.seedLocked : state.seedLocked;
   const seedRaw = snap ? snap.seedRaw : (($('seed')?.value || '').trim());
   if(!seedLocked){
-    if(seedRaw === '' || seedRaw === '-1') opts.seed = Math.floor(Math.random() * 0xffffffff);
-    else { const n = parseInt(seedRaw); if(!isNaN(n)) opts.seed = n; }
+    opts.seed = parseSeedInput(seedRaw);
   }
   // XYZ 오버라이드 적용 — 축별 파라미터 치환
   if(q.xyzOverrides){
@@ -8023,12 +8150,12 @@ function pgSetMode(mode){
 function pgResolveLockedSeed(){
   const raw = ($('pgFixedSeed')?.value || '').trim();
   if(raw === '' || raw === '-1'){
-    const v = Math.floor(Math.random() * 0xffffffff);
+    const v = randomSeed();
     if($('pgFixedSeed')) $('pgFixedSeed').value = v;  // 사용한 시드 표시
     return v;
   }
   const n = parseInt(raw, 10);
-  return isNaN(n) ? Math.floor(Math.random() * 0xffffffff) : n;
+  return isNaN(n) ? randomSeed() : n;
 }
 
 // 시드 고정 체크박스 토글 → input 행 표시/숨김
@@ -8699,7 +8826,7 @@ async function pgStartScenes(){
         }).filter(c => c.prompt);
         opts = {
           ...baseOpts,
-          seed: lockSeed ? lockedSeedValue : Math.floor(Math.random() * 0xffffffff),
+          seed: lockSeed ? lockedSeedValue : randomSeed(),
           prompt: combinedBase || s.prompt,
           characters: charactersArr,
           useCoords: cnt > 1,
@@ -8708,7 +8835,7 @@ async function pgStartScenes(){
         // 현재 폼 캐릭터·useCoords·characters 그대로
         opts = {
           ...baseOpts,
-          seed: lockSeed ? lockedSeedValue : Math.floor(Math.random() * 0xffffffff),
+          seed: lockSeed ? lockedSeedValue : randomSeed(),
           prompt: combinedBase || s.prompt,
         };
       }
@@ -8856,7 +8983,7 @@ async function pgStart(){
       const combinedBase = parts.join(', ');
       const opts = {
         ...baseOpts,
-        seed: lockSeed ? lockedSeedValue : Math.floor(Math.random() * 0xffffffff),
+        seed: lockSeed ? lockedSeedValue : randomSeed(),
         prompt: combinedBase || fallbackChar,
         characters: charactersArr,
         useCoords: cnt > 1,  // 다중 캐릭터일 때만 좌표 사용
@@ -9025,7 +9152,7 @@ async function afterImage(blob, q){
   // 🎴 캐릭터 IP별 자동 분류 모드 — 저장 직전 매번 적절한 세션으로 전환
   if($('targetSession')?.value === 'auto-ip'){
     const primary = (q.meta?.characters || [])[0];
-    if(primary){ try { await ensureIpSessionForChar(primary); } catch(_){} }
+    if(primary){ try { await ensureIpSessionForChar(primary); } catch(e){ _swallow(e, 'ipSession:ensure'); } }
   }
   const id = await DB.saveImage(blob, fname, label, prompt, q.meta);
   // 📂 출력 폴더가 설정돼 있으면 파일로도 저장
@@ -9175,7 +9302,7 @@ function populateSessionFilter(sessions){
         opts.push('</optgroup>');
       }
     }
-  } catch(_){}
+  } catch(e){ _swallow(e, 'gallery:workGroup-options'); }
   sel.innerHTML = opts.join('');
   // 옛 값이거나 새 work:* 옵션 호환
   if(cur && (cur === 'all' || cur.startsWith('ses:') || cur.startsWith('work:')) && [...sel.options].some(o => o.value === cur)){
@@ -10007,7 +10134,7 @@ async function setBaseImage(file){
   // Extract base64 (strip prefix)
   const b64 = dataURL.split(',')[1];
   state.baseImage = { blob, dataURL, w, h, b64 };
-  $('imgDropInner').innerHTML = `<img src="${dataURL}" style="max-height:140px"><div class="hint">${img.naturalWidth}×${img.naturalHeight} → ${w}×${h}</div>`;
+  $('imgDropInner').innerHTML = `<img src="${dataURL}" alt="베이스 이미지" style="max-height:140px"><div class="hint">${img.naturalWidth}×${img.naturalHeight} → ${w}×${h}</div>`;
   $('imgActions').style.display = '';
   state.inpaintMask = null;
   refreshResInfo();
@@ -10835,7 +10962,7 @@ function tplSetThumbnail(i){
     $('confirmTitle').innerHTML = `🖼 "${esc(t.name)}" 미리보기`;
     $('confirmBody').innerHTML = `
       <div style="text-align:center;margin-bottom:12px">
-        <img src="${esc(t.thumb)}" style="max-width:100%;max-height:200px;border-radius:6px;border:1.5px solid var(--b1)">
+        <img src="${esc(t.thumb)}" alt="템플릿 미리보기" style="max-width:100%;max-height:200px;border-radius:6px;border:1.5px solid var(--b1)">
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn ghost" data-tpl-thumb-act="pick" style="flex:1;padding:8px 12px;font-size:12.5px;border-color:rgba(58,99,152,.4);color:var(--blue)">🖼 갤러리에서 변경</button>
@@ -11541,8 +11668,37 @@ const LEGACY_LS_KEY = 'nai_apikey';        // 마이그레이션용
 // PIN 미설정: 디바이스 고유 키(IDB의 KEY_CRYPTOKEY) 사용
 // PIN 설정 시: PBKDF2(PIN, salt) → AES-GCM 키, 메모리에만 보관
 const KEY_PIN_SALT = 'nai_apikey_pin_salt';   // PIN 모드 활성화 표시 + salt 저장
+const KEY_PIN_FAILS = 'nai_apikey_pin_fails'; // {count, blockedUntil} — brute-force 지수 백오프
 const PIN_ITER = 250000;
+const PIN_MAX_FAILS_BEFORE_DELAY = 3;
+const PIN_BASE_DELAY_MS = 2000;               // 3회 실패부터 (실패-2)^2 * 2초 잠금
 let _pinDerivedKey = null;   // 메모리 캐시 (탭 세션 내 재사용)
+
+// 실패 카운터 — 시도 전 호출. blockedUntil 까지 throw.
+async function _checkPinThrottle(){
+  const rec = await DB.getFlag(KEY_PIN_FAILS);
+  if(!rec) return;
+  const now = Date.now();
+  if(rec.blockedUntil && now < rec.blockedUntil){
+    const sec = Math.ceil((rec.blockedUntil - now) / 1000);
+    const err = new Error(`PIN 잠금 — ${sec}초 후 재시도 가능 (실패 ${rec.count}회)`);
+    err.code = 'PIN_THROTTLED';
+    throw err;
+  }
+}
+async function _recordPinFail(){
+  const rec = (await DB.getFlag(KEY_PIN_FAILS)) || {count: 0};
+  rec.count = (rec.count || 0) + 1;
+  if(rec.count >= PIN_MAX_FAILS_BEFORE_DELAY){
+    const factor = Math.min(rec.count - PIN_MAX_FAILS_BEFORE_DELAY + 1, 8);  // cap 8 → ~128초
+    rec.blockedUntil = Date.now() + PIN_BASE_DELAY_MS * Math.pow(2, factor - 1);
+  }
+  await DB.setFlag(KEY_PIN_FAILS, rec);
+  return rec;
+}
+async function _resetPinFails(){
+  await DB.setFlag(KEY_PIN_FAILS, null);
+}
 
 async function _deriveKeyFromPin(pin, salt){
   const enc = new TextEncoder();
@@ -11599,11 +11755,31 @@ async function disablePinLock(){
 }
 
 // 사용자 PIN 입력 → 유도키 메모리에 적재. salt는 IDB에 있어야 함.
+// 🛡 brute-force 방어: 시도 전 throttle 체크 + 검증 실패 시 카운터 증가.
 async function unlockWithPin(pin){
+  await _checkPinThrottle();
   const saltArr = await DB.getFlag(KEY_PIN_SALT);
   if(!saltArr) throw new Error('PIN 모드 비활성');
   const salt = new Uint8Array(saltArr);
-  _pinDerivedKey = await _deriveKeyFromPin(pin, salt);
+  const derived = await _deriveKeyFromPin(pin, salt);
+  // 실제 복호화로 PIN 검증 — KEY_STORE_KEY 가 없으면 유도만 성공해도 OK
+  const rec = await DB.getFlag(KEY_STORE_KEY);
+  if(rec && rec.iv && rec.ct){
+    try {
+      await crypto.subtle.decrypt(
+        {name:'AES-GCM', iv: new Uint8Array(rec.iv)},
+        derived,
+        new Uint8Array(rec.ct)
+      );
+    } catch(e){
+      const f = await _recordPinFail();
+      const err = new Error(`PIN 불일치 (실패 ${f.count}회${f.blockedUntil?`, ${Math.ceil((f.blockedUntil-Date.now())/1000)}초 잠금`:''})`);
+      err.code = 'PIN_INVALID';
+      throw err;
+    }
+  }
+  _pinDerivedKey = derived;
+  await _resetPinFails();
   return _pinDerivedKey;
 }
 
@@ -11613,20 +11789,25 @@ async function isPinLockEnabled(){
 
 async function _encryptApiKey(plain){
   if(!plain) return null;
-  try {
-    const k = await _getOrCreateCryptoKey();
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, k, new TextEncoder().encode(plain));
-    return {iv: Array.from(iv), ct: Array.from(new Uint8Array(ct))};
-  } catch(e){
-    console.warn('[apikey] encrypt fail, fallback to plain', e?.message);
-    return {plain};  // 폴백 (구형 브라우저)
-  }
+  // 폴백 평문 저장 제거 — Web Crypto는 모든 모던 브라우저에서 지원되므로
+  // 실패 시 사용자에게 명확히 알리고 저장 거부 (예전 {plain} 저장 케이스는 마이그레이션에서 처리).
+  const k = await _getOrCreateCryptoKey();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, k, new TextEncoder().encode(plain));
+  return {iv: Array.from(iv), ct: Array.from(new Uint8Array(ct))};
 }
 
 async function _decryptApiKey(rec){
   if(!rec) return '';
-  if(rec.plain) return rec.plain;  // 폴백
+  if(rec.plain){
+    // 🛡 구버전 {plain} 폴백 자동 업그레이드 — 한 번만 실행되도록 재암호화 후 저장.
+    console.warn('[apikey] legacy plain record detected — re-encrypting');
+    try {
+      const upgraded = await _encryptApiKey(rec.plain);
+      if(upgraded) await DB.setFlag(KEY_STORE_KEY, upgraded);
+      return rec.plain;
+    } catch(e){ _swallow(e, 'apikey:plain-upgrade'); return rec.plain; }
+  }
   try {
     const k = await _getOrCreateCryptoKey();
     const iv = new Uint8Array(rec.iv);
@@ -11665,7 +11846,11 @@ async function loadApiKey(){
             k = await _decryptApiKey(rec);
           } catch(e2){
             console.warn('[apikey] PIN 잘못됨', e2?.message);
-            try { toast('PIN이 잘못되었습니다 — 키를 불러오지 못함', 'error'); } catch(_){}
+            // throttle/invalid 메시지 그대로 노출 (실패 횟수·잠금 시간 포함)
+            const detail = e2?.code === 'PIN_THROTTLED'
+              ? e2.message
+              : (e2?.code === 'PIN_INVALID' ? e2.message : 'PIN이 잘못되었습니다');
+            try { toast(`🔒 ${detail}`, 'error'); } catch(swallowErr){ _swallow(swallowErr, 'pin:toast'); }
           }
         }
       } else { throw e; }
@@ -11907,7 +12092,7 @@ function wireTopbarAndFormEvents(){
   $('i2iNoise').addEventListener('input', e => $('i2iNoiseVal').textContent = parseFloat(e.target.value).toFixed(2));
 
   // Seed buttons
-  $('randSeedBtn').addEventListener('click', () => $('seed').value = Math.floor(Math.random() * 0xffffffff));
+  $('randSeedBtn').addEventListener('click', () => $('seed').value = randomSeed());
   $('seedClearBtn')?.addEventListener('click', () => { $('seed').value = ''; $('seed').dispatchEvent(new Event('input',{bubbles:true})); });
   $('lockSeedBtn').addEventListener('click', () => {
     state.seedLocked = !state.seedLocked;
@@ -12432,7 +12617,7 @@ function wireGenerationAndPresetEvents(){
     a.click();
   });
   $('reseedBtn').addEventListener('click', () => {
-    $('seed').value = Math.floor(Math.random() * 0xffffffff);
+    $('seed').value = randomSeed();
     if(state.lastImage){ startGeneration(); }
   });
   $('reuseBtn').addEventListener('click', () => {
@@ -12499,7 +12684,7 @@ function wireGenerationAndPresetEvents(){
     const w = Math.round(img.naturalWidth / 64) * 64;
     const h = Math.round(img.naturalHeight / 64) * 64;
     state.directorImage = { blob: f, dataURL, b64, w, h };
-    $('directorImgInner').innerHTML = `<img src="${dataURL}" style="max-height:140px">`;
+    $('directorImgInner').innerHTML = `<img src="${dataURL}" alt="디렉터 참조 이미지" style="max-height:140px">`;
   });
   $('directorAction').addEventListener('change', () => {
     $('emotionOpts').style.display = $('directorAction').value === 'emotion' ? '' : 'none';
@@ -12678,13 +12863,13 @@ function wireGenerationAndPresetEvents(){
   setupImageDrop('presetThumbDrop', 'presetThumbFile', async f => {
     const dataURL = await blobToCompressedThumb(f, 240);
     _editingPreset.thumb = dataURL;
-    $('presetThumbInner').innerHTML = `<img src="${dataURL}" style="max-height:120px">`;
+    $('presetThumbInner').innerHTML = `<img src="${dataURL}" alt="프리셋 썸네일" style="max-height:120px">`;
   });
   $('pickGalleryThumb').addEventListener('click', () => {
     if(!_editingPreset){ toast('프리셋 편집 중이 아닙니다', 'warning'); return; }
     openGalleryPicker(dataURL => {
       _editingPreset.thumb = dataURL;
-      $('presetThumbInner').innerHTML = `<img src="${dataURL}" style="max-height:120px">`;
+      $('presetThumbInner').innerHTML = `<img src="${dataURL}" alt="프리셋 썸네일" style="max-height:120px">`;
       toast('갤러리 이미지로 썸네일 지정됨', 'success');
     });
   });
@@ -12802,7 +12987,7 @@ function wireGalleryEvents(){
   // 🌱 시드 고정 토글 + 시드 입력 보조 버튼
   $('pgLockSeed')?.addEventListener('change', pgRefreshSeedRow);
   $('pgSeedRand')?.addEventListener('click', () => {
-    if($('pgFixedSeed')) $('pgFixedSeed').value = Math.floor(Math.random() * 0xffffffff);
+    if($('pgFixedSeed')) $('pgFixedSeed').value = randomSeed();
   });
   $('pgSeedFromForm')?.addEventListener('click', () => {
     const formSeed = ($('seed')?.value || '').trim();
@@ -13272,7 +13457,7 @@ function wireLightboxEvents(){
       await new Promise(r => { img.onload = r; img.src = dataURL; });
       const w = (meta.w && meta.h) ? meta.w : Math.round(img.naturalWidth/64)*64;
       const h = (meta.w && meta.h) ? meta.h : Math.round(img.naturalHeight/64)*64;
-      const seed = Math.floor(Math.random() * 0xffffffff);
+      const seed = randomSeed();
       const mi = modelInfo(meta.model || $('model').value);
       const body = buildGenBody({
         prompt: meta.prompt || $('prompt').value || '',
