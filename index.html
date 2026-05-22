@@ -1428,26 +1428,69 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .mode-btn.rc-tab.act{color:var(--blue);border-bottom-color:var(--blue);background:rgba(58,99,152,.08)}
 .mode-btn.rc-tab:hover{color:var(--blue);background:rgba(58,99,152,.06)}
 
-.rc-builder-sec{border:2px solid var(--blue);background:rgba(58,99,152,.04)}
+/* 빌더 sec — 다른 sec 와 비슷한 톤, 좌측 보더로 정체성 표시 (전체 컬러 강조 톤다운) */
+.rc-builder-sec{
+  border:1.5px solid var(--b1);
+  border-left:4px solid var(--blue);
+  background:linear-gradient(to right, rgba(58,99,152,.05), transparent 30%)
+}
 .rc-builder-sec .sec-title{color:var(--blue)}
-.rc-category-list{display:flex;flex-direction:column;gap:8px}
+.rc-category-list{display:flex;flex-direction:column;gap:10px}
 
-.rc-card{background:var(--card);border:1.5px solid var(--b1);border-left:4px solid var(--acc);border-radius:6px;overflow:hidden;transition:border-color .15s}
-.rc-card.disabled{border-left-color:var(--b2);opacity:.55}
-.rc-card.disabled .rc-options{filter:grayscale(.5)}
-.rc-card.warn{border-left-color:var(--yellow)}
-.rc-card.locked{border-left-color:var(--blue);background:rgba(58,99,152,.06)}
+/* 🎨 카테고리 색상 팔레트 — 9색. 사용자가 ⋯ 메뉴에서 선택. */
+.rc-card{
+  --rc-color: var(--acc);
+  background:var(--card);
+  border:1.5px solid var(--b1);
+  border-left:4px solid var(--rc-color);
+  border-radius:6px;
+  overflow:hidden;
+  transition:border-color .15s, transform .12s, box-shadow .15s
+}
+.rc-card:hover{
+  border-color:var(--b2);
+  transform:translateY(-1px);
+  box-shadow:0 4px 12px rgba(74,52,20,.08)
+}
+.rc-card[data-color="red"]{--rc-color:#b54338}
+.rc-card[data-color="orange"]{--rc-color:#d97706}
+.rc-card[data-color="yellow"]{--rc-color:#b88820}
+.rc-card[data-color="green"]{--rc-color:#5d8a30}
+.rc-card[data-color="teal"]{--rc-color:#0d9488}
+.rc-card[data-color="blue"]{--rc-color:#3a6398}
+.rc-card[data-color="purple"]{--rc-color:#7c3aed}
+.rc-card[data-color="pink"]{--rc-color:#db2777}
 
-.rc-card-hdr{display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--card2);border-bottom:1px solid var(--b1);font-size:12.5px}
-.rc-card-hdr input.rc-label{flex:1;min-width:0;background:transparent;border:1px solid transparent;color:var(--t1);font-weight:700;padding:3px 6px;border-radius:3px;font-size:12.5px;font-family:inherit}
-.rc-card-hdr input.rc-label:focus{outline:none;border-color:var(--acc);background:var(--panel)}
+/* 상태별 보더는 색상 태그 위에 덮어쓰기 (disabled/locked 우선) */
+.rc-card.disabled{border-left-color:var(--b2)!important;opacity:.5;transform:none;box-shadow:none}
+.rc-card.disabled:hover{transform:none}
+.rc-card.disabled .rc-options{filter:grayscale(.4)}
+.rc-card.warn{border-left-color:var(--yellow)!important}
+.rc-card.locked{border-left-color:var(--blue)!important;background:rgba(58,99,152,.05)}
+
+.rc-card-hdr{display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--card2);border-bottom:1px solid var(--b1);font-size:13px;position:relative}
+.rc-card.disabled .rc-card-hdr{background:var(--card)}
+.rc-card-hdr .rc-color-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:var(--rc-color);
+  flex-shrink:0;
+  box-shadow:0 0 0 1.5px var(--card2), 0 1px 3px rgba(0,0,0,.15);
+  margin-right:2px
+}
+.rc-card-hdr input.rc-label{flex:1;min-width:0;background:transparent;border:1px solid transparent;color:var(--t1);font-weight:700;padding:4px 8px;border-radius:4px;font-size:13.5px;font-family:inherit}
+.rc-card-hdr input.rc-label:focus{outline:none;border-color:var(--rc-color);background:var(--panel);box-shadow:0 0 0 2px color-mix(in oklab, var(--rc-color) 22%, transparent)}
 .rc-card-hdr input.rc-label:hover:not(:focus){background:rgba(0,0,0,.04)}
-.rc-card-hdr .rc-count{font-size:10.5px;color:var(--t3);font-family:var(--mono);flex-shrink:0}
-.rc-card-hdr button{background:transparent;border:0;padding:3px 6px;cursor:pointer;font-size:13px;color:var(--t2);border-radius:3px;line-height:1}
-.rc-card-hdr button:hover{background:rgba(0,0,0,.06);color:var(--t1)}
+.rc-card-hdr .rc-count{font-size:11px;color:var(--t3);font-family:var(--mono);flex-shrink:0;background:var(--card);padding:2px 7px;border-radius:10px;border:1px solid var(--b1);font-weight:600;min-width:24px;text-align:center}
+.rc-card.locked .rc-card-hdr .rc-count{background:rgba(58,99,152,.12);color:var(--blue);border-color:rgba(58,99,152,.35)}
+.rc-card.warn .rc-card-hdr .rc-count{background:rgba(184,136,32,.12);color:var(--yellow);border-color:rgba(184,136,32,.35)}
+.rc-card-hdr button{background:transparent;border:0;padding:4px 7px;cursor:pointer;font-size:14px;color:var(--t2);border-radius:4px;line-height:1;transition:all .12s}
+.rc-card-hdr button:hover{background:rgba(0,0,0,.07);color:var(--t1)}
 .rc-card-hdr button.act{color:var(--green)}
-.rc-card-hdr .rc-toggle{font-weight:700;font-size:14px;min-width:24px}
+.rc-card-hdr .rc-toggle{font-weight:700;font-size:14px;min-width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center}
 .rc-card-hdr .rc-toggle.off{color:var(--t3);text-decoration:line-through}
+.rc-card-hdr .rc-toggle.act{background:rgba(93,138,48,.10)}
 
 .rc-options{padding:6px 8px;display:flex;flex-direction:column;gap:5px;max-height:340px;overflow-y:auto;background:var(--panel)}
 /* 옵션 행 — 2줄 grid 레이아웃 (가독성 ↑) — 모바일·데스크탑 둘 다 텍스트 한 줄 가득 */
@@ -1508,13 +1551,14 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   background:var(--card);
   border:1.5px solid var(--b1);
   color:var(--t2);
-  padding:3px 7px;
+  padding:4px 9px;
   cursor:pointer;
   border-radius:3px;
-  font-size:11px;
+  font-size:12px;
   line-height:1;
-  min-width:22px;
-  font-weight:700
+  min-width:28px;
+  font-weight:700;
+  transition:all .12s
 }
 .rc-option .rc-weight-ctrl button:hover{background:var(--panel);color:var(--t1);border-color:var(--acc)}
 .rc-option .rc-weight-ctrl .rc-weight-val{
@@ -1539,11 +1583,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   background:var(--card);
   border:1.5px solid var(--b1);
   color:var(--t3);
-  padding:3px 7px;
+  padding:4px 9px;
   cursor:pointer;
-  font-size:11px;
+  font-size:12px;
   border-radius:3px;
-  line-height:1
+  line-height:1;
+  min-width:28px;
+  transition:all .12s
 }
 .rc-option .rc-opt-actions button:hover{background:var(--panel);color:var(--t1);border-color:var(--b2)}
 .rc-option .rc-opt-actions button.lock-act{color:var(--blue)}
@@ -1621,6 +1667,49 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 .rc-warn-bar{padding:5px 10px;background:rgba(184,136,32,.15);color:var(--yellow);font-size:11px;border-top:1px solid rgba(184,136,32,.3);line-height:1.5}
 .rc-warn-bar b{font-weight:700;color:var(--yellow)}
+
+/* 빈 카테고리 CTA — 큰 4-버튼 그리드 */
+.rc-empty-cta{padding:14px 12px 16px}
+.rc-empty-cta-title{
+  font-size:11.5px;
+  color:var(--t3);
+  text-align:center;
+  margin-bottom:10px;
+  line-height:1.5
+}
+.rc-empty-cta-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px
+}
+.rc-empty-cta-grid .rc-cta-btn{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  padding:14px 8px;
+  background:var(--card2);
+  border:1.5px solid var(--b1);
+  border-radius:5px;
+  cursor:pointer;
+  font-family:inherit;
+  color:var(--t1);
+  transition:all .12s;
+  min-width:0
+}
+.rc-empty-cta-grid .rc-cta-btn:hover{
+  border-color:var(--rc-color, var(--acc));
+  background:var(--card);
+  transform:translateY(-1px);
+  box-shadow:0 2px 8px rgba(0,0,0,.08)
+}
+.rc-empty-cta-grid .rc-cta-icon{font-size:20px;line-height:1}
+.rc-empty-cta-grid .rc-cta-label{font-size:11.5px;font-weight:600;color:var(--t2)}
+.rc-empty-cta-grid .rc-cta-btn:hover .rc-cta-label{color:var(--t1)}
+
+/* 카드 헤더의 색상 점 — 클릭 가능 */
+.rc-card-hdr .rc-color-dot{cursor:pointer;transition:transform .12s}
+.rc-card-hdr .rc-color-dot:hover{transform:scale(1.25)}
 
 /* 🔍 검색·필터 행 */
 .rc-search-row{
@@ -1708,6 +1797,39 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .rc-more-menu button:hover:not(:disabled){background:var(--card)}
 .rc-more-menu button:disabled{opacity:.4;cursor:not-allowed}
 .rc-more-menu .rc-more-sep{height:1px;background:var(--b1);margin:2px 6px}
+.rc-more-menu .rc-more-section-title{
+  font-size:10.5px;
+  color:var(--t3);
+  padding:4px 12px 4px;
+  font-weight:700;
+  letter-spacing:.02em;
+  text-transform:uppercase
+}
+.rc-color-palette{
+  display:grid;
+  grid-template-columns:repeat(9, 1fr);
+  gap:4px;
+  padding:2px 6px 6px
+}
+.rc-color-swatch{
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  border:2px solid var(--b1);
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:13px;
+  color:#fff;
+  font-weight:700;
+  text-shadow:0 1px 2px rgba(0,0,0,.3);
+  padding:0;
+  background:none;
+  transition:transform .12s, border-color .12s
+}
+.rc-color-swatch:hover{transform:scale(1.15);border-color:var(--t1)}
+.rc-color-swatch.cur{border-color:var(--t1);border-width:2.5px}
 
 #rcStatsBadge{cursor:default}
 
@@ -9073,12 +9195,28 @@ async function loadRandomCategories(){
 async function saveRandomCategories(){
   await DB.setFlag('random_categories', state.randomCategories);
 }
+// 🎨 카테고리 색상 팔레트 — 8색 + 기본. 데이터 모델의 'color' 필드.
+const RC_CATEGORY_COLORS = [
+  {id: '',       label: '기본',  hex: '#a25a1f'},
+  {id: 'red',    label: '빨강',  hex: '#b54338'},
+  {id: 'orange', label: '주황',  hex: '#d97706'},
+  {id: 'yellow', label: '노랑',  hex: '#b88820'},
+  {id: 'green',  label: '초록',  hex: '#5d8a30'},
+  {id: 'teal',   label: '청록',  hex: '#0d9488'},
+  {id: 'blue',   label: '파랑',  hex: '#3a6398'},
+  {id: 'purple', label: '보라',  hex: '#7c3aed'},
+  {id: 'pink',   label: '분홍',  hex: '#db2777'},
+];
+const _RC_COLOR_IDS = new Set(RC_CATEGORY_COLORS.map(c => c.id));
+
 function _normalizeRandomCategory(c){
   if(!c || typeof c !== 'object') return null;
+  const colorId = typeof c.color === 'string' && _RC_COLOR_IDS.has(c.color) ? c.color : '';
   return {
     id: String(c.id || `rc-${Date.now()}-${Math.random().toString(36).slice(2,8)}`),
     label: String(c.label || '').slice(0, 80) || '카테고리',
     note: String(c.note || '').slice(0, 500),       // 📝 사용자 설명/주석
+    color: colorId,                                 // 🎨 색상 태그 (빈 문자열 = 기본)
     enabled: c.enabled !== false,
     collapsed: !!c.collapsed,                        // 📦 옵션 영역 접힘
     locked: !!c.locked,
@@ -15605,22 +15743,47 @@ function _rcRenderCard(cat, catIdx){
   if(warn) cls.push('warn');
   if(locked) cls.push('locked');
   if(collapsed) cls.push('collapsed');
+  const hasOptions = (cat.options || []).length > 0;
+  const emptyCTA = `
+    <div class="rc-empty-cta">
+      <div class="rc-empty-cta-title">옵션이 비어있습니다 — 추가 방법을 선택하세요</div>
+      <div class="rc-empty-cta-grid">
+        <button type="button" data-act="add-opt" data-cat-idx="${catIdx}" class="rc-cta-btn">
+          <span class="rc-cta-icon">＋</span>
+          <span class="rc-cta-label">직접 입력</span>
+        </button>
+        <button type="button" data-act="more-add-bulk" data-cat-idx="${catIdx}" class="rc-cta-btn">
+          <span class="rc-cta-icon">📋</span>
+          <span class="rc-cta-label">일괄 추가</span>
+        </button>
+        <button type="button" data-act="add-from-preset" data-cat-idx="${catIdx}" class="rc-cta-btn">
+          <span class="rc-cta-icon">📚</span>
+          <span class="rc-cta-label">프리셋에서</span>
+        </button>
+        <button type="button" data-act="add-from-tagdex" data-cat-idx="${catIdx}" class="rc-cta-btn">
+          <span class="rc-cta-icon">📖</span>
+          <span class="rc-cta-label">태그 도감</span>
+        </button>
+      </div>
+    </div>
+  `;
   return `
-    <div class="${cls.join(' ')}" data-cat-idx="${catIdx}" data-cat-id="${esc(cat.id || '')}" draggable="true">
+    <div class="${cls.join(' ')}" data-cat-idx="${catIdx}" data-cat-id="${esc(cat.id || '')}" ${cat.color?`data-color="${esc(cat.color)}"`:''} draggable="true">
       <div class="rc-drag-handle" title="드래그해서 카테고리 순서 변경" aria-label="드래그 핸들">⋮⋮</div>
       <div class="rc-card-hdr">
+        <span class="rc-color-dot" data-act="more-menu" data-cat-idx="${catIdx}" title="🎨 색상 변경 (⋯ 메뉴)" role="button" tabindex="0"></span>
         <button class="rc-collapse" data-act="toggle-collapse" data-cat-idx="${catIdx}" title="${collapsed?'펼치기':'접기'}" aria-label="${collapsed?'펼치기':'접기'}">${collapsed?'▶':'▼'}</button>
         <button class="rc-toggle${enabled?' act':' off'}" data-act="toggle-enabled" data-cat-idx="${catIdx}" title="${enabled?'비활성화':'활성화'}">${enabled?'✓':'○'}</button>
         <input type="text" class="rc-label" data-act="edit-label" data-cat-idx="${catIdx}" value="${esc(cat.label || '')}" placeholder="카테고리 이름" maxlength="80">
-        <span class="rc-count">${(cat.options||[]).length}</span>
+        <span class="rc-count" title="${(cat.options||[]).length}개 옵션">${(cat.options||[]).length}</span>
         <span class="rc-hdr-actions">
           <button data-act="add-opt" data-cat-idx="${catIdx}" title="＋ 옵션 추가">＋</button>
-          <button data-act="more-menu" data-cat-idx="${catIdx}" title="⋯ 더보기 — 노트·빈 옵션·프리셋·도감·이동·복제" class="${note?'has-note':''}" aria-haspopup="menu">⋯</button>
+          <button data-act="more-menu" data-cat-idx="${catIdx}" title="⋯ 더보기 — 색상·노트·일괄 추가·프리셋·도감·이동·복제" class="${note?'has-note':''}" aria-haspopup="menu">⋯</button>
           <button data-act="del-cat" data-cat-idx="${catIdx}" title="✕ 카테고리 삭제" style="color:var(--red)">✕</button>
         </span>
       </div>
       ${note ? `<div class="rc-note-display" data-act="edit-note" data-cat-idx="${catIdx}" title="클릭해서 편집">📝 ${esc(note)}</div>` : ''}
-      <div class="rc-options" ${collapsed?'style="display:none"':''}>${optsHtml || '<div style="font-size:11px;color:var(--t3);padding:6px;text-align:center">옵션 없음 — ＋ 로 추가</div>'}</div>
+      <div class="rc-options" ${collapsed?'style="display:none"':''}>${hasOptions ? optsHtml : emptyCTA}</div>
       ${warn && !collapsed ? `<div class="rc-warn-bar">${warn}</div>` : ''}
     </div>
   `;
@@ -15742,7 +15905,15 @@ function rcOpenMoreMenu(catIdx, anchorBtn){
   const wrap = document.createElement('div');
   wrap.className = 'rc-more-menu';
   wrap.setAttribute('role', 'menu');
+  // 🎨 색상 팔레트 (현재 선택 표시)
+  const colorPalette = RC_CATEGORY_COLORS.map(col => {
+    const isCur = (cat.color || '') === col.id;
+    return `<button type="button" class="rc-color-swatch ${isCur?'cur':''}" data-act="more-color" data-cat-idx="${catIdx}" data-color="${esc(col.id)}" title="${esc(col.label)}" style="background:${col.hex}" aria-label="색상 ${esc(col.label)}">${isCur?'✓':''}</button>`;
+  }).join('');
   wrap.innerHTML = `
+    <div class="rc-more-section-title">🎨 카테고리 색상</div>
+    <div class="rc-color-palette">${colorPalette}</div>
+    <div class="rc-more-sep"></div>
     <button type="button" data-act="more-edit-note" data-cat-idx="${catIdx}">📝 노트 편집${hasNote?' <span style="color:var(--acc);font-size:10px">●</span>':''}</button>
     <button type="button" data-act="more-add-empty" data-cat-idx="${catIdx}">∅ 빈 옵션 추가</button>
     <button type="button" data-act="more-add-bulk" data-cat-idx="${catIdx}">📋 옵션 일괄 추가 (콤마 분리)</button>
@@ -15774,6 +15945,18 @@ function rcOpenMoreMenu(catIdx, anchorBtn){
     const btn = e.target.closest('button[data-act]');
     if(!btn || btn.disabled) return;
     const act = btn.dataset.act;
+    if(act === 'more-color'){
+      // 색상은 메뉴 닫지 않음 — 사용자가 비교 후 다른 색 선택 가능
+      const col = btn.dataset.color || '';
+      rcSetCategoryColor(catIdx, col);
+      // 메뉴 안 모든 swatch 의 cur 상태 갱신
+      wrap.querySelectorAll('.rc-color-swatch').forEach(s => {
+        const isCur = (s.dataset.color || '') === col;
+        s.classList.toggle('cur', isCur);
+        s.textContent = isCur ? '✓' : '';
+      });
+      return;
+    }
     _rcCloseMoreMenu();
     if(act === 'more-edit-note') rcEditNote(catIdx);
     else if(act === 'more-add-empty') rcAddOption(catIdx, '');
@@ -15791,6 +15974,21 @@ function rcOpenMoreMenu(catIdx, anchorBtn){
   _rcMoreScope.on(document, 'keydown', e => {
     if(e.key === 'Escape') _rcCloseMoreMenu();
   });
+}
+
+// 🎨 카테고리 색상 변경 — color 필드 갱신 + 카드 data-color 즉시 반영
+function rcSetCategoryColor(catIdx, colorId){
+  const c = state.randomCategories?.[catIdx];
+  if(!c) return;
+  if(!_RC_COLOR_IDS.has(colorId)) colorId = '';
+  c.color = colorId;
+  _saveRandomCategoriesDebounced();
+  // 부분 갱신 — 전체 rerender 피해서 색상만 바꿈 (포커스 보존)
+  const card = document.querySelector(`#rcCategoryList .rc-card[data-cat-idx="${catIdx}"]`);
+  if(card){
+    if(colorId) card.setAttribute('data-color', colorId);
+    else card.removeAttribute('data-color');
+  }
 }
 
 // 📑 카테고리 복제 — 라벨 끝에 (복사) 붙여서 같은 옵션으로 새 카드
