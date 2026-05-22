@@ -133,6 +133,8 @@ const MIRRORED = [
   {mod: 'js/pure/randomChoice.mjs', fn: 'countRandomCombinations'},
   {mod: 'js/pure/randomChoice.mjs', fn: 'hasCameraAngle'},
   {mod: 'js/pure/randomChoice.mjs', fn: 'pickWeightedOption'},
+  {mod: 'js/pure/randomChoice.mjs', fn: 'guessCategoryLabel'},
+  {mod: 'js/pure/randomChoice.mjs', fn: 'compileCategoriesToText'},
 ];
 const inlineSrc = readFileSync(join(ROOT, 'index.html'), 'utf8');
 for(const {mod, fn} of MIRRORED){

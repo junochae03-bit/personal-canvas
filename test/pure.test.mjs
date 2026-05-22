@@ -13,7 +13,7 @@ import { RAND_SEED_MAX, randomSeed, parseSeedInput } from '../js/pure/seed.mjs';
 import { MEGAPIXEL, isSmallTier, aspectRatio, snapTo8 } from '../js/pure/image.mjs';
 import { toChosung, isAllChosung, koMatch, highlightMatch } from '../js/pure/korean.mjs';
 import { pickFirst, sanitizeCharacter, sanitizeCharacters, extractNaiFields } from '../js/pure/naiMeta.mjs';
-import { expandRandomChoices, listRandomChoices, countRandomCombinations, hasCameraAngle, pickWeightedOption } from '../js/pure/randomChoice.mjs';
+import { expandRandomChoices, listRandomChoices, countRandomCombinations, hasCameraAngle, pickWeightedOption, guessCategoryLabel, compileCategoriesToText } from '../js/pure/randomChoice.mjs';
 
 // ────────────── utils ──────────────
 test('esc: HTML 특수문자 5종 이스케이프', () => {
@@ -454,4 +454,53 @@ test('pickWeightedOption: 비배열·빈 배열 → null', () => {
   assert.equal(pickWeightedOption([]), null);
   assert.equal(pickWeightedOption(null), null);
   assert.equal(pickWeightedOption('x'), null);
+});
+
+test('guessCategoryLabel: 종족 키워드 매칭', () => {
+  const opts = [{text:'horse girl'}, {text:'cat girl'}, {text:'fox girl'}, {text:'elf'}];
+  assert.equal(guessCategoryLabel(opts), '🐱 종족');
+});
+test('guessCategoryLabel: 체위 키워드 매칭', () => {
+  const opts = [{text:'missionary'}, {text:'cowgirl position'}, {text:'doggystyle'}];
+  assert.equal(guessCategoryLabel(opts), '🎬 체위');
+});
+test('guessCategoryLabel: 가중치 옵션도 매칭', () => {
+  const opts = [{text:'2::angel::'}, {text:'2::fallen angel::'}, {text:'vampire'}];
+  assert.equal(guessCategoryLabel(opts), '🐱 종족');
+});
+test('guessCategoryLabel: 콤마 포함 옵션 (표정)', () => {
+  const opts = [
+    {text:'tears, crying, closed eyes'},
+    {text:'aroused, smile'},
+    {text:'ahegao'},
+  ];
+  assert.equal(guessCategoryLabel(opts), '😢 표정');
+});
+test('guessCategoryLabel: 약한 매칭은 null', () => {
+  const opts = [{text:'foo'}, {text:'bar'}, {text:'baz'}];
+  assert.equal(guessCategoryLabel(opts), null);
+});
+test('guessCategoryLabel: 빈/비배열 → null', () => {
+  assert.equal(guessCategoryLabel([]), null);
+  assert.equal(guessCategoryLabel(null), null);
+});
+
+test('compileCategoriesToText: 활성 카테고리만 ||A|B|C|| 로 직렬화', () => {
+  const cats = [
+    {enabled: true, options: [{text:'A', weight:1}, {text:'B', weight:1}]},
+    {enabled: false, options: [{text:'X', weight:1}]},
+    {enabled: true, options: [{text:'P', weight:1}, {text:'Q', weight:1.5}]},
+  ];
+  assert.equal(compileCategoriesToText(cats), '||A|B||, ||P|1.5::Q::||');
+});
+test('compileCategoriesToText: 빈 옵션 그대로 인코딩', () => {
+  const cats = [{enabled: true, options: [{text:'A', weight:1}, {text:'', weight:1}]}];
+  assert.equal(compileCategoriesToText(cats), '||A|||');
+});
+test('compileCategoriesToText: 옵션 없는 카테고리 생략', () => {
+  const cats = [
+    {enabled: true, options: []},
+    {enabled: true, options: [{text:'A', weight:1}]},
+  ];
+  assert.equal(compileCategoriesToText(cats), '||A||');
 });
