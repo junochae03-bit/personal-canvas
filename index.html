@@ -1549,10 +1549,47 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .rc-option .rc-opt-actions button.lock-act:hover{border-color:var(--blue)}
 .rc-option .rc-opt-actions button.del-act:hover{color:var(--red);background:rgba(181,67,56,.08);border-color:var(--red)}
 
-/* 카테고리 카드 헤더 — 버튼 간격 + 라벨 입력 가독성 ↑ */
-.rc-card-hdr{padding:8px 10px;gap:8px}
-.rc-card-hdr input.rc-label{font-size:13px;padding:5px 8px;font-weight:700}
-.rc-card-hdr button{padding:4px 8px;font-size:14px;min-width:28px;border-radius:4px}
+/* 카테고리 카드 헤더 — 버튼 간격 + 라벨 입력 가독성 ↑ + 모바일 wrap */
+.rc-card-hdr{padding:8px 10px;gap:6px;flex-wrap:wrap;align-items:center}
+.rc-card-hdr input.rc-label{font-size:13px;padding:5px 8px;font-weight:700;min-width:80px;flex:1 1 130px}
+.rc-card-hdr .rc-count{flex-shrink:0}
+.rc-card-hdr .rc-collapse{font-size:11px;padding:2px 5px;min-width:22px;color:var(--t2)}
+.rc-card-hdr .rc-collapse:hover{color:var(--acc)}
+.rc-card-hdr .rc-hdr-actions{display:flex;flex-wrap:wrap;gap:3px;margin-left:auto;align-items:center}
+.rc-card-hdr .rc-hdr-actions button{padding:4px 7px;font-size:13px;min-width:26px;border-radius:4px}
+.rc-card-hdr .rc-hdr-actions button.has-note{color:var(--acc);background:rgba(162,90,31,.08)}
+.rc-card-hdr .rc-hdr-actions button[disabled]{opacity:.3;cursor:not-allowed}
+
+/* 📝 노트 표시 — 카드 헤더 아래 별도 행 */
+.rc-note-display{
+  padding:5px 12px;
+  background:rgba(162,90,31,.06);
+  border-bottom:1px solid var(--b1);
+  font-size:11.5px;
+  color:var(--t2);
+  line-height:1.5;
+  cursor:pointer;
+  font-style:italic
+}
+.rc-note-display:hover{background:rgba(162,90,31,.12);color:var(--t1)}
+
+/* 접힌 카드 — 헤더만 표시, 옵션 영역 숨김 */
+.rc-card.collapsed{padding-bottom:0}
+.rc-card.collapsed .rc-card-hdr{border-bottom:none}
+
+/* 빌더 sec-utils 모바일 wrap */
+.rc-builder-sec .sec-utils{flex-wrap:wrap;gap:3px;justify-content:flex-end;max-width:65%}
+.rc-builder-sec .sec-title{flex-wrap:wrap;gap:6px;align-items:center}
+.rc-builder-sec #rcStatsBadge{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px}
+
+/* 모바일 (max-width:880px) — 빌더 헤더 더 압축 */
+@media (max-width:880px){
+  .rc-builder-sec .sec-utils{max-width:100%;flex-basis:100%;justify-content:flex-start;margin-top:4px}
+  .rc-builder-sec .sec-utils .sec-util-btn{width:32px;height:32px;font-size:13px}
+  .rc-builder-sec #rcStatsBadge{flex-basis:100%;font-size:10px}
+  .rc-card-hdr .rc-hdr-actions{margin-left:0;flex-basis:100%;justify-content:flex-end;margin-top:2px}
+  .rc-card-hdr input.rc-label{flex:1 1 100%;font-size:13.5px}
+}
 
 .rc-add-opt-row{display:flex;gap:4px;padding:4px 0 2px;border-top:1px dashed var(--b1);margin-top:3px}
 .rc-add-opt-row input{flex:1;min-width:0;background:var(--card2);border:1px solid var(--b1);color:var(--t1);padding:4px 8px;border-radius:3px;font-size:11.5px;font-family:var(--mono)}
@@ -1677,6 +1714,7 @@ mark{
           <span class="sec-utils" onclick="event.stopPropagation()">
             <button class="iconbtn sec-util-btn" id="rcAddBtn" title="＋ 새 카테고리 추가">＋</button>
             <button class="iconbtn sec-util-btn" id="rcImportBtn" title="📥 텍스트에서 가져오기 — ||A|B|C|| 패턴 자동 인식 + 라벨 자동 추측">📥</button>
+            <button class="iconbtn sec-util-btn" id="rcCollapseAllBtn" title="📦 모든 카테고리 일괄 접기/펼치기">📦</button>
             <button class="iconbtn sec-util-btn" id="rcDemoBtn" title="🎲 한 번 시연 — 현재 설정으로 어떤 옵션이 뽑힐지 한 번 expand">🎲</button>
             <button class="iconbtn sec-util-btn" id="rcApplyToCharBtn" title="🎴 캐릭터 프리셋에 적용 — 활성 카테고리를 ||A|B|C|| 텍스트로 컴파일 → 캐릭터 슬롯 추가 또는 새 프리셋 저장">🎴</button>
             <button class="iconbtn sec-util-btn" id="rcClearLocksBtn" title="🔓 모든 옵션 고정 해제">🔓</button>
@@ -8895,7 +8933,9 @@ function _normalizeRandomCategory(c){
   return {
     id: String(c.id || `rc-${Date.now()}-${Math.random().toString(36).slice(2,8)}`),
     label: String(c.label || '').slice(0, 80) || '카테고리',
+    note: String(c.note || '').slice(0, 500),       // 📝 사용자 설명/주석
     enabled: c.enabled !== false,
+    collapsed: !!c.collapsed,                        // 📦 옵션 영역 접힘
     locked: !!c.locked,
     lockedOptionIdx: Number.isInteger(c.lockedOptionIdx) ? c.lockedOptionIdx : null,
     options: Array.isArray(c.options) ? c.options.slice(0, 200).map(o => ({
@@ -15243,6 +15283,8 @@ function rcRender(){
 function _rcRenderCard(cat, catIdx){
   const enabled = cat.enabled !== false;
   const locked = !!cat.locked;
+  const collapsed = !!cat.collapsed;
+  const note = (cat.note || '').trim();
   const warn = _rcOptionWarning(cat);
   const optsHtml = (cat.options || []).map((o, i) => {
     const isLockedOpt = locked && cat.lockedOptionIdx === i;
@@ -15268,20 +15310,28 @@ function _rcRenderCard(cat, catIdx){
   if(!enabled) cls.push('disabled');
   if(warn) cls.push('warn');
   if(locked) cls.push('locked');
+  if(collapsed) cls.push('collapsed');
   return `
     <div class="${cls.join(' ')}" data-cat-idx="${catIdx}" data-cat-id="${esc(cat.id || '')}">
       <div class="rc-card-hdr">
+        <button class="rc-collapse" data-act="toggle-collapse" data-cat-idx="${catIdx}" title="${collapsed?'펼치기':'접기'}" aria-label="${collapsed?'펼치기':'접기'}">${collapsed?'▶':'▼'}</button>
         <button class="rc-toggle${enabled?' act':' off'}" data-act="toggle-enabled" data-cat-idx="${catIdx}" title="${enabled?'비활성화':'활성화'}">${enabled?'✓':'○'}</button>
         <input type="text" class="rc-label" data-act="edit-label" data-cat-idx="${catIdx}" value="${esc(cat.label || '')}" placeholder="카테고리 이름" maxlength="80">
         <span class="rc-count">${(cat.options||[]).length} 옵션</span>
-        <button data-act="add-opt" data-cat-idx="${catIdx}" title="옵션 추가">＋</button>
-        <button data-act="add-empty" data-cat-idx="${catIdx}" title="빈 옵션 추가 (= '아무것도 사용 안 함')">∅</button>
-        <button data-act="move-up" data-cat-idx="${catIdx}" title="위로 이동" ${catIdx===0?'disabled':''}>▲</button>
-        <button data-act="move-down" data-cat-idx="${catIdx}" title="아래로 이동">▼</button>
-        <button data-act="del-cat" data-cat-idx="${catIdx}" title="카테고리 삭제" style="color:var(--red)">✕</button>
+        <span class="rc-hdr-actions">
+          <button data-act="edit-note" data-cat-idx="${catIdx}" title="📝 카테고리 노트/설명 편집${note?` — 현재: ${esc(note.slice(0,40))}${note.length>40?'…':''}`:''}" class="${note?'has-note':''}">📝</button>
+          <button data-act="add-opt" data-cat-idx="${catIdx}" title="＋ 옵션 추가">＋</button>
+          <button data-act="add-empty" data-cat-idx="${catIdx}" title="∅ 빈 옵션 추가 (= '아무것도 사용 안 함')">∅</button>
+          <button data-act="add-from-preset" data-cat-idx="${catIdx}" title="📚 프리셋에서 옵션 추가">📚</button>
+          <button data-act="add-from-tagdex" data-cat-idx="${catIdx}" title="📖 태그 도감에서 옵션 추가">📖</button>
+          <button data-act="move-up" data-cat-idx="${catIdx}" title="▲ 위로 이동" ${catIdx===0?'disabled':''}>▲</button>
+          <button data-act="move-down" data-cat-idx="${catIdx}" title="▼ 아래로 이동">▼</button>
+          <button data-act="del-cat" data-cat-idx="${catIdx}" title="✕ 카테고리 삭제" style="color:var(--red)">✕</button>
+        </span>
       </div>
-      <div class="rc-options">${optsHtml || '<div style="font-size:11px;color:var(--t3);padding:6px;text-align:center">옵션 없음 — ＋ 로 추가</div>'}</div>
-      ${warn ? `<div class="rc-warn-bar">${warn}</div>` : ''}
+      ${note ? `<div class="rc-note-display" data-act="edit-note" data-cat-idx="${catIdx}" title="클릭해서 편집">📝 ${esc(note)}</div>` : ''}
+      <div class="rc-options" ${collapsed?'style="display:none"':''}>${optsHtml || '<div style="font-size:11px;color:var(--t3);padding:6px;text-align:center">옵션 없음 — ＋ 로 추가</div>'}</div>
+      ${warn && !collapsed ? `<div class="rc-warn-bar">${warn}</div>` : ''}
     </div>
   `;
 }
@@ -15379,6 +15429,264 @@ function rcAddCategory(label){
     const labelInput = document.querySelector(`#rcCategoryList .rc-card[data-cat-idx="${lastIdx}"] .rc-label`);
     if(labelInput){ labelInput.focus(); labelInput.select(); }
   }, 50);
+}
+
+// 📦 카테고리 접기/펼치기 — 개별 + 일괄
+function rcToggleCollapse(catIdx){
+  const c = state.randomCategories?.[catIdx];
+  if(!c) return;
+  c.collapsed = !c.collapsed;
+  _saveRandomCategoriesDebounced();
+  rcRender();
+}
+function rcCollapseAll(){
+  const cats = state.randomCategories || [];
+  if(!cats.length) return;
+  const allCollapsed = cats.every(c => c.collapsed);
+  const next = !allCollapsed;
+  for(const c of cats) c.collapsed = next;
+  _saveRandomCategoriesDebounced();
+  rcRender();
+  toast(next ? `📦 ${cats.length}개 카테고리 모두 접음` : `📂 ${cats.length}개 카테고리 모두 펼침`, 'info');
+}
+
+// 📝 카테고리 노트 편집 — 작은 prompt 또는 모달
+function rcEditNote(catIdx){
+  const c = state.randomCategories?.[catIdx];
+  if(!c) return;
+  const cur = c.note || '';
+  const next = window.prompt(`"${c.label}" 카테고리 노트/설명 (최대 500자)\n사용자 메모용 — 무슨 카테고리인지, 어떻게 쓰는지 등.\n비우면 노트 제거.`, cur);
+  if(next == null) return;
+  c.note = String(next).slice(0, 500);
+  _saveRandomCategoriesDebounced();
+  rcRender();
+}
+
+// 📚 프리셋에서 옵션 추가 — 카테고리 선택 → 항목 다중 선택
+function rcAddFromPreset(catIdx){
+  const cat = state.randomCategories?.[catIdx];
+  if(!cat) return;
+  const presetCats = (typeof PRESET_TYPES !== 'undefined' ? PRESET_TYPES : []).filter(t => (state.presets?.[t.id] || []).length > 0);
+  if(!presetCats.length){
+    toast('등록된 프리셋이 없습니다 — 프리셋 탭에서 먼저 추가하세요', 'warning');
+    return;
+  }
+  // 1단계: 프리셋 카테고리 선택
+  const html = `
+    <div style="font-size:12.5px;color:var(--t2);margin-bottom:12px;line-height:1.6">
+      "<b style="color:var(--t1)">${esc(cat.label)}</b>"에 옵션으로 추가할 프리셋 카테고리를 선택하세요.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;max-height:50vh;overflow-y:auto">
+      ${presetCats.map(t => `
+        <button type="button" data-preset-cat="${esc(t.id)}" class="btn ghost" style="justify-content:flex-start;padding:8px 12px;text-align:left">
+          ${t.ico} ${esc(t.label)} <span style="margin-left:auto;color:var(--t3);font-family:var(--mono);font-size:11px">${state.presets[t.id].length}개</span>
+        </button>
+      `).join('')}
+    </div>
+  `;
+  $('confirmTitle').innerHTML = '📚 프리셋 카테고리 선택 <span class="en">Step 1/2</span>';
+  $('confirmBody').innerHTML = html;
+  $('confirmOk').style.display = 'none';
+  $('confirmCancel').innerHTML = '취소 <span class="en">Cancel</span>';
+  $('confirmModal').classList.add('open');
+  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
+  $('confirmBody').querySelectorAll('[data-preset-cat]').forEach(btn => {
+    btn.onclick = () => {
+      const presetCatId = btn.dataset.presetCat;
+      _rcShowPresetPicker(catIdx, presetCatId);
+    };
+  });
+}
+function _rcShowPresetPicker(catIdx, presetCatId){
+  const cat = state.randomCategories?.[catIdx];
+  if(!cat) return;
+  const presets = state.presets?.[presetCatId] || [];
+  const def = PRESET_TYPES.find(t => t.id === presetCatId);
+  if(!presets.length){ toast('프리셋이 비어있습니다', 'warning'); return; }
+  const html = `
+    <div style="font-size:12.5px;color:var(--t2);margin-bottom:8px;line-height:1.6">
+      <b style="color:var(--t1)">${esc(def?.label || presetCatId)}</b> 에서 옵션으로 추가할 프리셋을 선택하세요. (다중 선택 가능)
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;font-size:11.5px">
+      <button type="button" id="_rcPpSelAll" class="btn ghost" style="padding:4px 10px">☑ 전체 선택</button>
+      <button type="button" id="_rcPpSelNone" class="btn ghost" style="padding:4px 10px">☐ 전체 해제</button>
+      <span style="margin-left:auto;color:var(--t3)" id="_rcPpCount">0개 선택됨</span>
+    </div>
+    <input type="text" id="_rcPpSearch" class="inp" placeholder="🔍 프리셋 이름 검색" style="width:100%;margin-bottom:6px">
+    <div id="_rcPpList" style="display:flex;flex-direction:column;gap:3px;max-height:45vh;overflow-y:auto;background:var(--card);padding:6px;border:1px solid var(--b1);border-radius:5px">
+      ${presets.map((p, i) => `
+        <label class="chk" data-preset-idx="${i}" data-preset-name="${esc((p.name||'').toLowerCase())}" style="display:flex;align-items:flex-start;gap:6px;padding:5px 7px;cursor:pointer;border-radius:3px;font-size:11.5px;line-height:1.4">
+          <input type="checkbox" class="_rcPpCheck" data-idx="${i}" style="margin-top:2px;flex-shrink:0">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;color:var(--t1)">${esc(p.name || '(이름 없음)')}</div>
+            <div style="font-size:10.5px;color:var(--t3);font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((p.text || '').slice(0, 100))}</div>
+          </div>
+        </label>
+      `).join('')}
+    </div>
+    <div style="margin-top:8px;display:flex;gap:6px;align-items:center;font-size:11px;color:var(--t3)">
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer">
+        <input type="checkbox" id="_rcPpUseName"> 옵션 텍스트로 <b>프리셋 이름</b> 사용 (기본: 프리셋 내용)
+      </label>
+    </div>
+  `;
+  $('confirmTitle').innerHTML = `📚 ${def?.ico||'•'} ${esc(def?.label||presetCatId)} <span class="en">Step 2/2</span>`;
+  $('confirmBody').innerHTML = html;
+  $('confirmOk').innerHTML = '추가 <span class="en">Add</span>';
+  $('confirmOk').style.display = '';
+  $('confirmCancel').innerHTML = '취소 <span class="en">Cancel</span>';
+  const updateCount = () => {
+    const n = $('confirmBody').querySelectorAll('._rcPpCheck:checked').length;
+    const cnt = $('_rcPpCount'); if(cnt) cnt.textContent = `${n}개 선택됨`;
+  };
+  $('confirmBody').querySelectorAll('._rcPpCheck').forEach(cb => cb.addEventListener('change', updateCount));
+  $('_rcPpSelAll').onclick = () => {
+    $('confirmBody').querySelectorAll('._rcPpCheck').forEach(cb => {
+      const row = cb.closest('label');
+      if(row && row.style.display !== 'none') cb.checked = true;
+    });
+    updateCount();
+  };
+  $('_rcPpSelNone').onclick = () => {
+    $('confirmBody').querySelectorAll('._rcPpCheck').forEach(cb => cb.checked = false);
+    updateCount();
+  };
+  $('_rcPpSearch').oninput = e => {
+    const q = (e.target.value || '').toLowerCase().trim();
+    $('confirmBody').querySelectorAll('[data-preset-name]').forEach(row => {
+      const name = row.dataset.presetName || '';
+      const text = row.querySelector('div > div:last-child')?.textContent.toLowerCase() || '';
+      row.style.display = (!q || name.includes(q) || text.includes(q)) ? '' : 'none';
+    });
+  };
+  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
+  $('confirmOk').onclick = () => {
+    const useName = $('_rcPpUseName')?.checked === true;
+    const checks = [...$('confirmBody').querySelectorAll('._rcPpCheck:checked')];
+    if(!checks.length){ toast('선택된 프리셋이 없습니다', 'warning'); return; }
+    let added = 0;
+    for(const cb of checks){
+      const idx = parseInt(cb.dataset.idx, 10);
+      const p = presets[idx];
+      if(!p) continue;
+      const text = useName ? (p.name || '') : (p.text || p.name || '');
+      cat.options = cat.options || [];
+      cat.options.push({text: String(text).slice(0, 500), weight: 1.0});
+      added++;
+    }
+    if(added){
+      _saveRandomCategoriesDebounced();
+      rcRender();
+      toast(`📚 ${added}개 옵션 추가됨 — "${cat.label}"`, 'success');
+    }
+    $('confirmModal').classList.remove('open');
+  };
+}
+
+// 📖 태그 도감에서 옵션 추가 — 단부루 인덱스 또는 사용자 태그 도감
+function rcAddFromTagdex(catIdx){
+  const cat = state.randomCategories?.[catIdx];
+  if(!cat) return;
+  // 도감 소스: state.galleryTagIndex (사용자 갤러리 추출) 우선, 없으면 danbooru
+  const userTags = Array.isArray(state.galleryTagIndex) ? state.galleryTagIndex : [];
+  const dbTags = (typeof window.DANBOORU_TAGS !== 'undefined' && Array.isArray(window.DANBOORU_TAGS)) ? window.DANBOORU_TAGS : [];
+  // 갤러리 인덱스가 비어있으면 danbooru 사용
+  const source = userTags.length ? userTags : dbTags;
+  if(!source.length){
+    toast('태그 도감이 비어있습니다 — 갤러리 이미지를 만들거나 단부루 사전이 로드될 때까지 기다리세요', 'warning');
+    return;
+  }
+  const sourceLabel = userTags.length ? '📋 갤러리 태그 인덱스' : '📚 단부루 태그 사전';
+  // 정규화: {tag, count?, kana?, kor?} 형태로
+  const items = source.slice(0, 5000).map(t => {
+    if(typeof t === 'string') return {tag: t, label: t};
+    return {
+      tag: String(t.tag || t.name || t.value || ''),
+      label: String(t.tag || t.name || t.value || ''),
+      sub: String(t.kor || t.kana || t.ko || '').slice(0, 50),
+      count: t.count != null ? Number(t.count) : null,
+    };
+  }).filter(x => x.tag);
+  const html = `
+    <div style="font-size:12.5px;color:var(--t2);margin-bottom:8px;line-height:1.6">
+      "<b style="color:var(--t1)">${esc(cat.label)}</b>" 에 옵션으로 추가할 태그를 선택하세요. <span style="color:var(--t3);font-size:11px">(소스: ${sourceLabel} · ${items.length.toLocaleString()}개)</span>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;font-size:11.5px;align-items:center">
+      <input type="text" id="_rcTdxSearch" class="inp" placeholder="🔍 태그 검색 (영문 또는 한글)" style="flex:1">
+      <span style="color:var(--t3)" id="_rcTdxCount">0개 선택됨</span>
+    </div>
+    <div id="_rcTdxList" style="display:flex;flex-direction:column;gap:2px;max-height:45vh;overflow-y:auto;background:var(--card);padding:6px;border:1px solid var(--b1);border-radius:5px;font-size:11.5px">
+      <div style="color:var(--t3);text-align:center;padding:10px;font-size:11px">검색어를 입력하세요 (최소 2자)</div>
+    </div>
+  `;
+  $('confirmTitle').innerHTML = `📖 태그 도감에서 추가 <span class="en">From Tagdex</span>`;
+  $('confirmBody').innerHTML = html;
+  $('confirmOk').innerHTML = '추가 <span class="en">Add</span>';
+  $('confirmOk').style.display = '';
+  $('confirmCancel').innerHTML = '취소 <span class="en">Cancel</span>';
+  $('confirmModal').classList.add('open');
+  setTimeout(() => $('_rcTdxSearch')?.focus(), 50);
+
+  const selected = new Set();
+  const updateCount = () => {
+    const cnt = $('_rcTdxCount'); if(cnt) cnt.textContent = `${selected.size}개 선택됨`;
+  };
+  const renderList = () => {
+    const q = ($('_rcTdxSearch')?.value || '').toLowerCase().trim();
+    const list = $('_rcTdxList');
+    if(!list) return;
+    if(q.length < 2){
+      list.innerHTML = '<div style="color:var(--t3);text-align:center;padding:10px;font-size:11px">검색어를 입력하세요 (최소 2자)</div>';
+      return;
+    }
+    const filtered = items.filter(it => {
+      const t = (it.tag || '').toLowerCase();
+      const s = (it.sub || '').toLowerCase();
+      return t.includes(q) || s.includes(q);
+    }).slice(0, 200);
+    if(!filtered.length){
+      list.innerHTML = `<div style="color:var(--t3);text-align:center;padding:10px;font-size:11px">"${esc(q)}" 검색 결과 없음</div>`;
+      return;
+    }
+    list.innerHTML = filtered.map((it, i) => {
+      const isSel = selected.has(it.tag);
+      return `
+        <label class="chk" style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;border-radius:3px;background:${isSel?'rgba(162,90,31,.10)':'transparent'}">
+          <input type="checkbox" data-tag="${esc(it.tag)}" ${isSel?'checked':''} style="margin:0;flex-shrink:0">
+          <span style="font-family:var(--mono);color:var(--t1);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(it.tag)}</span>
+          ${it.sub ? `<span style="color:var(--t3);font-size:10.5px;flex-shrink:0">${esc(it.sub)}</span>` : ''}
+          ${it.count ? `<span style="color:var(--t3);font-family:var(--mono);font-size:10px;flex-shrink:0">${it.count.toLocaleString()}</span>` : ''}
+        </label>
+      `;
+    }).join('');
+    list.querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const tag = cb.dataset.tag;
+        if(cb.checked) selected.add(tag); else selected.delete(tag);
+        updateCount();
+      });
+    });
+  };
+  const searchInp = $('_rcTdxSearch');
+  if(searchInp){
+    let debounceId = null;
+    searchInp.oninput = () => {
+      if(debounceId) clearTimeout(debounceId);
+      debounceId = setTimeout(renderList, 150);
+    };
+  }
+  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
+  $('confirmOk').onclick = () => {
+    if(selected.size === 0){ toast('선택된 태그가 없습니다', 'warning'); return; }
+    cat.options = cat.options || [];
+    for(const tag of selected){
+      cat.options.push({text: tag, weight: 1.0});
+    }
+    _saveRandomCategoriesDebounced();
+    rcRender();
+    toast(`📖 ${selected.size}개 태그 추가됨 — "${cat.label}"`, 'success');
+    $('confirmModal').classList.remove('open');
+  };
 }
 // 🎴 캐릭터 프리셋 적용 — 빌더의 활성 카테고리들을 ||A|B|C|| 텍스트로 컴파일.
 //    1. 현재 캐릭터 슬롯 (state.characters) 중 하나의 action/prompt 에 추가
@@ -15698,6 +16006,7 @@ function rcWireEvents(){
   $('rcAddBtn')?.addEventListener('click', () => rcAddCategory());
   $('rcDemoBtn')?.addEventListener('click', () => rcDemo());
   $('rcImportBtn')?.addEventListener('click', () => rcImportFromText());
+  $('rcCollapseAllBtn')?.addEventListener('click', () => rcCollapseAll());
   $('rcApplyToCharBtn')?.addEventListener('click', () => rcApplyToCharacter());
   $('rcClearLocksBtn')?.addEventListener('click', () => rcClearAllLocks());
 
@@ -15711,6 +16020,8 @@ function rcWireEvents(){
     const catIdx = parseInt(btn.dataset.catIdx, 10);
     const optIdx = parseInt(btn.dataset.optIdx, 10);
     if(act === 'toggle-enabled') rcToggleEnabled(catIdx);
+    else if(act === 'toggle-collapse') rcToggleCollapse(catIdx);
+    else if(act === 'edit-note') rcEditNote(catIdx);
     else if(act === 'add-opt'){
       const cat = state.randomCategories?.[catIdx];
       if(!cat) return;
@@ -15718,6 +16029,8 @@ function rcWireEvents(){
       if(v != null && v.trim()) rcAddOption(catIdx, v.trim());
     }
     else if(act === 'add-empty') rcAddOption(catIdx, '');
+    else if(act === 'add-from-preset') rcAddFromPreset(catIdx);
+    else if(act === 'add-from-tagdex') rcAddFromTagdex(catIdx);
     else if(act === 'del-opt') rcDelOption(catIdx, optIdx);
     else if(act === 'weight-up') rcAdjustOptWeight(catIdx, optIdx, +0.2);
     else if(act === 'weight-down') rcAdjustOptWeight(catIdx, optIdx, -0.2);
