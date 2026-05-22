@@ -65,6 +65,49 @@ test.describe('NAI Studio smoke', () => {
     expect(hasEmpty + hasCards).toBeGreaterThan(0);
   });
 
+  test('만화 페인 — 레이아웃 5개 노출 + 선택', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#prompt')).toBeVisible({timeout: 10000});
+
+    await page.evaluate(() => window.setMainPane && window.setMainPane('comic'));
+    await expect(page.locator('[data-pane="comic"].main-pane')).toBeVisible();
+
+    // 5개 레이아웃 카드 노출
+    const cards = page.locator('.comic-layout-card');
+    await expect(cards).toHaveCount(5);
+
+    // 첫 카드 클릭 → aria-checked 가 'true' 로
+    await cards.first().click();
+    await expect(cards.first()).toHaveAttribute('aria-checked', 'true');
+    await expect(page.locator('#comicSelected')).toBeVisible();
+    await expect(page.locator('#comicSelectedName')).not.toBeEmpty();
+
+    // 컷별 prompt textarea 가 패널 수만큼 자동 생성 + 시작 버튼 + 비용 정보 노출
+    const ptas = page.locator('.comic-prompt-ta');
+    await expect(ptas.first()).toBeVisible();
+    const count = await ptas.count();
+    expect(count).toBeGreaterThanOrEqual(1);
+    await expect(page.locator('#comicStartBtn')).toBeVisible();
+    await expect(page.locator('#comicCostInfo')).toContainText('Anlas');
+  });
+
+  test('말풍선 편집기 — 마크업 + 도구 노출 (모달 닫힘 상태)', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#prompt')).toBeVisible({timeout: 10000});
+
+    // 모달은 초기엔 닫혀있어야 (.open 클래스 없음)
+    await expect(page.locator('#bubbleModal')).not.toHaveClass(/open/);
+    // 도형 추가 버튼 3종이 DOM 에 존재
+    await expect(page.locator('[data-bubble-add="round"]')).toHaveCount(1);
+    await expect(page.locator('[data-bubble-add="spike"]')).toHaveCount(1);
+    await expect(page.locator('[data-bubble-add="thought"]')).toHaveCount(1);
+    // 텍스트 편집·삭제 버튼은 disabled 로 시작
+    await expect(page.locator('#bubbleEditTextBtn')).toBeDisabled();
+    await expect(page.locator('#bubbleDeleteBtn')).toBeDisabled();
+    // 라이트박스 진입 버튼이 액션 사이드바에 존재
+    await expect(page.locator('#lbBubbles')).toHaveCount(1);
+  });
+
   test('CSP 메타 + 외부 script crossorigin 강제', async ({ page }) => {
     await page.goto('/');
     const csp = await page.locator('meta[http-equiv="Content-Security-Policy"]').count();

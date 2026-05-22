@@ -16,7 +16,8 @@ personal-canvas/
 │   ├── prompt.mjs      parseFreePromptTokens / dedupePromptTags / parseSeqInput
 │   ├── chars.mjs       getCharGroup / groupCharsByWork
 │   ├── seed.mjs        randomSeed / parseSeedInput / RAND_SEED_MAX
-│   └── image.mjs       isSmallTier / aspectRatio / snapTo8 / MEGAPIXEL
+│   ├── image.mjs       isSmallTier / aspectRatio / snapTo8 / MEGAPIXEL
+│   └── comic.mjs       만화 빌더 — LAYOUTS / getPanelMaskCoords / bubbleSvgString / serializeProject
 ├── test/pure.test.mjs  Node 내장 test runner (TZ=UTC 고정)
 └── tools/lint.mjs      외부 의존 0 자체 lint
 ```
@@ -46,6 +47,11 @@ personal-canvas/
 인라인이 아니라 `js/pure/` 에 추가하고 테스트도 같이 작성합니다.
 브라우저는 인라인 카피를 사용하지만, **동일 시그니처**를 유지해 향후 단일
 소스로 합쳐질 수 있게 합니다.
+
+- **함수 미러**: `tools/lint.mjs` 의 `MIRRORED` 배열이 함수 본문 정합성을 검증.
+- **데이터 상수 미러**: `MIRRORED_DATA` 배열이 const 객체/배열 정합성을 검증
+  (예: `comic.mjs` 의 `LAYOUTS` ↔ 인라인 `COMIC_LAYOUTS`).
+  공백·콤마 무시 후 비교 — 한쪽만 수정하면 lint 실패.
 
 ## 4. 데이터 흐름
 

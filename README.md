@@ -21,6 +21,7 @@ npm run lint     # 자체 lint (eval/var/CSP/순수성 검증)
   - `chars.mjs` — 캐릭터 prefix 기반 작품 그룹화
   - `seed.mjs` — NAI seed 입력 파싱·랜덤 시드 생성
   - `image.mjs` — 해상도 tier 판정·종횡비·8 단위 스냅
+  - `comic.mjs` — 만화 빌더 (레이아웃 5종·패널 마스크 좌표·말풍선 SVG·프로젝트 직렬화)
 - `test/pure.test.mjs` — Node 내장 test runner 단위 테스트 (32 케이스)
 - `tools/lint.mjs` — 의존성 없는 자체 lint 스크립트
 - `.github/workflows/ci.yml` — push/PR 시 check + lint + test 자동 실행
