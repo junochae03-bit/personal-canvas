@@ -9303,6 +9303,8 @@ async function runOne(q, apiKey){
       baseImageB64: state.baseImage.b64,
       maskB64: q._comic.maskB64,
       addOrig: true,
+      // 🎨 일관성 — Vibe 참조도 만화 컷에 함께 적용 (기본 mode 분기는 vibe 모드에서만 전달하던 것을 강제)
+      vibeRefs: vibeRefs?.length ? vibeRefs : undefined,
     });
     body.parameters.width = state.baseImage.w;
     body.parameters.height = state.baseImage.h;
@@ -9311,6 +9313,7 @@ async function runOne(q, apiKey){
       baseB64Len: state.baseImage.b64?.length,
       maskB64Len: q._comic.maskB64?.length,
       w: state.baseImage.w, h: state.baseImage.h,
+      vibes: vibeRefs?.length || 0,
     });
   } else if(mode === 't2i'){
     body = buildGenBody({...opts, action: 'generate'});
