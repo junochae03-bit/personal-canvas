@@ -335,7 +335,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .comic-sub{color:var(--t2);font-size:13.5px;line-height:1.6;margin:0}
 .comic-sub strong{color:var(--acc)}
 .comic-layout-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
-.comic-layout-card{background:var(--panel);border:2px solid var(--b1);border-radius:8px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:8px;transition:all .15s;text-align:left;font-family:inherit;color:var(--t1)}
+.comic-layout-card{background:var(--panel);border:2px solid var(--b1);border-radius:8px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:8px;transition:all .15s;text-align:left;font-family:inherit;color:var(--t1);user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
 .comic-layout-card:hover{border-color:var(--acc);background:var(--card)}
 .comic-layout-card:focus-visible{outline:2.5px solid var(--acc);outline-offset:2px}
 .comic-layout-card[aria-checked="true"]{border-color:var(--acc);background:rgba(162,90,31,.08);box-shadow:0 0 0 1px var(--acc) inset}
@@ -13137,31 +13137,32 @@ function renderComicLayoutPicker(){
     const isSel = layout.id === selectedId;
     const customCls = layout.isCustom ? ' is-custom' : '';
     // 사용자 정의 카드에는 ✎ 수정 / ✕ 삭제 버튼 (hover 시 노출)
+    // ⚠ <button> 안의 <button> 은 HTML invalid → 카드를 <div role="radio"> 로 변경
     const customActions = layout.isCustom ? (
       `<div class="comic-layout-actions" aria-label="레이아웃 액션">`
       + `<button type="button" class="cla-btn" data-act="layout-edit" data-layout-id="${esc(layout.id)}" title="이 레이아웃 편집">✎</button>`
       + `<button type="button" class="cla-btn danger" data-act="layout-del" data-layout-id="${esc(layout.id)}" title="이 레이아웃 삭제">✕</button>`
       + `</div>`
     ) : '';
-    return `<button type="button" class="comic-layout-card${customCls}" role="radio" aria-checked="${isSel}" data-layout-id="${esc(layout.id)}">`
+    return `<div class="comic-layout-card${customCls}" role="radio" tabindex="0" aria-checked="${isSel}" data-layout-id="${esc(layout.id)}">`
       + customActions
       + `<div class="comic-layout-thumb">${_comicLayoutThumbSvg(layout)}</div>`
       + `<div class="comic-layout-meta">`
       +   `<div class="comic-layout-name">${esc(layout.name)}</div>`
       +   `<div class="comic-layout-dim">${layout.w}×${layout.h} · ${layout.panels.length}컷</div>`
       + `</div>`
-      + `</button>`;
+      + `</div>`;
   });
   // ✎ 사용자 정의 만들기 카드 — 항상 마지막
   cards.push(
-    `<button type="button" class="comic-layout-card is-custom-add" id="comicCustomAddCard" `
-    + `aria-label="사용자 정의 레이아웃 만들기" data-layout-id="__custom_add__">`
+    `<div class="comic-layout-card is-custom-add" id="comicCustomAddCard" `
+    + `role="button" tabindex="0" aria-label="사용자 정의 레이아웃 만들기" data-layout-id="__custom_add__">`
     + `<div class="comic-layout-thumb" style="display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--t3)">✎</div>`
     + `<div class="comic-layout-meta">`
     +   `<div class="comic-layout-name">사용자 정의${state.comicCustomLayout ? ' (편집)' : ''}</div>`
     +   `<div class="comic-layout-dim">행·열 직접 지정</div>`
     + `</div>`
-    + `</button>`
+    + `</div>`
   );
   picker.innerHTML = cards.join('');
   _updateComicSelectedPanel();
@@ -15968,6 +15969,15 @@ function wireGenerationAndPresetEvents(){
       }
       const card = e.target.closest('.comic-layout-card');
       if(card && card.dataset.layoutId) selectComicLayout(card.dataset.layoutId);
+    });
+    // 키보드 — Enter/Space 로 카드 선택 (div role="radio" 라 button 기본 동작 없음)
+    comicPicker.addEventListener('keydown', e => {
+      const card = e.target.closest('.comic-layout-card');
+      if(!card || !card.dataset.layoutId) return;
+      if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        selectComicLayout(card.dataset.layoutId);
+      }
     });
   }
   const comicInputs = $('comicPanelInputs');
