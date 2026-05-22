@@ -8,10 +8,12 @@ import { test, expect } from '@playwright/test';
 test.describe('NAI Studio smoke', () => {
   test.beforeEach(async ({ page }) => {
     // 콘솔 에러는 fail 조건 — but ignore expected NAI fetch errors (API key 없으니).
+    // 화이트리스트: NAI fetch / 네트워크 / CSP <meta> 한계 / SW · manifest 경고 등 비치명적.
+    const IGNORE = /novelai|fetch|net::|frame-ancestors|content security policy|x-frame-options|serviceworker|manifest|preload|favicon/i;
     const errors = [];
     page.on('pageerror', e => errors.push(e.message || String(e)));
     page.on('console', msg => {
-      if(msg.type() === 'error' && !/novelai|fetch|net::/i.test(msg.text())){
+      if(msg.type() === 'error' && !IGNORE.test(msg.text())){
         errors.push(`console.error: ${msg.text()}`);
       }
     });

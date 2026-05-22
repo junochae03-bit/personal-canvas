@@ -110,8 +110,9 @@ for(const f of htmlFiles){
     fail(f, 'CSP <meta http-equiv="Content-Security-Policy"> 누락');
   } else {
     const csp = cspMatch[2];
-    // 플러그인/iframe/base 변조 차단 디렉티브 — XSS 표면 축소
-    for(const req of ['object-src', 'frame-ancestors', 'base-uri', 'form-action']){
+    // 플러그인/iframe/base 변조 차단 디렉티브 — XSS 표면 축소.
+    // (frame-ancestors 는 HTTP 헤더 전용이라 <meta> 에선 브라우저가 무시 → 검증 제외.)
+    for(const req of ['object-src', 'base-uri', 'form-action']){
       if(!csp.includes(req)){
         fail(f, `CSP 에 ${req} 디렉티브 누락`);
       }
