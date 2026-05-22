@@ -512,6 +512,11 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .bubble-tail-btn:hover:not(:disabled){border-color:var(--acc);color:var(--acc);background:var(--card)}
 .bubble-tail-btn[aria-checked="true"]{border-color:var(--acc);color:var(--acc);background:rgba(162,90,31,.12)}
 .bubble-tail-btn:disabled{opacity:.35;cursor:not-allowed}
+.bubble-font-row{display:flex;flex-direction:column;gap:6px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--b1)}
+.bubble-font-label{font-size:11.5px;color:var(--t2);font-weight:600;display:flex;align-items:center;gap:6px}
+.bubble-font-label select,.bubble-font-label input[type=range]{flex:1;font-size:11.5px;padding:3px 6px;font-family:inherit}
+.bubble-font-label select{background:var(--card);border:1px solid var(--b1);color:var(--t1);border-radius:4px;cursor:pointer;min-height:26px}
+.bubble-font-label:has(select:disabled),.bubble-font-label:has(input:disabled){opacity:.45}
 .bubble-text-modal{width:min(440px,92vw)}
 @media (max-width:880px){
   .bubble-modal{width:96vw}
@@ -3372,6 +3377,20 @@ coffee shop, latte art"></textarea>
             <button type="button" class="bubble-tail-btn" data-tail="none" title="꼬리 없음" disabled>·</button>
             <button type="button" class="bubble-tail-btn" data-tail="bl" title="왼쪽 아래" disabled>↙</button>
             <button type="button" class="bubble-tail-btn" data-tail="br" title="오른쪽 아래" disabled>↘</button>
+          </div>
+          <div class="bubble-font-row">
+            <label class="bubble-font-label">폰트
+              <select id="bubbleFontSel" disabled>
+                <option value="sans">기본 (산세리프)</option>
+                <option value="sans-bold">굵게 (만화체)</option>
+                <option value="serif">세리프</option>
+                <option value="mono">고정폭</option>
+              </select>
+            </label>
+            <label class="bubble-font-label">크기
+              <input type="range" id="bubbleFontSize" min="0" max="48" step="1" value="0" disabled>
+              <span class="bubble-tool-meta" id="bubbleFontSizeVal">자동</span>
+            </label>
           </div>
         </div>
         <div class="bubble-tool-group">
@@ -14199,6 +14218,7 @@ function wrapBubbleText(text, maxCharsPerLine){
 // 인라인 미러 상수 — comic.mjs 의 동일 이름과 정확히 일치해야 lint MIRRORED 통과.
 const BUBBLE_SHAPES = ['round', 'spike', 'thought'];
 const BUBBLE_TAIL_DIRS = ['bl', 'br', 'tl', 'tr', 'none'];
+const BUBBLE_FONTS = ['sans', 'sans-bold', 'serif', 'mono'];
 const MIN_BUBBLE_W = 40;
 const MIN_BUBBLE_H = 30;
 const DEFAULT_BUBBLE_W = 120;
@@ -14263,7 +14283,15 @@ function bubbleSvgString(bubble){
   } else {
     body = `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="white" stroke="black" stroke-width="3" stroke-dasharray="6 4"/>`;
   }
-  const fontSize = Math.max(11, Math.min(20, Math.floor(h / 8)));
+  const baseFs = Math.max(11, Math.min(20, Math.floor(h / 8)));
+  const userFs = Number(bubble.fontSize);
+  const fontSize = (Number.isFinite(userFs) && userFs > 0) ? Math.max(8, Math.min(72, userFs)) : baseFs;
+  const fontKey = BUBBLE_FONTS.includes(bubble.fontFamily) ? bubble.fontFamily : 'sans';
+  let ff, fw;
+  if(fontKey === 'sans-bold'){ ff = "Pretendard, 'Apple SD Gothic Neo', sans-serif"; fw = '900'; }
+  else if(fontKey === 'serif'){ ff = "'Noto Serif KR', serif"; fw = '600'; }
+  else if(fontKey === 'mono'){ ff = "'JetBrains Mono', monospace"; fw = '600'; }
+  else { ff = "Pretendard, 'Noto Sans KR', sans-serif"; fw = '500'; }
   const maxChars = Math.max(4, Math.floor(w / (fontSize * 0.65)));
   const lines = wrapBubbleText(text, maxChars);
   const lineH = fontSize * 1.25;
@@ -14273,7 +14301,7 @@ function bubbleSvgString(bubble){
     `<tspan x="${cx}" y="${(startY + i * lineH).toFixed(1)}">${escXml(line)}</tspan>`
   ).join('');
   const textSvg = lines.length
-    ? `<text text-anchor="middle" font-family="Pretendard, sans-serif" font-size="${fontSize}" fill="black">${textEls}</text>`
+    ? `<text text-anchor="middle" font-family="${ff}" font-size="${fontSize}" font-weight="${fw}" fill="black">${textEls}</text>`
     : '';
   return `<g class="comic-bubble" data-shape="${shape}">${tail}${body}${textSvg}</g>`;
 }
@@ -14380,6 +14408,23 @@ function _renderBubbleEditor(){
     btn.disabled = tailLocked;
     btn.setAttribute('aria-checked', (sel && btn.dataset.tail === (sel.tailDir || 'bl')) ? 'true' : 'false');
   });
+  // 폰트·크기 컨트롤 동기화
+  const fontSel = $('bubbleFontSel');
+  const fontSize = $('bubbleFontSize');
+  const fontSizeVal = $('bubbleFontSizeVal');
+  if(fontSel && fontSize && fontSizeVal){
+    fontSel.disabled = !hasSel;
+    fontSize.disabled = !hasSel;
+    if(hasSel){
+      fontSel.value = BUBBLE_FONTS.includes(sel.fontFamily) ? sel.fontFamily : 'sans';
+      const fs = Number(sel.fontSize);
+      fontSize.value = (Number.isFinite(fs) && fs > 0) ? Math.max(0, Math.min(48, fs)) : 0;
+      fontSizeVal.textContent = (Number(fontSize.value) > 0) ? `${fontSize.value}px` : '자동';
+    } else {
+      fontSize.value = 0;
+      fontSizeVal.textContent = '자동';
+    }
+  }
 }
 
 // SVG 마우스 좌표 → viewBox 좌표 변환 (CSS 축소·DPR 무관)
@@ -14404,7 +14449,7 @@ function _bubbleAdd(shape){
   const off = (_bub.bubbles.length % 6) * 24;
   const x = Math.round((W - w) / 2) + off;
   const y = Math.round((H - h) / 2) + off;
-  _bub.bubbles.push({shape, x, y, w, h, text: '', tailDir: 'bl'});
+  _bub.bubbles.push({shape, x, y, w, h, text: '', tailDir: 'bl', fontFamily: 'sans', fontSize: 0});
   _bub.selIdx = _bub.bubbles.length - 1;
   _renderBubbleEditor();
 }
@@ -16567,6 +16612,21 @@ function wireGenerationAndPresetEvents(){
     const dir = btn.dataset.tail;
     if(!BUBBLE_TAIL_DIRS.includes(dir)) return;
     _bub.bubbles[_bub.selIdx].tailDir = dir;
+    _renderBubbleEditor();
+  });
+  // 폰트·크기 컨트롤
+  $('bubbleFontSel')?.addEventListener('change', e => {
+    if(_bub.selIdx < 0) return;
+    const v = e.target.value;
+    if(!BUBBLE_FONTS.includes(v)) return;
+    _bub.bubbles[_bub.selIdx].fontFamily = v;
+    _renderBubbleEditor();
+  });
+  $('bubbleFontSize')?.addEventListener('input', e => {
+    if(_bub.selIdx < 0) return;
+    const v = parseInt(e.target.value, 10);
+    _bub.bubbles[_bub.selIdx].fontSize = Number.isFinite(v) && v > 0 ? v : 0;
+    $('bubbleFontSizeVal').textContent = (v > 0) ? `${v}px` : '자동';
     _renderBubbleEditor();
   });
 
