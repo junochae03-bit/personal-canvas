@@ -14,7 +14,7 @@ import { MEGAPIXEL, isSmallTier, aspectRatio, snapTo8 } from '../js/pure/image.m
 import { toChosung, isAllChosung, koMatch, highlightMatch } from '../js/pure/korean.mjs';
 import { pickFirst, sanitizeCharacter, sanitizeCharacters, extractNaiFields } from '../js/pure/naiMeta.mjs';
 import { expandRandomChoices, listRandomChoices, countRandomCombinations, hasCameraAngle, pickWeightedOption, guessCategoryLabel, compileCategoriesToText } from '../js/pure/randomChoice.mjs';
-import { LAYOUTS, BUBBLE_SHAPES, getLayout, getPanelMaskCoords, wrapBubbleText, bubbleSvgString, serializeProject, parseProject } from '../js/pure/comic.mjs';
+import { LAYOUTS, BUBBLE_SHAPES, getLayout, getPanelMaskCoords, wrapBubbleText, bubbleSvgString, serializeProject, parseProject, pageTemplateSvg, panelMaskSvg } from '../js/pure/comic.mjs';
 
 // ────────────── utils ──────────────
 test('esc: HTML 특수문자 5종 이스케이프', () => {
@@ -676,4 +676,52 @@ test('parseProject: round-trip 보존', () => {
   assert.equal(restored.panels[2].prompt, 'C');
   assert.equal(restored.bubbles[0].shape, 'spike');
   assert.equal(restored.bubbles[0].tailDir, 'br');
+});
+
+test('pageTemplateSvg: 페이지 크기 + 모든 패널 rect 포함', () => {
+  const layout = getLayout('4grid');
+  const svg = pageTemplateSvg(layout);
+  assert.match(svg, /<svg[^>]*width="1024"[^>]*height="1024"/);
+  assert.match(svg, /viewBox="0 0 1024 1024"/);
+  // 외곽 검은 + 패널 4개 = rect 5개
+  assert.equal((svg.match(/<rect/g) || []).length, 5);
+  assert.match(svg, /fill="white"/);
+  assert.match(svg, /stroke="black"/);
+});
+
+test('pageTemplateSvg: gutter 0 인 1wide 도 안전', () => {
+  const layout = getLayout('1wide');
+  const svg = pageTemplateSvg(layout);
+  assert.match(svg, /width="1216"/);
+  assert.equal((svg.match(/<rect/g) || []).length, 2);  // 배경 + 패널 1
+});
+
+test('pageTemplateSvg: null 입력 → 빈 문자열', () => {
+  assert.equal(pageTemplateSvg(null), '');
+});
+
+test('panelMaskSvg: 페이지 크기 + 흰색은 지정 패널만', () => {
+  const layout = getLayout('4grid');
+  const mask = panelMaskSvg(layout, 1, 0);
+  assert.match(mask, /<svg[^>]*width="1024"[^>]*height="1024"/);
+  // 검은 배경 1개 + 흰 패널 1개
+  assert.equal((mask.match(/<rect/g) || []).length, 2);
+  assert.match(mask, /fill="black"/);
+  assert.match(mask, /fill="white"/);
+  // 패널 1 (오른쪽 위) 좌표 — feather=0 이면 정확히 패널 좌표
+  assert.match(mask, /x="518"\s+y="0"/);
+});
+
+test('panelMaskSvg: feather 기본값 4 적용', () => {
+  const layout = getLayout('2v');
+  const mask = panelMaskSvg(layout, 0);
+  // feather=4 → x=-4, y=-4, w=832+8=840, h=600+8=608
+  assert.match(mask, /x="-4"\s+y="-4"/);
+  assert.match(mask, /width="840"/);
+});
+
+test('panelMaskSvg: 잘못된 인덱스 → 빈 문자열', () => {
+  const layout = getLayout('2v');
+  assert.equal(panelMaskSvg(layout, 99), '');
+  assert.equal(panelMaskSvg(null, 0), '');
 });

@@ -228,3 +228,41 @@ export function parseProject(data){
   if(data.schemaVersion !== SCHEMA_VERSION) return null;
   return serializeProject(data);
 }
+
+/**
+ * 페이지 템플릿 SVG — 빈 만화 페이지. 흰 배경 + 검은 패널 보더.
+ * 브라우저: SVG → Image → Canvas → PNG b64 로 변환해 state.baseImage 에 주입.
+ * borderPx 는 패널 사이 검은 선의 두께. layout.gutter 가 두 패널 사이 공백이므로
+ * 보더는 gutter 의 절반 가량으로 그려서 패널 영역을 침범하지 않게 함.
+ */
+export function pageTemplateSvg(layout){
+  if(!layout) return '';
+  const border = Math.max(2, Math.floor((layout.gutter || 12) * 0.7));
+  const half = border / 2;
+  // 외곽 검은 테두리 + 각 패널 영역 안쪽 흰색 + 패널 보더.
+  // stroke 가 좌표 중심 기준이므로 inset 처리로 패널 안쪽 흰색 영역을 보존.
+  const panelRects = layout.panels.map(p =>
+    `<rect x="${p.x + half}" y="${p.y + half}" width="${p.w - border}" height="${p.h - border}" `
+    + `fill="white" stroke="black" stroke-width="${border}"/>`
+  ).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.w}" height="${layout.h}" viewBox="0 0 ${layout.w} ${layout.h}">`
+    + `<rect width="${layout.w}" height="${layout.h}" fill="black"/>`
+    + panelRects
+    + `</svg>`;
+}
+
+/**
+ * 패널 마스크 SVG — 지정 패널만 흰색(인페인트 영역), 나머지 검은색(보존).
+ * NAI 마스크 규약: 흰 = 새로 그림, 검정 = 원본 유지.
+ * 마스크는 패널 보더를 살짝 침범해서(featherPx) NAI 가 경계를 자연스럽게 만들도록.
+ */
+export function panelMaskSvg(layout, panelIndex, featherPx){
+  if(!layout) return '';
+  const p = layout.panels[panelIndex];
+  if(!p) return '';
+  const f = (typeof featherPx === 'number' && featherPx >= 0) ? featherPx : 4;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.w}" height="${layout.h}" viewBox="0 0 ${layout.w} ${layout.h}">`
+    + `<rect width="${layout.w}" height="${layout.h}" fill="black"/>`
+    + `<rect x="${p.x - f}" y="${p.y - f}" width="${p.w + 2*f}" height="${p.h + 2*f}" fill="white"/>`
+    + `</svg>`;
+}

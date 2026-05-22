@@ -347,6 +347,14 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .comic-selected-head strong{color:var(--acc);font-size:15px}
 .comic-selected-head .muted{color:var(--t3);font-size:11.5px;font-family:var(--mono)}
 .comic-todo-note{color:var(--t2);font-size:12.5px;line-height:1.6;background:var(--panel);padding:10px 12px;border-radius:6px;border-left:3px solid var(--acc)}
+.comic-panel-inputs{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.comic-panel-input{display:flex;flex-direction:column;gap:4px}
+.comic-panel-input label{font-size:12.5px;color:var(--t2);font-weight:600;display:flex;align-items:center;gap:8px}
+.comic-panel-input label .muted{color:var(--t3);font-weight:500;font-family:var(--mono);font-size:11px}
+.comic-prompt-ta{width:100%;min-height:50px;resize:vertical;font-size:13px;padding:8px 10px}
+.comic-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:6px}
+.comic-actions .btn.primary{min-height:38px;font-size:14px;padding:9px 18px}
+.comic-cost-info{font-size:12px;color:var(--t3);font-family:var(--mono)}
 @media (max-width:880px){
   .comic-body{padding:14px 12px;gap:14px}
   .comic-title{font-size:18px}
@@ -2502,8 +2510,14 @@ mark{
               <strong id="comicSelectedName"></strong>
               <span class="muted" id="comicSelectedDim"></span>
             </div>
+            <div class="comic-panel-inputs" id="comicPanelInputs"></div>
+            <div class="comic-actions">
+              <button type="button" class="btn primary" id="comicStartBtn">🎞 만화 생성 시작 <span class="en">Generate Comic</span></button>
+              <span class="comic-cost-info" id="comicCostInfo"></span>
+            </div>
             <div class="comic-todo-note">
-              💡 컷별 프롬프트 입력·생성·말풍선 편집기는 다음 PR 에서 추가됩니다. 현재는 레이아웃 선택만 동작합니다.
+              💡 각 컷에 프롬프트를 입력하고 시작하세요. 캐릭터 일관성을 위해 편집 모드의 캐릭터·Vibe 가 그대로 적용됩니다.
+              말풍선 편집기는 다음 PR 에서 추가됩니다 — 현재는 PNG 페이지가 갤러리에 저장됩니다.
             </div>
           </div>
         </div>
@@ -8975,16 +8989,21 @@ async function runOne(q, apiKey){
     body.parameters.height = baseImage.h;
   } else if(mode === 'inpaint'){
     if(!baseImage){ throw new Error('베이스 이미지가 필요합니다'); }
-    if(!inpaintMask){ throw new Error('마스크가 필요합니다'); }
+    // 🎞 만화 큐 — 베이스는 state.baseImage (전 패널 결과로 매번 갱신), 마스크는 큐 아이템에서.
+    //   add_original_image 는 항상 true — 다른 패널을 그대로 보존해야 함.
+    const isComic = !!q._comic;
+    const activeBase = isComic ? state.baseImage : baseImage;
+    const activeMask = isComic ? q._comic.maskB64 : inpaintMask;
+    if(!activeMask){ throw new Error('마스크가 필요합니다'); }
     body = buildGenBody({
       ...opts,
       action: 'infill',
-      baseImageB64: baseImage.b64,
-      maskB64: inpaintMask,
-      addOrig: inpAddOrig
+      baseImageB64: activeBase.b64,
+      maskB64: activeMask,
+      addOrig: isComic ? true : inpAddOrig
     });
-    body.parameters.width = baseImage.w;
-    body.parameters.height = baseImage.h;
+    body.parameters.width = activeBase.w;
+    body.parameters.height = activeBase.h;
   } else if(mode === 'vibe'){
     if(!vibeRefs?.length){ throw new Error('Vibe 참조 이미지가 필요합니다'); }
     body = buildGenBody({
@@ -10748,6 +10767,21 @@ async function afterImage(blob, q){
     }
   }
   q.blobId = id;
+  // 🎞 만화 모드 — 결과를 다음 패널의 베이스로 사용 (체이닝).
+  //   마지막 패널이면 만화 모드 플래그 해제 + 완료 토스트.
+  if(q._comic && state._comicActive){
+    try {
+      state.baseImage = await _comicBlobToBaseImage(blob, q.meta.w, q.meta.h);
+    } catch(e){ _swallow(e, 'comic:nextBase'); }
+    const remaining = state.queue.some(x => x !== q && x._comic && x.status === 'wait');
+    if(!remaining){
+      state._comicActive = false;
+      // 베이스·마스크 잔류 방지 — 편집 모드 i2i/inpaint 가 만화 페이지를 베이스로 잘못 쓰는 사고 차단.
+      state.baseImage = null;
+      state.inpaintMask = null;
+      toast(`🎞 만화 완성 — ${q._comic.panelIndex + 1}컷 모두 생성됨. 갤러리에서 확인하세요`, 'success');
+    }
+  }
   // Refresh gallery if visible
   if(state.mainPane === 'gallery') await loadGallery();
   await refreshGallerySize();
@@ -12700,6 +12734,150 @@ function selectComicLayout(layoutId){
     card.setAttribute('aria-checked', card.dataset.layoutId === layoutId ? 'true' : 'false');
   });
   _updateComicSelectedPanel();
+  _renderComicPanelInputs();
+  _refreshComicCost();
+}
+
+// 🎞 페이지 템플릿 SVG — 빈 만화 페이지 (흰 배경 + 검은 패널 보더).
+//   ※ js/pure/comic.mjs 의 pageTemplateSvg 와 단일소스 미러 (lint MIRRORED 검증).
+function pageTemplateSvg(layout){
+  if(!layout) return '';
+  const border = Math.max(2, Math.floor((layout.gutter || 12) * 0.7));
+  const half = border / 2;
+  const panelRects = layout.panels.map(p =>
+    `<rect x="${p.x + half}" y="${p.y + half}" width="${p.w - border}" height="${p.h - border}" `
+    + `fill="white" stroke="black" stroke-width="${border}"/>`
+  ).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.w}" height="${layout.h}" viewBox="0 0 ${layout.w} ${layout.h}">`
+    + `<rect width="${layout.w}" height="${layout.h}" fill="black"/>`
+    + panelRects
+    + `</svg>`;
+}
+
+// 🎞 패널 마스크 SVG — 지정 패널만 흰색, 나머지 검정. NAI 마스크 규약: 흰=새로그림, 검정=보존.
+//   ※ js/pure/comic.mjs 의 panelMaskSvg 와 단일소스 미러 (lint MIRRORED 검증).
+function panelMaskSvg(layout, panelIndex, featherPx){
+  if(!layout) return '';
+  const p = layout.panels[panelIndex];
+  if(!p) return '';
+  const f = (typeof featherPx === 'number' && featherPx >= 0) ? featherPx : 4;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.w}" height="${layout.h}" viewBox="0 0 ${layout.w} ${layout.h}">`
+    + `<rect width="${layout.w}" height="${layout.h}" fill="black"/>`
+    + `<rect x="${p.x - f}" y="${p.y - f}" width="${p.w + 2*f}" height="${p.h + 2*f}" fill="white"/>`
+    + `</svg>`;
+}
+
+// 🖼 SVG 문자열 → PNG b64. NAI infill 의 image/mask 필드 형식과 호환.
+//   Blob URL 경유 — data:URI 보다 큰 SVG 도 안전, CORS 영향 없음.
+function _svgToPngB64(svgStr, w, h){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const blob = new Blob([svgStr], {type: 'image/svg+xml'});
+    const url = URL.createObjectURL(blob);
+    img.onload = () => {
+      try {
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        const ctx = cv.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        const b64 = cv.toDataURL('image/png').split(',')[1];
+        resolve(b64);
+      } catch(e){ URL.revokeObjectURL(url); reject(e); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('SVG 로드 실패')); };
+    img.src = url;
+  });
+}
+
+// 🎞 blob (NAI 응답) → state.baseImage 형식 {blob, dataURL, w, h, b64}.
+//   afterImage 가 만화 모드일 때 다음 패널의 베이스로 사용.
+async function _comicBlobToBaseImage(blob, w, h){
+  const dataURL = await blobToDataURL(blob);
+  const b64 = dataURL.split(',')[1];
+  return { blob, dataURL, w, h, b64 };
+}
+
+// 🎞 컷별 프롬프트 입력 UI — 선택된 레이아웃 의 패널 수만큼 textarea 생성.
+function _renderComicPanelInputs(){
+  const host = $('comicPanelInputs');
+  if(!host) return;
+  const layout = COMIC_LAYOUTS.find(l => l.id === state.comicLayoutId);
+  if(!layout){ host.innerHTML = ''; return; }
+  // 기존 입력값 보존 — 같은 레이아웃 ID 면 textarea value 가 유지됨
+  const prev = state._comicPanelPrompts || [];
+  host.innerHTML = layout.panels.map((p, i) => {
+    const val = esc(prev[i] || '');
+    return `<div class="comic-panel-input">`
+      +   `<label for="comicPrompt${i}">컷 ${i+1} <span class="muted">${p.w}×${p.h}</span></label>`
+      +   `<textarea id="comicPrompt${i}" class="ta comic-prompt-ta" rows="2" `
+      +     `placeholder="이 컷의 프롬프트 (예: girl close-up, smiling, school uniform)" `
+      +     `data-panel-idx="${i}">${val}</textarea>`
+      + `</div>`;
+  }).join('');
+}
+
+// 🧮 Anlas 비용 미리 계산 — 모든 패널이 페이지 전체 크기로 인페인트되므로 패널 수 × 페이지 비용.
+function _refreshComicCost(){
+  const el = $('comicCostInfo');
+  if(!el) return;
+  const layout = COMIC_LAYOUTS.find(l => l.id === state.comicLayoutId);
+  if(!layout){ el.textContent = ''; return; }
+  const steps = parseInt($('steps')?.value, 10) || 28;
+  const perPanel = anlasCostFor({w: layout.w, h: layout.h, steps});
+  const total = perPanel * layout.panels.length;
+  el.textContent = `예상 Anlas: ${total} (${perPanel} × ${layout.panels.length}컷)`;
+}
+
+// 🎞 만화 생성 시작 — 페이지 템플릿·패널 마스크 만들어서 큐에 주입 후 startGeneration 호출.
+async function startComicGeneration(){
+  const layout = COMIC_LAYOUTS.find(l => l.id === state.comicLayoutId);
+  if(!layout){ toast('레이아웃을 먼저 선택하세요', 'warning'); return; }
+  if(state.running){ stopGeneration(); return; }
+  // 컷별 프롬프트 수집 + 빈 컷 검증
+  const prompts = layout.panels.map((_, i) =>
+    (($('comicPrompt'+i)?.value) || '').trim()
+  );
+  const emptyIdx = prompts.findIndex(p => !p);
+  if(emptyIdx >= 0){
+    toast(`컷 ${emptyIdx+1} 의 프롬프트가 비어있어요`, 'warning');
+    $('comicPrompt'+emptyIdx)?.focus();
+    return;
+  }
+  const apiKey = $('apiKey').value.trim();
+  if(!apiKey){ toast('API 키(pst-...)를 먼저 입력하세요 — 설정 → 보안', 'error'); return; }
+  // 다음 호출에도 입력 보존
+  state._comicPanelPrompts = prompts.slice();
+  // 페이지 템플릿 + 패널 마스크 미리 생성 (한 번만)
+  let pageB64, maskB64s;
+  try {
+    pageB64 = await _svgToPngB64(pageTemplateSvg(layout), layout.w, layout.h);
+    maskB64s = await Promise.all(layout.panels.map((_, i) =>
+      _svgToPngB64(panelMaskSvg(layout, i), layout.w, layout.h)
+    ));
+  } catch(e){
+    toast(`만화 페이지 준비 실패 — ${e.message||e}\n브라우저 캔버스가 차단됐을 수 있어요. 새로고침 후 재시도`, 'error');
+    return;
+  }
+  // 페이지 템플릿을 베이스 이미지로 주입 (data URL 포함 — 정밀한 b64 그대로 보존)
+  const pageDataURL = 'data:image/png;base64,' + pageB64;
+  state.baseImage = { blob: null, dataURL: pageDataURL, w: layout.w, h: layout.h, b64: pageB64 };
+  state.inpaintMask = maskB64s[0];   // runOne 의 기본 inpaint 분기가 안전하게 통과하도록
+  state.mode = 'inpaint';            // validateForGeneration 통과용 (만화 큐는 자체 분기)
+  // 만화 큐 빌드 — _comic 표식 + 라벨 사전 확정 (자동 라벨 우회)
+  state.queue = layout.panels.map((_, i) => ({
+    id: _qSeq++,
+    status: 'wait',
+    label: `컷${i+1}`,
+    _labelFinalized: true,
+    _labelIsName: true,
+    promptOverride: prompts[i],
+    _comic: { layoutId: layout.id, panelIndex: i, maskB64: maskB64s[i] },
+  }));
+  state._customQueue = true;
+  state._comicActive = true;          // afterImage 가 만화 분기 인지하도록
+  toast(`🎞 만화 생성 시작 — ${layout.panels.length}컷 (${layout.w}×${layout.h})`, 'info');
+  startGeneration();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -14431,7 +14609,7 @@ function wireGenerationAndPresetEvents(){
   // 키타이핑마다 grid.innerHTML 재구성 → 200+ 프리셋에서 input race. 다른 검색바와 동일하게 80ms debounce.
   $('presetSearch').addEventListener('input', debounce(renderPresets, 80));
 
-  // 🎞 Comic — 레이아웃 카드 클릭 위임
+  // 🎞 Comic — 레이아웃 카드 클릭 위임 + 시작 버튼 + 컷별 textarea 입력 보존 + steps 변경 시 비용 갱신
   const comicPicker = $('comicLayoutPicker');
   if(comicPicker){
     comicPicker.addEventListener('click', e => {
@@ -14439,6 +14617,21 @@ function wireGenerationAndPresetEvents(){
       if(card && card.dataset.layoutId) selectComicLayout(card.dataset.layoutId);
     });
   }
+  const comicInputs = $('comicPanelInputs');
+  if(comicInputs){
+    comicInputs.addEventListener('input', e => {
+      const ta = e.target.closest('.comic-prompt-ta');
+      if(!ta) return;
+      const idx = parseInt(ta.dataset.panelIdx, 10);
+      if(!Number.isFinite(idx)) return;
+      if(!Array.isArray(state._comicPanelPrompts)) state._comicPanelPrompts = [];
+      state._comicPanelPrompts[idx] = ta.value;
+    });
+  }
+  const comicStart = $('comicStartBtn');
+  if(comicStart) comicStart.addEventListener('click', startComicGeneration);
+  // steps 변경 → 만화 비용 갱신 (만화 페인에서만 표시되지만 항상 최신 유지)
+  $('steps')?.addEventListener('input', _refreshComicCost);
 
   // Tag Codex 이벤트
   $('tagCats').addEventListener('click', e => {

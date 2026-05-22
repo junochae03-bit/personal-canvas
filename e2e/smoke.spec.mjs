@@ -81,6 +81,14 @@ test.describe('NAI Studio smoke', () => {
     await expect(cards.first()).toHaveAttribute('aria-checked', 'true');
     await expect(page.locator('#comicSelected')).toBeVisible();
     await expect(page.locator('#comicSelectedName')).not.toBeEmpty();
+
+    // 컷별 prompt textarea 가 패널 수만큼 자동 생성 + 시작 버튼 + 비용 정보 노출
+    const ptas = page.locator('.comic-prompt-ta');
+    await expect(ptas.first()).toBeVisible();
+    const count = await ptas.count();
+    expect(count).toBeGreaterThanOrEqual(1);
+    await expect(page.locator('#comicStartBtn')).toBeVisible();
+    await expect(page.locator('#comicCostInfo')).toContainText('Anlas');
   });
 
   test('CSP 메타 + 외부 script crossorigin 강제', async ({ page }) => {
