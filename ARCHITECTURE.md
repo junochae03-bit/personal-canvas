@@ -16,7 +16,8 @@ personal-canvas/
 │   ├── prompt.mjs      parseFreePromptTokens / dedupePromptTags / parseSeqInput
 │   ├── chars.mjs       getCharGroup / groupCharsByWork
 │   ├── seed.mjs        randomSeed / parseSeedInput / RAND_SEED_MAX
-│   └── image.mjs       isSmallTier / aspectRatio / snapTo8 / MEGAPIXEL
+│   ├── image.mjs       isSmallTier / aspectRatio / snapTo8 / MEGAPIXEL
+│   └── comic.mjs       만화 빌더 — LAYOUTS / getPanelMaskCoords / bubbleSvgString / serializeProject
 ├── test/pure.test.mjs  Node 내장 test runner (TZ=UTC 고정)
 └── tools/lint.mjs      외부 의존 0 자체 lint
 ```
