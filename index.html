@@ -9453,6 +9453,29 @@ async function runOne(q, apiKey){
   };
   state.lastSeed = q.seed;
   recordSeedHistory(q.seed);
+  // 🎨 만화 + Vibe + inpaint 호환 fallback —
+  // NAI 의 v4-5-full-inpainting 등 일부 인페인트 모델이 reference_image_multiple 조합에서 500 반환.
+  // 첫 시도가 500 이고 vibe 가 포함됐다면 vibe 빼고 1회 재시도. 사용자 일관성은 캐릭터·시드·좌표로 유지.
+  if(q._comic && body.parameters.reference_image_multiple){
+    try {
+      return await naiGenerate(apiKey, body, state.abortCtrl.signal);
+    } catch(e){
+      const isFiveHundred = /500|Internal Server Error/i.test(e?.message || '');
+      if(!isFiveHundred) throw e;
+      console.warn('[comic:vibeFallback] inpaint + vibe 가 500 → vibe 빼고 재시도', e?.message);
+      delete body.parameters.reference_image_multiple;
+      delete body.parameters.reference_information_extracted_multiple;
+      delete body.parameters.reference_strength_multiple;
+      delete body.parameters.reference_image;
+      delete body.parameters.reference_information_extracted;
+      delete body.parameters.reference_strength;
+      if(!state._comicVibeFallbackToasted){
+        state._comicVibeFallbackToasted = true;
+        toast('⚠ Vibe + 인페인트 모델 조합이 NAI 측에서 거부됨 — Vibe 없이 진행. 캐릭터·시드·좌표로 일관성 유지', 'warning');
+      }
+      return await naiGenerate(apiKey, body, state.abortCtrl.signal);
+    }
+  }
   return await naiGenerate(apiKey, body, state.abortCtrl.signal);
 }
 
@@ -14157,6 +14180,7 @@ async function startComicGeneration(){
     }));
   state._customQueue = true;
   state._comicActive = true;
+  state._comicVibeFallbackToasted = false;   // 새 만화 시작마다 한 번만 안내
   // 모든 컷이 매핑되면 NAI 호출 없이 페이지만 갤러리에 저장
   if(state.queue.length === 0){
     try {
