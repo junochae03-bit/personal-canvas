@@ -833,11 +833,11 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   .logo .sub{display:none}
   #apiKey{width:70px;font-size:11px;padding:5px 7px;min-height:0}
   .pill{padding:2px 7px;font-size:10px;border-radius:10px}
-  /* 모바일 터치 타깃 — 44px 가이드 충족 */
-  .iconbtn{width:42px;height:42px;font-size:14px;border-radius:5px;min-width:42px}
-  .gal-zoom .iconbtn{width:38px;height:38px;font-size:16px;min-width:38px}
+  /* 모바일 터치 타깃 — WCAG 2.5.5 권고 44×44px CSS 픽셀 충족 */
+  .iconbtn{width:44px;height:44px;font-size:14px;border-radius:5px;min-width:44px}
+  .gal-zoom .iconbtn{width:44px;height:44px;font-size:16px;min-width:44px}
   .gal-zoom{padding:3px}
-  .weight-row .w-btn{width:36px;height:36px;font-size:15px;min-width:36px}
+  .weight-row .w-btn{width:44px;height:44px;font-size:15px;min-width:44px}
   .tb-group{gap:4px}
 
   /* MODE BAR — 한 줄 5탭, 작고 컴팩트 */
@@ -3074,7 +3074,7 @@ function _dbErrToast(e, op){
   } else if(name === 'TimeoutError'){
     toast(`💾 저장 지연 — 잠시 후 재시도 (${op})`, 'warning');
   } else if(op){
-    toast(`💾 저장 실패: ${err?.message || name || '알 수 없는 오류'} (${op})`, 'error');
+    toast(`💾 저장 실패 (${op}) — ${err?.message || name || '알 수 없는 오류'}\n새로고침해도 안 되면 설정 → 백업으로 데이터 내보낸 뒤 갤러리 정리 권장`, 'error');
   }
 }
 
@@ -3321,7 +3321,7 @@ function toggleFullscreen(){
     try {
       handle(req.call(el, {navigationUI: 'hide'}));
     } catch(e){
-      try { handle(req.call(el)); } catch(e2){ toast('전체화면 진입 실패: ' + (e2.message||e2), 'error'); }
+      try { handle(req.call(el)); } catch(e2){ toast(`전체화면 진입 실패 — ${e2.message||e2}\n브라우저가 전체화면을 차단했을 수 있어요. 주소창 자물쇠 → 권한 확인 또는 F11 사용`, 'error'); }
     }
   }
 }
@@ -5398,7 +5398,7 @@ async function importPngExifToForm(file){
     }
   } catch(e){
     console.warn('[EXIF import]', e);
-    toast(`EXIF 추출 실패: ${e?.message || '알 수 없는 오류'}`, 'error');
+    toast(`EXIF 추출 실패 — ${e?.message || '알 수 없는 오류'}\nNAI 가 생성하지 않은 이미지이거나 PNG 메타가 손상됐을 수 있어요`, 'error');
   }
 }
 
@@ -5434,7 +5434,7 @@ async function applyExifFromGalleryImage(imgId){
     }
   } catch(e){
     console.warn('[gallery exif]', e);
-    toast(`EXIF 추출 실패: ${e?.message || e}`, 'error');
+    toast(`EXIF 추출 실패 — ${e?.message || e}\n갤러리에 저장된 이미지가 손상됐을 수 있어요. 라이트박스에서 원본 다운로드 후 재확인 권장`, 'error');
   }
 }
 
@@ -6690,7 +6690,7 @@ async function importPresetFile(file, opts){
     }
   } catch(e){
     hideImportProgress();
-    toast(`${file.name} 가져오기 실패: ${e.message||e}`, 'error');
+    toast(`${file.name} 가져오기 실패 — ${e.message||e}\n지원 형식: NAI 가 생성한 PNG, 프리셋 JSON, 백업 ZIP`, 'error');
     console.error('Import error:', e);
   }
   return result;
@@ -6799,7 +6799,7 @@ async function _buildSingleZip(images, zipName, onProgress){
     return true;
   } catch(e){
     console.error('[zip]', e);
-    toast('ZIP 생성 실패: ' + (e.message || e), 'error');
+    toast(`ZIP 생성 실패 — ${e.message || e}\n선택 항목이 많거나 메모리가 부족할 수 있어요. 갤러리를 여러 청크로 나눠 백업해 보세요`, 'error');
     return false;
   }
 }
@@ -6955,7 +6955,7 @@ function openRestoreModal(){
       const data = JSON.parse(text);
       renderRestoreOptions(f.name, data);
     } catch(err){
-      toast('파일 읽기 실패: ' + err.message, 'error');
+      toast(`파일 읽기 실패 — ${err.message}\nJSON 형식이 올바른지, 또는 다른 도구에서 손상되지 않았는지 확인하세요`, 'error');
     }
   };
   $('hiddenFile').accept = 'application/json';
@@ -7234,7 +7234,7 @@ async function doSelectiveRestore(){
     }
   } catch(e){
     hideImportProgress();
-    toast('복원 실패: ' + e.message, 'error');
+    toast(`복원 실패 — ${e.message}\n이 도구가 내보낸 JSON·ZIP 백업만 지원해요. 파일이 손상됐을 가능성도 있어요`, 'error');
     console.error('Restore error', e);
   }
 }
@@ -7461,7 +7461,7 @@ async function pickOutputDirectory(){
     toast(`📂 출력 폴더: "${handle.name}"`, 'success');
   } catch(e){
     if(e.name === 'AbortError') return;
-    toast('폴더 선택 실패: ' + (e.message||e), 'error');
+    toast(`폴더 선택 실패 — ${e.message||e}\nChrome·Edge 만 지원해요. Safari·Firefox 에서는 매번 다운로드 폴더에 저장됩니다`, 'error');
   }
 }
 
@@ -9242,7 +9242,7 @@ async function _wfThumb(){
   if(!state.lastImage?.blob) return null;
   try {
     return await blobToCompressedThumb(state.lastImage.blob, 120);
-  } catch(_){ return null; }
+  } catch(e){ _swallow(e, 'workflow:thumb'); return null; }
 }
 
 async function workflowSave(name){
@@ -11145,7 +11145,7 @@ function applyGalZoom(){
   const inB = $('galZoomIn'), outB = $('galZoomOut');
   if(outB) outB.disabled = _galZoom <= 0;
   if(inB) inB.disabled = _galZoom >= GAL_ZOOM_LEVELS.length - 1;
-  localStorage.setItem('nai_galzoom', String(_galZoom));
+  try { localStorage.setItem('nai_galzoom', String(_galZoom)); } catch(e){ _swallow(e, 'lsSet:galzoom'); }
 }
 
 function setGalZoom(delta){
@@ -11171,7 +11171,7 @@ function applyPreZoom(){
   const inB = $('presetZoomIn'), outB = $('presetZoomOut');
   if(outB) outB.disabled = _preZoom <= 0;
   if(inB) inB.disabled = _preZoom >= PRE_ZOOM_LEVELS.length - 1;
-  localStorage.setItem('nai_prezoom', String(_preZoom));
+  try { localStorage.setItem('nai_prezoom', String(_preZoom)); } catch(e){ _swallow(e, 'lsSet:prezoom'); }
 }
 function setPreZoom(delta){
   const next = Math.max(0, Math.min(PRE_ZOOM_LEVELS.length-1, _preZoom + delta));
@@ -12195,7 +12195,7 @@ async function tplLoadTemplates(){
   try {
     const saved = await DB.getFlag('templates');
     state.templates = Array.isArray(saved) ? saved : [];
-  } catch(_){ state.templates = []; }
+  } catch(e){ _swallow(e, 'templates:load'); state.templates = []; }
 }
 
 let _tplAlbumFilter = '__all__';  // '__all__' | '__none__' | 앨범명
@@ -14521,7 +14521,7 @@ function wireGalleryEvents(){
     const grid = $('galleryGrid');
     grid.classList.toggle('compact', mode === 'compact');
     grid.dataset.view = mode;
-    localStorage.setItem('nai_gv', mode);
+    try { localStorage.setItem('nai_gv', mode); } catch(e){ _swallow(e, 'lsSet:galView'); }
     // 📁 앨범 전체 펼침/접기 — album view에서만 노출
     const showAlb = (mode === 'album') ? '' : 'none';
     if($('galAlbumsExpandAll')) $('galAlbumsExpandAll').style.display = showAlb;
@@ -14580,7 +14580,7 @@ function wireGalleryEvents(){
     e.currentTarget.innerHTML = on
       ? '🙈 본문 숨기기 <span class="en" style="opacity:.6">Hide</span>'
       : '👁 본문 표시 <span class="en" style="opacity:.6">Text</span>';
-    localStorage.setItem('nai_pre_psub', on ? '1' : '0');
+    try { localStorage.setItem('nai_pre_psub', on ? '1' : '0'); } catch(e){ _swallow(e, 'lsSet:prePsub'); }
   });
   $('previewGenBtn').addEventListener('click', openPreviewGenModal);
   // 편집 뷰 사이드바의 진입점도 같이 (모델·생성 옵션 카드 안)
@@ -15114,7 +15114,7 @@ function wireLightboxEvents(){
       await refreshGallerySize();
       toast('✅ Enhance 완료 → 갤러리 저장됨', 'success');
     } catch(e){
-      toast('Enhance 실패: ' + (e.message || e), 'error');
+      toast(`Enhance 실패 — ${e.message || e}\nAnlas 잔량과 API 키 권한을 확인하세요. 5분 후에도 실패하면 NAI 서버 점검 가능성`, 'error');
       console.error('Enhance', e);
     }
   });
@@ -15142,7 +15142,7 @@ function wireLightboxEvents(){
       await refreshGallerySize();
       toast(`✅ 4배 업스케일 완료 (${w*4}×${h*4}) → 갤러리`, 'success');
     } catch(e){
-      toast('업스케일 실패: ' + (e.message || e), 'error');
+      toast(`업스케일 실패 — ${e.message || e}\nAnlas 잔량 확인. 1MP 이상 큰 이미지는 4배 업스케일이 지원되지 않을 수 있어요`, 'error');
       console.error('Upscale', e);
     }
   });
@@ -16038,7 +16038,7 @@ async function rcExportCategory(catIdx){
       document.execCommand('copy');
       ta.remove();
       toast('📤 복사됨', 'success');
-    } catch(e2){ toast('클립보드 복사 실패', 'error'); }
+    } catch(e2){ toast('클립보드 복사 실패 — 브라우저가 차단했어요. 주소창 자물쇠 → 권한에서 허용 설정', 'error'); }
   }
 }
 
@@ -16521,7 +16521,7 @@ async function _rcDoApply(target, compiled){
         document.execCommand('copy');
         ta.remove();
         toast('📋 클립보드에 복사됨', 'success');
-      } catch(e2){ toast('클립보드 복사 실패: ' + (e2.message||e2), 'error'); }
+      } catch(e2){ toast(`클립보드 복사 실패 — ${e2.message||e2}\n주소창 자물쇠 → 권한에서 클립보드 허용 후 다시 시도하세요`, 'error'); }
     }
     return;
   }
@@ -16547,7 +16547,7 @@ async function _rcDoApply(target, compiled){
       await loadPresetsFromDB();
       toast(`💾 새 캐릭터 프리셋 "${name.trim()}" 저장됨`, 'success');
     } catch(e){
-      toast('프리셋 저장 실패: ' + (e.message||e), 'error');
+      toast(`프리셋 저장 실패 — ${e.message||e}\n저장 공간이 부족할 수 있어요. 설정 → 갤러리 정리 후 다시 시도하세요`, 'error');
     }
     return;
   }
@@ -17234,7 +17234,7 @@ async function init(){
         toast('복원 가능한 항목이 없습니다', 'warning');
       }
     } catch(e){
-      toast(`EXIF 복원 실패: ${e?.message || e}`, 'error');
+      toast(`EXIF 복원 실패 — ${e?.message || e}\n이 이미지에 NAI 메타가 없거나 손상됐어요. 원본 PNG 인지 확인하세요`, 'error');
     }
   });
 

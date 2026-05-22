@@ -84,6 +84,22 @@ for(const f of [...jsFiles, ...htmlFiles]){
   }
 }
 
+// 4b. localStorage.setItem 은 QuotaExceededError 가능 — 반드시 try 블록 안에 있어야.
+//     try { ... localStorage.setItem(...) ... } 패턴만 허용. catch 가 없는 setItem 호출은 거부.
+for(const f of htmlFiles){
+  const src = readFileSync(f, 'utf8');
+  const lines = src.split('\n');
+  lines.forEach((ln, i) => {
+    if(!/localStorage\.setItem\s*\(/.test(ln)) return;
+    // 직전 200자 또는 이전 6줄 안에 try { 가 있어야 함 (최소 보수적 검사)
+    const start = Math.max(0, i - 6);
+    const window = lines.slice(start, i + 1).join('\n');
+    if(!/\btry\s*\{/.test(window)){
+      fail(f, `L${i+1} localStorage.setItem — try/catch 없음 (QuotaExceeded 노출)`);
+    }
+  });
+}
+
 // 5. index.html CSP 메타 + 외부 script crossorigin + CSP 필수 디렉티브
 for(const f of htmlFiles){
   const src = readFileSync(f, 'utf8');
