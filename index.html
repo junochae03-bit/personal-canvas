@@ -1577,18 +1577,39 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .rc-card.collapsed{padding-bottom:0}
 .rc-card.collapsed .rc-card-hdr{border-bottom:none}
 
-/* 빌더 sec-utils 모바일 wrap */
-.rc-builder-sec .sec-utils{flex-wrap:wrap;gap:3px;justify-content:flex-end;max-width:65%}
-.rc-builder-sec .sec-title{flex-wrap:wrap;gap:6px;align-items:center}
-.rc-builder-sec #rcStatsBadge{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px}
+/* 빌더 sec-title — 한글 텍스트가 글자 단위로 wrap 되지 않도록 명시적 span + nowrap */
+.rc-builder-sec .sec-title{flex-wrap:wrap;gap:6px;align-items:center;row-gap:4px}
+.rc-builder-sec .rc-sec-title-label{
+  white-space:nowrap;
+  flex-shrink:0;
+  color:var(--blue);
+  font-weight:700;
+  font-size:13px
+}
+.rc-builder-sec .rc-sec-stats{
+  font-size:10.5px;
+  color:var(--t3);
+  font-family:var(--mono);
+  font-weight:500;
+  margin-left:auto;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  cursor:default
+}
+.rc-builder-sec .sec-utils{flex-wrap:wrap;gap:3px;justify-content:flex-end;flex-shrink:0}
 
-/* 모바일 (max-width:880px) — 빌더 헤더 더 압축 */
+/* 모바일 (max-width:880px) — 빌더 헤더 압축: 통계 + 액션 바를 별도 줄로 */
 @media (max-width:880px){
-  .rc-builder-sec .sec-utils{max-width:100%;flex-basis:100%;justify-content:flex-start;margin-top:4px}
-  .rc-builder-sec .sec-utils .sec-util-btn{width:32px;height:32px;font-size:13px}
-  .rc-builder-sec #rcStatsBadge{flex-basis:100%;font-size:10px}
-  .rc-card-hdr .rc-hdr-actions{margin-left:0;flex-basis:100%;justify-content:flex-end;margin-top:2px}
-  .rc-card-hdr input.rc-label{flex:1 1 100%;font-size:13.5px}
+  .rc-builder-sec .sec-title{padding-right:4px}
+  .rc-builder-sec .rc-sec-title-label{font-size:13.5px}
+  .rc-builder-sec .rc-sec-stats{flex-basis:100%;margin-left:0;font-size:10.5px;text-align:left;white-space:normal;line-height:1.5;padding:2px 0}
+  .rc-builder-sec .sec-utils{flex-basis:100%;justify-content:flex-start;margin-top:6px;gap:4px}
+  .rc-builder-sec .sec-utils .sec-util-btn{width:36px;height:36px;font-size:14px}
+  .rc-card-hdr .rc-hdr-actions{margin-left:0;flex-basis:100%;justify-content:flex-end;margin-top:4px;gap:3px}
+  .rc-card-hdr .rc-hdr-actions button{width:32px;height:32px;padding:3px 5px;min-width:32px}
+  .rc-card-hdr input.rc-label{flex:1 1 100%;font-size:14px;min-width:0}
 }
 
 .rc-add-opt-row{display:flex;gap:4px;padding:4px 0 2px;border-top:1px dashed var(--b1);margin-top:3px}
@@ -1599,6 +1620,37 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 .rc-warn-bar{padding:5px 10px;background:rgba(184,136,32,.15);color:var(--yellow);font-size:11px;border-top:1px solid rgba(184,136,32,.3);line-height:1.5}
 .rc-warn-bar b{font-weight:700;color:var(--yellow)}
+
+/* ⋯ 더보기 메뉴 popover */
+.rc-more-menu{
+  position:fixed;
+  background:var(--panel);
+  border:1.5px solid var(--b1);
+  border-radius:6px;
+  box-shadow:0 10px 28px rgba(0,0,0,.20);
+  z-index:9100;
+  padding:4px;
+  min-width:220px;
+  font-size:12.5px;
+  display:flex;
+  flex-direction:column;
+  gap:1px
+}
+.rc-more-menu button{
+  background:transparent;
+  border:0;
+  color:var(--t1);
+  padding:7px 12px;
+  text-align:left;
+  cursor:pointer;
+  font-family:inherit;
+  font-size:12.5px;
+  border-radius:4px;
+  line-height:1.5
+}
+.rc-more-menu button:hover:not(:disabled){background:var(--card)}
+.rc-more-menu button:disabled{opacity:.4;cursor:not-allowed}
+.rc-more-menu .rc-more-sep{height:1px;background:var(--b1);margin:2px 6px}
 
 #rcStatsBadge{cursor:default}
 
@@ -1709,8 +1761,8 @@ mark{
       <!-- 🎲 RANDOM CATEGORY BUILDER — 모드 바의 🎲 탭으로 열림. 다른 모드와 독립. -->
       <div class="sec rc-builder-sec" id="randomBuilderSec" style="display:none">
         <div class="sec-title">
-          🎲 랜덤 카테고리 빌더 <span class="en">Random</span>
-          <span style="font-size:11px;color:var(--t3);font-family:var(--mono);font-weight:500;margin-left:6px" id="rcStatsBadge"></span>
+          <span class="rc-sec-title-label">🎲 랜덤 카테고리 빌더 <span class="en">Random</span></span>
+          <span class="rc-sec-stats" id="rcStatsBadge"></span>
           <span class="sec-utils" onclick="event.stopPropagation()">
             <button class="iconbtn sec-util-btn" id="rcAddBtn" title="＋ 새 카테고리 추가">＋</button>
             <button class="iconbtn sec-util-btn" id="rcImportBtn" title="📥 텍스트에서 가져오기 — ||A|B|C|| 패턴 자동 인식 + 라벨 자동 추측">📥</button>
@@ -15271,10 +15323,19 @@ function rcRender(){
   if(statsBadge){
     const enabled = cats.filter(c => c.enabled).length;
     const totalOpts = cats.filter(c => c.enabled).reduce((s, c) => s + (c.options?.length || 0), 0);
-    // 총 조합 수 — 각 활성 카테고리 옵션 수 곱
+    // 총 조합 수 — 각 활성 카테고리 옵션 수 곱. 매우 큰 수는 지수 표기로 압축.
     const combo = cats.filter(c => c.enabled && (c.options?.length || 0) > 0)
       .reduce((s, c) => s * c.options.length, 1);
-    statsBadge.textContent = `${cats.length}개 (활성 ${enabled} · 옵션 ${totalOpts} · 조합 ${combo.toLocaleString()})`;
+    const fmtCombo = n => {
+      if(!Number.isFinite(n)) return '∞';
+      if(n >= 1e15) return n.toExponential(1);
+      if(n >= 1e9) return (n/1e9).toFixed(1) + 'B';
+      if(n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+      if(n >= 1e3) return n.toLocaleString();
+      return String(n);
+    };
+    statsBadge.textContent = `${cats.length}개 · 활성 ${enabled} · 옵션 ${totalOpts} · 조합 ${fmtCombo(combo)}`;
+    statsBadge.title = `${cats.length} 카테고리 (활성 ${enabled}개 · 총 옵션 ${totalOpts}개 · 조합 ${combo.toLocaleString()})`;
   }
   if(cats.length === 0){ list.innerHTML = ''; return; }
   list.innerHTML = cats.map((c, ci) => _rcRenderCard(c, ci)).join('');
@@ -15317,15 +15378,10 @@ function _rcRenderCard(cat, catIdx){
         <button class="rc-collapse" data-act="toggle-collapse" data-cat-idx="${catIdx}" title="${collapsed?'펼치기':'접기'}" aria-label="${collapsed?'펼치기':'접기'}">${collapsed?'▶':'▼'}</button>
         <button class="rc-toggle${enabled?' act':' off'}" data-act="toggle-enabled" data-cat-idx="${catIdx}" title="${enabled?'비활성화':'활성화'}">${enabled?'✓':'○'}</button>
         <input type="text" class="rc-label" data-act="edit-label" data-cat-idx="${catIdx}" value="${esc(cat.label || '')}" placeholder="카테고리 이름" maxlength="80">
-        <span class="rc-count">${(cat.options||[]).length} 옵션</span>
+        <span class="rc-count">${(cat.options||[]).length}</span>
         <span class="rc-hdr-actions">
-          <button data-act="edit-note" data-cat-idx="${catIdx}" title="📝 카테고리 노트/설명 편집${note?` — 현재: ${esc(note.slice(0,40))}${note.length>40?'…':''}`:''}" class="${note?'has-note':''}">📝</button>
           <button data-act="add-opt" data-cat-idx="${catIdx}" title="＋ 옵션 추가">＋</button>
-          <button data-act="add-empty" data-cat-idx="${catIdx}" title="∅ 빈 옵션 추가 (= '아무것도 사용 안 함')">∅</button>
-          <button data-act="add-from-preset" data-cat-idx="${catIdx}" title="📚 프리셋에서 옵션 추가">📚</button>
-          <button data-act="add-from-tagdex" data-cat-idx="${catIdx}" title="📖 태그 도감에서 옵션 추가">📖</button>
-          <button data-act="move-up" data-cat-idx="${catIdx}" title="▲ 위로 이동" ${catIdx===0?'disabled':''}>▲</button>
-          <button data-act="move-down" data-cat-idx="${catIdx}" title="▼ 아래로 이동">▼</button>
+          <button data-act="more-menu" data-cat-idx="${catIdx}" title="⋯ 더보기 — 노트·빈 옵션·프리셋·도감·이동·복제" class="${note?'has-note':''}" aria-haspopup="menu">⋯</button>
           <button data-act="del-cat" data-cat-idx="${catIdx}" title="✕ 카테고리 삭제" style="color:var(--red)">✕</button>
         </span>
       </div>
@@ -15423,12 +15479,179 @@ function rcAddCategory(label){
   state.randomCategories.push(c);
   _saveRandomCategoriesDebounced();
   rcRender();
-  // 새 카테고리의 라벨 입력 필드에 자동 포커스
+  // 새 카테고리의 라벨 입력 필드에 자동 포커스 + list 끝으로 스크롤
   setTimeout(() => {
     const lastIdx = state.randomCategories.length - 1;
-    const labelInput = document.querySelector(`#rcCategoryList .rc-card[data-cat-idx="${lastIdx}"] .rc-label`);
-    if(labelInput){ labelInput.focus(); labelInput.select(); }
+    const card = document.querySelector(`#rcCategoryList .rc-card[data-cat-idx="${lastIdx}"]`);
+    if(card){
+      card.scrollIntoView({block: 'center', behavior: 'smooth'});
+      const labelInput = card.querySelector('.rc-label');
+      if(labelInput){ labelInput.focus(); labelInput.select(); }
+    }
   }, 50);
+}
+
+// ⋯ 카테고리 더보기 메뉴 — 자주 안 쓰는 액션 묶음 (popover)
+let _rcMoreEl = null;
+let _rcMoreScope = null;
+function _rcCloseMoreMenu(){
+  if(_rcMoreEl){ _rcMoreEl.remove(); _rcMoreEl = null; }
+  if(_rcMoreScope){ _rcMoreScope.dispose(); _rcMoreScope = null; }
+}
+function rcOpenMoreMenu(catIdx, anchorBtn){
+  _rcCloseMoreMenu();
+  const cat = state.randomCategories?.[catIdx];
+  if(!cat || !anchorBtn) return;
+  const isFirst = catIdx === 0;
+  const isLast = catIdx === (state.randomCategories.length - 1);
+  const hasNote = !!(cat.note && cat.note.trim());
+  const wrap = document.createElement('div');
+  wrap.className = 'rc-more-menu';
+  wrap.setAttribute('role', 'menu');
+  wrap.innerHTML = `
+    <button type="button" data-act="more-edit-note" data-cat-idx="${catIdx}">📝 노트 편집${hasNote?' <span style="color:var(--acc);font-size:10px">●</span>':''}</button>
+    <button type="button" data-act="more-add-empty" data-cat-idx="${catIdx}">∅ 빈 옵션 추가</button>
+    <button type="button" data-act="more-add-bulk" data-cat-idx="${catIdx}">📋 옵션 일괄 추가 (콤마 분리)</button>
+    <div class="rc-more-sep"></div>
+    <button type="button" data-act="more-add-from-preset" data-cat-idx="${catIdx}">📚 프리셋에서 추가</button>
+    <button type="button" data-act="more-add-from-tagdex" data-cat-idx="${catIdx}">📖 태그 도감에서 추가</button>
+    <div class="rc-more-sep"></div>
+    <button type="button" data-act="more-duplicate" data-cat-idx="${catIdx}">📑 카테고리 복제</button>
+    <button type="button" data-act="more-export" data-cat-idx="${catIdx}">📤 이 카테고리만 텍스트 복사</button>
+    <div class="rc-more-sep"></div>
+    <button type="button" data-act="more-move-up" data-cat-idx="${catIdx}" ${isFirst?'disabled':''}>▲ 위로 이동</button>
+    <button type="button" data-act="more-move-down" data-cat-idx="${catIdx}" ${isLast?'disabled':''}>▼ 아래로 이동</button>
+  `;
+  document.body.appendChild(wrap);
+  _rcMoreEl = wrap;
+  // 위치 — 앵커 버튼 우하단 (화면 밖 안 나가게 clamp)
+  const r = anchorBtn.getBoundingClientRect();
+  const dw = wrap.offsetWidth, dh = wrap.offsetHeight;
+  let left = r.right - dw;
+  let top = r.bottom + 4;
+  if(left < 8) left = 8;
+  if(left + dw > window.innerWidth - 8) left = window.innerWidth - dw - 8;
+  if(top + dh > window.innerHeight - 8) top = r.top - dh - 4;
+  wrap.style.left = left + 'px';
+  wrap.style.top = top + 'px';
+  // 인터랙션
+  _rcMoreScope = _listenerScope();
+  _rcMoreScope.on(wrap, 'click', e => {
+    const btn = e.target.closest('button[data-act]');
+    if(!btn || btn.disabled) return;
+    const act = btn.dataset.act;
+    _rcCloseMoreMenu();
+    if(act === 'more-edit-note') rcEditNote(catIdx);
+    else if(act === 'more-add-empty') rcAddOption(catIdx, '');
+    else if(act === 'more-add-bulk') rcAddBulkOptions(catIdx);
+    else if(act === 'more-add-from-preset') rcAddFromPreset(catIdx);
+    else if(act === 'more-add-from-tagdex') rcAddFromTagdex(catIdx);
+    else if(act === 'more-duplicate') rcDuplicateCategory(catIdx);
+    else if(act === 'more-export') rcExportCategory(catIdx);
+    else if(act === 'more-move-up') rcMoveCategory(catIdx, -1);
+    else if(act === 'more-move-down') rcMoveCategory(catIdx, +1);
+  });
+  _rcMoreScope.on(document, 'mousedown', e => {
+    if(!wrap.contains(e.target) && e.target !== anchorBtn) _rcCloseMoreMenu();
+  });
+  _rcMoreScope.on(document, 'keydown', e => {
+    if(e.key === 'Escape') _rcCloseMoreMenu();
+  });
+}
+
+// 📑 카테고리 복제 — 라벨 끝에 (복사) 붙여서 같은 옵션으로 새 카드
+function rcDuplicateCategory(catIdx){
+  const c = state.randomCategories?.[catIdx];
+  if(!c) return;
+  const clone = _normalizeRandomCategory({
+    ...c,
+    id: `rc-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+    label: `${c.label} (복사)`.slice(0, 80),
+    options: (c.options || []).map(o => ({text: o.text, weight: o.weight})),
+    locked: false,
+    lockedOptionIdx: null,
+  });
+  if(!clone) return;
+  state.randomCategories.splice(catIdx + 1, 0, clone);
+  _saveRandomCategoriesDebounced();
+  rcRender();
+  toast(`📑 카테고리 "${c.label}" 복제됨`, 'success');
+}
+
+// 📤 단일 카테고리 export — ||A|B|C|| 텍스트로 클립보드 복사
+async function rcExportCategory(catIdx){
+  const c = state.randomCategories?.[catIdx];
+  if(!c) return;
+  const compiled = compileCategoriesToText([{...c, enabled: true}]);
+  if(!compiled){ toast('이 카테고리에 옵션이 없습니다', 'warning'); return; }
+  const labelLine = `# ${c.label}`;
+  const text = `${labelLine}\n${compiled}`;
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(`📤 "${c.label}" 복사됨 (${c.options.length}개 옵션)`, 'success');
+  } catch(e){
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.top = '-100px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      toast('📤 복사됨', 'success');
+    } catch(e2){ toast('클립보드 복사 실패', 'error'); }
+  }
+}
+
+// 📋 옵션 일괄 추가 — 콤마/줄바꿈 분리 텍스트 → 여러 옵션 자동 split
+function rcAddBulkOptions(catIdx){
+  const cat = state.randomCategories?.[catIdx];
+  if(!cat) return;
+  const html = `
+    <div style="font-size:12.5px;color:var(--t2);margin-bottom:10px;line-height:1.7">
+      "<b style="color:var(--t1)">${esc(cat.label)}</b>" 에 옵션 일괄 추가. <b>콤마(,)</b> 또는 <b>줄바꿈</b>으로 구분하면 각각 별도 옵션으로 추가됩니다.
+    </div>
+    <textarea id="_rcBulkTa" class="ta" style="min-height:180px;font-family:var(--mono);font-size:12.5px;line-height:1.6" placeholder="예:&#10;cat girl, fox girl, wolf girl&#10;rabbit girl&#10;2::angel::, 2::fallen angel::&#10;&#10;(가중치 표기 2::tag:: 도 자동 인식)"></textarea>
+    <div style="margin-top:8px;font-size:11.5px;color:var(--t3);line-height:1.5">
+      ℹ 가중치 표기 <code style="background:var(--card);padding:1px 4px;border-radius:3px;font-family:var(--mono)">2::tag::</code> 자동 파싱 — 가중치 분리됨.
+    </div>
+  `;
+  $('confirmTitle').innerHTML = `📋 옵션 일괄 추가 <span class="en">Bulk Add</span>`;
+  $('confirmBody').innerHTML = html;
+  $('confirmOk').innerHTML = '추가 <span class="en">Add</span>';
+  $('confirmOk').style.display = '';
+  $('confirmCancel').innerHTML = '취소 <span class="en">Cancel</span>';
+  $('confirmModal').classList.add('open');
+  setTimeout(() => $('_rcBulkTa')?.focus(), 50);
+  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
+  $('confirmOk').onclick = () => {
+    const text = $('_rcBulkTa')?.value || '';
+    if(!text.trim()){ toast('입력이 비어있습니다', 'warning'); return; }
+    // 콤마 + 줄바꿈으로 split — 단, ::가중치, 옵션:: 안 콤마는 보호
+    // 가중치 패턴: -?\d+(?:\.\d+)?::...::
+    // 간단하게 줄 단위 split 후 각 줄에서 가중치 보존하면서 콤마 split
+    const lines = text.split('\n');
+    const added = [];
+    for(const line of lines){
+      const tokens = parseFreePromptTokens(line);   // 가중치 안 콤마 보호 됨 — Batch 2 의 pure 함수
+      for(const tok of tokens){
+        if(!tok) continue;
+        // 가중치 표기 추출
+        const wm = tok.match(/^(-?\d+(?:\.\d+)?)::([\s\S]*?)::$/);
+        if(wm){
+          added.push({text: wm[2].trim().slice(0, 500), weight: parseFloat(wm[1]) || 1.0});
+        } else {
+          added.push({text: tok.trim().slice(0, 500), weight: 1.0});
+        }
+      }
+    }
+    if(!added.length){ toast('파싱된 옵션이 없습니다', 'warning'); return; }
+    cat.options = cat.options || [];
+    cat.options.push(...added);
+    _saveRandomCategoriesDebounced();
+    rcRender();
+    toast(`📋 ${added.length}개 옵션 추가됨 — "${cat.label}"`, 'success');
+    $('confirmModal').classList.remove('open');
+  };
 }
 
 // 📦 카테고리 접기/펼치기 — 개별 + 일괄
@@ -15450,16 +15673,93 @@ function rcCollapseAll(){
   toast(next ? `📦 ${cats.length}개 카테고리 모두 접음` : `📂 ${cats.length}개 카테고리 모두 펼침`, 'info');
 }
 
-// 📝 카테고리 노트 편집 — 작은 prompt 또는 모달
+// ＋ 단일 옵션 추가 — 큰 모달 (prompt() 모바일 한계 회피)
+function rcOpenAddOptionModal(catIdx){
+  const cat = state.randomCategories?.[catIdx];
+  if(!cat) return;
+  const html = `
+    <div style="font-size:12.5px;color:var(--t2);margin-bottom:10px;line-height:1.6">
+      "<b style="color:var(--t1)">${esc(cat.label)}</b>" 에 추가할 옵션 텍스트. Enter 로 추가 후 입력칸이 비워져 연속 추가 가능합니다.
+    </div>
+    <div style="display:flex;gap:6px">
+      <input type="text" id="_rcAddOptInp" class="inp" style="flex:1;font-family:var(--mono);font-size:13px" placeholder="예: cat girl   /   2::angel::   /   tears, crying" spellcheck="false" autofocus>
+      <button type="button" id="_rcAddOptBtn" class="btn primary" style="flex-shrink:0;padding:8px 14px">추가</button>
+    </div>
+    <div style="margin-top:8px;font-size:11.5px;color:var(--t3);line-height:1.55">
+      ℹ 콤마(,)로 여러 옵션 한 번에 입력하려면 <b>📋 일괄 추가</b> 사용 (⋯ 메뉴).<br>
+      가중치 표기 <code style="background:var(--card);padding:1px 4px;border-radius:3px;font-family:var(--mono)">2::tag::</code> 자동 파싱됨.
+    </div>
+    <div style="margin-top:6px;font-size:11px;color:var(--t3)" id="_rcAddOptCount">옵션 ${(cat.options||[]).length}개</div>
+  `;
+  $('confirmTitle').innerHTML = `＋ 옵션 추가 <span class="en">Add Option</span>`;
+  $('confirmBody').innerHTML = html;
+  $('confirmOk').style.display = 'none';
+  $('confirmCancel').innerHTML = '닫기 <span class="en">Close</span>';
+  $('confirmModal').classList.add('open');
+  setTimeout(() => $('_rcAddOptInp')?.focus(), 50);
+  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
+  const addOne = () => {
+    const inp = $('_rcAddOptInp');
+    if(!inp) return;
+    const v = (inp.value || '').trim();
+    if(!v) return;
+    // 가중치 자동 파싱
+    const wm = v.match(/^(-?\d+(?:\.\d+)?)::([\s\S]*?)::$/);
+    cat.options = cat.options || [];
+    if(wm){
+      cat.options.push({text: wm[2].trim().slice(0,500), weight: parseFloat(wm[1])||1.0});
+    } else {
+      cat.options.push({text: v.slice(0,500), weight: 1.0});
+    }
+    _saveRandomCategoriesDebounced();
+    rcRender();
+    inp.value = '';
+    inp.focus();
+    const cnt = $('_rcAddOptCount');
+    if(cnt) cnt.textContent = `옵션 ${cat.options.length}개`;
+  };
+  $('_rcAddOptBtn').onclick = addOne;
+  $('_rcAddOptInp').onkeydown = e => {
+    if(e.key === 'Enter'){ e.preventDefault(); addOne(); }
+  };
+}
+
+// 📝 카테고리 노트 편집 — 큰 textarea 모달 (500자, 모바일 친화)
 function rcEditNote(catIdx){
   const c = state.randomCategories?.[catIdx];
   if(!c) return;
   const cur = c.note || '';
-  const next = window.prompt(`"${c.label}" 카테고리 노트/설명 (최대 500자)\n사용자 메모용 — 무슨 카테고리인지, 어떻게 쓰는지 등.\n비우면 노트 제거.`, cur);
-  if(next == null) return;
-  c.note = String(next).slice(0, 500);
-  _saveRandomCategoriesDebounced();
-  rcRender();
+  const html = `
+    <div style="font-size:12.5px;color:var(--t2);margin-bottom:10px;line-height:1.6">
+      "<b style="color:var(--t1)">${esc(c.label)}</b>" 카테고리의 사용자 메모. 무슨 태그인지, 어떻게 쓰는지 자유 작성.
+      <br><span style="font-size:11px;color:var(--t3)">비우고 저장하면 노트 제거됨.</span>
+    </div>
+    <textarea id="_rcNoteTa" class="ta" style="min-height:140px;font-size:13px;line-height:1.6" placeholder="예: 03/01 angel/fallen angel 가중치 2 부여 (그냥은 느낌 안 나옴)&#10;예: 본인 취향 아니어도 다양성 테스트용" maxlength="500">${esc(cur)}</textarea>
+    <div style="margin-top:6px;font-size:11px;color:var(--t3);text-align:right" id="_rcNoteCount">${cur.length} / 500</div>
+  `;
+  $('confirmTitle').innerHTML = `📝 카테고리 노트 <span class="en">Note</span>`;
+  $('confirmBody').innerHTML = html;
+  $('confirmOk').innerHTML = '저장 <span class="en">Save</span>';
+  $('confirmOk').style.display = '';
+  $('confirmCancel').innerHTML = '취소 <span class="en">Cancel</span>';
+  $('confirmModal').classList.add('open');
+  setTimeout(() => $('_rcNoteTa')?.focus(), 50);
+  const ta = $('_rcNoteTa');
+  if(ta){
+    ta.oninput = () => {
+      const cnt = $('_rcNoteCount');
+      if(cnt) cnt.textContent = `${ta.value.length} / 500`;
+    };
+  }
+  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
+  $('confirmOk').onclick = () => {
+    const v = ($('_rcNoteTa')?.value || '').slice(0, 500);
+    c.note = v;
+    _saveRandomCategoriesDebounced();
+    rcRender();
+    $('confirmModal').classList.remove('open');
+    toast(v.trim() ? `📝 노트 저장됨 (${v.length}자)` : '🗑 노트 제거됨', 'info');
+  };
 }
 
 // 📚 프리셋에서 옵션 추가 — 카테고리 선택 → 항목 다중 선택
@@ -16022,12 +16322,8 @@ function rcWireEvents(){
     if(act === 'toggle-enabled') rcToggleEnabled(catIdx);
     else if(act === 'toggle-collapse') rcToggleCollapse(catIdx);
     else if(act === 'edit-note') rcEditNote(catIdx);
-    else if(act === 'add-opt'){
-      const cat = state.randomCategories?.[catIdx];
-      if(!cat) return;
-      const v = window.prompt(`"${cat.label}" 에 추가할 옵션 텍스트:`, '');
-      if(v != null && v.trim()) rcAddOption(catIdx, v.trim());
-    }
+    else if(act === 'more-menu') rcOpenMoreMenu(catIdx, btn);
+    else if(act === 'add-opt') rcOpenAddOptionModal(catIdx);
     else if(act === 'add-empty') rcAddOption(catIdx, '');
     else if(act === 'add-from-preset') rcAddFromPreset(catIdx);
     else if(act === 'add-from-tagdex') rcAddFromTagdex(catIdx);
