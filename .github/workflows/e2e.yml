@@ -1,10 +1,12 @@
 name: E2E (Playwright)
 
 # CI(빠른 lint/test) 와 분리 — Playwright 는 브라우저 다운로드 ~80MB, 시간 ~2분.
-# PR + 수동 트리거에서만 실행 (push 마다 X).
+# PR · main push · 수동 트리거. (E2E 는 production 안정성용이라 main 머지 후 검증 권장.)
 
 on:
   pull_request:
+    branches: [main]
+  push:
     branches: [main]
   workflow_dispatch:
 
@@ -16,10 +18,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          # ⚠ cache: 'npm' 제거 — .gitignore 에 package-lock.json 이 포함됨.
+          # npm install 자체는 빠르고 (devDep 1개), Playwright 브라우저는 actions/cache@v4 로 별도 캐싱.
 
       - name: Install dependencies
-        run: npm ci || npm install
+        run: npm install
 
       - name: Cache Playwright browsers
         id: playwright-cache
