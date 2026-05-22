@@ -287,18 +287,11 @@ export function parseProject(data){
  */
 export function pageTemplateSvg(layout){
   if(!layout) return '';
-  const border = Math.max(2, Math.floor((layout.gutter || 12) * 0.7));
-  const half = border / 2;
-  // 외곽 흰색 페이지 + 각 패널 영역도 흰색 + 패널 stroke(검정) 가 보더 역할.
-  // (이전엔 외곽이 검정이라 NAI 가 add_original_image 로 검정 영역을 보존하면서
-  //  결과가 검정에 끌려가는 문제 → 외곽 white 로 변경, gutter 효과는 stroke 만으로.)
-  const panelRects = layout.panels.map(p =>
-    `<rect x="${p.x + half}" y="${p.y + half}" width="${p.w - border}" height="${p.h - border}" `
-    + `fill="white" stroke="black" stroke-width="${border}"/>`
-  ).join('');
+  // 페이지 전체 흰색 — 패널 stroke(보더) 없음. NAI 가 마스크 흰 영역만 채우고 검정(다른 컷·외곽) 보존.
+  // (사용자 보고: '분할선이 그림을 침범해 굵은 검정선이 남음' → stroke 제거.)
+  // 만화 보더 룩을 결과에 원하면 말풍선 편집기 합성 단계에서 별도 그림.
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.w}" height="${layout.h}" viewBox="0 0 ${layout.w} ${layout.h}">`
     + `<rect width="${layout.w}" height="${layout.h}" fill="white"/>`
-    + panelRects
     + `</svg>`;
 }
 
