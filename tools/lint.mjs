@@ -164,6 +164,8 @@ const MIRRORED = [
   {mod: 'js/pure/randomChoice.mjs', fn: 'compileCategoriesToText'},
   {mod: 'js/pure/comic.mjs', fn: 'pageTemplateSvg'},
   {mod: 'js/pure/comic.mjs', fn: 'panelMaskSvg'},
+  {mod: 'js/pure/comic.mjs', fn: 'wrapBubbleText'},
+  {mod: 'js/pure/comic.mjs', fn: 'bubbleSvgString'},
 ];
 const inlineSrc = readFileSync(join(ROOT, 'index.html'), 'utf8');
 for(const {mod, fn} of MIRRORED){

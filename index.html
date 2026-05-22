@@ -355,6 +355,35 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .comic-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:6px}
 .comic-actions .btn.primary{min-height:38px;font-size:14px;padding:9px 18px}
 .comic-cost-info{font-size:12px;color:var(--t3);font-family:var(--mono)}
+
+/* 💬 BUBBLE EDITOR MODAL */
+.bubble-modal{width:min(960px,94vw);max-width:none}
+.bubble-body{display:flex;gap:14px;flex-direction:row;align-items:stretch;flex-wrap:wrap;min-height:420px}
+.bubble-stage{flex:1 1 460px;position:relative;background:#1a130a;border:1px solid var(--b1);border-radius:6px;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:380px;touch-action:none;user-select:none;-webkit-user-select:none}
+.bubble-stage img{max-width:100%;max-height:60vh;display:block;pointer-events:none;user-select:none;-webkit-user-drag:none}
+.bubble-stage svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:auto}
+.bubble-stage svg .b-shape{cursor:move}
+.bubble-stage svg .b-shape.sel{filter:drop-shadow(0 0 6px rgba(162,90,31,.9))}
+.bubble-stage svg .b-handle{cursor:nwse-resize;fill:var(--acc);stroke:#fff;stroke-width:1.5;pointer-events:auto}
+.bubble-hint{position:absolute;left:10px;bottom:10px;right:10px;background:rgba(20,14,4,.78);color:#f3ead4;padding:6px 10px;border-radius:5px;font-size:11.5px;line-height:1.5;text-align:center;pointer-events:none}
+.bubble-stage.has-bubbles .bubble-hint{display:none}
+.bubble-toolbar{flex:0 0 220px;display:flex;flex-direction:column;gap:14px;padding:4px}
+.bubble-tool-group{display:flex;flex-direction:column;gap:6px;padding-bottom:10px;border-bottom:1px dashed var(--b1)}
+.bubble-tool-group:last-child{border-bottom:none;padding-bottom:0}
+.bubble-tool-label{font-size:12px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.4px}
+.bubble-tool-row{display:flex;flex-wrap:wrap;gap:6px}
+.bubble-tool-row .btn.small{font-size:12px;padding:6px 9px;min-height:34px}
+.bubble-tool-meta{font-size:11px;color:var(--t3);line-height:1.5}
+.bubble-tool-meta kbd{background:var(--card2);color:var(--t1);font-family:var(--mono);font-size:10.5px;padding:1px 6px;border-radius:3px;border:1px solid var(--b1)}
+.bubble-text-modal{width:min(440px,92vw)}
+@media (max-width:880px){
+  .bubble-modal{width:96vw}
+  .bubble-body{flex-direction:column;min-height:auto}
+  .bubble-toolbar{flex:0 0 auto;flex-direction:row;flex-wrap:wrap;gap:10px}
+  .bubble-tool-group{flex:1 1 140px;border-bottom:none;padding-bottom:6px;border-right:1px dashed var(--b1);padding-right:10px}
+  .bubble-tool-group:last-child{border-right:none}
+  .bubble-stage img{max-height:46vh}
+}
 @media (max-width:880px){
   .comic-body{padding:14px 12px;gap:14px}
   .comic-title{font-size:18px}
@@ -2638,6 +2667,7 @@ mark{
     <button class="iconbtn lb-act-btn" id="lbI2I" title="→ I2I로 보내기 (Send to I2I)"><span class="lb-act-ico">→I</span><span class="lb-act-lbl">I2I</span></button>
     <button class="iconbtn lb-act-btn" id="lbVibe" title="→ Vibe 참조로 사용 (Send to Vibe)"><span class="lb-act-ico">→V</span><span class="lb-act-lbl">Vibe</span></button>
     <button class="iconbtn lb-act-btn" id="lbExtractTags" title="📋 이 이미지의 태그를 도감에 추출"><span class="lb-act-ico">📋</span><span class="lb-act-lbl">태그</span></button>
+    <button class="iconbtn lb-act-btn" id="lbBubbles" title="💬 말풍선 편집 (이 이미지에 말풍선 추가 후 새 항목으로 저장)"><span class="lb-act-ico">💬</span><span class="lb-act-lbl">말풍선</span></button>
     <div style="height:1px;background:var(--b1);margin:2px 0"></div>
     <button class="iconbtn lb-act-btn" id="lbInfoBtn" title="ℹ 상세정보 펼치기/접기 (메타·프롬프트)" aria-pressed="false"><span class="lb-act-ico">ℹ</span><span class="lb-act-lbl">정보</span></button>
     <button class="iconbtn lb-act-btn" id="lbDelete" title="삭제 (Delete)" style="color:var(--red);border-color:rgba(181,67,56,.3)"><span class="lb-act-ico">🗑</span><span class="lb-act-lbl">삭제</span></button>
@@ -3048,6 +3078,64 @@ coffee shop, latte art"></textarea>
     <div class="modal-foot">
       <button class="btn ghost" id="inpaintCancel">취소 <span class="en">Cancel</span></button>
       <button class="btn primary" id="inpaintSave">저장 <span class="en">Save</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- 💬 BUBBLE EDITOR MODAL — 말풍선 SVG 오버레이 편집 후 PNG 합성 저장 -->
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="bubbleModalTitle" id="bubbleModal">
+  <div class="modal bubble-modal">
+    <h3 id="bubbleModalTitle">💬 말풍선 편집 <span class="en">Speech Bubbles</span></h3>
+    <div class="modal-body bubble-body">
+      <div class="bubble-stage" id="bubbleStage">
+        <img id="bubbleImg" alt="편집 대상 이미지" draggable="false">
+        <svg id="bubbleSvg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" aria-label="말풍선 오버레이"></svg>
+        <div class="bubble-hint" id="bubbleHint">도형 추가 → 드래그·코너 핸들로 위치·크기 조정. 더블 클릭하면 텍스트 편집.</div>
+      </div>
+      <div class="bubble-toolbar">
+        <div class="bubble-tool-group">
+          <div class="bubble-tool-label">도형 추가</div>
+          <div class="bubble-tool-row">
+            <button type="button" class="btn small" data-bubble-add="round">⬭ 둥근</button>
+            <button type="button" class="btn small" data-bubble-add="spike">⚡ 톱니</button>
+            <button type="button" class="btn small" data-bubble-add="thought">☁ 구름</button>
+          </div>
+        </div>
+        <div class="bubble-tool-group">
+          <div class="bubble-tool-label">선택된 말풍선</div>
+          <div class="bubble-tool-row">
+            <button type="button" class="btn small" id="bubbleEditTextBtn" disabled>✎ 텍스트</button>
+            <button type="button" class="btn small danger" id="bubbleDeleteBtn" disabled>🗑 삭제</button>
+          </div>
+        </div>
+        <div class="bubble-tool-group">
+          <div class="bubble-tool-label">전체</div>
+          <div class="bubble-tool-row">
+            <button type="button" class="btn small ghost" id="bubbleClearBtn">↺ 모두 지우기</button>
+          </div>
+          <div class="bubble-tool-meta" id="bubbleCount">말풍선 0개</div>
+          <div class="bubble-tool-meta">단축키 · <kbd>Esc</kbd> 선택해제 · <kbd>Del</kbd> 삭제</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="bubbleCancelBtn">취소 <span class="en">Cancel</span></button>
+      <button class="btn primary" id="bubbleSaveBtn">💾 새 항목으로 저장 <span class="en">Save as New</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- 💬 BUBBLE TEXT EDIT POPUP — 말풍선 텍스트 편집기 (간단 textarea) -->
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="bubbleTextTitle" id="bubbleTextModal">
+  <div class="modal bubble-text-modal">
+    <h3 id="bubbleTextTitle">💬 말풍선 텍스트 <span class="en">Edit Text</span></h3>
+    <div class="modal-body">
+      <textarea id="bubbleTextArea" class="ta" rows="4" placeholder="이 말풍선의 대사…" maxlength="500"></textarea>
+      <div class="muted" style="font-size:11.5px;margin-top:6px;color:var(--t3)">최대 500자. 줄바꿈 보존.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="bubbleTextCancel">취소</button>
+      <button class="btn primary" id="bubbleTextOk">적용 <span class="en">Apply</span></button>
     </div>
   </div>
 </div>
@@ -12881,6 +12969,318 @@ async function startComicGeneration(){
 }
 
 // ═══════════════════════════════════════════════════════════
+// 💬 BUBBLE EDITOR — 말풍선 SVG 오버레이 편집기
+// ═══════════════════════════════════════════════════════════
+// 책임 분리:
+//   - bubbleSvgString / wrapBubbleText 는 js/pure/comic.mjs 단일 소스 (lint MIRRORED 검증)
+//   - 인라인 코드는 DOM·이벤트·합성만 담당
+//
+// 좌표계: SVG viewBox = 원본 이미지 픽셀 좌표. img 가 CSS 로 축소돼도 SVG 가 같은
+// viewBox 라 마우스 좌표 → SVG 좌표 변환은 getScreenCTM().inverse() 로 일관 처리.
+
+// ──── 인라인 미러 (comic.mjs 와 동일) ────
+function wrapBubbleText(text, maxCharsPerLine){
+  if(!text) return [];
+  const cap = Math.max(1, Math.floor(maxCharsPerLine || 12));
+  const lines = [];
+  for(const para of String(text).split('\n')){
+    if(!para){ lines.push(''); continue; }
+    let cur = '';
+    for(const word of para.split(/(\s+)/)){
+      if(!word) continue;
+      if(word.length > cap){
+        if(cur){ lines.push(cur.trim()); cur = ''; }
+        for(let i = 0; i < word.length; i += cap){
+          const chunk = word.slice(i, i + cap);
+          if(i + cap >= word.length){ cur = chunk; }
+          else lines.push(chunk);
+        }
+        continue;
+      }
+      if((cur + word).length > cap){
+        lines.push(cur.trim());
+        cur = word.trimStart();
+      } else {
+        cur += word;
+      }
+    }
+    if(cur.trim()) lines.push(cur.trim());
+  }
+  return lines;
+}
+
+// 인라인 미러 상수 — comic.mjs 의 동일 이름과 정확히 일치해야 lint MIRRORED 통과.
+const BUBBLE_SHAPES = ['round', 'spike', 'thought'];
+const BUBBLE_TAIL_DIRS = ['bl', 'br', 'tl', 'tr'];
+const MIN_BUBBLE_W = 40;
+const MIN_BUBBLE_H = 30;
+const DEFAULT_BUBBLE_W = 120;
+const DEFAULT_BUBBLE_H = 80;
+function escXml(s){
+  return String(s||'').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c])
+  );
+}
+function bubbleSvgString(bubble){
+  if(!bubble || typeof bubble !== 'object') return '';
+  const x = Number(bubble.x) || 0;
+  const y = Number(bubble.y) || 0;
+  const w = Math.max(MIN_BUBBLE_W, Number(bubble.w) || DEFAULT_BUBBLE_W);
+  const h = Math.max(MIN_BUBBLE_H, Number(bubble.h) || DEFAULT_BUBBLE_H);
+  const text = String(bubble.text || '');
+  const shape = BUBBLE_SHAPES.includes(bubble.shape) ? bubble.shape : 'round';
+  const cx = x + w/2, cy = y + h/2;
+  const rx = w/2, ry = h/2;
+  let body;
+  if(shape === 'round'){
+    body = `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="white" stroke="black" stroke-width="3"/>`;
+  } else if(shape === 'spike'){
+    const points = [];
+    const N = 24;
+    for(let i = 0; i < N; i++){
+      const angle = (i / N) * Math.PI * 2 - Math.PI/2;
+      const r = (i % 2 === 0) ? 1.0 : 0.78;
+      const px = cx + Math.cos(angle) * rx * r;
+      const py = cy + Math.sin(angle) * ry * r;
+      points.push(`${px.toFixed(1)},${py.toFixed(1)}`);
+    }
+    body = `<polygon points="${points.join(' ')}" fill="white" stroke="black" stroke-width="3"/>`;
+  } else {
+    body = `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="white" stroke="black" stroke-width="3" stroke-dasharray="6 4"/>`;
+  }
+  const fontSize = Math.max(11, Math.min(20, Math.floor(h / 8)));
+  const maxChars = Math.max(4, Math.floor(w / (fontSize * 0.65)));
+  const lines = wrapBubbleText(text, maxChars);
+  const lineH = fontSize * 1.25;
+  const totalH = lines.length * lineH;
+  const startY = cy - totalH/2 + lineH * 0.75;
+  const textEls = lines.map((line, i) =>
+    `<tspan x="${cx}" y="${(startY + i * lineH).toFixed(1)}">${escXml(line)}</tspan>`
+  ).join('');
+  const textSvg = lines.length
+    ? `<text text-anchor="middle" font-family="Pretendard, sans-serif" font-size="${fontSize}" fill="black">${textEls}</text>`
+    : '';
+  return `<g class="comic-bubble" data-shape="${shape}">${body}${textSvg}</g>`;
+}
+
+// ──── 편집기 상태 ────
+const _bub = {
+  open: false,
+  imgBlob: null,
+  imgW: 0,
+  imgH: 0,
+  bubbles: [],             // [{shape, x, y, w, h, text, tailDir}]
+  selIdx: -1,
+  drag: null,              // {kind:'move'|'resize', startX, startY, origBubble}
+  sourceLabel: '',         // 저장 시 새 갤러리 항목 라벨 prefix
+  sourcePrompt: '',
+  sourceMeta: null,
+};
+const BUBBLE_HANDLE_SIZE = 18;   // viewBox(원본 픽셀) 기준 — MIN_BUBBLE_W/H 는 미러 상수 블록에 정의
+
+/**
+ * 라이트박스의 현재 이미지를 편집기에 로드 — 만화든 일반 이미지든 동일.
+ */
+async function openBubbleEditor(){
+  if(!_lbCurrent){ toast('편집할 이미지를 찾을 수 없습니다', 'warning'); return; }
+  const blob = _lbCurrent.blob;
+  if(!blob){ toast('이미지 blob 누락', 'error'); return; }
+  // 이미지 자연 크기 — 마스크·말풍선 좌표계 기준
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  try {
+    await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('이미지 로드 실패')); img.src = url; });
+  } catch(e){
+    URL.revokeObjectURL(url);
+    toast(`이미지 로드 실패 — ${e.message||e}`, 'error');
+    return;
+  }
+  _bub.open = true;
+  _bub.imgBlob = blob;
+  _bub.imgW = img.naturalWidth;
+  _bub.imgH = img.naturalHeight;
+  _bub.sourceLabel = _lbCurrent.label || '';
+  _bub.sourcePrompt = _lbCurrent.prompt || _lbCurrent.meta?.prompt || '';
+  _bub.sourceMeta = _lbCurrent.meta || null;
+  // 기존 메타에 말풍선 프로젝트가 있으면 복원
+  const savedProj = _lbCurrent.meta?.bubbleProject;
+  _bub.bubbles = Array.isArray(savedProj?.bubbles) ? savedProj.bubbles.map(b => ({...b})) : [];
+  _bub.selIdx = -1;
+  _bub.drag = null;
+  // DOM 세팅
+  const imgEl = $('bubbleImg');
+  if(imgEl.dataset.url) URL.revokeObjectURL(imgEl.dataset.url);
+  imgEl.src = url;
+  imgEl.dataset.url = url;
+  const svg = $('bubbleSvg');
+  svg.setAttribute('viewBox', `0 0 ${img.naturalWidth} ${img.naturalHeight}`);
+  $('bubbleModal').classList.add('open');
+  _renderBubbleEditor();
+}
+
+function closeBubbleEditor(){
+  $('bubbleModal').classList.remove('open');
+  const imgEl = $('bubbleImg');
+  if(imgEl.dataset.url){ URL.revokeObjectURL(imgEl.dataset.url); imgEl.dataset.url = ''; }
+  _bub.open = false;
+  _bub.bubbles = [];
+  _bub.selIdx = -1;
+  _bub.drag = null;
+  _bub.imgBlob = null;
+}
+
+/**
+ * SVG 다시 그리기 — 모든 말풍선 + 선택 표시 핸들.
+ * idx 데이터 속성으로 이벤트 위임 → drag/select 모두 한 곳에서.
+ */
+function _renderBubbleEditor(){
+  const svg = $('bubbleSvg');
+  if(!svg) return;
+  const stage = $('bubbleStage');
+  stage.classList.toggle('has-bubbles', _bub.bubbles.length > 0);
+  const parts = _bub.bubbles.map((b, i) => {
+    const baseSvg = bubbleSvgString(b);   // <g class="comic-bubble">...</g>
+    // 선택 표시: 점선 박스 + 핸들 — selIdx 만
+    const cls = (i === _bub.selIdx) ? 'b-shape sel' : 'b-shape';
+    let extras = '';
+    if(i === _bub.selIdx){
+      const x2 = b.x + b.w, y2 = b.y + b.h;
+      const hs = BUBBLE_HANDLE_SIZE / 2;
+      extras = `<rect class="b-sel-box" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" `
+        + `fill="none" stroke="${'#a25a1f'}" stroke-width="2" stroke-dasharray="6 4" pointer-events="none"/>`
+        + `<rect class="b-handle" data-handle="se" data-bubble-idx="${i}" `
+        + `x="${x2 - hs}" y="${y2 - hs}" width="${BUBBLE_HANDLE_SIZE}" height="${BUBBLE_HANDLE_SIZE}" rx="3"/>`;
+    }
+    return `<g class="${cls}" data-bubble-idx="${i}">${baseSvg.replace('<g class="comic-bubble"', `<g class="comic-bubble"`)}${extras}</g>`;
+  });
+  svg.innerHTML = parts.join('');
+  $('bubbleCount').textContent = `말풍선 ${_bub.bubbles.length}개${_bub.selIdx >= 0 ? ` · ${_bub.selIdx+1}번 선택됨` : ''}`;
+  const hasSel = _bub.selIdx >= 0 && _bub.selIdx < _bub.bubbles.length;
+  $('bubbleEditTextBtn').disabled = !hasSel;
+  $('bubbleDeleteBtn').disabled = !hasSel;
+}
+
+// SVG 마우스 좌표 → viewBox 좌표 변환 (CSS 축소·DPR 무관)
+function _bubblePtToSvg(evt){
+  const svg = $('bubbleSvg');
+  const pt = svg.createSVGPoint();
+  pt.x = evt.clientX; pt.y = evt.clientY;
+  const ctm = svg.getScreenCTM();
+  if(!ctm) return {x: 0, y: 0};
+  const inv = ctm.inverse();
+  const local = pt.matrixTransform(inv);
+  return {x: local.x, y: local.y};
+}
+
+function _bubbleAdd(shape){
+  if(!_bub.open) return;
+  if(_bub.bubbles.length >= 100){ toast('말풍선은 최대 100개까지 추가할 수 있어요', 'warning'); return; }
+  const W = _bub.imgW, H = _bub.imgH;
+  const w = Math.max(MIN_BUBBLE_W, Math.round(W * 0.22));
+  const h = Math.max(MIN_BUBBLE_H, Math.round(H * 0.14));
+  // 중앙 + 작은 stagger (이미 N개면 살짝씩 어긋나게)
+  const off = (_bub.bubbles.length % 6) * 24;
+  const x = Math.round((W - w) / 2) + off;
+  const y = Math.round((H - h) / 2) + off;
+  _bub.bubbles.push({shape, x, y, w, h, text: '', tailDir: 'bl'});
+  _bub.selIdx = _bub.bubbles.length - 1;
+  _renderBubbleEditor();
+}
+
+function _bubbleSelect(idx){
+  _bub.selIdx = (typeof idx === 'number' && idx >= 0 && idx < _bub.bubbles.length) ? idx : -1;
+  _renderBubbleEditor();
+}
+
+function _bubbleDeleteSelected(){
+  if(_bub.selIdx < 0) return;
+  _bub.bubbles.splice(_bub.selIdx, 1);
+  _bub.selIdx = -1;
+  _renderBubbleEditor();
+}
+
+function _bubbleClearAll(){
+  if(!_bub.bubbles.length) return;
+  if(!confirm('말풍선을 모두 지울까요?')) return;
+  _bub.bubbles = [];
+  _bub.selIdx = -1;
+  _renderBubbleEditor();
+}
+
+// 텍스트 편집 — 별도 모달 (textarea + 적용/취소)
+function _bubbleOpenTextEditor(){
+  if(_bub.selIdx < 0) return;
+  const b = _bub.bubbles[_bub.selIdx];
+  $('bubbleTextArea').value = b.text || '';
+  $('bubbleTextModal').classList.add('open');
+  setTimeout(() => $('bubbleTextArea')?.focus(), 50);
+}
+function _bubbleApplyText(){
+  if(_bub.selIdx < 0){ $('bubbleTextModal').classList.remove('open'); return; }
+  const v = ($('bubbleTextArea').value || '').slice(0, 500);
+  _bub.bubbles[_bub.selIdx].text = v;
+  $('bubbleTextModal').classList.remove('open');
+  _renderBubbleEditor();
+}
+
+// 합성 → 새 갤러리 항목 저장. 원본 보존.
+async function _bubbleSaveAsNew(){
+  if(!_bub.imgBlob) return;
+  try {
+    // 1) 이미지 + 모든 말풍선을 single SVG 로 직렬화 (viewBox = 원본 픽셀)
+    const allBubbles = _bub.bubbles.map(b => bubbleSvgString(b)).join('');
+    // 2) 캔버스에 원본 이미지 그리고 위에 SVG 오버레이 그림 (PNG 무손실 합성)
+    const baseImg = await _bubbleBlobToImg(_bub.imgBlob);
+    const W = _bub.imgW, H = _bub.imgH;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(baseImg, 0, 0, W, H);
+    if(allBubbles){
+      const overlaySvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${allBubbles}</svg>`;
+      const overlayUrl = URL.createObjectURL(new Blob([overlaySvg], {type:'image/svg+xml'}));
+      const overlayImg = new Image();
+      await new Promise((res, rej) => { overlayImg.onload = res; overlayImg.onerror = () => rej(new Error('말풍선 SVG 로드 실패')); overlayImg.src = overlayUrl; });
+      ctx.drawImage(overlayImg, 0, 0, W, H);
+      URL.revokeObjectURL(overlayUrl);
+    }
+    const blob = await new Promise(res => cv.toBlob(res, 'image/png'));
+    if(!blob) throw new Error('PNG 인코딩 실패');
+    // 3) 갤러리 저장 — 메타에 bubbleProject 포함 (재편집 가능)
+    const baseLabel = _bub.sourceLabel || '';
+    const label = baseLabel ? `${baseLabel}+말풍선` : '말풍선';
+    const fname = `bubble_${Date.now()}.png`;
+    const newMeta = {
+      ...(_bub.sourceMeta || {}),
+      bubbleProject: {
+        schemaVersion: 1,
+        // layoutId 모름 (원본이 만화 아니어도 됨) — 메타로 보존
+        bubbles: _bub.bubbles.map(b => ({...b})),
+      },
+      w: W, h: H,
+    };
+    await DB.saveImage(blob, fname, label, _bub.sourcePrompt || '', newMeta);
+    if(state.mainPane === 'gallery') await loadGallery();
+    await refreshGallerySize();
+    toast(`💬 말풍선 ${_bub.bubbles.length}개 추가 — '${label}' 갤러리 저장됨`, 'success');
+    closeBubbleEditor();
+  } catch(e){
+    toast(`말풍선 저장 실패 — ${e.message||e}\n브라우저 캔버스가 차단됐을 수 있어요. 새로고침 후 재시도`, 'error');
+    console.error('[bubble:save]', e);
+  }
+}
+
+function _bubbleBlobToImg(blob){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); res(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('이미지 로드 실패')); };
+    img.src = url;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
 // TAG CODEX — 태그 도감
 // ═══════════════════════════════════════════════════════════
 let _tagActiveCats = new Set(TAG_CATEGORIES.map(c => c.id));  // 전체 표시
@@ -14632,6 +15032,98 @@ function wireGenerationAndPresetEvents(){
   if(comicStart) comicStart.addEventListener('click', startComicGeneration);
   // steps 변경 → 만화 비용 갱신 (만화 페인에서만 표시되지만 항상 최신 유지)
   $('steps')?.addEventListener('input', _refreshComicCost);
+
+  // 💬 Bubble editor — lightbox 진입 + 도구·드래그·키보드·저장
+  $('lbBubbles')?.addEventListener('click', openBubbleEditor);
+  $('bubbleCancelBtn')?.addEventListener('click', closeBubbleEditor);
+  $('bubbleSaveBtn')?.addEventListener('click', _bubbleSaveAsNew);
+  $('bubbleClearBtn')?.addEventListener('click', _bubbleClearAll);
+  $('bubbleDeleteBtn')?.addEventListener('click', _bubbleDeleteSelected);
+  $('bubbleEditTextBtn')?.addEventListener('click', _bubbleOpenTextEditor);
+  $('bubbleTextCancel')?.addEventListener('click', () => $('bubbleTextModal').classList.remove('open'));
+  $('bubbleTextOk')?.addEventListener('click', _bubbleApplyText);
+  // 도형 추가 버튼 — 위임
+  document.querySelectorAll('[data-bubble-add]').forEach(btn => {
+    btn.addEventListener('click', () => _bubbleAdd(btn.dataset.bubbleAdd));
+  });
+
+  // 편집기 드래그/리사이즈 — pointer events 로 마우스·터치 통합
+  const bubbleSvg = $('bubbleSvg');
+  if(bubbleSvg){
+    bubbleSvg.addEventListener('pointerdown', e => {
+      if(!_bub.open) return;
+      const handle = e.target.closest('.b-handle');
+      const shape = e.target.closest('.b-shape');
+      const targetIdx = handle
+        ? parseInt(handle.dataset.bubbleIdx, 10)
+        : (shape ? parseInt(shape.dataset.bubbleIdx, 10) : -1);
+      if(!handle && !shape){
+        // 빈 영역 클릭 → 선택 해제
+        _bubbleSelect(-1);
+        return;
+      }
+      if(!Number.isFinite(targetIdx) || targetIdx < 0) return;
+      _bubbleSelect(targetIdx);
+      const orig = {..._bub.bubbles[targetIdx]};
+      const pt = _bubblePtToSvg(e);
+      _bub.drag = {
+        kind: handle ? 'resize' : 'move',
+        startX: pt.x, startY: pt.y,
+        origBubble: orig,
+      };
+      try { bubbleSvg.setPointerCapture(e.pointerId); } catch(_){}
+      e.preventDefault();
+    });
+    bubbleSvg.addEventListener('pointermove', e => {
+      if(!_bub.drag || _bub.selIdx < 0) return;
+      const pt = _bubblePtToSvg(e);
+      const dx = pt.x - _bub.drag.startX;
+      const dy = pt.y - _bub.drag.startY;
+      const b = _bub.bubbles[_bub.selIdx];
+      const o = _bub.drag.origBubble;
+      if(_bub.drag.kind === 'move'){
+        b.x = Math.max(0, Math.min(_bub.imgW - o.w, Math.round(o.x + dx)));
+        b.y = Math.max(0, Math.min(_bub.imgH - o.h, Math.round(o.y + dy)));
+      } else {
+        b.w = Math.max(MIN_BUBBLE_W, Math.min(_bub.imgW - o.x, Math.round(o.w + dx)));
+        b.h = Math.max(MIN_BUBBLE_H, Math.min(_bub.imgH - o.y, Math.round(o.h + dy)));
+      }
+      _renderBubbleEditor();
+    });
+    const endDrag = e => {
+      if(_bub.drag){
+        _bub.drag = null;
+        try { bubbleSvg.releasePointerCapture(e.pointerId); } catch(_){}
+      }
+    };
+    bubbleSvg.addEventListener('pointerup', endDrag);
+    bubbleSvg.addEventListener('pointercancel', endDrag);
+    // 더블 클릭 = 텍스트 편집
+    bubbleSvg.addEventListener('dblclick', e => {
+      const shape = e.target.closest('.b-shape');
+      if(!shape) return;
+      const idx = parseInt(shape.dataset.bubbleIdx, 10);
+      if(!Number.isFinite(idx)) return;
+      _bubbleSelect(idx);
+      _bubbleOpenTextEditor();
+    });
+  }
+
+  // 키보드 — 모달 열려있을 때만
+  document.addEventListener('keydown', e => {
+    if(!_bub.open) return;
+    // 텍스트 편집 모달이 열려있으면 무시 (textarea 가 키 차지)
+    if($('bubbleTextModal').classList.contains('open')) return;
+    if(e.key === 'Escape'){
+      if(_bub.selIdx >= 0){ _bubbleSelect(-1); e.preventDefault(); }
+      else { closeBubbleEditor(); e.preventDefault(); }
+    } else if(e.key === 'Delete' || e.key === 'Backspace'){
+      if(_bub.selIdx >= 0 && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT'){
+        _bubbleDeleteSelected();
+        e.preventDefault();
+      }
+    }
+  });
 
   // Tag Codex 이벤트
   $('tagCats').addEventListener('click', e => {

@@ -91,6 +91,23 @@ test.describe('NAI Studio smoke', () => {
     await expect(page.locator('#comicCostInfo')).toContainText('Anlas');
   });
 
+  test('말풍선 편집기 — 마크업 + 도구 노출 (모달 닫힘 상태)', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#prompt')).toBeVisible({timeout: 10000});
+
+    // 모달은 초기엔 닫혀있어야 (.open 클래스 없음)
+    await expect(page.locator('#bubbleModal')).not.toHaveClass(/open/);
+    // 도형 추가 버튼 3종이 DOM 에 존재
+    await expect(page.locator('[data-bubble-add="round"]')).toHaveCount(1);
+    await expect(page.locator('[data-bubble-add="spike"]')).toHaveCount(1);
+    await expect(page.locator('[data-bubble-add="thought"]')).toHaveCount(1);
+    // 텍스트 편집·삭제 버튼은 disabled 로 시작
+    await expect(page.locator('#bubbleEditTextBtn')).toBeDisabled();
+    await expect(page.locator('#bubbleDeleteBtn')).toBeDisabled();
+    // 라이트박스 진입 버튼이 액션 사이드바에 존재
+    await expect(page.locator('#lbBubbles')).toHaveCount(1);
+  });
+
   test('CSP 메타 + 외부 script crossorigin 강제', async ({ page }) => {
     await page.goto('/');
     const csp = await page.locator('meta[http-equiv="Content-Security-Policy"]').count();
