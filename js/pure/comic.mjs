@@ -58,7 +58,7 @@ export const LAYOUTS = [
 ];
 
 export const BUBBLE_SHAPES = ['round', 'spike', 'thought'];
-export const BUBBLE_TAIL_DIRS = ['bl', 'br', 'tl', 'tr'];
+export const BUBBLE_TAIL_DIRS = ['bl', 'br', 'tl', 'tr', 'none'];
 
 const SCHEMA_VERSION = 1;
 const MAX_TEXT_LEN = 500;        // 말풍선 1개 최대 글자
@@ -133,6 +133,36 @@ function escXml(s){
  * shape: 'round' (대사) | 'spike' (외침) | 'thought' (생각)
  * 꼬리는 MVP 에서 생략 — 도형만. (꼬리 분기는 별도 단계에서 추가.)
  */
+// 꼬리(tail) SVG — 도형 외곽에서 방향(tailDir)으로 빠져나옴.
+// 'spike' 와 'none' 은 꼬리 없음. round=삼각형, thought=작은 원 2개 (큰→작은).
+// 본체보다 먼저 stack 에 올려서 본체가 위쪽 stroke 를 자연스럽게 덮도록.
+function bubbleTailSvg(shape, tailDir, cx, cy, rx, ry){
+  if(shape === 'spike' || tailDir === 'none' || !BUBBLE_TAIL_DIRS.includes(tailDir)) return '';
+  const dx = tailDir.endsWith('l') ? -1 : 1;
+  const dy = tailDir.startsWith('t') ? -1 : 1;
+  const angle = Math.atan2(dy * ry, dx * rx);   // 타원 외곽 매개변수 각도
+  const off = Math.min(rx, ry) * 0.65;          // 꼬리 길이
+  const sx = cx + Math.cos(angle) * rx * 0.92;
+  const sy = cy + Math.sin(angle) * ry * 0.92;
+  const tipX = cx + Math.cos(angle) * (rx + off);
+  const tipY = cy + Math.sin(angle) * (ry + off);
+  if(shape === 'thought'){
+    const m1x = (sx + tipX) / 2, m1y = (sy + tipY) / 2;
+    const r1 = Math.max(4, off * 0.22);
+    const r2 = Math.max(3, off * 0.13);
+    return `<circle cx="${m1x.toFixed(1)}" cy="${m1y.toFixed(1)}" r="${r1.toFixed(1)}" fill="white" stroke="black" stroke-width="3"/>`
+      + `<circle cx="${tipX.toFixed(1)}" cy="${tipY.toFixed(1)}" r="${r2.toFixed(1)}" fill="white" stroke="black" stroke-width="3"/>`;
+  }
+  // round — 본체 옆 양 점 + 꼬리 끝, 삼각형
+  const perp = Math.PI / 2;
+  const wing = Math.min(rx, ry) * 0.22;
+  const ax = sx + Math.cos(angle + perp) * wing;
+  const ay = sy + Math.sin(angle + perp) * wing;
+  const bx = sx + Math.cos(angle - perp) * wing;
+  const by = sy + Math.sin(angle - perp) * wing;
+  return `<polygon points="${ax.toFixed(1)},${ay.toFixed(1)} ${tipX.toFixed(1)},${tipY.toFixed(1)} ${bx.toFixed(1)},${by.toFixed(1)}" fill="white" stroke="black" stroke-width="3" stroke-linejoin="round"/>`;
+}
+
 export function bubbleSvgString(bubble){
   if(!bubble || typeof bubble !== 'object') return '';
   const x = Number(bubble.x) || 0;
@@ -141,8 +171,11 @@ export function bubbleSvgString(bubble){
   const h = Math.max(MIN_BUBBLE_H, Number(bubble.h) || DEFAULT_BUBBLE_H);
   const text = String(bubble.text || '');
   const shape = BUBBLE_SHAPES.includes(bubble.shape) ? bubble.shape : 'round';
+  const tailDir = BUBBLE_TAIL_DIRS.includes(bubble.tailDir) ? bubble.tailDir : 'bl';
   const cx = x + w/2, cy = y + h/2;
   const rx = w/2, ry = h/2;
+
+  const tail = bubbleTailSvg(shape, tailDir, cx, cy, rx, ry);
 
   let body;
   if(shape === 'round'){
@@ -177,7 +210,8 @@ export function bubbleSvgString(bubble){
     ? `<text text-anchor="middle" font-family="Pretendard, sans-serif" font-size="${fontSize}" fill="black">${textEls}</text>`
     : '';
 
-  return `<g class="comic-bubble" data-shape="${shape}">${body}${textSvg}</g>`;
+  // 꼬리는 본체보다 먼저 (본체가 위에서 자연스럽게 덮음)
+  return `<g class="comic-bubble" data-shape="${shape}">${tail}${body}${textSvg}</g>`;
 }
 
 /**

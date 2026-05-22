@@ -725,3 +725,36 @@ test('panelMaskSvg: 잘못된 인덱스 → 빈 문자열', () => {
   assert.equal(panelMaskSvg(layout, 99), '');
   assert.equal(panelMaskSvg(null, 0), '');
 });
+
+test('bubbleSvgString: tailDir 적용 (round → 삼각형 꼬리)', () => {
+  const out = bubbleSvgString({shape:'round', x:0, y:0, w:120, h:80, text:'', tailDir:'br'});
+  // 본체 <ellipse> + 꼬리 <polygon>
+  assert.match(out, /<ellipse/);
+  assert.match(out, /<polygon[^>]*stroke-linejoin="round"/);
+});
+
+test('bubbleSvgString: thought tailDir → 작은 원 2개', () => {
+  const out = bubbleSvgString({shape:'thought', x:0, y:0, w:120, h:80, text:'', tailDir:'bl'});
+  // 본체 <ellipse> + 꼬리 <circle> × 2 (작은 원 + 더 작은 원)
+  assert.equal((out.match(/<circle/g) || []).length, 2);
+});
+
+test('bubbleSvgString: spike 는 tailDir 무시 (꼬리 없음)', () => {
+  const out = bubbleSvgString({shape:'spike', x:0, y:0, w:120, h:80, text:'', tailDir:'br'});
+  assert.equal((out.match(/<polygon/g) || []).length, 1);  // 본체만
+  assert.equal((out.match(/<circle/g) || []).length, 0);
+});
+
+test('bubbleSvgString: tailDir=none → 꼬리 없음', () => {
+  const out = bubbleSvgString({shape:'round', x:0, y:0, w:120, h:80, text:'', tailDir:'none'});
+  assert.equal((out.match(/<polygon/g) || []).length, 0);
+  assert.equal((out.match(/<ellipse/g) || []).length, 1);
+});
+
+test('serializeProject: tailDir none 도 허용', () => {
+  const p = serializeProject({
+    layoutId: '2v',
+    bubbles: [{shape:'round', text:'', tailDir:'none'}],
+  });
+  assert.equal(p.bubbles[0].tailDir, 'none');
+});

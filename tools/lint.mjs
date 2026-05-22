@@ -165,6 +165,7 @@ const MIRRORED = [
   {mod: 'js/pure/comic.mjs', fn: 'pageTemplateSvg'},
   {mod: 'js/pure/comic.mjs', fn: 'panelMaskSvg'},
   {mod: 'js/pure/comic.mjs', fn: 'wrapBubbleText'},
+  {mod: 'js/pure/comic.mjs', fn: 'bubbleTailSvg'},
   {mod: 'js/pure/comic.mjs', fn: 'bubbleSvgString'},
 ];
 const inlineSrc = readFileSync(join(ROOT, 'index.html'), 'utf8');
