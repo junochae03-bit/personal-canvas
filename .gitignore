@@ -3,3 +3,9 @@ Thumbs.db
 *.log
 node_modules/
 package-lock.json
+
+# Playwright
+/playwright-report/
+/test-results/
+/blob-report/
+/playwright/.cache/

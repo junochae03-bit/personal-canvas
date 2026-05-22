@@ -5,10 +5,18 @@
   "description": "NAI Studio — NovelAI image generation PWA (static, GitHub Pages)",
   "type": "module",
   "scripts": {
-    "test": "node --test test/*.test.mjs",
-    "check": "node --check sw.js && node -e \"const fs=require('fs'),re=/<script(?![^>]*\\\\bsrc=)[^>]*>([\\\\s\\\\S]*?)<\\/script>/g,h=fs.readFileSync('index.html','utf8');let m,j='';while((m=re.exec(h)))j+='\\\\n//---\\\\n'+m[1];fs.writeFileSync('/tmp/_inline.js',j);\" && node --check /tmp/_inline.js"
+    "test": "TZ=UTC node --test test/*.test.mjs",
+    "check": "node --check sw.js && node -e \"const fs=require('fs'),re=/<script(?![^>]*\\\\bsrc=)[^>]*>([\\\\s\\\\S]*?)<\\/script>/g,h=fs.readFileSync('index.html','utf8');let m,j='';while((m=re.exec(h)))j+='\\\\n//---\\\\n'+m[1];fs.writeFileSync('/tmp/_inline.js',j);\" && node --check /tmp/_inline.js",
+    "lint": "node tools/lint.mjs",
+    "sri": "node tools/build-sri.mjs",
+    "bump-sw-cache": "node tools/bump-sw-cache.mjs",
+    "release": "npm run sri && npm run bump-sw-cache && npm run check && npm run lint && npm test",
+    "e2e": "playwright test"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
   }
 }

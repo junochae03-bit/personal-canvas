@@ -1,4 +1,4 @@
-// NAI Studio Service Worker — v4
+// NAI Studio Service Worker — v6
 // 전략:
 //   1. HTML/네비게이션 = stale-while-revalidate + 새 빌드 감지 시 클라이언트에 알림
 //      (네트워크 우선은 첫 페인트가 네트워크 RTT에 묶여서 느림. 캐시 즉시 반환 + BG로 갱신)
@@ -6,8 +6,13 @@
 //   3. CDN 외부 라이브러리 = cache-first (한 번 받고 오래 사용)
 //   4. NovelAI API 등 동적 요청 = 캐시 우회
 //   5. file:// 환경에선 SW 자체가 등록되지 않으므로 영향 없음
+//
+// 캐시 버전 정책:
+//   - CACHE_NAME 은 수동 증가가 원칙이나, 잊었을 때를 대비해 클라이언트가
+//     ETag/Content-Length 변경을 감지하면 NEW_VERSION_AVAILABLE 메시지를
+//     보내서 사용자에게 새로고침을 안내.
 
-const CACHE_NAME = 'nai-studio-v5';
+const CACHE_NAME = 'nai-studio-af49754d';
 const CORE = [
   './',
   './index.html',
@@ -41,7 +46,17 @@ self.addEventListener('activate', e => {
 self.addEventListener('message', e => {
   if(e.data === 'SKIP_WAITING') self.skipWaiting();
   if(e.data === 'CLEAR_CACHE'){
-    e.waitUntil(caches.delete(CACHE_NAME).then(() => self.clients.claim()));
+    // 모든 캐시 일괄 삭제 + clients.claim + 완료 알림 — 트러블슈팅용.
+    // 🐛 fix: 이전엔 일방적 삭제만 하고 사용자에게 피드백 없음 → CACHE_CLEARED 메시지 보냄.
+    e.waitUntil((async () => {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+      await self.clients.claim();
+      const clients = await self.clients.matchAll({type: 'window'});
+      for(const c of clients){
+        try { c.postMessage({type: 'CACHE_CLEARED', deletedCount: keys.length}); } catch(_){}
+      }
+    })());
   }
 });
 

@@ -30,5 +30,7 @@ jobs:
       - name: Validate JSON assets
         run: |
           node -e "JSON.parse(require('fs').readFileSync('tags-danbooru.json', 'utf8'))"
-      - name: Run unit tests (pure functions)
+      - name: Custom lint (eval, var, pure isolation, CSP, crossorigin)
+        run: npm run lint
+      - name: Run unit tests (pure functions, TZ=UTC)
         run: npm test
