@@ -84,11 +84,38 @@ for(const f of [...jsFiles, ...htmlFiles]){
   }
 }
 
-// 5. index.html CSP 메타 + 외부 script crossorigin
+// 4b. localStorage.setItem 은 QuotaExceededError 가능 — 반드시 try 블록 안에 있어야.
+//     try { ... localStorage.setItem(...) ... } 패턴만 허용. catch 가 없는 setItem 호출은 거부.
 for(const f of htmlFiles){
   const src = readFileSync(f, 'utf8');
-  if(!/<meta\s+http-equiv=["']Content-Security-Policy["']/i.test(src)){
+  const lines = src.split('\n');
+  lines.forEach((ln, i) => {
+    if(!/localStorage\.setItem\s*\(/.test(ln)) return;
+    // 직전 200자 또는 이전 6줄 안에 try { 가 있어야 함 (최소 보수적 검사)
+    const start = Math.max(0, i - 6);
+    const window = lines.slice(start, i + 1).join('\n');
+    if(!/\btry\s*\{/.test(window)){
+      fail(f, `L${i+1} localStorage.setItem — try/catch 없음 (QuotaExceeded 노출)`);
+    }
+  });
+}
+
+// 5. index.html CSP 메타 + 외부 script crossorigin + CSP 필수 디렉티브
+for(const f of htmlFiles){
+  const src = readFileSync(f, 'utf8');
+  // content 속성은 double-quote 로 감싸지고 내부 single-quote('self','none' 등) 를 그대로 포함하므로
+  // 인용부호 종류를 캡처(1) 한 뒤 동일 종류만 종결자로 인정.
+  const cspMatch = src.match(/<meta\s+http-equiv=["']Content-Security-Policy["']\s+content=(["'])([\s\S]+?)\1/i);
+  if(!cspMatch){
     fail(f, 'CSP <meta http-equiv="Content-Security-Policy"> 누락');
+  } else {
+    const csp = cspMatch[2];
+    // 플러그인/iframe/base 변조 차단 디렉티브 — XSS 표면 축소
+    for(const req of ['object-src', 'frame-ancestors', 'base-uri', 'form-action']){
+      if(!csp.includes(req)){
+        fail(f, `CSP 에 ${req} 디렉티브 누락`);
+      }
+    }
   }
   // <script src="http..."> 마다 crossorigin 속성 확인
   const scripts = [...src.matchAll(/<script\b[^>]*\bsrc=["']https?:\/\/[^"']+["'][^>]*>/gi)];
