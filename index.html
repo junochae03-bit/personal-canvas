@@ -355,6 +355,19 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .comic-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:6px}
 .comic-actions .btn.primary{min-height:38px;font-size:14px;padding:9px 18px}
 .comic-cost-info{font-size:12px;color:var(--t3);font-family:var(--mono)}
+.comic-consistency-toggle{display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:1.5px solid var(--b1);border-radius:8px;padding:12px 14px;cursor:pointer;transition:border-color .12s}
+.comic-consistency-toggle:hover{border-color:var(--b2)}
+.comic-consistency-toggle input[type="checkbox"]{margin-top:3px;width:18px;height:18px;flex-shrink:0;accent-color:var(--acc);cursor:pointer}
+.comic-consistency-toggle:has(input:checked){border-color:var(--acc);background:rgba(162,90,31,.06)}
+.comic-consistency-body{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.comic-consistency-title{font-weight:700;font-size:14px;color:var(--t1);display:flex;align-items:center;gap:8px}
+.comic-consistency-title .muted{color:var(--t3);font-size:11.5px;font-weight:500}
+.comic-consistency-desc{font-size:12.5px;color:var(--t2);line-height:1.55}
+.comic-consistency-desc strong{color:var(--acc)}
+.comic-consistency-status{font-size:11.5px;color:var(--t3);font-family:var(--mono);margin-top:4px}
+.vibe-role-row{display:flex;margin-bottom:4px}
+.vibe-role-sel{flex:1;font-size:11.5px;padding:3px 6px;background:var(--card);border:1px solid var(--b1);color:var(--t1);border-radius:4px;font-family:inherit;cursor:pointer;min-height:26px}
+.vibe-role-sel:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
 
 /* 💬 BUBBLE EDITOR MODAL */
 .bubble-modal{width:min(960px,94vw);max-width:none}
@@ -2545,6 +2558,19 @@ mark{
               <span class="muted" id="comicSelectedDim"></span>
             </div>
             <div class="comic-panel-inputs" id="comicPanelInputs"></div>
+            <label class="comic-consistency-toggle" title="🎯 그림체·캐릭터 일관성 자동 보정 — 컷 간 변동을 최소화하는 설정 한 번에 적용">
+              <input type="checkbox" id="comicConsistencyToggle" checked>
+              <div class="comic-consistency-body">
+                <div class="comic-consistency-title">🎯 일관성 모드 <span class="muted">(권장)</span></div>
+                <div class="comic-consistency-desc">
+                  생성 시작 시 자동 적용:
+                  <strong>시드 잠금</strong> · <strong>V4 좌표 사용</strong> ·
+                  <strong>Vibe 역할별 권장값</strong> (그림체 0.35/0.50, 캐릭터 0.90/0.60).
+                  편집 모드에서 Vibe 이미지의 역할(🎨 그림체 / 🎴 캐릭터) 만 선택해두면 됩니다.
+                </div>
+                <div class="comic-consistency-status" id="comicConsistencyStatus"></div>
+              </div>
+            </label>
             <div class="comic-actions">
               <button type="button" class="btn primary" id="comicStartBtn">🎞 만화 생성 시작 <span class="en">Generate Comic</span></button>
               <span class="comic-cost-info" id="comicCostInfo"></span>
@@ -11876,20 +11902,44 @@ async function setBaseImage(file){
   refreshResInfo();
 }
 
+// 🎯 Vibe 역할 프리셋 — 사용자가 '그림체'/'캐릭터' 라벨로 선택하면 권장 info/strength 자동 적용.
+// 'custom' 은 슬라이더 그대로. NAI 가이드 + 만화 5겹 일관성 전략에서 도출.
+const VIBE_ROLE_PRESETS = {
+  style:     {info: 0.35, strength: 0.50, label: '🎨 그림체', hint: '디테일·캐릭터 정보 줄이고 화풍만'},
+  character: {info: 0.90, strength: 0.60, label: '🎴 캐릭터', hint: '캐릭터 외형·정체성 강하게 보존'},
+  custom:    {info: null, strength: null, label: '직접', hint: '슬라이더 직접 조정'},
+};
+
 async function addVibeRef(file){
   if(!file) return;
   const dataURL = await blobToDataURL(file);
   const b64 = dataURL.split(',')[1];
-  state.vibeRefs.push({ blob: file, dataURL, b64, info: 1.0, strength: 0.6 });
+  // 자동 역할 추정 — 첫 번째 vibe = '그림체', 두 번째 = '캐릭터', 그 후 = 'custom'
+  const n = state.vibeRefs.length;
+  const role = n === 0 ? 'style' : (n === 1 ? 'character' : 'custom');
+  const preset = VIBE_ROLE_PRESETS[role];
+  const info = preset.info != null ? preset.info : 1.0;
+  const strength = preset.strength != null ? preset.strength : 0.6;
+  state.vibeRefs.push({ blob: file, dataURL, b64, info, strength, role });
   renderVibeList();
 }
 
 function renderVibeList(){
   const wrap = $('vibeList');
-  wrap.innerHTML = state.vibeRefs.map((v, i) => `
+  wrap.innerHTML = state.vibeRefs.map((v, i) => {
+    const role = v.role || 'custom';
+    const preset = VIBE_ROLE_PRESETS[role] || VIBE_ROLE_PRESETS.custom;
+    return `
     <div class="vibe-item" data-idx="${i}">
       <div class="vibe-thumb" style="background-image:url('${v.dataURL}')"></div>
       <div class="vibe-ctrl">
+        <div class="vibe-role-row">
+          <select class="vibe-role-sel" data-act="role" data-idx="${i}" title="${esc(preset.hint)}">
+            <option value="style" ${role==='style'?'selected':''}>${VIBE_ROLE_PRESETS.style.label}</option>
+            <option value="character" ${role==='character'?'selected':''}>${VIBE_ROLE_PRESETS.character.label}</option>
+            <option value="custom" ${role==='custom'?'selected':''}>${VIBE_ROLE_PRESETS.custom.label}</option>
+          </select>
+        </div>
         <div class="slider-row"><span class="lbl">Info</span>
           <input type="range" data-act="info" data-idx="${i}" min="0" max="1" step="0.05" value="${v.info}">
           <span class="val">${v.info.toFixed(2)}</span></div>
@@ -11898,8 +11948,21 @@ function renderVibeList(){
           <span class="val">${v.strength.toFixed(2)}</span></div>
       </div>
       <button class="iconbtn" data-act="del-vibe" data-idx="${i}" title="제거">✕</button>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
+}
+
+// Vibe 역할 변경 → info/strength 권장값 자동 적용. 'custom' 은 기존값 유지.
+function setVibeRole(idx, role){
+  const v = state.vibeRefs[idx];
+  if(!v) return;
+  if(!VIBE_ROLE_PRESETS[role]) role = 'custom';
+  v.role = role;
+  const p = VIBE_ROLE_PRESETS[role];
+  if(p.info != null) v.info = p.info;
+  if(p.strength != null) v.strength = p.strength;
+  renderVibeList();
+  saveSettingsDebounced();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -12764,7 +12827,7 @@ function setMainPane(pane){
   else if(pane === 'presets'){ renderPresetTabs(); renderPresets(); }
   else if(pane === 'templates'){ tplRenderCatChips(); tplRenderRoll(); tplRenderSavedList(); }
   else if(pane === 'tags'){ loadDanbooruTags(); renderTagCats(); renderTagBody(); }
-  else if(pane === 'comic'){ renderComicLayoutPicker(); }
+  else if(pane === 'comic'){ renderComicLayoutPicker(); _refreshComicConsistencyStatus(); }
   // 페인 변경 이벤트 발행 — 캐릭터 네거티브 모드 등이 자동 해제 가능
   if(prev !== pane) document.dispatchEvent(new CustomEvent('mview-change', {detail:{prev, next:pane}}));
 }
@@ -12843,6 +12906,7 @@ function selectComicLayout(layoutId){
   _updateComicSelectedPanel();
   _renderComicPanelInputs();
   _refreshComicCost();
+  _refreshComicConsistencyStatus();
 }
 
 // 🎞 페이지 템플릿 SVG — 빈 만화 페이지 (흰 배경 + 검은 패널 보더).
@@ -12924,6 +12988,59 @@ function _renderComicPanelInputs(){
   }).join('');
 }
 
+// 🎯 일관성 모드 적용 — 만화 시작 직전 자동 보정.
+//   1) 시드 비어있으면 새 시드 한 번 굴리고 잠금 → 모든 컷이 같은 노이즈에서 시작
+//   2) useCoords 체크박스 ON — V4 캐릭터 좌표 사용 (캐릭터 슬롯의 pos.x/y 활성)
+//   3) Vibe 슬롯의 role 별 권장값 일괄 재적용 (사용자가 슬라이더 만져서 'custom' 된 건 건드리지 않음)
+function _applyComicConsistencyMode(){
+  // 시드 잠금
+  const seedInput = $('seed');
+  if(seedInput){
+    const cur = (seedInput.value || '').trim();
+    if(!cur || cur === '-1'){
+      const newSeed = randomSeed();
+      seedInput.value = String(newSeed);
+    }
+    state.seedLocked = true;
+    const lockBtn = $('lockSeedBtn');
+    if(lockBtn) lockBtn.textContent = '🔒';
+  }
+  // useCoords
+  const uc = $('useCoords');
+  if(uc && !uc.checked){ uc.checked = true; }
+  // Vibe 역할 재적용 — 사용자가 'custom' 으로 둔 건 그대로
+  let applied = 0;
+  for(let i = 0; i < state.vibeRefs.length; i++){
+    const v = state.vibeRefs[i];
+    const role = v.role || 'custom';
+    const p = VIBE_ROLE_PRESETS[role];
+    if(!p || p.info == null) continue;
+    v.info = p.info;
+    v.strength = p.strength;
+    applied++;
+  }
+  if(applied > 0) renderVibeList();
+  toast(`🎯 일관성 모드 — 시드 ${seedInput?.value} 잠금·좌표 ON${applied?`·Vibe ${applied}장 보정`:''}`, 'info');
+  saveSettingsDebounced();
+  _refreshComicConsistencyStatus();
+}
+
+// 일관성 상태 한 줄 — 현재 시드·잠금·useCoords·vibe 역할 분포 표시
+function _refreshComicConsistencyStatus(){
+  const el = $('comicConsistencyStatus');
+  if(!el) return;
+  const seed = ($('seed')?.value || '').trim() || '랜덤';
+  const locked = state.seedLocked ? '🔒' : '🔓';
+  const coords = $('useCoords')?.checked ? 'ON' : 'OFF';
+  const roles = state.vibeRefs.reduce((acc, v) => {
+    const r = v.role || 'custom';
+    acc[r] = (acc[r] || 0) + 1;
+    return acc;
+  }, {});
+  const roleStr = ['style','character','custom'].map(r => roles[r] ? `${VIBE_ROLE_PRESETS[r].label}${roles[r]}` : '').filter(Boolean).join(' · ');
+  el.textContent = `현재: 시드 ${seed} ${locked} · 좌표 ${coords}${roleStr ? ' · Vibe '+roleStr : ' · Vibe 없음'}`;
+}
+
 // 🧮 Anlas 비용 미리 계산 — 모든 패널이 페이지 전체 크기로 인페인트되므로 패널 수 × 페이지 비용.
 function _refreshComicCost(){
   const el = $('comicCostInfo');
@@ -12953,6 +13070,10 @@ async function startComicGeneration(){
   }
   const apiKey = $('apiKey').value.trim();
   if(!apiKey){ toast('API 키(pst-...)를 먼저 입력하세요 — 설정 → 보안', 'error'); return; }
+  // 🎯 일관성 모드 — 만화 시작 직전 자동 보정 (사용자가 끄면 건너뜀)
+  if($('comicConsistencyToggle')?.checked){
+    _applyComicConsistencyMode();
+  }
   // 다음 호출에도 입력 보존
   state._comicPanelPrompts = prompts.slice();
   // 페이지 템플릿 + 패널 마스크 미리 생성 (한 번만)
@@ -15029,9 +15150,24 @@ function wireGenerationAndPresetEvents(){
     const idx = parseInt(t.dataset.idx);
     if(isNaN(idx) || !state.vibeRefs[idx]) return;
     const act = t.dataset.act;
-    if(act === 'info'){ state.vibeRefs[idx].info = parseFloat(t.value); }
-    else if(act === 'strength'){ state.vibeRefs[idx].strength = parseFloat(t.value); }
+    if(act === 'info'){
+      state.vibeRefs[idx].info = parseFloat(t.value);
+      // 사용자가 슬라이더 직접 만지면 자동으로 'custom' 으로 전환 — 역할 의미 유지
+      if(state.vibeRefs[idx].role !== 'custom'){ state.vibeRefs[idx].role = 'custom'; renderVibeList(); return; }
+    }
+    else if(act === 'strength'){
+      state.vibeRefs[idx].strength = parseFloat(t.value);
+      if(state.vibeRefs[idx].role !== 'custom'){ state.vibeRefs[idx].role = 'custom'; renderVibeList(); return; }
+    }
     t.parentElement.querySelector('.val').textContent = parseFloat(t.value).toFixed(2);
+  });
+  // 🎯 Vibe 역할 셀렉트 — change 이벤트 (input 보다 정확)
+  $('vibeList').addEventListener('change', e => {
+    const t = e.target;
+    if(t.dataset.act !== 'role') return;
+    const idx = parseInt(t.dataset.idx);
+    if(isNaN(idx)) return;
+    setVibeRole(idx, t.value);
   });
   $('vibeList').addEventListener('click', e => {
     const t = e.target.closest('[data-act="del-vibe"]');
@@ -15086,6 +15222,18 @@ function wireGenerationAndPresetEvents(){
   if(comicStart) comicStart.addEventListener('click', startComicGeneration);
   // steps 변경 → 만화 비용 갱신 (만화 페인에서만 표시되지만 항상 최신 유지)
   $('steps')?.addEventListener('input', _refreshComicCost);
+  // 🎯 일관성 토글 → 상태 한 줄 즉시 갱신 + 저장
+  $('comicConsistencyToggle')?.addEventListener('change', () => {
+    _refreshComicConsistencyStatus();
+    saveSettingsDebounced();
+  });
+  // 시드·useCoords 변경 시도 만화 페인 보이면 상태 갱신
+  $('seed')?.addEventListener('input', () => {
+    if(state.mainPane === 'comic') _refreshComicConsistencyStatus();
+  });
+  $('useCoords')?.addEventListener('change', () => {
+    if(state.mainPane === 'comic') _refreshComicConsistencyStatus();
+  });
 
   // 💬 Bubble editor — lightbox 진입 + 도구·드래그·키보드·저장
   $('lbBubbles')?.addEventListener('click', openBubbleEditor);
