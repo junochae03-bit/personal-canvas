@@ -357,6 +357,27 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .comic-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:6px}
 .comic-actions .btn.primary{min-height:38px;font-size:14px;padding:9px 18px}
 .comic-cost-info{font-size:12px;color:var(--t3);font-family:var(--mono)}
+.comic-shared-input{display:flex;flex-direction:column;gap:6px}
+.comic-shared-input label{font-size:13px;color:var(--t2);font-weight:600;display:flex;align-items:center;gap:8px}
+.comic-shared-input .muted{color:var(--t3);font-size:11.5px;font-weight:500}
+.comic-shared-input code{background:var(--card);padding:1px 6px;border-radius:3px;font-family:var(--mono);font-size:11px;color:var(--acc)}
+.comic-shared-input textarea{font-size:13px;min-height:60px;font-family:var(--mono)}
+.comic-shared-hint{font-size:11.5px;color:var(--t3);line-height:1.5}
+.comic-shared-hint.warn{color:var(--yellow)}
+.comic-layout-card.is-custom{border-style:dashed}
+.comic-layout-card.is-custom-add{background:var(--card2);border-style:dashed;justify-content:center;align-items:center;text-align:center}
+.comic-custom-modal{width:min(640px,94vw)}
+.custom-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-bottom:14px}
+.custom-ctl{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--t2);font-weight:600}
+.custom-ctl .inp{font-size:13px;padding:6px 8px}
+.custom-ctl input[type=range]{padding:0;height:24px}
+.custom-gval{font-size:11.5px;color:var(--t3);font-family:var(--mono);margin-top:2px}
+.custom-preview{background:var(--card2);border-radius:6px;padding:16px;display:flex;justify-content:center;max-height:300px;margin-bottom:8px}
+.custom-preview svg{max-height:270px;width:auto;display:block}
+.custom-info{font-size:12px;color:var(--t2);line-height:1.6}
+.custom-info .ok{color:var(--green)}
+.custom-info .warn{color:var(--yellow)}
+.custom-info .err{color:var(--red)}
 .comic-selected-preview{display:flex;justify-content:center;background:var(--card2);border-radius:6px;padding:14px;max-height:220px}
 .comic-selected-preview svg{max-height:200px;width:auto;display:block}
 .comic-panel-status{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--b1);margin-right:4px;vertical-align:middle;transition:background .2s,box-shadow .2s}
@@ -2570,6 +2591,14 @@ mark{
               <span class="muted" id="comicSelectedDim"></span>
             </div>
             <div class="comic-selected-preview" id="comicSelectedPreview" aria-hidden="true"></div>
+            <div class="comic-shared-input">
+              <label for="comicShared">
+                📝 공통 프롬프트 <span class="muted">(모든 컷에 prefix 로 적용 · <code>||A|B|C||</code> 동적 선택 가능)</span>
+              </label>
+              <textarea id="comicShared" class="ta" rows="3"
+                placeholder="모든 컷에 공통으로 들어가는 부분 — 카테고리 묶음 한 번만 적기.&#10;예) ||simple background|indoors|outdoors||, ||happy sex|rough sex|implied sex||, ||tears, crying|aroused, smile|ahegao||"></textarea>
+              <div class="comic-shared-hint" id="comicSharedHint"></div>
+            </div>
             <div class="comic-panel-inputs" id="comicPanelInputs"></div>
             <label class="comic-consistency-toggle" title="🎯 그림체·캐릭터 일관성 자동 보정 — 컷 간 변동을 최소화하는 설정 한 번에 적용">
               <input type="checkbox" id="comicConsistencyToggle" checked>
@@ -3122,6 +3151,41 @@ coffee shop, latte art"></textarea>
     <div class="modal-foot">
       <button class="btn ghost" id="inpaintCancel">취소 <span class="en">Cancel</span></button>
       <button class="btn primary" id="inpaintSave">저장 <span class="en">Save</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- 🧩 COMIC CUSTOM LAYOUT MODAL — 사용자가 행·열·페이지 크기 지정해서 레이아웃 생성 -->
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="comicCustomTitle" id="comicCustomModal">
+  <div class="modal comic-custom-modal">
+    <h3 id="comicCustomTitle">🧩 사용자 정의 레이아웃 <span class="en">Custom Grid</span></h3>
+    <div class="modal-body">
+      <div class="custom-controls">
+        <label class="custom-ctl">페이지 크기
+          <select id="comicCustomSize" class="inp">
+            <option value="832,1216">832×1216 — 세로 (1MP)</option>
+            <option value="1216,832">1216×832 — 가로 (1MP)</option>
+            <option value="1024,1024">1024×1024 — 정사각 (1MP)</option>
+            <option value="1024,1216">1024×1216 — 세로 와이드 (1.25MP, Opus)</option>
+          </select>
+        </label>
+        <label class="custom-ctl">행 (Rows)
+          <input type="number" id="comicCustomRows" class="inp" min="1" max="5" value="2">
+        </label>
+        <label class="custom-ctl">열 (Cols)
+          <input type="number" id="comicCustomCols" class="inp" min="1" max="5" value="2">
+        </label>
+        <label class="custom-ctl">여백 (Gutter)
+          <input type="range" id="comicCustomGutter" min="4" max="32" step="2" value="12">
+          <span class="custom-gval"><span id="comicCustomGutterVal">12</span>px</span>
+        </label>
+      </div>
+      <div class="custom-preview" id="comicCustomPreview"></div>
+      <div class="custom-info" id="comicCustomInfo"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="comicCustomCancel">취소 <span class="en">Cancel</span></button>
+      <button class="btn primary" id="comicCustomApply">이 레이아웃 사용 <span class="en">Apply</span></button>
     </div>
   </div>
 </div>
@@ -12878,6 +12942,44 @@ const COMIC_LAYOUTS = [
     panels:[{x:0,y:0,w:832,h:700},{x:0,y:712,w:410,h:504},{x:422,y:712,w:410,h:504}]},
 ];
 
+// 🧩 사용자 정의 레이아웃 — 페이지 크기 + 행·열 + gutter 로 균등 분할 panels 자동 생성.
+//   최소 컷 크기 200×200 (NAI 디테일) 검증은 호출자가 수행 (_validateCustomLayout).
+function _genCustomLayout(w, h, rows, cols, gutter){
+  const r = Math.max(1, Math.min(8, parseInt(rows, 10) || 2));
+  const c = Math.max(1, Math.min(8, parseInt(cols, 10) || 2));
+  const g = Math.max(0, Math.min(64, parseInt(gutter, 10) || 12));
+  const cellW = (w - g * (c + 1)) / c;
+  const cellH = (h - g * (r + 1)) / r;
+  const panels = [];
+  for(let row = 0; row < r; row++){
+    for(let col = 0; col < c; col++){
+      panels.push({
+        x: Math.round(g + col * (cellW + g)),
+        y: Math.round(g + row * (cellH + g)),
+        w: Math.round(cellW),
+        h: Math.round(cellH),
+      });
+    }
+  }
+  return {id:'custom', name:`사용자 ${c}×${r}`, w, h, gutter:g, panels, isCustom:true};
+}
+
+function _validateCustomLayout(layout){
+  if(!layout || !layout.panels.length) return {ok:false, msg:'컷이 없습니다'};
+  const tooSmall = layout.panels.find(p => p.w < 200 || p.h < 200);
+  if(tooSmall) return {ok:false, msg:`컷 크기 ${tooSmall.w}×${tooSmall.h} 가 너무 작아요 (최소 200×200 권장 — NAI 디테일 손실)`};
+  // 1MP 초과 시 Opus 필요 경고
+  if(layout.w * layout.h > 1048576) return {ok:true, warn:'1MP 초과 — NAI Opus 구독 필요'};
+  return {ok:true};
+}
+
+function _allComicLayouts(){
+  // 정적 5종 + 사용자 정의 (있을 때)
+  const list = COMIC_LAYOUTS.slice();
+  if(state.comicCustomLayout) list.push(state.comicCustomLayout);
+  return list;
+}
+
 function _comicLayoutThumbSvg(layout){
   // 레이아웃 비율에 맞춰 viewBox, 패널은 옅은 보더 + 번호
   const vb = `0 0 ${layout.w} ${layout.h}`;
@@ -12894,23 +12996,36 @@ function renderComicLayoutPicker(){
   const picker = $('comicLayoutPicker');
   if(!picker) return;
   const selectedId = state.comicLayoutId || '';
-  picker.innerHTML = COMIC_LAYOUTS.map(layout => {
+  const cards = _allComicLayouts().map(layout => {
     const isSel = layout.id === selectedId;
-    return `<button type="button" class="comic-layout-card" role="radio" aria-checked="${isSel}" data-layout-id="${esc(layout.id)}">`
+    const customCls = layout.isCustom ? ' is-custom' : '';
+    return `<button type="button" class="comic-layout-card${customCls}" role="radio" aria-checked="${isSel}" data-layout-id="${esc(layout.id)}">`
       + `<div class="comic-layout-thumb">${_comicLayoutThumbSvg(layout)}</div>`
       + `<div class="comic-layout-meta">`
       +   `<div class="comic-layout-name">${esc(layout.name)}</div>`
       +   `<div class="comic-layout-dim">${layout.w}×${layout.h} · ${layout.panels.length}컷</div>`
       + `</div>`
       + `</button>`;
-  }).join('');
+  });
+  // ✎ 사용자 정의 만들기 카드 — 항상 마지막
+  cards.push(
+    `<button type="button" class="comic-layout-card is-custom-add" id="comicCustomAddCard" `
+    + `aria-label="사용자 정의 레이아웃 만들기" data-layout-id="__custom_add__">`
+    + `<div class="comic-layout-thumb" style="display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--t3)">✎</div>`
+    + `<div class="comic-layout-meta">`
+    +   `<div class="comic-layout-name">사용자 정의${state.comicCustomLayout ? ' (편집)' : ''}</div>`
+    +   `<div class="comic-layout-dim">행·열 직접 지정</div>`
+    + `</div>`
+    + `</button>`
+  );
+  picker.innerHTML = cards.join('');
   _updateComicSelectedPanel();
 }
 
 function _updateComicSelectedPanel(){
   const sel = $('comicSelected');
   if(!sel) return;
-  const layout = COMIC_LAYOUTS.find(l => l.id === state.comicLayoutId);
+  const layout = _allComicLayouts().find(l => l.id === state.comicLayoutId);
   if(!layout){ sel.hidden = true; return; }
   sel.hidden = false;
   $('comicSelectedName').textContent = layout.name;
@@ -12918,12 +13033,18 @@ function _updateComicSelectedPanel(){
   // 큰 미리보기 — 카드 썸네일과 동일한 SVG 재사용
   const preview = $('comicSelectedPreview');
   if(preview) preview.innerHTML = _comicLayoutThumbSvg(layout);
+  // 공통 프롬프트 textarea 값 복원 + hint 갱신 (페인 재진입 시 IDB 에서 복원된 state 반영)
+  const shared = $('comicShared');
+  if(shared && state._comicSharedPrompt != null && shared.value !== state._comicSharedPrompt){
+    shared.value = state._comicSharedPrompt;
+  }
+  _refreshComicSharedHint();
 }
 
 // 만화 큐 진행 중 컷 카드에 시각적 상태 (대기/생성중/완료/실패) 표시.
 //   data-state 속성만 갱신 → CSS 가 색·애니메이션 적용.
 function _refreshComicPanelStates(){
-  const layout = COMIC_LAYOUTS.find(l => l.id === state.comicLayoutId);
+  const layout = _allComicLayouts().find(l => l.id === state.comicLayoutId);
   if(!layout) return;
   // 만화 큐 아이템 (state.queue 의 _comic 표식) → panelIndex 별 status 매핑
   const states = new Array(layout.panels.length).fill('wait');
@@ -12939,7 +13060,9 @@ function _refreshComicPanelStates(){
 }
 
 function selectComicLayout(layoutId){
-  const layout = COMIC_LAYOUTS.find(l => l.id === layoutId);
+  // ✎ 추가 카드면 모달 열기
+  if(layoutId === '__custom_add__'){ openComicCustomModal(); return; }
+  const layout = _allComicLayouts().find(l => l.id === layoutId);
   if(!layout) return;
   state.comicLayoutId = layout.id;
   // 카드 aria-checked 갱신 (전체 재렌더 대신 부분 갱신 — flicker 없음)
@@ -13016,7 +13139,7 @@ async function _comicBlobToBaseImage(blob, w, h){
 function _renderComicPanelInputs(){
   const host = $('comicPanelInputs');
   if(!host) return;
-  const layout = COMIC_LAYOUTS.find(l => l.id === state.comicLayoutId);
+  const layout = _allComicLayouts().find(l => l.id === state.comicLayoutId);
   if(!layout){ host.innerHTML = ''; return; }
   // 기존 입력값 보존 — 같은 레이아웃 ID 면 textarea value 가 유지됨
   const prev = state._comicPanelPrompts || [];
@@ -13028,10 +13151,73 @@ function _renderComicPanelInputs(){
       +     `컷 ${i+1} <span class="muted">${p.w}×${p.h}</span>`
       +   `</label>`
       +   `<textarea id="comicPrompt${i}" class="ta comic-prompt-ta" rows="2" `
-      +     `placeholder="표정·동작·구도만 (캐릭터 외형은 슬롯에서 자동 적용) — 예: close-up, smiling, blushing" `
+      +     `placeholder="이 컷만의 차이점 (공통 위에 추가) · ||A|B|C|| 가능 — 예: close-up, smiling, blushing" `
       +     `data-panel-idx="${i}">${val}</textarea>`
       + `</div>`;
   }).join('');
+}
+
+// 🧩 사용자 정의 레이아웃 모달 — 행·열·페이지 크기 → 미리보기 → 적용.
+function openComicCustomModal(){
+  const modal = $('comicCustomModal');
+  if(!modal) return;
+  const cur = state.comicCustomLayout;
+  if(cur){
+    $('comicCustomSize').value = `${cur.w},${cur.h}`;
+    $('comicCustomRows').value = state._comicCustomRows || 2;
+    $('comicCustomCols').value = state._comicCustomCols || 2;
+    $('comicCustomGutter').value = cur.gutter || 12;
+  } else {
+    $('comicCustomRows').value = state._comicCustomRows || 2;
+    $('comicCustomCols').value = state._comicCustomCols || 2;
+    $('comicCustomGutter').value = 12;
+  }
+  $('comicCustomGutterVal').textContent = $('comicCustomGutter').value;
+  modal.classList.add('open');
+  _refreshComicCustomPreview();
+}
+
+function closeComicCustomModal(){ $('comicCustomModal').classList.remove('open'); }
+
+function _readComicCustomInputs(){
+  const [w, h] = $('comicCustomSize').value.split(',').map(n => parseInt(n, 10));
+  const rows = parseInt($('comicCustomRows').value, 10);
+  const cols = parseInt($('comicCustomCols').value, 10);
+  const gutter = parseInt($('comicCustomGutter').value, 10);
+  return {w, h, rows, cols, gutter};
+}
+
+function _refreshComicCustomPreview(){
+  const {w, h, rows, cols, gutter} = _readComicCustomInputs();
+  $('comicCustomGutterVal').textContent = gutter;
+  const layout = _genCustomLayout(w, h, rows, cols, gutter);
+  $('comicCustomPreview').innerHTML = _comicLayoutThumbSvg(layout);
+  const v = _validateCustomLayout(layout);
+  const info = $('comicCustomInfo');
+  const minPanel = layout.panels.reduce((a, p) => Math.min(a, p.w, p.h), Infinity);
+  if(!v.ok){
+    info.innerHTML = `<span class="err">⚠ ${esc(v.msg)}</span> · 최소 컷 크기 <code>${minPanel}px</code>`;
+  } else if(v.warn){
+    info.innerHTML = `<span class="warn">⚠ ${esc(v.warn)}</span> · 컷 ${layout.panels.length}개 · 최소 ${minPanel}×${minPanel}`;
+  } else {
+    info.innerHTML = `<span class="ok">✓ 사용 가능</span> · 컷 ${layout.panels.length}개 · 최소 ${minPanel}×${minPanel}`;
+  }
+  return {layout, valid: v};
+}
+
+function applyComicCustomLayout(){
+  const {w, h, rows, cols, gutter} = _readComicCustomInputs();
+  const layout = _genCustomLayout(w, h, rows, cols, gutter);
+  const v = _validateCustomLayout(layout);
+  if(!v.ok){ toast(`사용자 정의 레이아웃 적용 실패 — ${v.msg}`, 'warning'); return; }
+  state.comicCustomLayout = layout;
+  state._comicCustomRows = rows;
+  state._comicCustomCols = cols;
+  closeComicCustomModal();
+  renderComicLayoutPicker();
+  selectComicLayout('custom');
+  saveSettingsDebounced();
+  toast(`🧩 사용자 정의 레이아웃 적용 — ${cols}×${rows}컷 (${w}×${h})`, 'success');
 }
 
 // 🎯 일관성 모드 적용 — 만화 시작 직전 자동 보정.
@@ -13087,11 +13273,28 @@ function _refreshComicConsistencyStatus(){
   el.textContent = `현재: 시드 ${seed} ${locked} · 좌표 ${coords}${roleStr ? ' · Vibe '+roleStr : ' · Vibe 없음'}`;
 }
 
+// 📝 공통 프롬프트 hint — 사용자가 ||A|B|C|| 적었으면 조합 수, 안 적었으면 격려.
+function _refreshComicSharedHint(){
+  const ta = $('comicShared');
+  const el = $('comicSharedHint');
+  if(!ta || !el) return;
+  const text = ta.value.trim();
+  if(!text){ el.textContent = ''; el.classList.remove('warn'); return; }
+  const combos = countRandomCombinations(text);
+  if(combos > 1){
+    el.textContent = `🎲 가능한 조합 ${combos}개 — 매 컷마다 자동 무작위 선택`;
+    el.classList.remove('warn');
+  } else {
+    el.textContent = `정적 텍스트 (랜덤 없음) — ||A|B|C|| 문법으로 카테고리 묶음 표현 가능`;
+    el.classList.add('warn');
+  }
+}
+
 // 🧮 Anlas 비용 미리 계산 — 모든 패널이 페이지 전체 크기로 인페인트되므로 패널 수 × 페이지 비용.
 function _refreshComicCost(){
   const el = $('comicCostInfo');
   if(!el) return;
-  const layout = COMIC_LAYOUTS.find(l => l.id === state.comicLayoutId);
+  const layout = _allComicLayouts().find(l => l.id === state.comicLayoutId);
   if(!layout){ el.textContent = ''; return; }
   const steps = parseInt($('steps')?.value, 10) || 28;
   const perPanel = anlasCostFor({w: layout.w, h: layout.h, steps});
@@ -13101,19 +13304,26 @@ function _refreshComicCost(){
 
 // 🎞 만화 생성 시작 — 페이지 템플릿·패널 마스크 만들어서 큐에 주입 후 startGeneration 호출.
 async function startComicGeneration(){
-  const layout = COMIC_LAYOUTS.find(l => l.id === state.comicLayoutId);
+  const layout = _allComicLayouts().find(l => l.id === state.comicLayoutId);
   if(!layout){ toast('레이아웃을 먼저 선택하세요', 'warning'); return; }
   if(state.running){ stopGeneration(); return; }
-  // 컷별 프롬프트 수집 + 빈 컷 검증
-  const prompts = layout.panels.map((_, i) =>
+  // 공통 프롬프트 + 컷별 프롬프트 수집. 공통은 prefix, 컷별은 그 뒤에 콤마로 이어 붙임.
+  const shared = (($('comicShared')?.value) || '').trim();
+  const panelPrompts = layout.panels.map((_, i) =>
     (($('comicPrompt'+i)?.value) || '').trim()
   );
-  const emptyIdx = prompts.findIndex(p => !p);
+  // 공통도·컷별도 둘 다 비어있으면 거부. 한쪽이라도 있으면 OK (공통만으로도 의미 있음).
+  const emptyIdx = panelPrompts.findIndex((p, i) => !p && !shared);
   if(emptyIdx >= 0){
-    toast(`컷 ${emptyIdx+1} 의 프롬프트가 비어있어요`, 'warning');
+    toast(`컷 ${emptyIdx+1} 의 프롬프트가 비어있어요 (공통 프롬프트도 비어있음)`, 'warning');
     $('comicPrompt'+emptyIdx)?.focus();
     return;
   }
+  // 최종 컷별 프롬프트 — buildGenBody 가 expandRandomChoices 로 ||A|B|C|| 자동 expand
+  const prompts = panelPrompts.map(p => {
+    if(shared && p) return `${shared}, ${p}`;
+    return shared || p;
+  });
   const apiKey = $('apiKey').value.trim();
   if(!apiKey){ toast('API 키(pst-...)를 먼저 입력하세요 — 설정 → 보안', 'error'); return; }
   // 🎯 일관성 모드 — 만화 시작 직전 자동 보정 (사용자가 끄면 건너뜀)
@@ -14005,6 +14215,13 @@ async function saveSettings(){
     mode: state.mode,
     presetType: state.presetType,
     seedHistory: state.seedHistory,
+    // 🎞 만화 빌더 — 사용자 정의 레이아웃·공통 프롬프트·일관성 토글 영구화
+    comicLayoutId: state.comicLayoutId || '',
+    comicCustomLayout: state.comicCustomLayout || null,
+    comicCustomRows: state._comicCustomRows || null,
+    comicCustomCols: state._comicCustomCols || null,
+    comicSharedPrompt: state._comicSharedPrompt || '',
+    comicConsistency: $('comicConsistencyToggle')?.checked ?? true,
   };
   await DB.appSet(payload);
 }
@@ -14149,6 +14366,16 @@ async function loadSettings(){
     });
   }
   if(s.mode) setMode(s.mode);
+  // 🎞 만화 빌더 — 영구화 데이터 복원 (textarea 값은 페인 진입 시 _renderComicPanelInputs / _updateComicSelectedPanel 가 반영)
+  if(typeof s.comicLayoutId === 'string') state.comicLayoutId = s.comicLayoutId;
+  if(s.comicCustomLayout && typeof s.comicCustomLayout === 'object') state.comicCustomLayout = s.comicCustomLayout;
+  if(typeof s.comicCustomRows === 'number') state._comicCustomRows = s.comicCustomRows;
+  if(typeof s.comicCustomCols === 'number') state._comicCustomCols = s.comicCustomCols;
+  if(typeof s.comicSharedPrompt === 'string') state._comicSharedPrompt = s.comicSharedPrompt;
+  if(typeof s.comicConsistency === 'boolean'){
+    const tg = $('comicConsistencyToggle');
+    if(tg) tg.checked = s.comicConsistency;
+  }
 }
 
 // API 키 저장 — Web Crypto AES-GCM 으로 IndexedDB 에 암호화 보관
@@ -15269,6 +15496,19 @@ function wireGenerationAndPresetEvents(){
   if(comicStart) comicStart.addEventListener('click', startComicGeneration);
   // steps 변경 → 만화 비용 갱신 (만화 페인에서만 표시되지만 항상 최신 유지)
   $('steps')?.addEventListener('input', _refreshComicCost);
+  // 공통 프롬프트 — 입력 보존 + saveSettingsDebounced
+  $('comicShared')?.addEventListener('input', () => {
+    state._comicSharedPrompt = $('comicShared').value;
+    _refreshComicSharedHint();
+    saveSettingsDebounced();
+  });
+  // 🧩 사용자 정의 레이아웃 모달 컨트롤 → 실시간 미리보기
+  ['comicCustomSize','comicCustomRows','comicCustomCols','comicCustomGutter'].forEach(id => {
+    $(id)?.addEventListener('input', _refreshComicCustomPreview);
+    $(id)?.addEventListener('change', _refreshComicCustomPreview);
+  });
+  $('comicCustomCancel')?.addEventListener('click', closeComicCustomModal);
+  $('comicCustomApply')?.addEventListener('click', applyComicCustomLayout);
   // 🎯 일관성 토글 → 상태 한 줄 즉시 갱신 + 저장
   $('comicConsistencyToggle')?.addEventListener('change', () => {
     _refreshComicConsistencyStatus();
