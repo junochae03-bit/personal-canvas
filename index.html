@@ -2677,10 +2677,11 @@ mark{
                 📝 공통 프롬프트 <span class="muted">(모든 컷에 prefix · <code>||A|B|C||</code> 동적 선택 가능)</span>
               </label>
               <div class="comic-auto-hint">
-                💡 편집 모드의 <strong>메인 프롬프트·네거티브·캐릭터·Vibe</strong> 는 모든 컷에 자동 적용됩니다 — 여기엔 만화 전용 토큰만.
+                💡 <strong>편집 모드에서 자동 가져옴</strong> — 메인 프롬프트·네거티브·캐릭터 슬롯·Vibe·모델·샘플러·CFG·스텝·해상도.
+                <br>📌 <strong>여기에는 만화 전용 추가 토큰만</strong>: 메인 프롬프트와 겹치지 않게, 컷마다 변주하고 싶은 토큰 (배경·상황·표정 카테고리)을 <code>||A|B|C||</code> 로.
               </div>
               <textarea id="comicShared" class="ta" rows="3"
-                placeholder="만화 전용 prefix — 카테고리 묶음 한 번만 적기.&#10;예) ||simple background|indoors|outdoors||, ||happy sex|rough sex|implied sex||, ||tears, crying|aroused, smile|ahegao||"></textarea>
+                placeholder="만화 전용 prefix · 메인 프롬프트와 겹치지 않게 — 행동·상황·표정 카테고리만.&#10;예) ||simple background|indoors|outdoors||, ||happy sex|rough sex|implied sex||, ||tears, crying|aroused, smile|ahegao||"></textarea>
               <div class="comic-shared-hint" id="comicSharedHint"></div>
             </div>
             <div class="comic-panel-inputs" id="comicPanelInputs"></div>
@@ -6005,7 +6006,7 @@ function removeCharacter(idx){
     });
   };
   if(hasContent){
-    confirmDialog(`${label} 슬롯을 삭제하시겠습니까?\n(프롬프트와 썸네일이 함께 제거됩니다)`, doRemove, '캐릭터 삭제');
+    confirmDialog(`${label} 슬롯 자체를 삭제할까요?\n(슬롯 카드가 사라지고, 프롬프트·썸네일이 함께 제거됩니다.\n텍스트만 비우려면 🧹 비우기 버튼을 사용하세요.)`, doRemove, '캐릭터 슬롯 삭제');
   } else {
     doRemove();
   }
@@ -6360,7 +6361,7 @@ function renderCharacters(){
           <button class="char-act-btn ${c.enabled?'act':''}" data-act="toggle" data-idx="${i}">${c.enabled?'✓ 활성':'⭕ 비활성'} <span class="en" style="opacity:.55;font-weight:400">${c.enabled?'On':'Off'}</span></button>
           <button class="char-act-btn edit" data-act="expand" data-idx="${i}">✏ 프롬프트 <span class="en" style="opacity:.55;font-weight:400">Edit</span></button>
           <button class="char-act-btn" data-act="clear-char-all" data-idx="${i}" title="이 캐릭터의 외형·액션·네거티브 3개 텍스트를 한 번에 비웁니다 (실행 취소 6초)">🧹 비우기 <span class="en" style="opacity:.55;font-weight:400">Clear</span></button>
-          <button class="char-act-btn del" data-act="del" data-idx="${i}" title="이 슬롯 자체를 통째로 제거 (비우기와 다름 — 카드가 사라집니다)"><span class="del-ico">🗑</span><span class="del-lbl"> 슬롯 제거</span></button>
+          <button class="char-act-btn del" data-act="del" data-idx="${i}" title="이 캐릭터 슬롯 자체를 통째로 삭제 (텍스트만 비우려면 🧹 비우기 사용)"><span class="del-ico">🗑</span><span class="del-lbl"> 삭제</span></button>
         </div>
         ${poolBadge}
       </div>
@@ -13729,35 +13730,81 @@ function _refreshComicConsistencyStatus(){
 // 🎴 컷 프리셋 — state.comicPanelPresets 헬퍼·렌더링·CRUD.
 // state._comicPanelPresetUse[idx] = '' (직접) | 'random' | 'preset:ID' — 컷별 select 값 영구화.
 
+// 컷 select 옵션 — 직접 입력 / 랜덤 / 저장된 컷 프리셋 / NAI 캐릭터·액션 프리셋 (char + char-action 카테고리).
+//   value 형식:
+//     ''                           = 직접 입력만
+//     'random'                     = 저장된 컷 프리셋 중 랜덤
+//     'preset:CPP_ID'              = 저장된 컷 프리셋
+//     'nai:CAT_ID:PRESET_NAME'     = NAI 프리셋 (state.presets[catId] 에서 찾음)
+//     'nai-random:char-action'     = char-action 모든 카테고리에서 랜덤
 function _comicPanelPresetOptions(panelIdx){
-  const presets = Array.isArray(state.comicPanelPresets) ? state.comicPanelPresets : [];
+  const cppList = Array.isArray(state.comicPanelPresets) ? state.comicPanelPresets : [];
   const cur = (state._comicPanelPresetUse || {})[panelIdx] || '';
   const opts = [
     `<option value="" ${cur===''?'selected':''}>직접 입력만</option>`,
-    `<option value="random" ${cur==='random'?'selected':''} ${presets.length===0?'disabled':''}>🎲 저장된 프리셋 중 랜덤${presets.length===0?' (저장된 것 없음)':''}</option>`,
+    `<option value="random" ${cur==='random'?'selected':''} ${cppList.length===0?'disabled':''}>🎲 저장된 컷 프리셋 중 랜덤${cppList.length===0?' (저장된 것 없음)':''}</option>`,
   ];
-  if(presets.length){
-    opts.push(`<option disabled>── 저장된 프리셋 ──</option>`);
-    for(const p of presets){
+  // NAI 액션 카테고리에서 랜덤 — 매 컷마다 다른 액션
+  const charActionCats = PRESET_TYPES.filter(t => t.target === 'char-action');
+  const hasAnyNaiAction = charActionCats.some(t => Array.isArray(state.presets?.[t.id]) && state.presets[t.id].length > 0);
+  if(hasAnyNaiAction){
+    opts.push(`<option value="nai-random:char-action" ${cur==='nai-random:char-action'?'selected':''}>🎲 NAI 액션 프리셋 중 랜덤 (의상·자세·상황·헤어·콤보·인원)</option>`);
+  }
+  // 저장된 컷 프리셋
+  if(cppList.length){
+    opts.push(`<option disabled>── 저장된 컷 프리셋 ──</option>`);
+    for(const p of cppList){
       const val = `preset:${p.id}`;
+      opts.push(`<option value="${val}" ${cur===val?'selected':''}>${esc(p.name)}</option>`);
+    }
+  }
+  // NAI 캐릭터·액션 프리셋 — 카테고리별 그룹
+  for(const cat of [...PRESET_TYPES.filter(t => t.target === 'char'), ...charActionCats]){
+    const list = state.presets?.[cat.id] || [];
+    if(!list.length) continue;
+    opts.push(`<option disabled>── ${esc(cat.ico)} ${esc(cat.label)} (${cat.en}) ──</option>`);
+    for(const p of list){
+      const val = `nai:${cat.id}:${p.name}`;
       opts.push(`<option value="${val}" ${cur===val?'selected':''}>${esc(p.name)}</option>`);
     }
   }
   return opts.join('');
 }
 
-// 컷 N 의 프리셋 선택값 → 실제 프롬프트 텍스트. '' 면 빈, 'random' 이면 매번 다른 프리셋.
+// 컷 N 의 프리셋 선택값 → 실제 프롬프트 텍스트.
 function _resolveComicPanelPreset(panelIdx){
   const sel = (state._comicPanelPresetUse || {})[panelIdx] || '';
-  const presets = Array.isArray(state.comicPanelPresets) ? state.comicPanelPresets : [];
-  if(!sel || !presets.length) return '';
+  if(!sel) return '';
+  const cppList = Array.isArray(state.comicPanelPresets) ? state.comicPanelPresets : [];
   if(sel === 'random'){
-    const pick = presets[Math.floor(Math.random() * presets.length)];
-    return pick?.prompt || '';
+    if(!cppList.length) return '';
+    return cppList[Math.floor(Math.random() * cppList.length)]?.prompt || '';
+  }
+  if(sel === 'nai-random:char-action'){
+    // 모든 char-action 카테고리의 프리셋을 합쳐서 1개 무작위
+    const charActionCats = PRESET_TYPES.filter(t => t.target === 'char-action');
+    const pool = [];
+    for(const cat of charActionCats){
+      const list = state.presets?.[cat.id] || [];
+      for(const p of list){ pool.push(p.text || p.prompt || ''); }
+    }
+    if(!pool.length) return '';
+    return pool[Math.floor(Math.random() * pool.length)] || '';
   }
   if(sel.startsWith('preset:')){
     const id = sel.slice(7);
-    return presets.find(p => p.id === id)?.prompt || '';
+    return cppList.find(p => p.id === id)?.prompt || '';
+  }
+  if(sel.startsWith('nai:')){
+    // nai:catId:presetName
+    const rest = sel.slice(4);
+    const colonIdx = rest.indexOf(':');
+    if(colonIdx < 0) return '';
+    const catId = rest.slice(0, colonIdx);
+    const name = rest.slice(colonIdx + 1);
+    const list = state.presets?.[catId] || [];
+    const p = list.find(x => x.name === name);
+    return p ? (p.text || p.prompt || '') : '';
   }
   return '';
 }
