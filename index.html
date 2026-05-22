@@ -2689,7 +2689,8 @@ mark{
                 📝 공통 프롬프트 <span class="muted">(모든 컷에 prefix · <code>||A|B|C||</code> 동적 선택 가능)</span>
               </label>
               <div class="comic-auto-hint">
-                💡 <strong>편집 모드에서 자동 가져옴</strong> — 메인 프롬프트·네거티브·캐릭터 슬롯·Vibe·모델·샘플러·CFG·스텝·해상도.
+                💡 <strong>편집 모드에서 자동 가져옴</strong> — 메인 프롬프트·네거티브·캐릭터 슬롯·모델·샘플러·CFG·스텝·해상도.
+                <br>⚠ <strong>Vibe 는 NAI 인페인트 모델 미지원</strong> — 만화 컷 생성에서 자동 무시됩니다. 일관성은 캐릭터 슬롯 외형·시드 잠금·좌표(<code>use_coords</code>)로 유지.
                 <br>📌 <strong>여기에는 만화 전용 추가 토큰만</strong>: 메인 프롬프트와 겹치지 않게, 컷마다 변주하고 싶은 토큰 (배경·상황·표정 카테고리)을 <code>||A|B|C||</code> 로.
               </div>
               <textarea id="comicShared" class="ta" rows="3"
@@ -5355,7 +5356,10 @@ function buildGenBody(opts){
     }
   }
   // Vibe transfer (V4: multi; V3: single)
-  if(opts.vibeRefs && opts.vibeRefs.length){
+  // ⚠ NAI 인페인트 모델 (nai-diffusion-*-inpainting) 은 reference_image 파라미터 거부 (500).
+  //   이런 모델에서는 vibe 자동 무시. 사용자 호출자 (만화 빌더 등) 가 별도 안내 처리.
+  const _isInpaintModel = (opts.model || '').endsWith('-inpainting') || opts.action === 'infill';
+  if(opts.vibeRefs && opts.vibeRefs.length && !_isInpaintModel){
     if(isV4){
       params.reference_image_multiple = opts.vibeRefs.map(v => v.b64);
       params.reference_information_extracted_multiple = opts.vibeRefs.map(v => v.info ?? 1.0);
@@ -13797,7 +13801,9 @@ function _refreshComicConsistencyStatus(){
     return acc;
   }, {});
   const roleStr = ['style','character','custom'].map(r => roles[r] ? `${VIBE_ROLE_PRESETS[r].label}${roles[r]}` : '').filter(Boolean).join(' · ');
-  el.textContent = `현재: 시드 ${seed} ${locked} · 좌표 ${coords}${roleStr ? ' · Vibe '+roleStr : ' · Vibe 없음'}`;
+  // 만화는 인페인트 모델 사용 → NAI 가 vibe 거부 → 자동 무시. 사용자가 인지하도록 표시.
+  const vibeIgnored = roleStr ? ' ⚠ Vibe 인페인트 미지원으로 무시' : '';
+  el.textContent = `현재: 시드 ${seed} ${locked} · 좌표 ${coords}${roleStr ? ' · Vibe '+roleStr : ' · Vibe 없음'}${vibeIgnored}`;
 }
 
 // 🎴 컷 프리셋 — state.comicPanelPresets 헬퍼·렌더링·CRUD.
@@ -14181,6 +14187,11 @@ async function startComicGeneration(){
   state._customQueue = true;
   state._comicActive = true;
   state._comicVibeFallbackToasted = false;   // 새 만화 시작마다 한 번만 안내
+  // 사용자가 Vibe 를 추가했지만 만화는 인페인트 모델 사용 → NAI 가 거부 → 자동 무시.
+  // 사용자에게 명확히 알려서 일관성 약화 인지 + 캐릭터·시드로 보강하도록 안내.
+  if(Array.isArray(state.vibeRefs) && state.vibeRefs.length > 0){
+    toast(`⚠ 인페인트 모델은 Vibe 미지원 — Vibe ${state.vibeRefs.length}장 무시됨\n일관성은 캐릭터 슬롯 외형·시드 잠금·좌표로 유지하세요`, 'warning');
+  }
   // 모든 컷이 매핑되면 NAI 호출 없이 페이지만 갤러리에 저장
   if(state.queue.length === 0){
     try {
