@@ -335,7 +335,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .comic-sub{color:var(--t2);font-size:13.5px;line-height:1.6;margin:0}
 .comic-sub strong{color:var(--acc)}
 .comic-layout-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
-.comic-layout-card{background:var(--panel);border:2px solid var(--b1);border-radius:8px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:8px;transition:all .15s;text-align:left;font-family:inherit;color:var(--t1)}
+.comic-layout-card{background:var(--panel);border:2px solid var(--b1);border-radius:8px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:8px;transition:all .15s;text-align:left;font-family:inherit;color:var(--t1);user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
 .comic-layout-card:hover{border-color:var(--acc);background:var(--card)}
 .comic-layout-card:focus-visible{outline:2.5px solid var(--acc);outline-offset:2px}
 .comic-layout-card[aria-checked="true"]{border-color:var(--acc);background:rgba(162,90,31,.08);box-shadow:0 0 0 1px var(--acc) inset}
@@ -460,6 +460,21 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .cv-del{position:absolute;top:2px;right:2px;width:20px;height:20px;background:rgba(20,14,4,.65);color:#fff;border:none;border-radius:50%;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
 .cv-del:hover{background:var(--red)}
 .cv-empty{font-size:12px;color:var(--t3);text-align:center;padding:14px;background:var(--card);border-radius:5px;line-height:1.5}
+/* 📁 Comic Vibe Gallery Picker */
+.comic-vibe-gal-modal{width:min(820px,94vw)}
+.cvg-role-row{display:flex;align-items:center;gap:14px;margin-bottom:12px;flex-wrap:wrap;padding:8px 12px;background:var(--card);border-radius:6px;border:1.5px solid var(--b1)}
+.cvg-role-row .cvg-label{font-weight:700;color:var(--t2);font-size:13px}
+.cvg-role-opt{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--t1);cursor:pointer}
+.cvg-role-opt .muted{color:var(--t3);font-size:11px;font-family:var(--mono)}
+.cvg-role-row .tb-grow{flex:1}
+.cvg-role-row .inp{font-size:12.5px;padding:5px 9px}
+.cvg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;max-height:480px;overflow-y:auto;padding:4px}
+.cvg-item{background:#1a130a;border:2px solid var(--b1);border-radius:5px;cursor:pointer;padding:0;overflow:hidden;display:flex;flex-direction:column;font-family:inherit;transition:border-color .12s}
+.cvg-item:hover{border-color:var(--acc)}
+.cvg-item:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.cvg-item img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.cvg-item-meta{font-size:10.5px;color:var(--t3);padding:4px 6px;background:var(--card);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.cvg-loading,.cvg-empty{grid-column:1/-1;text-align:center;color:var(--t3);padding:30px;font-size:13px}
 @media (max-width:880px){
   .cv-header{flex-wrap:wrap}
   .cv-item{width:72px}
@@ -2686,8 +2701,9 @@ mark{
                 <span>🎨 일관성 참조 이미지</span>
                 <span class="muted" id="comicVibeCount">0장</span>
                 <span class="tb-grow"></span>
-                <button type="button" class="btn ghost small" id="comicVibeAddStyleBtn" title="화풍 참조 — 작가/시리즈 이미지 (info 0.35 / str 0.5)">+ 🎨 그림체</button>
-                <button type="button" class="btn ghost small" id="comicVibeAddCharBtn" title="캐릭터 참조 — 같은 인물 이미지 (info 0.9 / str 0.6)">+ 🎴 캐릭터</button>
+                <button type="button" class="btn ghost small" id="comicVibeAddStyleBtn" title="외부 파일 → 그림체 (info 0.35 / str 0.5)">+ 🎨 그림체</button>
+                <button type="button" class="btn ghost small" id="comicVibeAddCharBtn" title="외부 파일 → 캐릭터 (info 0.9 / str 0.6)">+ 🎴 캐릭터</button>
+                <button type="button" class="btn ghost small" id="comicVibeFromGalleryBtn" title="이 도구의 갤러리에서 이미지 선택">📁 갤러리에서</button>
                 <input type="file" id="comicVibeFile" accept="image/*" hidden multiple>
               </div>
               <div class="cv-list" id="comicVibeList"></div>
@@ -3276,6 +3292,26 @@ coffee shop, latte art"></textarea>
     <div class="modal-foot">
       <button class="btn ghost" id="comicCustomCancel">취소 <span class="en">Cancel</span></button>
       <button class="btn primary" id="comicCustomApply">이 레이아웃 사용 <span class="en">Apply</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- 📁 COMIC VIBE GALLERY PICKER — 내부 갤러리에서 일관성 참조 이미지 선택 -->
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="cvgTitle" id="comicVibeGalModal">
+  <div class="modal comic-vibe-gal-modal">
+    <h3 id="cvgTitle">📁 갤러리에서 일관성 참조 선택</h3>
+    <div class="modal-body">
+      <div class="cvg-role-row">
+        <span class="cvg-label">역할:</span>
+        <label class="cvg-role-opt"><input type="radio" name="cvgRole" value="style" checked> 🎨 그림체 <span class="muted">(info 0.35 / str 0.5)</span></label>
+        <label class="cvg-role-opt"><input type="radio" name="cvgRole" value="character"> 🎴 캐릭터 <span class="muted">(info 0.9 / str 0.6)</span></label>
+        <span class="tb-grow"></span>
+        <input type="text" class="inp" id="cvgSearch" placeholder="🔍 라벨/세션 검색" style="max-width:200px">
+      </div>
+      <div class="cvg-grid" id="cvgGrid"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="cvgCloseBtn">닫기 <span class="en">Close</span></button>
     </div>
   </div>
 </div>
@@ -13137,31 +13173,32 @@ function renderComicLayoutPicker(){
     const isSel = layout.id === selectedId;
     const customCls = layout.isCustom ? ' is-custom' : '';
     // 사용자 정의 카드에는 ✎ 수정 / ✕ 삭제 버튼 (hover 시 노출)
+    // ⚠ <button> 안의 <button> 은 HTML invalid → 카드를 <div role="radio"> 로 변경
     const customActions = layout.isCustom ? (
       `<div class="comic-layout-actions" aria-label="레이아웃 액션">`
       + `<button type="button" class="cla-btn" data-act="layout-edit" data-layout-id="${esc(layout.id)}" title="이 레이아웃 편집">✎</button>`
       + `<button type="button" class="cla-btn danger" data-act="layout-del" data-layout-id="${esc(layout.id)}" title="이 레이아웃 삭제">✕</button>`
       + `</div>`
     ) : '';
-    return `<button type="button" class="comic-layout-card${customCls}" role="radio" aria-checked="${isSel}" data-layout-id="${esc(layout.id)}">`
+    return `<div class="comic-layout-card${customCls}" role="radio" tabindex="0" aria-checked="${isSel}" data-layout-id="${esc(layout.id)}">`
       + customActions
       + `<div class="comic-layout-thumb">${_comicLayoutThumbSvg(layout)}</div>`
       + `<div class="comic-layout-meta">`
       +   `<div class="comic-layout-name">${esc(layout.name)}</div>`
       +   `<div class="comic-layout-dim">${layout.w}×${layout.h} · ${layout.panels.length}컷</div>`
       + `</div>`
-      + `</button>`;
+      + `</div>`;
   });
   // ✎ 사용자 정의 만들기 카드 — 항상 마지막
   cards.push(
-    `<button type="button" class="comic-layout-card is-custom-add" id="comicCustomAddCard" `
-    + `aria-label="사용자 정의 레이아웃 만들기" data-layout-id="__custom_add__">`
+    `<div class="comic-layout-card is-custom-add" id="comicCustomAddCard" `
+    + `role="button" tabindex="0" aria-label="사용자 정의 레이아웃 만들기" data-layout-id="__custom_add__">`
     + `<div class="comic-layout-thumb" style="display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--t3)">✎</div>`
     + `<div class="comic-layout-meta">`
     +   `<div class="comic-layout-name">사용자 정의${state.comicCustomLayout ? ' (편집)' : ''}</div>`
     +   `<div class="comic-layout-dim">행·열 직접 지정</div>`
     + `</div>`
-    + `</button>`
+    + `</div>`
   );
   picker.innerHTML = cards.join('');
   _updateComicSelectedPanel();
@@ -13591,6 +13628,86 @@ async function _comicVibeAddFromFiles(fileList, role){
   }
   _renderComicVibeMirror();
   _refreshComicConsistencyStatus();
+}
+
+// 📁 갤러리 picker — 모든 세션 이미지를 그리드로 표시. 클릭 시 vibe 로 추가.
+const _cvgUrls = [];   // 메모리 누수 방지용 createObjectURL 리스트
+
+function openComicVibeGalModal(){
+  const modal = $('comicVibeGalModal');
+  if(!modal) return;
+  $('cvgSearch').value = '';
+  modal.classList.add('open');
+  _renderComicVibeGalGrid();
+}
+
+function closeComicVibeGalModal(){
+  $('comicVibeGalModal').classList.remove('open');
+  // URL 정리
+  for(const u of _cvgUrls){ try { URL.revokeObjectURL(u); } catch(_){} }
+  _cvgUrls.length = 0;
+}
+
+async function _renderComicVibeGalGrid(){
+  const grid = $('cvgGrid');
+  if(!grid) return;
+  grid.innerHTML = '<div class="cvg-loading">갤러리 로딩 중...</div>';
+  // 기존 URL 정리
+  for(const u of _cvgUrls){ try { URL.revokeObjectURL(u); } catch(_){} }
+  _cvgUrls.length = 0;
+  const q = ($('cvgSearch')?.value || '').trim().toLowerCase();
+  const sessions = state.gallerySessions || [];
+  if(sessions.length === 0){
+    grid.innerHTML = '<div class="cvg-empty">갤러리가 비어있어요 — 먼저 이미지를 생성하세요</div>';
+    return;
+  }
+  const items = [];
+  for(const ses of sessions){
+    try {
+      const imgs = await DB.getSessionImages(ses.id);
+      for(const img of imgs){
+        if(q){
+          const hay = `${ses.label||''} ${img.label||''} ${img.prompt||''}`.toLowerCase();
+          if(!hay.includes(q)) continue;
+        }
+        items.push({img, sesName: ses.label || `세션 ${ses.id}`, sesId: ses.id});
+      }
+    } catch(e){ _swallow(e, 'cvg:getSession'); }
+  }
+  if(!items.length){
+    grid.innerHTML = q
+      ? `<div class="cvg-empty">'${esc(q)}' 검색 결과 없음</div>`
+      : '<div class="cvg-empty">갤러리가 비어있어요</div>';
+    return;
+  }
+  grid.innerHTML = items.map(({img, sesName, sesId}) => {
+    const url = URL.createObjectURL(img.blob);
+    _cvgUrls.push(url);
+    const labelText = img.label || img.prompt?.slice(0, 30) || sesName;
+    return `<button type="button" class="cvg-item" data-img-id="${img.id}" data-ses-id="${sesId}" title="${esc(sesName)} · ${esc(img.label||img.prompt||'')}">`
+      + `<img src="${url}" alt="${esc(img.label||'갤러리 이미지')}" loading="lazy" decoding="async">`
+      + `<div class="cvg-item-meta">${esc(labelText.slice(0, 24))}</div>`
+      + `</button>`;
+  }).join('');
+}
+
+async function _comicVibeFromGalImg(imgId, sesId){
+  try {
+    const imgs = await DB.getSessionImages(sesId);
+    const img = imgs.find(i => i.id === imgId);
+    if(!img || !img.blob){ toast('이미지를 찾을 수 없어요', 'warning'); return; }
+    const role = document.querySelector('input[name="cvgRole"]:checked')?.value || 'style';
+    await addVibeRef(img.blob);
+    setVibeRole(state.vibeRefs.length - 1, role);
+    _renderComicVibeMirror();
+    _refreshComicConsistencyStatus();
+    closeComicVibeGalModal();
+    const roleLabel = VIBE_ROLE_PRESETS[role]?.label || role;
+    toast(`📁 갤러리 → ${roleLabel} 추가됨`, 'success');
+  } catch(e){
+    toast(`갤러리 이미지 로드 실패 — ${e.message||e}`, 'error');
+    console.error('[cvg:add]', e);
+  }
 }
 
 // 일관성 상태 한 줄 — 현재 시드·잠금·useCoords·vibe 역할 분포 표시
@@ -15969,6 +16086,15 @@ function wireGenerationAndPresetEvents(){
       const card = e.target.closest('.comic-layout-card');
       if(card && card.dataset.layoutId) selectComicLayout(card.dataset.layoutId);
     });
+    // 키보드 — Enter/Space 로 카드 선택 (div role="radio" 라 button 기본 동작 없음)
+    comicPicker.addEventListener('keydown', e => {
+      const card = e.target.closest('.comic-layout-card');
+      if(!card || !card.dataset.layoutId) return;
+      if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        selectComicLayout(card.dataset.layoutId);
+      }
+    });
   }
   const comicInputs = $('comicPanelInputs');
   if(comicInputs){
@@ -16026,6 +16152,18 @@ function wireGenerationAndPresetEvents(){
     if(!e.target.files?.length) return;
     await _comicVibeAddFromFiles(e.target.files, _comicVibeRole);
     e.target.value = '';
+  });
+  // 📁 갤러리 picker
+  $('comicVibeFromGalleryBtn')?.addEventListener('click', openComicVibeGalModal);
+  $('cvgCloseBtn')?.addEventListener('click', closeComicVibeGalModal);
+  $('cvgSearch')?.addEventListener('input', debounce(_renderComicVibeGalGrid, 200));
+  $('cvgGrid')?.addEventListener('click', e => {
+    const item = e.target.closest('.cvg-item');
+    if(!item) return;
+    const imgId = parseInt(item.dataset.imgId, 10);
+    const sesId = parseInt(item.dataset.sesId, 10);
+    if(!Number.isFinite(imgId) || !Number.isFinite(sesId)) return;
+    _comicVibeFromGalImg(imgId, sesId);
   });
   $('comicVibeList')?.addEventListener('click', e => {
     const del = e.target.closest('[data-act="cv-del"]');
