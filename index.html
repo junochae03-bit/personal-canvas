@@ -1453,7 +1453,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 /* 옵션 행 — 2줄 grid 레이아웃 (가독성 ↑) — 모바일·데스크탑 둘 다 텍스트 한 줄 가득 */
 .rc-option{
   display:grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: auto 1fr auto auto;
   grid-template-rows: auto auto;
   align-items:center;
   gap:3px 6px;
@@ -1463,10 +1463,11 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   background:var(--card2);
   transition:background .12s,border-color .12s
 }
+.rc-option .rc-opt-drag{grid-column:1;grid-row:1 / -1}
 .rc-option:hover{background:var(--card);border-color:var(--b2)}
 .rc-option.locked-opt{background:rgba(58,99,152,.10);border-color:var(--blue);border-style:dashed}
 .rc-option .rc-opt-text{
-  grid-column:1 / -1;
+  grid-column:2 / -1;
   grid-row:1;
   background:var(--panel);
   border:1.5px solid var(--b1);
@@ -1482,7 +1483,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .rc-option .rc-opt-text:hover:not(:focus){border-color:var(--b2)}
 .rc-option .rc-opt-text.placeholder{color:var(--t3);font-style:italic}
 .rc-option .rc-opt-empty-badge{
-  grid-column:1;
+  grid-column:2;
   grid-row:2;
   font-size:10px;
   color:var(--t3);
@@ -1494,7 +1495,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   align-self:center
 }
 .rc-option .rc-weight-ctrl{
-  grid-column:2;
+  grid-column:3;
   grid-row:2;
   display:flex;
   align-items:center;
@@ -1528,7 +1529,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .rc-option .rc-weight-ctrl .rc-weight-val.negative{color:var(--red)}
 .rc-option .rc-weight-ctrl .rc-weight-val.zero{color:var(--t3)}
 .rc-option .rc-opt-actions{
-  grid-column:3;
+  grid-column:4;
   grid-row:2;
   display:flex;
   gap:2px;
@@ -1620,6 +1621,62 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 .rc-warn-bar{padding:5px 10px;background:rgba(184,136,32,.15);color:var(--yellow);font-size:11px;border-top:1px solid rgba(184,136,32,.3);line-height:1.5}
 .rc-warn-bar b{font-weight:700;color:var(--yellow)}
+
+/* 🔍 검색·필터 행 */
+.rc-search-row{
+  display:flex;
+  gap:6px;
+  margin-bottom:10px;
+  align-items:center
+}
+.rc-search-row #rcSearchInp{flex:1;min-width:0;font-size:12.5px;padding:6px 10px}
+.rc-search-row #rcFilterSel{flex-shrink:0;font-size:12px;padding:6px 8px;min-width:90px}
+.rc-search-row .iconbtn{width:34px;height:34px;font-size:12px}
+
+/* 🪄 카드 드래그 정렬 — grab cursor + 드래그 중 시각 강조 */
+.rc-card{position:relative}
+.rc-card.dragging{opacity:.5;background:var(--card2);border-style:dashed}
+.rc-card.drag-over{border-top:3px solid var(--acc);margin-top:-3px}
+.rc-drag-handle{
+  position:absolute;
+  left:-3px;
+  top:0;
+  bottom:0;
+  width:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:grab;
+  color:var(--t3);
+  font-size:11px;
+  font-weight:700;
+  user-select:none;
+  background:transparent
+}
+.rc-drag-handle:hover{color:var(--acc);background:rgba(162,90,31,.08)}
+.rc-drag-handle:active{cursor:grabbing}
+.rc-card-hdr{padding-left:18px}
+
+/* 옵션 행 드래그 정렬 */
+.rc-option.dragging{opacity:.5;border-style:dashed}
+.rc-option.drag-over{border-top:2px solid var(--acc)}
+.rc-opt-drag{
+  cursor:grab;
+  color:var(--t3);
+  font-size:11px;
+  padding:0 4px;
+  align-self:center;
+  user-select:none;
+  flex-shrink:0
+}
+.rc-opt-drag:hover{color:var(--acc)}
+.rc-opt-drag:active{cursor:grabbing}
+
+@media (max-width:880px){
+  .rc-drag-handle{display:none}   /* 모바일은 ▲▼ 버튼만 — 드래그 false positive 회피 */
+  .rc-opt-drag{display:none}
+  .rc-card-hdr{padding-left:10px}
+}
 
 /* ⋯ 더보기 메뉴 popover */
 .rc-more-menu{
@@ -1775,10 +1832,27 @@ mark{
           <span class="caret">▾</span>
         </div>
         <div class="sec-body">
+          <!-- 🔍 카테고리·옵션 검색 + 필터 -->
+          <div class="rc-search-row">
+            <input type="text" id="rcSearchInp" class="inp" placeholder="🔍 카테고리 라벨·옵션 텍스트 검색 (한글 초성 가능)" spellcheck="false" autocomplete="off">
+            <select id="rcFilterSel" class="inp" title="필터">
+              <option value="all">전체</option>
+              <option value="enabled">활성만</option>
+              <option value="disabled">비활성만</option>
+              <option value="locked">고정만</option>
+              <option value="warn">경고만</option>
+              <option value="empty">옵션 없음</option>
+              <option value="has-note">노트 있음</option>
+            </select>
+            <button type="button" id="rcSearchClearBtn" class="iconbtn" title="검색·필터 초기화" style="flex-shrink:0">✕</button>
+          </div>
           <div id="rcCategoryList" class="rc-category-list"></div>
           <div id="rcEmptyState" style="text-align:center;color:var(--t3);padding:30px 16px;font-size:12.5px;line-height:1.7;display:none">
             🎲 아직 등록된 카테고리가 없습니다<br>
             <span style="font-size:11px">＋ 버튼으로 새 카테고리를 만들거나, 📥 로 ||A|B|C|| 텍스트를 붙여넣으세요</span>
+          </div>
+          <div id="rcSearchEmptyState" style="text-align:center;color:var(--t3);padding:24px 16px;font-size:12.5px;line-height:1.7;display:none">
+            🔍 검색·필터 결과 없음
           </div>
         </div>
       </div>
@@ -15298,6 +15372,135 @@ function rcToggleBuilder(force){
   if(open) rcRender();
 }
 
+// 🔍 검색·필터 상태 (메모리만 — 세션 한정)
+const _rcSearch = {query: '', filter: 'all'};
+
+// 🪄 카드/옵션 드래그 정렬 — HTML5 drag&drop, 카드와 옵션 따로 처리.
+// 이벤트 위임으로 list 한 곳에서 처리. 카드 자체 또는 옵션 행이 draggable.
+function _rcInstallDragSort(list){
+  if(!list) return;
+  let dragging = null;   // {type:'card'|'opt', catIdx, optIdx}
+  list.addEventListener('dragstart', e => {
+    // input/textarea/button/select 안에서 시작한 드래그는 무시 (텍스트 선택·기본 동작 보존)
+    if(e.target.matches && e.target.matches('input, textarea, button, select')) return;
+    const optEl = e.target.closest('.rc-option');
+    const cardEl = e.target.closest('.rc-card');
+    // 옵션 드래그 — opt-drag 핸들에서만 (옵션 카드 본체에서 시작하면 입력칸 선택 방해)
+    if(optEl && e.target.classList?.contains('rc-opt-drag')){
+      const catIdx = parseInt(cardEl.dataset.catIdx, 10);
+      const optIdx = parseInt(optEl.dataset.optIdx, 10);
+      dragging = {type: 'opt', catIdx, optIdx};
+      optEl.classList.add('dragging');
+      try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'opt'); } catch(_){}
+      return;
+    }
+    // 카드 드래그 — drag handle 에서만
+    if(cardEl && e.target.classList?.contains('rc-drag-handle')){
+      const catIdx = parseInt(cardEl.dataset.catIdx, 10);
+      dragging = {type: 'card', catIdx};
+      cardEl.classList.add('dragging');
+      try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'card'); } catch(_){}
+      return;
+    }
+    // 그 외에서 시작한 드래그는 무시 (브라우저 기본 동작 막지 않음)
+  });
+  list.addEventListener('dragend', () => {
+    list.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+    list.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    dragging = null;
+  });
+  list.addEventListener('dragover', e => {
+    if(!dragging) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    // 드래그 위치 시각 표시 (drop target 하이라이트)
+    list.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    if(dragging.type === 'card'){
+      const targetCard = e.target.closest('.rc-card');
+      if(targetCard && !targetCard.classList.contains('dragging')){
+        targetCard.classList.add('drag-over');
+      }
+    } else if(dragging.type === 'opt'){
+      const targetCard = e.target.closest('.rc-card');
+      if(!targetCard) return;
+      // 같은 카드 안에서만 옵션 정렬 (다른 카테고리로 이동은 지원 안 함)
+      const targetOpt = e.target.closest('.rc-option');
+      if(targetOpt && !targetOpt.classList.contains('dragging') &&
+         parseInt(targetCard.dataset.catIdx, 10) === dragging.catIdx){
+        targetOpt.classList.add('drag-over');
+      }
+    }
+  });
+  list.addEventListener('drop', e => {
+    if(!dragging){ return; }
+    e.preventDefault();
+    list.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    if(dragging.type === 'card'){
+      const targetCard = e.target.closest('.rc-card');
+      if(!targetCard) { dragging = null; return; }
+      const fromIdx = dragging.catIdx;
+      const toIdx = parseInt(targetCard.dataset.catIdx, 10);
+      if(Number.isNaN(toIdx) || fromIdx === toIdx){ dragging = null; return; }
+      const cats = state.randomCategories;
+      const item = cats.splice(fromIdx, 1)[0];
+      cats.splice(toIdx, 0, item);
+      _saveRandomCategoriesDebounced();
+      rcRender();
+      toast(`📦 "${item.label}" 이동됨 (${fromIdx+1} → ${toIdx+1})`, 'info');
+    } else if(dragging.type === 'opt'){
+      const targetCard = e.target.closest('.rc-card');
+      const targetOpt = e.target.closest('.rc-option');
+      if(!targetCard || !targetOpt){ dragging = null; return; }
+      const catIdx = dragging.catIdx;
+      if(parseInt(targetCard.dataset.catIdx, 10) !== catIdx){ dragging = null; return; }
+      const fromIdx = dragging.optIdx;
+      const toIdx = parseInt(targetOpt.dataset.optIdx, 10);
+      if(Number.isNaN(toIdx) || fromIdx === toIdx){ dragging = null; return; }
+      const cat = state.randomCategories?.[catIdx];
+      if(!cat?.options){ dragging = null; return; }
+      const item = cat.options.splice(fromIdx, 1)[0];
+      cat.options.splice(toIdx, 0, item);
+      // 고정 옵션 인덱스 조정
+      if(cat.locked && Number.isInteger(cat.lockedOptionIdx)){
+        if(cat.lockedOptionIdx === fromIdx) cat.lockedOptionIdx = toIdx;
+        else if(fromIdx < cat.lockedOptionIdx && toIdx >= cat.lockedOptionIdx) cat.lockedOptionIdx--;
+        else if(fromIdx > cat.lockedOptionIdx && toIdx <= cat.lockedOptionIdx) cat.lockedOptionIdx++;
+      }
+      _saveRandomCategoriesDebounced();
+      rcRender();
+    }
+    dragging = null;
+  });
+}
+
+// 카테고리가 검색·필터 매칭에 통과하는지
+function _rcMatches(cat){
+  // 필터 우선
+  const f = _rcSearch.filter || 'all';
+  if(f === 'enabled' && !cat.enabled) return false;
+  if(f === 'disabled' && cat.enabled) return false;
+  if(f === 'locked' && !cat.locked) return false;
+  if(f === 'warn' && !_rcOptionWarning(cat)) return false;
+  if(f === 'empty' && (cat.options?.length || 0) > 0) return false;
+  if(f === 'has-note' && !(cat.note && cat.note.trim())) return false;
+  // 검색 — 라벨·노트·옵션 텍스트 모두 검사 (koMatch — Batch 2 한글 초성)
+  const q = (_rcSearch.query || '').trim();
+  if(!q) return true;
+  if(typeof koMatch === 'function'){
+    if(koMatch(cat.label || '', q).match) return true;
+    if(koMatch(cat.note || '', q).match) return true;
+    for(const o of (cat.options || [])){
+      if(koMatch(o.text || '', q).match) return true;
+    }
+    return false;
+  }
+  // 폴백
+  const ql = q.toLowerCase();
+  if((cat.label || '').toLowerCase().includes(ql)) return true;
+  if((cat.note || '').toLowerCase().includes(ql)) return true;
+  return (cat.options || []).some(o => (o.text || '').toLowerCase().includes(ql));
+}
+
 function _rcWeightClass(w){
   if(w < 0) return 'negative';
   if(w === 0) return 'zero';
@@ -15316,6 +15519,7 @@ function _rcOptionWarning(cat){
 function rcRender(){
   const list = $('rcCategoryList');
   const empty = $('rcEmptyState');
+  const searchEmpty = $('rcSearchEmptyState');
   const statsBadge = $('rcStatsBadge');
   if(!list) return;
   const cats = state.randomCategories || [];
@@ -15323,7 +15527,6 @@ function rcRender(){
   if(statsBadge){
     const enabled = cats.filter(c => c.enabled).length;
     const totalOpts = cats.filter(c => c.enabled).reduce((s, c) => s + (c.options?.length || 0), 0);
-    // 총 조합 수 — 각 활성 카테고리 옵션 수 곱. 매우 큰 수는 지수 표기로 압축.
     const combo = cats.filter(c => c.enabled && (c.options?.length || 0) > 0)
       .reduce((s, c) => s * c.options.length, 1);
     const fmtCombo = n => {
@@ -15337,8 +15540,18 @@ function rcRender(){
     statsBadge.textContent = `${cats.length}개 · 활성 ${enabled} · 옵션 ${totalOpts} · 조합 ${fmtCombo(combo)}`;
     statsBadge.title = `${cats.length} 카테고리 (활성 ${enabled}개 · 총 옵션 ${totalOpts}개 · 조합 ${combo.toLocaleString()})`;
   }
-  if(cats.length === 0){ list.innerHTML = ''; return; }
-  list.innerHTML = cats.map((c, ci) => _rcRenderCard(c, ci)).join('');
+  if(cats.length === 0){
+    list.innerHTML = '';
+    if(searchEmpty) searchEmpty.style.display = 'none';
+    return;
+  }
+  // 🔍 검색·필터 적용 — 매칭 카드만 표시 (원본 인덱스 보존을 위해 ci 사용)
+  const filtered = cats.map((c, ci) => ({c, ci})).filter(({c}) => _rcMatches(c));
+  if(searchEmpty){
+    const hasFilter = (_rcSearch.query || '').trim() || _rcSearch.filter !== 'all';
+    searchEmpty.style.display = (hasFilter && filtered.length === 0) ? '' : 'none';
+  }
+  list.innerHTML = filtered.map(({c, ci}) => _rcRenderCard(c, ci)).join('');
 }
 
 function _rcRenderCard(cat, catIdx){
@@ -15353,7 +15566,8 @@ function _rcRenderCard(cat, catIdx){
     const wDisplay = Number.isFinite(w) ? w.toFixed(1) : '1.0';
     const isEmpty = !(o.text || '').trim();
     return `
-      <div class="rc-option${isLockedOpt?' locked-opt':''}" data-opt-idx="${i}">
+      <div class="rc-option${isLockedOpt?' locked-opt':''}" data-opt-idx="${i}" draggable="true">
+        <span class="rc-opt-drag" title="드래그해서 순서 변경">⋮⋮</span>
         <input type="text" class="rc-opt-text${isEmpty?' placeholder':''}" data-act="edit-opt" data-cat-idx="${catIdx}" data-opt-idx="${i}" value="${esc(o.text || '')}" placeholder="(빈 옵션 — 아무것도 사용 안 함)" spellcheck="false">
         ${isEmpty ? '<span class="rc-opt-empty-badge" title="빈 옵션 = 이 옵션이 선택되면 카테고리에서 아무 태그도 추가 안 함">∅</span>' : ''}
         <span class="rc-weight-ctrl">
@@ -15373,7 +15587,8 @@ function _rcRenderCard(cat, catIdx){
   if(locked) cls.push('locked');
   if(collapsed) cls.push('collapsed');
   return `
-    <div class="${cls.join(' ')}" data-cat-idx="${catIdx}" data-cat-id="${esc(cat.id || '')}">
+    <div class="${cls.join(' ')}" data-cat-idx="${catIdx}" data-cat-id="${esc(cat.id || '')}" draggable="true">
+      <div class="rc-drag-handle" title="드래그해서 카테고리 순서 변경" aria-label="드래그 핸들">⋮⋮</div>
       <div class="rc-card-hdr">
         <button class="rc-collapse" data-act="toggle-collapse" data-cat-idx="${catIdx}" title="${collapsed?'펼치기':'접기'}" aria-label="${collapsed?'펼치기':'접기'}">${collapsed?'▶':'▼'}</button>
         <button class="rc-toggle${enabled?' act':' off'}" data-act="toggle-enabled" data-cat-idx="${catIdx}" title="${enabled?'비활성화':'활성화'}">${enabled?'✓':'○'}</button>
@@ -16309,6 +16524,36 @@ function rcWireEvents(){
   $('rcCollapseAllBtn')?.addEventListener('click', () => rcCollapseAll());
   $('rcApplyToCharBtn')?.addEventListener('click', () => rcApplyToCharacter());
   $('rcClearLocksBtn')?.addEventListener('click', () => rcClearAllLocks());
+
+  // 🔍 검색 + 필터 (debounce 80ms)
+  const searchInp = $('rcSearchInp');
+  const filterSel = $('rcFilterSel');
+  const clearBtn = $('rcSearchClearBtn');
+  if(searchInp){
+    let debId = null;
+    searchInp.addEventListener('input', () => {
+      _rcSearch.query = searchInp.value || '';
+      if(debId) clearTimeout(debId);
+      debId = setTimeout(rcRender, 80);
+    });
+  }
+  if(filterSel){
+    filterSel.addEventListener('change', () => {
+      _rcSearch.filter = filterSel.value || 'all';
+      rcRender();
+    });
+  }
+  if(clearBtn){
+    clearBtn.addEventListener('click', () => {
+      _rcSearch.query = ''; _rcSearch.filter = 'all';
+      if(searchInp) searchInp.value = '';
+      if(filterSel) filterSel.value = 'all';
+      rcRender();
+    });
+  }
+
+  // 🪄 드래그 정렬 — 카드(상위) + 옵션(자식). HTML5 drag&drop API.
+  _rcInstallDragSort($('rcCategoryList'));
 
   // 카드 목록 이벤트 위임
   const list = $('rcCategoryList');
