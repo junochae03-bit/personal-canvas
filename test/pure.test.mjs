@@ -712,10 +712,17 @@ test('panelMaskSvg: 페이지 크기 + 흰색은 지정 패널만', () => {
   assert.match(mask, /x="518"\s+y="0"/);
 });
 
-test('panelMaskSvg: feather 기본값 4 적용', () => {
+test('panelMaskSvg: feather 기본값 0 — 인접 컷 침범 차단', () => {
   const layout = getLayout('2v');
   const mask = panelMaskSvg(layout, 0);
-  // feather=4 → x=-4, y=-4, w=832+8=840, h=600+8=608
+  // feather=0 → 패널 좌표 그대로
+  // 2v panel 0 = {x:0, y:0, w:832, h:600}, 페이지 832×1216 가 배경
+  // 흰 패널 사각형은 패턴 매칭으로 검증
+  assert.match(mask, /<rect x="0" y="0" width="832" height="600" fill="white"/);
+});
+test('panelMaskSvg: feather 명시 지정 가능', () => {
+  const layout = getLayout('2v');
+  const mask = panelMaskSvg(layout, 0, 4);
   assert.match(mask, /x="-4"\s+y="-4"/);
   assert.match(mask, /width="840"/);
 });

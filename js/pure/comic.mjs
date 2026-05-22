@@ -311,7 +311,9 @@ export function panelMaskSvg(layout, panelIndex, featherPx){
   if(!layout) return '';
   const p = layout.panels[panelIndex];
   if(!p) return '';
-  const f = (typeof featherPx === 'number' && featherPx >= 0) ? featherPx : 4;
+  // feather 기본 0 — 인접 컷 침범 차단. NAI 가 다른 패널 영역도 같은 그림으로 채우는 사고 방지.
+  // (사용자 보고: '한 이미지가 세 컷에 분할' 또는 '첫 컷에만 그림, 나머지 빈')
+  const f = (typeof featherPx === 'number' && featherPx >= 0) ? featherPx : 0;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.w}" height="${layout.h}" viewBox="0 0 ${layout.w} ${layout.h}">`
     + `<rect width="${layout.w}" height="${layout.h}" fill="black"/>`
     + `<rect x="${p.x - f}" y="${p.y - f}" width="${p.w + 2*f}" height="${p.h + 2*f}" fill="white"/>`
