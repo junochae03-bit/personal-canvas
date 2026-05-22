@@ -2690,39 +2690,25 @@ mark{
               </label>
               <div class="comic-auto-hint">
                 💡 <strong>편집 모드에서 자동 가져옴</strong> — 메인 프롬프트·네거티브·캐릭터 슬롯·모델·샘플러·CFG·스텝·해상도.
-                <br>⚠ <strong>Vibe 는 NAI 인페인트 모델 미지원</strong> — 만화 컷 생성에서 자동 무시됩니다. 일관성은 캐릭터 슬롯 외형·시드 잠금·좌표(<code>use_coords</code>)로 유지.
-                <br>📌 <strong>여기에는 만화 전용 추가 토큰만</strong>: 메인 프롬프트와 겹치지 않게, 컷마다 변주하고 싶은 토큰 (배경·상황·표정 카테고리)을 <code>||A|B|C||</code> 로.
+                <br>📌 <strong>일관성 유지</strong> — 캐릭터 슬롯 외형 상세 + 시드 잠금 + <code>use_coords</code> 좌표.
+                <br>📝 <strong>여기에는 만화 전용 추가 토큰만</strong>: 메인 프롬프트와 겹치지 않게, 컷마다 변주할 토큰 (배경·상황·표정)을 <code>||A|B|C||</code> 로.
               </div>
               <textarea id="comicShared" class="ta" rows="3"
                 placeholder="만화 전용 prefix · 메인 프롬프트와 겹치지 않게 — 행동·상황·표정 카테고리만.&#10;예) ||simple background|indoors|outdoors||, ||happy sex|rough sex|implied sex||, ||tears, crying|aroused, smile|ahegao||"></textarea>
               <div class="comic-shared-hint" id="comicSharedHint"></div>
             </div>
             <div class="comic-panel-inputs" id="comicPanelInputs"></div>
-            <label class="comic-consistency-toggle" title="🎯 그림체·캐릭터 일관성 자동 보정 — 컷 간 변동을 최소화하는 설정 한 번에 적용">
+            <label class="comic-consistency-toggle" title="🎯 컷 간 변동을 최소화하는 설정 한 번에 적용">
               <input type="checkbox" id="comicConsistencyToggle" checked>
               <div class="comic-consistency-body">
                 <div class="comic-consistency-title">🎯 일관성 모드 <span class="muted">(권장)</span></div>
                 <div class="comic-consistency-desc">
-                  생성 시작 시 자동 적용:
-                  <strong>시드 잠금</strong> · <strong>V4 좌표 사용</strong> ·
-                  <strong>Vibe 역할별 권장값</strong> (그림체 0.35/0.50, 캐릭터 0.90/0.60).
+                  생성 시작 시 자동 적용: <strong>시드 잠금</strong> · <strong>V4 좌표 사용</strong>.
+                  <br>※ Vibe 는 NAI 인페인트 모델 미지원이라 만화 컷에서 자동 무시됩니다.
                 </div>
                 <div class="comic-consistency-status" id="comicConsistencyStatus"></div>
               </div>
             </label>
-            <div class="comic-vibe-mirror">
-              <div class="cv-header">
-                <span>🎨 일관성 참조 이미지</span>
-                <span class="muted" id="comicVibeCount">0장</span>
-                <span class="tb-grow"></span>
-                <button type="button" class="btn ghost small" id="comicVibeAddStyleBtn" title="외부 파일 → 그림체 (info 0.35 / str 0.5)">+ 🎨 그림체</button>
-                <button type="button" class="btn ghost small" id="comicVibeAddCharBtn" title="외부 파일 → 캐릭터 (info 0.9 / str 0.6)">+ 🎴 캐릭터</button>
-                <button type="button" class="btn ghost small" id="comicVibeFromGalleryBtn" title="이 도구의 갤러리에서 이미지 선택">📁 갤러리에서</button>
-                <input type="file" id="comicVibeFile" accept="image/*" hidden multiple>
-              </div>
-              <div class="cv-list" id="comicVibeList"></div>
-              <div class="cv-empty" id="comicVibeEmpty" hidden>참조 이미지 없음 — 위 버튼으로 추가하세요. V4 모델은 다중 참조 지원.</div>
-            </div>
             <div class="comic-actions">
               <button type="button" class="btn primary" id="comicStartBtn">🎞 만화 생성 시작 <span class="en">Generate Comic</span></button>
               <button type="button" class="btn ghost small" id="comicPanelPresetsBtn" title="컷 프리셋 관리 — 저장된 컷 프롬프트 목록·수정·삭제">🎴 컷 프리셋 관리</button>
@@ -13140,7 +13126,7 @@ function setMainPane(pane){
   else if(pane === 'presets'){ renderPresetTabs(); renderPresets(); }
   else if(pane === 'templates'){ tplRenderCatChips(); tplRenderRoll(); tplRenderSavedList(); }
   else if(pane === 'tags'){ loadDanbooruTags(); renderTagCats(); renderTagBody(); }
-  else if(pane === 'comic'){ renderComicLayoutPicker(); _refreshComicConsistencyStatus(); _renderComicVibeMirror(); }
+  else if(pane === 'comic'){ renderComicLayoutPicker(); _refreshComicConsistencyStatus(); }
   // 페인 변경 이벤트 발행 — 캐릭터 네거티브 모드 등이 자동 해제 가능
   if(prev !== pane) document.dispatchEvent(new CustomEvent('mview-change', {detail:{prev, next:pane}}));
 }
@@ -13315,15 +13301,8 @@ function selectComicLayout(layoutId){
 //   ※ js/pure/comic.mjs 의 pageTemplateSvg 와 단일소스 미러 (lint MIRRORED 검증).
 function pageTemplateSvg(layout){
   if(!layout) return '';
-  const border = Math.max(2, Math.floor((layout.gutter || 12) * 0.7));
-  const half = border / 2;
-  const panelRects = layout.panels.map(p =>
-    `<rect x="${p.x + half}" y="${p.y + half}" width="${p.w - border}" height="${p.h - border}" `
-    + `fill="white" stroke="black" stroke-width="${border}"/>`
-  ).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.w}" height="${layout.h}" viewBox="0 0 ${layout.w} ${layout.h}">`
     + `<rect width="${layout.w}" height="${layout.h}" fill="white"/>`
-    + panelRects
     + `</svg>`;
 }
 
@@ -13619,7 +13598,7 @@ function clearComicInputs(){
 // 🎯 일관성 모드 적용 — 만화 시작 직전 자동 보정.
 //   1) 시드 비어있으면 새 시드 한 번 굴리고 잠금 → 모든 컷이 같은 노이즈에서 시작
 //   2) useCoords 체크박스 ON — V4 캐릭터 좌표 사용 (캐릭터 슬롯의 pos.x/y 활성)
-//   3) Vibe 슬롯의 role 별 권장값 일괄 재적용 (사용자가 슬라이더 만져서 'custom' 된 건 건드리지 않음)
+//   ※ Vibe 는 NAI 인페인트 모델 미지원이라 만화에서 제외 (buildGenBody 자동 차단).
 function _applyComicConsistencyMode(){
   // 시드 잠금
   const seedInput = $('seed');
@@ -13636,67 +13615,12 @@ function _applyComicConsistencyMode(){
   // useCoords
   const uc = $('useCoords');
   if(uc && !uc.checked){ uc.checked = true; }
-  // Vibe 역할 재적용 — 사용자가 'custom' 으로 둔 건 그대로
-  let applied = 0;
-  for(let i = 0; i < state.vibeRefs.length; i++){
-    const v = state.vibeRefs[i];
-    const role = v.role || 'custom';
-    const p = VIBE_ROLE_PRESETS[role];
-    if(!p || p.info == null) continue;
-    v.info = p.info;
-    v.strength = p.strength;
-    applied++;
-  }
-  if(applied > 0) renderVibeList();
-  toast(`🎯 일관성 모드 — 시드 ${seedInput?.value} 잠금·좌표 ON${applied?`·Vibe ${applied}장 보정`:''}`, 'info');
+  toast(`🎯 일관성 모드 — 시드 ${seedInput?.value} 잠금 · 좌표 ON`, 'info');
   saveSettingsDebounced();
   _refreshComicConsistencyStatus();
 }
 
-// 🎨 만화 모드 Vibe 미러 — 편집 모드 Vibe 슬롯을 만화 페인에서도 보고 관리.
-//   추가 버튼 ('+ 그림체' / '+ 캐릭터') 은 파일 선택 → addVibeRef + role 자동 설정.
-let _comicVibeRole = 'style';   // 다음 파일 선택의 role (버튼이 미리 설정)
-
-function _renderComicVibeMirror(){
-  const list = $('comicVibeList');
-  const empty = $('comicVibeEmpty');
-  const count = $('comicVibeCount');
-  if(!list || !empty || !count) return;
-  const refs = Array.isArray(state.vibeRefs) ? state.vibeRefs : [];
-  count.textContent = `${refs.length}장`;
-  if(refs.length === 0){
-    list.innerHTML = '';
-    empty.hidden = false;
-    return;
-  }
-  empty.hidden = true;
-  list.innerHTML = refs.map((v, i) => {
-    const role = v.role || 'custom';
-    const preset = VIBE_ROLE_PRESETS[role] || VIBE_ROLE_PRESETS.custom;
-    return `<div class="cv-item" data-vibe-idx="${i}" data-role="${role}" title="${esc(preset.hint)}">`
-      + `<div class="cv-thumb" style="background-image:url('${v.dataURL}')"></div>`
-      + `<div class="cv-role-line"><span>${preset.label}</span></div>`
-      + `<div class="cv-meta">info ${Number(v.info).toFixed(2)}<br>str ${Number(v.strength).toFixed(2)}</div>`
-      + `<button type="button" class="cv-del" data-act="cv-del" data-idx="${i}" aria-label="제거" title="제거">✕</button>`
-      + `</div>`;
-  }).join('');
-}
-
-async function _comicVibeAddFromFiles(fileList, role){
-  for(const f of fileList){
-    if(!f) continue;
-    await addVibeRef(f);
-    // addVibeRef 가 자동 role 추정 (첫=style, 둘째=character...) — 만화 모드 버튼이 명시한 role 로 덮어쓰기
-    const v = state.vibeRefs[state.vibeRefs.length - 1];
-    if(v && VIBE_ROLE_PRESETS[role]){
-      setVibeRole(state.vibeRefs.length - 1, role);
-    }
-  }
-  _renderComicVibeMirror();
-  _refreshComicConsistencyStatus();
-}
-
-// 📁 갤러리 picker — 모든 세션 이미지를 그리드로 표시. 클릭 시 vibe 로 추가.
+// 📁 갤러리 picker — 모든 세션 이미지를 그리드로 표시. mode='vibe' (편집 모드용) / 'cut' (만화 컷 배치).
 const _cvgUrls = [];   // 메모리 누수 방지용 createObjectURL 리스트
 
 function openComicVibeGalModal(mode){
@@ -13795,15 +13719,7 @@ function _refreshComicConsistencyStatus(){
   const seed = ($('seed')?.value || '').trim() || '랜덤';
   const locked = state.seedLocked ? '🔒' : '🔓';
   const coords = $('useCoords')?.checked ? 'ON' : 'OFF';
-  const roles = state.vibeRefs.reduce((acc, v) => {
-    const r = v.role || 'custom';
-    acc[r] = (acc[r] || 0) + 1;
-    return acc;
-  }, {});
-  const roleStr = ['style','character','custom'].map(r => roles[r] ? `${VIBE_ROLE_PRESETS[r].label}${roles[r]}` : '').filter(Boolean).join(' · ');
-  // 만화는 인페인트 모델 사용 → NAI 가 vibe 거부 → 자동 무시. 사용자가 인지하도록 표시.
-  const vibeIgnored = roleStr ? ' ⚠ Vibe 인페인트 미지원으로 무시' : '';
-  el.textContent = `현재: 시드 ${seed} ${locked} · 좌표 ${coords}${roleStr ? ' · Vibe '+roleStr : ' · Vibe 없음'}${vibeIgnored}`;
+  el.textContent = `현재: 시드 ${seed} ${locked} · 좌표 ${coords}`;
 }
 
 // 🎴 컷 프리셋 — state.comicPanelPresets 헬퍼·렌더링·CRUD.
@@ -14186,12 +14102,7 @@ async function startComicGeneration(){
     }));
   state._customQueue = true;
   state._comicActive = true;
-  state._comicVibeFallbackToasted = false;   // 새 만화 시작마다 한 번만 안내
-  // 사용자가 Vibe 를 추가했지만 만화는 인페인트 모델 사용 → NAI 가 거부 → 자동 무시.
-  // 사용자에게 명확히 알려서 일관성 약화 인지 + 캐릭터·시드로 보강하도록 안내.
-  if(Array.isArray(state.vibeRefs) && state.vibeRefs.length > 0){
-    toast(`⚠ 인페인트 모델은 Vibe 미지원 — Vibe ${state.vibeRefs.length}장 무시됨\n일관성은 캐릭터 슬롯 외형·시드 잠금·좌표로 유지하세요`, 'warning');
-  }
+  state._comicVibeFallbackToasted = false;   // 다른 원인 500 대비용 fallback (편집 모드 vibe 잔여 등)
   // 모든 컷이 매핑되면 NAI 호출 없이 페이지만 갤러리에 저장
   if(state.queue.length === 0){
     try {
@@ -16470,22 +16381,7 @@ function wireGenerationAndPresetEvents(){
   $('comicCustomApply')?.addEventListener('click', applyComicCustomLayout);
   // 컷 입력 일괄 비우기
   $('comicClearInputsBtn')?.addEventListener('click', clearComicInputs);
-  // 🎨 만화 모드 Vibe 미러 — 그림체/캐릭터 추가 + 삭제 위임
-  $('comicVibeAddStyleBtn')?.addEventListener('click', () => {
-    _comicVibeRole = 'style';
-    $('comicVibeFile').click();
-  });
-  $('comicVibeAddCharBtn')?.addEventListener('click', () => {
-    _comicVibeRole = 'character';
-    $('comicVibeFile').click();
-  });
-  $('comicVibeFile')?.addEventListener('change', async e => {
-    if(!e.target.files?.length) return;
-    await _comicVibeAddFromFiles(e.target.files, _comicVibeRole);
-    e.target.value = '';
-  });
-  // 📁 갤러리 picker
-  $('comicVibeFromGalleryBtn')?.addEventListener('click', openComicVibeGalModal);
+  // 📁 갤러리 picker — mode='cut' (만화 컷 직접 배치) 만 활성. 만화 Vibe 진입점은 제거됨 (NAI 인페인트 모델 미지원).
   $('cvgCloseBtn')?.addEventListener('click', closeComicVibeGalModal);
   $('cvgSearch')?.addEventListener('input', debounce(_renderComicVibeGalGrid, 200));
   $('cvgGrid')?.addEventListener('click', e => {
@@ -16501,18 +16397,9 @@ function wireGenerationAndPresetEvents(){
       closeComicVibeGalModal();
       toast(`📁 컷 ${cutIdx+1} 에 갤러리 이미지 배치됨 (NAI 호출 생략)`, 'success');
     } else {
+      // mode='vibe' (라이트박스 → Vibe) — 만화 외 일반 갤러리 picker. 현재는 컷 모드만 진입.
       _comicVibeFromGalImg(imgId, sesId);
     }
-  });
-  $('comicVibeList')?.addEventListener('click', e => {
-    const del = e.target.closest('[data-act="cv-del"]');
-    if(!del) return;
-    const idx = parseInt(del.dataset.idx, 10);
-    if(!Number.isFinite(idx)) return;
-    state.vibeRefs.splice(idx, 1);
-    renderVibeList();   // 편집 모드 Vibe 카드도 갱신
-    _renderComicVibeMirror();
-    _refreshComicConsistencyStatus();
   });
   // 🎴 컷 프리셋 관리 모달 진입
   $('comicPanelPresetsBtn')?.addEventListener('click', openComicPresetsModal);

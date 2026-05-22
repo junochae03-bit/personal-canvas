@@ -678,22 +678,22 @@ test('parseProject: round-trip 보존', () => {
   assert.equal(restored.bubbles[0].tailDir, 'br');
 });
 
-test('pageTemplateSvg: 페이지 크기 + 모든 패널 rect 포함', () => {
+test('pageTemplateSvg: 단순 흰 페이지 (보더 stroke 없음)', () => {
   const layout = getLayout('4grid');
   const svg = pageTemplateSvg(layout);
   assert.match(svg, /<svg[^>]*width="1024"[^>]*height="1024"/);
   assert.match(svg, /viewBox="0 0 1024 1024"/);
-  // 외곽 검은 + 패널 4개 = rect 5개
-  assert.equal((svg.match(/<rect/g) || []).length, 5);
+  // 단순 흰 배경 rect 1개 (NAI 결과에 검정선 침범 차단을 위해 stroke 제거)
+  assert.equal((svg.match(/<rect/g) || []).length, 1);
   assert.match(svg, /fill="white"/);
-  assert.match(svg, /stroke="black"/);
+  assert.ok(!/stroke="black"/.test(svg));
 });
 
-test('pageTemplateSvg: gutter 0 인 1wide 도 안전', () => {
-  const layout = getLayout('1wide');
-  const svg = pageTemplateSvg(layout);
-  assert.match(svg, /width="1216"/);
-  assert.equal((svg.match(/<rect/g) || []).length, 2);  // 배경 + 패널 1
+test('pageTemplateSvg: 모든 레이아웃이 흰 배경 1 rect', () => {
+  for(const layout of LAYOUTS){
+    const svg = pageTemplateSvg(layout);
+    assert.equal((svg.match(/<rect/g) || []).length, 1, `${layout.id}: rect 1개여야`);
+  }
 });
 
 test('pageTemplateSvg: null 입력 → 빈 문자열', () => {
