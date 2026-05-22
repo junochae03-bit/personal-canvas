@@ -364,6 +364,33 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .comic-shared-input textarea{font-size:13px;min-height:60px;font-family:var(--mono)}
 .comic-shared-hint{font-size:11.5px;color:var(--t3);line-height:1.5}
 .comic-shared-hint.warn{color:var(--yellow)}
+.comic-auto-hint{font-size:12px;color:var(--t2);line-height:1.55;background:var(--card);padding:7px 11px;border-radius:5px;border-left:3px solid var(--blue);margin-bottom:2px}
+.comic-auto-hint strong{color:var(--acc);font-weight:700}
+.comic-panel-preset-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.comic-panel-preset-row .lbl{font-size:11.5px;color:var(--t3)}
+.comic-panel-preset-sel{flex:1;font-size:12px;padding:4px 7px;background:var(--card);border:1px solid var(--b1);color:var(--t1);border-radius:4px;font-family:inherit;cursor:pointer;min-height:28px;max-width:280px}
+.comic-panel-preset-sel:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.comic-panel-preset-save{font-size:11px;padding:3px 8px;min-height:26px}
+/* 컷 프리셋 관리 모달 */
+.comic-presets-modal{width:min(640px,94vw)}
+.cpp-intro{font-size:12.5px;color:var(--t2);line-height:1.6;background:var(--panel);padding:9px 12px;border-radius:5px;border-left:3px solid var(--acc);margin-bottom:12px}
+.cpp-intro strong{color:var(--acc)}
+.cpp-add-row{display:flex;flex-direction:column;gap:6px;padding:10px 12px;background:var(--card);border-radius:6px;border:1.5px solid var(--b1);margin-bottom:12px}
+.cpp-add-row .inp{font-size:13px}
+.cpp-add-row textarea{font-size:12.5px;min-height:50px;font-family:var(--mono)}
+.cpp-add-row .btn{align-self:flex-end}
+.cpp-list{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto}
+.cpp-item{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:start;padding:8px 10px;background:var(--panel);border:1px solid var(--b1);border-radius:5px}
+.cpp-item-body{display:flex;flex-direction:column;gap:3px;min-width:0}
+.cpp-item-name{font-weight:700;color:var(--t1);font-size:13px}
+.cpp-item-prompt{font-size:11.5px;color:var(--t2);font-family:var(--mono);line-height:1.45;word-break:break-all;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.cpp-item.editing .cpp-item-prompt,.cpp-item.editing .cpp-item-name{display:none}
+.cpp-item-edit{display:none;flex-direction:column;gap:4px}
+.cpp-item.editing .cpp-item-edit{display:flex}
+.cpp-item-edit input,.cpp-item-edit textarea{font-size:12.5px;padding:5px 8px}
+.cpp-item-edit textarea{font-family:var(--mono);min-height:50px}
+.cpp-item .btn.small{padding:4px 9px;font-size:11.5px;min-height:28px}
+.cpp-empty{color:var(--t3);text-align:center;padding:24px;font-size:13px;background:var(--card);border-radius:5px}
 .comic-layout-card.is-custom{border-style:dashed}
 .comic-layout-card.is-custom-add{background:var(--card2);border-style:dashed;justify-content:center;align-items:center;text-align:center}
 .comic-custom-modal{width:min(640px,94vw)}
@@ -2607,10 +2634,13 @@ mark{
             <div class="comic-selected-preview" id="comicSelectedPreview" aria-hidden="true"></div>
             <div class="comic-shared-input">
               <label for="comicShared">
-                📝 공통 프롬프트 <span class="muted">(모든 컷에 prefix 로 적용 · <code>||A|B|C||</code> 동적 선택 가능)</span>
+                📝 공통 프롬프트 <span class="muted">(모든 컷에 prefix · <code>||A|B|C||</code> 동적 선택 가능)</span>
               </label>
+              <div class="comic-auto-hint">
+                💡 편집 모드의 <strong>메인 프롬프트·네거티브·캐릭터·Vibe</strong> 는 모든 컷에 자동 적용됩니다 — 여기엔 만화 전용 토큰만.
+              </div>
               <textarea id="comicShared" class="ta" rows="3"
-                placeholder="모든 컷에 공통으로 들어가는 부분 — 카테고리 묶음 한 번만 적기.&#10;예) ||simple background|indoors|outdoors||, ||happy sex|rough sex|implied sex||, ||tears, crying|aroused, smile|ahegao||"></textarea>
+                placeholder="만화 전용 prefix — 카테고리 묶음 한 번만 적기.&#10;예) ||simple background|indoors|outdoors||, ||happy sex|rough sex|implied sex||, ||tears, crying|aroused, smile|ahegao||"></textarea>
               <div class="comic-shared-hint" id="comicSharedHint"></div>
             </div>
             <div class="comic-panel-inputs" id="comicPanelInputs"></div>
@@ -2629,6 +2659,7 @@ mark{
             </label>
             <div class="comic-actions">
               <button type="button" class="btn primary" id="comicStartBtn">🎞 만화 생성 시작 <span class="en">Generate Comic</span></button>
+              <button type="button" class="btn ghost small" id="comicPanelPresetsBtn" title="컷 프리셋 관리 — 저장된 컷 프롬프트 목록·수정·삭제">🎴 컷 프리셋 관리</button>
               <button type="button" class="btn ghost small" id="comicClearInputsBtn" title="공통 프롬프트 + 모든 컷 입력 비우기">🧹 컷 입력 비우기</button>
               <span class="comic-cost-info" id="comicCostInfo"></span>
             </div>
@@ -3209,6 +3240,25 @@ coffee shop, latte art"></textarea>
     <div class="modal-foot">
       <button class="btn ghost" id="comicCustomCancel">취소 <span class="en">Cancel</span></button>
       <button class="btn primary" id="comicCustomApply">이 레이아웃 사용 <span class="en">Apply</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- 🎴 COMIC PANEL PRESETS MODAL — 컷별 프롬프트 저장·수정·삭제 -->
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="comicPresetsTitle" id="comicPresetsModal">
+  <div class="modal comic-presets-modal">
+    <h3 id="comicPresetsTitle">🎴 컷 프리셋 관리 <span class="en">Panel Presets</span></h3>
+    <div class="modal-body">
+      <div class="cpp-intro">컷별 프롬프트를 저장해두고 재사용. 컷 위 셀렉트에서 적용하거나 <strong>🎲 랜덤</strong> 으로 매 컷마다 다른 프리셋 자동 선택.</div>
+      <div class="cpp-add-row">
+        <input type="text" id="cppNewName" class="inp" placeholder="새 프리셋 이름 (예: 클로즈업 미소)" maxlength="40">
+        <textarea id="cppNewPrompt" class="ta" rows="2" placeholder="이 프리셋의 프롬프트 — 예: close-up, smile, blushing"></textarea>
+        <button type="button" class="btn primary small" id="cppAddBtn">💾 추가</button>
+      </div>
+      <div class="cpp-list" id="cppList"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="cppCloseBtn">닫기 <span class="en">Close</span></button>
     </div>
   </div>
 </div>
@@ -4399,6 +4449,7 @@ const state = {
   selectedSessionId: null,
   themes: 'default',
   comicLayoutId: '',      // 🎞 만화 빌더 — 선택된 레이아웃 ID ('' = 미선택)
+  comicPanelPresets: [],  // 🎴 컷 프리셋 — [{id, name, prompt, ts}] (영구화)
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -13173,8 +13224,15 @@ function _renderComicPanelInputs(){
       +     `<span class="comic-panel-status" data-status-idx="${i}" aria-hidden="true"></span>`
       +     `컷 ${i+1} <span class="muted">${p.w}×${p.h}</span>`
       +   `</label>`
+      +   `<div class="comic-panel-preset-row">`
+      +     `<span class="lbl">프리셋</span>`
+      +     `<select class="comic-panel-preset-sel" data-act="preset-sel" data-panel-idx="${i}">`
+      +       _comicPanelPresetOptions(i)
+      +     `</select>`
+      +     `<button type="button" class="btn ghost comic-panel-preset-save" data-act="preset-save" data-panel-idx="${i}" title="이 컷 텍스트를 새 프리셋으로 저장">💾 저장</button>`
+      +   `</div>`
       +   `<textarea id="comicPrompt${i}" class="ta comic-prompt-ta" rows="2" `
-      +     `placeholder="이 컷만의 차이점 (공통 위에 추가) · ||A|B|C|| 가능 — 예: close-up, smiling, blushing" `
+      +     `placeholder="이 컷만의 차이점 (공통·프리셋 위에 추가) · ||A|B|C|| 가능 — 예: close-up, smiling, blushing" `
       +     `data-panel-idx="${i}">${val}</textarea>`
       + `</div>`;
   }).join('');
@@ -13437,6 +13495,132 @@ function _refreshComicConsistencyStatus(){
   el.textContent = `현재: 시드 ${seed} ${locked} · 좌표 ${coords}${roleStr ? ' · Vibe '+roleStr : ' · Vibe 없음'}`;
 }
 
+// 🎴 컷 프리셋 — state.comicPanelPresets 헬퍼·렌더링·CRUD.
+// state._comicPanelPresetUse[idx] = '' (직접) | 'random' | 'preset:ID' — 컷별 select 값 영구화.
+
+function _comicPanelPresetOptions(panelIdx){
+  const presets = Array.isArray(state.comicPanelPresets) ? state.comicPanelPresets : [];
+  const cur = (state._comicPanelPresetUse || {})[panelIdx] || '';
+  const opts = [
+    `<option value="" ${cur===''?'selected':''}>직접 입력만</option>`,
+    `<option value="random" ${cur==='random'?'selected':''} ${presets.length===0?'disabled':''}>🎲 저장된 프리셋 중 랜덤${presets.length===0?' (저장된 것 없음)':''}</option>`,
+  ];
+  if(presets.length){
+    opts.push(`<option disabled>── 저장된 프리셋 ──</option>`);
+    for(const p of presets){
+      const val = `preset:${p.id}`;
+      opts.push(`<option value="${val}" ${cur===val?'selected':''}>${esc(p.name)}</option>`);
+    }
+  }
+  return opts.join('');
+}
+
+// 컷 N 의 프리셋 선택값 → 실제 프롬프트 텍스트. '' 면 빈, 'random' 이면 매번 다른 프리셋.
+function _resolveComicPanelPreset(panelIdx){
+  const sel = (state._comicPanelPresetUse || {})[panelIdx] || '';
+  const presets = Array.isArray(state.comicPanelPresets) ? state.comicPanelPresets : [];
+  if(!sel || !presets.length) return '';
+  if(sel === 'random'){
+    const pick = presets[Math.floor(Math.random() * presets.length)];
+    return pick?.prompt || '';
+  }
+  if(sel.startsWith('preset:')){
+    const id = sel.slice(7);
+    return presets.find(p => p.id === id)?.prompt || '';
+  }
+  return '';
+}
+
+function _setComicPanelPresetUse(panelIdx, value){
+  if(!state._comicPanelPresetUse) state._comicPanelPresetUse = {};
+  if(value){ state._comicPanelPresetUse[panelIdx] = value; }
+  else { delete state._comicPanelPresetUse[panelIdx]; }
+  saveSettingsDebounced();
+}
+
+function _newComicPresetId(){ return 'cpp_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function addComicPanelPreset(name, prompt){
+  const cleanName = String(name||'').trim().slice(0, 40);
+  const cleanPrompt = String(prompt||'').trim().slice(0, 4000);
+  if(!cleanName){ toast('프리셋 이름이 비어있어요', 'warning'); return null; }
+  if(!cleanPrompt){ toast('프리셋 프롬프트가 비어있어요', 'warning'); return null; }
+  if(!Array.isArray(state.comicPanelPresets)) state.comicPanelPresets = [];
+  if(state.comicPanelPresets.some(p => p.name === cleanName)){
+    toast(`'${cleanName}' 이름의 프리셋이 이미 있어요`, 'warning'); return null;
+  }
+  const p = {id: _newComicPresetId(), name: cleanName, prompt: cleanPrompt, ts: Date.now()};
+  state.comicPanelPresets.push(p);
+  saveSettingsDebounced();
+  return p;
+}
+
+function updateComicPanelPreset(id, name, prompt){
+  const p = state.comicPanelPresets.find(x => x.id === id);
+  if(!p) return false;
+  p.name = String(name||'').trim().slice(0, 40) || p.name;
+  p.prompt = String(prompt||'').trim().slice(0, 4000) || p.prompt;
+  p.ts = Date.now();
+  saveSettingsDebounced();
+  return true;
+}
+
+function deleteComicPanelPreset(id){
+  state.comicPanelPresets = state.comicPanelPresets.filter(p => p.id !== id);
+  // 이 프리셋을 쓰던 컷의 선택값도 해제
+  if(state._comicPanelPresetUse){
+    for(const k in state._comicPanelPresetUse){
+      if(state._comicPanelPresetUse[k] === 'preset:'+id) delete state._comicPanelPresetUse[k];
+    }
+  }
+  saveSettingsDebounced();
+}
+
+// 컷 프리셋 관리 모달
+function openComicPresetsModal(){
+  $('cppNewName').value = '';
+  $('cppNewPrompt').value = '';
+  $('comicPresetsModal').classList.add('open');
+  _renderComicPresetsList();
+}
+
+function _renderComicPresetsList(){
+  const list = $('cppList');
+  const presets = state.comicPanelPresets || [];
+  if(!presets.length){
+    list.innerHTML = `<div class="cpp-empty">저장된 컷 프리셋이 없어요. 위에서 추가하세요.</div>`;
+    return;
+  }
+  list.innerHTML = presets.map(p => `
+    <div class="cpp-item" data-pid="${esc(p.id)}">
+      <div class="cpp-item-body">
+        <div class="cpp-item-name">${esc(p.name)}</div>
+        <div class="cpp-item-prompt">${esc(p.prompt)}</div>
+        <div class="cpp-item-edit">
+          <input type="text" class="inp cpp-edit-name" value="${esc(p.name)}" maxlength="40">
+          <textarea class="ta cpp-edit-prompt" rows="2">${esc(p.prompt)}</textarea>
+        </div>
+      </div>
+      <button class="btn small" data-act="edit-toggle" title="이름·프롬프트 수정">✎ 수정</button>
+      <button class="btn small danger" data-act="delete" title="이 프리셋 삭제">🗑</button>
+    </div>
+  `).join('');
+}
+
+// 현재 컷 textarea 내용을 새 프리셋으로 저장 (인라인 prompt())
+function saveCurrentCutAsPreset(panelIdx){
+  const text = (($('comicPrompt'+panelIdx)?.value) || '').trim();
+  if(!text){ toast(`컷 ${panelIdx+1} 의 입력이 비어있어요`, 'warning'); return; }
+  const name = prompt(`컷 ${panelIdx+1} 프리셋 이름:`, '');
+  if(!name) return;
+  const p = addComicPanelPreset(name, text);
+  if(p){
+    _setComicPanelPresetUse(panelIdx, 'preset:' + p.id);
+    _renderComicPanelInputs();
+    toast(`💾 '${p.name}' 프리셋 저장됨`, 'success');
+  }
+}
+
 // 📝 공통 프롬프트 hint — 사용자가 ||A|B|C|| 적었으면 조합 수, 안 적었으면 격려.
 function _refreshComicSharedHint(){
   const ta = $('comicShared');
@@ -13471,22 +13655,29 @@ async function startComicGeneration(){
   const layout = _allComicLayouts().find(l => l.id === state.comicLayoutId);
   if(!layout){ toast('레이아웃을 먼저 선택하세요', 'warning'); return; }
   if(state.running){ stopGeneration(); return; }
-  // 공통 프롬프트 + 컷별 프롬프트 수집. 공통은 prefix, 컷별은 그 뒤에 콤마로 이어 붙임.
+  // 만화 큐 prompt 조립 우선순위 (모든 컷에 자동 결합):
+  //   1) 편집 모드의 메인 #prompt (t2i 기본) — 화풍·품질 토큰 등
+  //   2) 만화 모드 공통 프롬프트 #comicShared (||A|B|C|| 자동 expand)
+  //   3) 컷별 프리셋 (state._comicPanelPresetUse[i]) — 'random' 또는 'preset:ID'
+  //   4) 컷별 textarea (사용자 직접 입력)
+  // 네거티브·캐릭터·Vibe 는 currentPromptOpts() 가 자동 적용 → 별도 결합 불필요.
+  const mainPrompt = (($('prompt')?.value) || '').trim();
   const shared = (($('comicShared')?.value) || '').trim();
   const panelPrompts = layout.panels.map((_, i) =>
     (($('comicPrompt'+i)?.value) || '').trim()
   );
-  // 공통도·컷별도 둘 다 비어있으면 거부. 한쪽이라도 있으면 OK (공통만으로도 의미 있음).
-  const emptyIdx = panelPrompts.findIndex((p, i) => !p && !shared);
+  // 컷별 프리셋 적용 (랜덤이면 매 컷마다 다른 프리셋 선택)
+  const presetTexts = layout.panels.map((_, i) => _resolveComicPanelPreset(i));
+  // 공통도·컷별도·프리셋도 모두 비어있는 컷만 거부 (메인 #prompt 만 있어도 OK 는 아님 — 그러면 모든 컷이 동일)
+  const emptyIdx = panelPrompts.findIndex((p, i) => !p && !shared && !presetTexts[i]);
   if(emptyIdx >= 0){
-    toast(`컷 ${emptyIdx+1} 의 프롬프트가 비어있어요 (공통 프롬프트도 비어있음)`, 'warning');
+    toast(`컷 ${emptyIdx+1} 의 프롬프트가 비어있어요 (공통·프리셋·직접 입력 모두 없음)`, 'warning');
     $('comicPrompt'+emptyIdx)?.focus();
     return;
   }
   // 최종 컷별 프롬프트 — buildGenBody 가 expandRandomChoices 로 ||A|B|C|| 자동 expand
-  const prompts = panelPrompts.map(p => {
-    if(shared && p) return `${shared}, ${p}`;
-    return shared || p;
+  const prompts = panelPrompts.map((p, i) => {
+    return [mainPrompt, shared, presetTexts[i], p].filter(Boolean).join(', ');
   });
   const apiKey = $('apiKey').value.trim();
   if(!apiKey){ toast('API 키(pst-...)를 먼저 입력하세요 — 설정 → 보안', 'error'); return; }
@@ -14386,6 +14577,9 @@ async function saveSettings(){
     comicCustomCols: state._comicCustomCols || null,
     comicSharedPrompt: state._comicSharedPrompt || '',
     comicConsistency: $('comicConsistencyToggle')?.checked ?? true,
+    // 컷 프리셋 + 컷별 선택값
+    comicPanelPresets: Array.isArray(state.comicPanelPresets) ? state.comicPanelPresets : [],
+    comicPanelPresetUse: state._comicPanelPresetUse || {},
   };
   await DB.appSet(payload);
 }
@@ -14539,6 +14733,14 @@ async function loadSettings(){
   if(typeof s.comicConsistency === 'boolean'){
     const tg = $('comicConsistencyToggle');
     if(tg) tg.checked = s.comicConsistency;
+  }
+  if(Array.isArray(s.comicPanelPresets)){
+    state.comicPanelPresets = s.comicPanelPresets.filter(p =>
+      p && typeof p.id === 'string' && typeof p.name === 'string' && typeof p.prompt === 'string'
+    ).slice(0, 200);   // cap 200개
+  }
+  if(s.comicPanelPresetUse && typeof s.comicPanelPresetUse === 'object'){
+    state._comicPanelPresetUse = {...s.comicPanelPresetUse};
   }
 }
 
@@ -15688,6 +15890,65 @@ function wireGenerationAndPresetEvents(){
   $('comicCustomApply')?.addEventListener('click', applyComicCustomLayout);
   // 컷 입력 일괄 비우기
   $('comicClearInputsBtn')?.addEventListener('click', clearComicInputs);
+  // 🎴 컷 프리셋 관리 모달 진입
+  $('comicPanelPresetsBtn')?.addEventListener('click', openComicPresetsModal);
+  $('cppCloseBtn')?.addEventListener('click', () => $('comicPresetsModal').classList.remove('open'));
+  $('cppAddBtn')?.addEventListener('click', () => {
+    const p = addComicPanelPreset($('cppNewName').value, $('cppNewPrompt').value);
+    if(p){
+      $('cppNewName').value = '';
+      $('cppNewPrompt').value = '';
+      _renderComicPresetsList();
+      _renderComicPanelInputs();   // 컷별 select 도 갱신 (새 프리셋 옵션 추가)
+      toast(`💾 '${p.name}' 프리셋 추가됨`, 'success');
+    }
+  });
+  // 관리 모달 — 수정/삭제 위임
+  $('cppList')?.addEventListener('click', e => {
+    const item = e.target.closest('.cpp-item');
+    if(!item) return;
+    const pid = item.dataset.pid;
+    const act = e.target.closest('[data-act]')?.dataset.act;
+    if(!act) return;
+    if(act === 'delete'){
+      const p = state.comicPanelPresets.find(x => x.id === pid);
+      if(!p) return;
+      if(!confirm(`'${p.name}' 프리셋을 삭제할까요? (이 프리셋을 쓰던 컷의 선택도 해제됩니다)`)) return;
+      deleteComicPanelPreset(pid);
+      _renderComicPresetsList();
+      _renderComicPanelInputs();
+      toast(`🗑 '${p.name}' 삭제됨`, 'info');
+    } else if(act === 'edit-toggle'){
+      // 편집 모드 토글 — '✎ 수정' ↔ '✓ 저장'
+      if(item.classList.contains('editing')){
+        // 저장
+        const newName = item.querySelector('.cpp-edit-name')?.value || '';
+        const newPrompt = item.querySelector('.cpp-edit-prompt')?.value || '';
+        updateComicPanelPreset(pid, newName, newPrompt);
+        _renderComicPresetsList();
+        _renderComicPanelInputs();
+        toast(`✓ 프리셋 수정됨`, 'success');
+      } else {
+        item.classList.add('editing');
+        e.target.closest('[data-act]').innerHTML = '✓ 저장';
+      }
+    }
+  });
+  // 컷 textarea 영역 — select 변경 + 저장 버튼 (위임)
+  $('comicPanelInputs')?.addEventListener('change', e => {
+    const sel = e.target.closest('[data-act="preset-sel"]');
+    if(!sel) return;
+    const idx = parseInt(sel.dataset.panelIdx, 10);
+    if(!Number.isFinite(idx)) return;
+    _setComicPanelPresetUse(idx, sel.value);
+  });
+  $('comicPanelInputs')?.addEventListener('click', e => {
+    const saveBtn = e.target.closest('[data-act="preset-save"]');
+    if(!saveBtn) return;
+    const idx = parseInt(saveBtn.dataset.panelIdx, 10);
+    if(!Number.isFinite(idx)) return;
+    saveCurrentCutAsPreset(idx);
+  });
   // 셀 드래그·리사이즈 (pointer events)
   const ccSvg = $('comicCustomSvg');
   if(ccSvg){
