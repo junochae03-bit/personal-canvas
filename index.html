@@ -1423,6 +1423,65 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   outline-offset: 2px;
 }
 
+/* 🎲 RANDOM BUILDER — 카테고리 카드 + 옵션 칩 + 가중치 */
+.mode-btn.rc-tab{color:var(--blue);font-weight:700}
+.mode-btn.rc-tab.act{color:var(--blue);border-bottom-color:var(--blue);background:rgba(58,99,152,.08)}
+.mode-btn.rc-tab:hover{color:var(--blue);background:rgba(58,99,152,.06)}
+
+.rc-builder-sec{border:2px solid var(--blue);background:rgba(58,99,152,.04)}
+.rc-builder-sec .sec-title{color:var(--blue)}
+.rc-category-list{display:flex;flex-direction:column;gap:8px}
+
+.rc-card{background:var(--card);border:1.5px solid var(--b1);border-left:4px solid var(--acc);border-radius:6px;overflow:hidden;transition:border-color .15s}
+.rc-card.disabled{border-left-color:var(--b2);opacity:.55}
+.rc-card.disabled .rc-options{filter:grayscale(.5)}
+.rc-card.warn{border-left-color:var(--yellow)}
+.rc-card.locked{border-left-color:var(--blue);background:rgba(58,99,152,.06)}
+
+.rc-card-hdr{display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--card2);border-bottom:1px solid var(--b1);font-size:12.5px}
+.rc-card-hdr input.rc-label{flex:1;min-width:0;background:transparent;border:1px solid transparent;color:var(--t1);font-weight:700;padding:3px 6px;border-radius:3px;font-size:12.5px;font-family:inherit}
+.rc-card-hdr input.rc-label:focus{outline:none;border-color:var(--acc);background:var(--panel)}
+.rc-card-hdr input.rc-label:hover:not(:focus){background:rgba(0,0,0,.04)}
+.rc-card-hdr .rc-count{font-size:10.5px;color:var(--t3);font-family:var(--mono);flex-shrink:0}
+.rc-card-hdr button{background:transparent;border:0;padding:3px 6px;cursor:pointer;font-size:13px;color:var(--t2);border-radius:3px;line-height:1}
+.rc-card-hdr button:hover{background:rgba(0,0,0,.06);color:var(--t1)}
+.rc-card-hdr button.act{color:var(--green)}
+.rc-card-hdr .rc-toggle{font-weight:700;font-size:14px;min-width:24px}
+.rc-card-hdr .rc-toggle.off{color:var(--t3);text-decoration:line-through}
+
+.rc-options{padding:6px 8px;display:flex;flex-direction:column;gap:3px;max-height:280px;overflow-y:auto;background:var(--panel)}
+.rc-option{display:flex;align-items:center;gap:4px;padding:3px 4px;border-radius:3px;font-size:12px;transition:background .12s}
+.rc-option:hover{background:rgba(162,90,31,.06)}
+.rc-option.locked-opt{background:rgba(58,99,152,.12);border:1px dashed var(--blue)}
+.rc-option .rc-opt-text{flex:1;min-width:0;background:transparent;border:1px solid transparent;color:var(--t1);padding:3px 5px;border-radius:3px;font-family:var(--mono);font-size:11.5px;line-height:1.4}
+.rc-option .rc-opt-text:focus{outline:none;border-color:var(--acc);background:var(--card2)}
+.rc-option .rc-opt-text:hover:not(:focus){background:rgba(0,0,0,.03)}
+.rc-option .rc-opt-text.placeholder{color:var(--t3);font-style:italic}
+.rc-option .rc-opt-empty-badge{font-size:9.5px;color:var(--t3);background:var(--card2);padding:1px 5px;border-radius:8px;flex-shrink:0;font-family:var(--mono)}
+.rc-option .rc-weight-ctrl{display:flex;align-items:center;gap:2px;flex-shrink:0;font-family:var(--mono);font-size:10.5px}
+.rc-option .rc-weight-ctrl button{background:var(--card2);border:1px solid var(--b1);color:var(--t2);padding:1px 5px;cursor:pointer;border-radius:2px;font-size:10px;line-height:1;min-width:18px}
+.rc-option .rc-weight-ctrl button:hover{background:var(--card);color:var(--t1);border-color:var(--b2)}
+.rc-option .rc-weight-ctrl .rc-weight-val{min-width:30px;text-align:center;color:var(--t1);font-weight:700}
+.rc-option .rc-weight-ctrl .rc-weight-val.heavy{color:var(--acc)}
+.rc-option .rc-weight-ctrl .rc-weight-val.negative{color:var(--red)}
+.rc-option .rc-weight-ctrl .rc-weight-val.zero{color:var(--t3)}
+.rc-option .rc-opt-actions{display:flex;gap:1px;flex-shrink:0}
+.rc-option .rc-opt-actions button{background:transparent;border:0;color:var(--t3);padding:2px 4px;cursor:pointer;font-size:11px;border-radius:2px;line-height:1}
+.rc-option .rc-opt-actions button:hover{background:rgba(0,0,0,.08);color:var(--t1)}
+.rc-option .rc-opt-actions button.lock-act{color:var(--blue)}
+.rc-option .rc-opt-actions button.del-act:hover{color:var(--red);background:rgba(181,67,56,.1)}
+
+.rc-add-opt-row{display:flex;gap:4px;padding:4px 0 2px;border-top:1px dashed var(--b1);margin-top:3px}
+.rc-add-opt-row input{flex:1;min-width:0;background:var(--card2);border:1px solid var(--b1);color:var(--t1);padding:4px 8px;border-radius:3px;font-size:11.5px;font-family:var(--mono)}
+.rc-add-opt-row input:focus{outline:none;border-color:var(--acc);background:var(--panel)}
+.rc-add-opt-row button{background:var(--acc);color:#fff8ec;border:0;padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11.5px;font-weight:600;flex-shrink:0}
+.rc-add-opt-row button:hover{background:var(--acc2)}
+
+.rc-warn-bar{padding:5px 10px;background:rgba(184,136,32,.15);color:var(--yellow);font-size:11px;border-top:1px solid rgba(184,136,32,.3);line-height:1.5}
+.rc-warn-bar b{font-weight:700;color:var(--yellow)}
+
+#rcStatsBadge{cursor:default}
+
 /* ✱ 필수 입력 마커 — sec-title / .lbl 옆에 표시 */
 .req{
   color: var(--red);
@@ -1519,11 +1578,37 @@ mark{
       <button class="mode-btn" data-mode="inpaint">부분 수정<span class="en">Inpaint</span></button>
       <button class="mode-btn" data-mode="vibe">참조<span class="en">Vibe</span></button>
       <button class="mode-btn" data-mode="director">보정<span class="en">Director</span></button>
+      <!-- 🎲 랜덤 — 모드가 아닌 토글 (다른 모드 유지 + 빌더 sec 표시). data-mode 없이 별도 처리. -->
+      <button class="mode-btn rc-tab" id="randomBuilderTab" type="button" title="🎲 랜덤 카테고리 빌더 — 매 생성마다 활성 카테고리에서 옵션 무작위 선택 (모드와 독립)" aria-pressed="false">🎲<span class="en">Rnd</span></button>
     </div>
     <div class="side-body" id="sideBody">
       <div class="sec-toggle-row">
         <button class="btn ghost" id="toggleAllSecBtn" title="현재 보이는 모든 섹션을 한꺼번에 펼치거나 접습니다">⤡ 전체 접기 <span class="en">Collapse All</span></button>
       </div>
+
+      <!-- 🎲 RANDOM CATEGORY BUILDER — 모드 바의 🎲 탭으로 열림. 다른 모드와 독립. -->
+      <div class="sec rc-builder-sec" id="randomBuilderSec" style="display:none">
+        <div class="sec-title">
+          🎲 랜덤 카테고리 빌더 <span class="en">Random</span>
+          <span style="font-size:11px;color:var(--t3);font-family:var(--mono);font-weight:500;margin-left:6px" id="rcStatsBadge"></span>
+          <span class="sec-utils" onclick="event.stopPropagation()">
+            <button class="iconbtn sec-util-btn" id="rcAddBtn" title="＋ 새 카테고리 추가">＋</button>
+            <button class="iconbtn sec-util-btn" id="rcDemoBtn" title="🎲 한 번 시연 — 현재 설정으로 어떤 옵션이 뽑힐지 한 번 expand">🎲</button>
+            <button class="iconbtn sec-util-btn" id="rcImportBtn" title="📥 텍스트에서 가져오기 — # 라벨 / ||A|B|C|| 패턴 자동 인식">📥</button>
+            <button class="iconbtn sec-util-btn" id="rcClearLocksBtn" title="🔓 모든 옵션 고정 해제">🔓</button>
+            <button class="iconbtn sec-util-btn" id="rcCloseBtn" title="빌더 닫기">✕</button>
+          </span>
+          <span class="caret">▾</span>
+        </div>
+        <div class="sec-body">
+          <div id="rcCategoryList" class="rc-category-list"></div>
+          <div id="rcEmptyState" style="text-align:center;color:var(--t3);padding:30px 16px;font-size:12.5px;line-height:1.7;display:none">
+            🎲 아직 등록된 카테고리가 없습니다<br>
+            <span style="font-size:11px">＋ 버튼으로 새 카테고리를 만들거나, 📥 로 ||A|B|C|| 텍스트를 붙여넣으세요</span>
+          </div>
+        </div>
+      </div>
+
       <!-- DIRECTOR — 디렉터 도구 -->
       <div class="sec mode-show director" style="display:none">
         <div class="sec-title">디렉터 도구 <span class="en">Director Tool</span><span class="caret">▾</span></div>
@@ -1609,7 +1694,6 @@ mark{
           <!-- 유틸 아이콘들 — 섹션 헤더로 옮겨 본문 액션 행을 단순화 -->
           <span class="sec-utils" onclick="event.stopPropagation()">
             <button class="iconbtn sec-util-btn" id="importExifBtn" title="📁 EXIF 복원 — NAI PNG에서 프롬프트·파라미터 가져오기">📁</button>
-            <button class="iconbtn sec-util-btn" id="randomChoicePreviewBtn" title="🎲 동적 선택 미리보기 — ||A|B|C|| 문법이 어떻게 expand 되는지 한 번 시연">🎲</button>
             <button class="iconbtn sec-util-btn" id="expandPromptBtn" title="⛶ 확대 — 큰 창에서 프롬프트/네거티브 편집">⛶</button>
             <button class="iconbtn sec-util-btn" id="openTagsBtn" title="📖 태그 도감 열기">📖</button>
             <button class="iconbtn sec-util-btn" id="openGuideBtn" title="📘 NAI 4.5 가이드">📘</button>
@@ -2711,6 +2795,40 @@ function countRandomCombinations(text){
   return list.reduce((acc, x) => acc * Math.max(1, x.options.length), 1);
 }
 
+// 🎥 카메라 앵글 토큰 — 단독 옵션이면 경고 (다른 체위·표정과 모순 자주 발생).
+const CAMERA_ANGLE_TOKENS = [
+  /^from above$/i, /^from below$/i, /^from side$/i, /^from front$/i,
+  /\blow angle\b/i, /\bhigh angle\b/i, /\bdutch angle\b/i,
+  /^bird'?s[-\s]?eye view$/i, /^worm'?s[-\s]?eye view$/i,
+  /^pov$/i, /^point of view$/i, /\bforeshortening\b/i,
+  /^wide shot$/i, /^close[-\s]?up$/i, /^medium shot$/i,
+  /^full body$/i, /^cowboy shot$/i, /^upper body$/i, /^lower body$/i,
+];
+function hasCameraAngle(optionText){
+  if(!optionText || typeof optionText !== 'string') return false;
+  const tokens = optionText.split(',').map(t => t.trim()).filter(Boolean);
+  return tokens.some(tok => {
+    const m = tok.match(/^-?\d+(?:\.\d+)?::([\s\S]*?)::$/);
+    const body = (m ? m[1] : tok).trim();
+    return CAMERA_ANGLE_TOKENS.some(re => re.test(body));
+  });
+}
+function pickWeightedOption(options, rng){
+  if(!Array.isArray(options) || options.length === 0) return null;
+  const random = (typeof rng === 'function') ? rng : Math.random;
+  const total = options.reduce((s, o) => s + Math.max(0, Number(o?.weight) || 0), 0);
+  if(total <= 0){
+    return options[Math.floor(random() * options.length)];
+  }
+  const target = random() * total;
+  let acc = 0;
+  for(const o of options){
+    acc += Math.max(0, Number(o?.weight) || 0);
+    if(target < acc) return o;
+  }
+  return options[options.length - 1];
+}
+
 // 🎲 시드 상수 — uint32 max. NovelAI seed는 0..0xFFFFFFFF 범위.
 // 동일 로직이 js/pure/seed.mjs 에 있음 (Node 테스트용). 브라우저는 인라인 사용.
 const RAND_SEED_MAX = 0xFFFFFFFF;
@@ -3538,6 +3656,8 @@ const state = {
   outputDirName: '',      // 표시용 폴더명
   seedHistory: [],        // ⏱ [{seed, ts, fav, note}] — 최근 시드 + 즐겨찾기 (최대 100)
   workflows: [],          // 💾 [{id, name, ts, thumb, data}] — 워크플로우 스냅샷 슬롯
+  randomCategories: [],   // 🎲 [{id, label, enabled, locked, lockedOptionIdx, options:[{text, weight}]}] — 동적 선택 빌더
+  randomBuilderOpen: false,   // 빌더 sec 토글 (모드 바의 🎲 버튼)
   gallerySessions: [],
   galleryImages: {},     // sessionId -> [{id, blob, thumbURL, prompt, ts, label, fname, meta}]
   selectedSessionId: null,
@@ -4257,9 +4377,33 @@ function buildGenBody(opts){
   //        vibeRefs (array of {b64, info, strength}), action='generate'|'img2img'|'infill'}
   // 🎲 NAI 동적 선택 ||A|B|C|| — 매 호출마다 옵션 무작위 expand.
   //    원본 opts 는 보존, 얕은 복사 후 prompt/neg/characters[*].prompt/neg 만 갱신.
+  let expandedPrompt = expandRandomChoices(opts.prompt || '');
+
+  // 🎲 RANDOM CATEGORY BUILDER — 활성 카테고리에서 옵션 선택해서 prompt 끝에 자동 추가.
+  //    각 카테고리: locked 면 lockedOptionIdx 고정, 아니면 pickWeightedOption.
+  //    빈 텍스트 옵션은 "사용 안 함" 의미 → 추가 안 함.
+  const cats = Array.isArray(state?.randomCategories) ? state.randomCategories : [];
+  const extras = [];
+  for(const cat of cats){
+    if(!cat.enabled) continue;
+    const optsArr = cat.options || [];
+    if(!optsArr.length) continue;
+    let chosen;
+    if(cat.locked && Number.isInteger(cat.lockedOptionIdx) && optsArr[cat.lockedOptionIdx]){
+      chosen = optsArr[cat.lockedOptionIdx];
+    } else {
+      chosen = pickWeightedOption(optsArr);
+    }
+    const text = (chosen?.text || '').trim();
+    if(text) extras.push(text);
+  }
+  if(extras.length){
+    expandedPrompt = expandedPrompt + (expandedPrompt.trim() ? ', ' : '') + extras.join(', ');
+  }
+
   opts = {
     ...opts,
-    prompt: expandRandomChoices(opts.prompt || ''),
+    prompt: expandedPrompt,
     neg: expandRandomChoices(opts.neg || ''),
     characters: Array.isArray(opts.characters) ? opts.characters.map(c => ({
       ...c,
@@ -8582,6 +8726,39 @@ async function loadWorkflows(){
 async function saveWorkflows(){
   await DB.setFlag('workflows', state.workflows);
 }
+
+// 🎲 RANDOM CATEGORIES — 빌더 UI 로 관리, buildGenBody 가 매 생성마다 활성 카테고리에서 옵션 무작위 선택.
+//    카테고리 모델: {id, label, enabled, locked, lockedOptionIdx, options: [{text, weight}]}
+async function loadRandomCategories(){
+  const saved = await DB.getFlag('random_categories');
+  state.randomCategories = Array.isArray(saved) ? saved.map(_normalizeRandomCategory).filter(Boolean) : [];
+}
+async function saveRandomCategories(){
+  await DB.setFlag('random_categories', state.randomCategories);
+}
+function _normalizeRandomCategory(c){
+  if(!c || typeof c !== 'object') return null;
+  return {
+    id: String(c.id || `rc-${Date.now()}-${Math.random().toString(36).slice(2,8)}`),
+    label: String(c.label || '').slice(0, 80) || '카테고리',
+    enabled: c.enabled !== false,
+    locked: !!c.locked,
+    lockedOptionIdx: Number.isInteger(c.lockedOptionIdx) ? c.lockedOptionIdx : null,
+    options: Array.isArray(c.options) ? c.options.slice(0, 200).map(o => ({
+      text: String(o?.text || '').slice(0, 500),
+      weight: Number.isFinite(Number(o?.weight)) ? Math.max(0, Math.min(10, Number(o.weight))) : 1.0,
+    })) : [],
+  };
+}
+function rcNewCategory(label){
+  return _normalizeRandomCategory({
+    id: `rc-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+    label: label || '새 카테고리',
+    enabled: true,
+    options: [{text: '', weight: 1.0}],
+  });
+}
+const _saveRandomCategoriesDebounced = debounce(saveRandomCategories, 400);
 
 async function _wfThumb(){
   // 현재 미리보기 이미지를 작은 data URL로 — 없으면 null
@@ -14862,6 +15039,355 @@ function showRandomChoicePreview(){
   if(reroll) reroll.onclick = () => showRandomChoicePreview();
 }
 
+// ═══════════════════════════════════════════════════════════
+// 🎲 RANDOM CATEGORY BUILDER — 빌더 UI 렌더 + CRUD
+// ═══════════════════════════════════════════════════════════
+function rcToggleBuilder(force){
+  const open = (typeof force === 'boolean') ? force : !state.randomBuilderOpen;
+  state.randomBuilderOpen = open;
+  const tab = $('randomBuilderTab');
+  const sec = $('randomBuilderSec');
+  if(tab){ tab.classList.toggle('act', open); tab.setAttribute('aria-pressed', String(open)); }
+  if(sec) sec.style.display = open ? '' : 'none';
+  if(open) rcRender();
+}
+
+function _rcWeightClass(w){
+  if(w < 0) return 'negative';
+  if(w === 0) return 'zero';
+  if(w >= 1.5) return 'heavy';
+  return '';
+}
+
+function _rcOptionWarning(cat){
+  // 옵션 중 카메라 앵글이 단독으로 있으면 경고 (다른 토큰과 결합된 'sex from behind' 류는 안전)
+  if(!cat?.options) return null;
+  const hits = cat.options.filter(o => hasCameraAngle(o.text)).map(o => o.text);
+  if(!hits.length) return null;
+  return `⚠ 카메라 앵글 옵션 감지 — 다른 체위·표정과 모순 가능: <b>${esc(hits.slice(0, 3).join(', '))}</b>${hits.length>3?` 외 ${hits.length-3}개`:''}`;
+}
+
+function rcRender(){
+  const list = $('rcCategoryList');
+  const empty = $('rcEmptyState');
+  const statsBadge = $('rcStatsBadge');
+  if(!list) return;
+  const cats = state.randomCategories || [];
+  if(empty) empty.style.display = cats.length === 0 ? '' : 'none';
+  if(statsBadge){
+    const enabled = cats.filter(c => c.enabled).length;
+    const totalOpts = cats.filter(c => c.enabled).reduce((s, c) => s + (c.options?.length || 0), 0);
+    // 총 조합 수 — 각 활성 카테고리 옵션 수 곱
+    const combo = cats.filter(c => c.enabled && (c.options?.length || 0) > 0)
+      .reduce((s, c) => s * c.options.length, 1);
+    statsBadge.textContent = `${cats.length}개 (활성 ${enabled} · 옵션 ${totalOpts} · 조합 ${combo.toLocaleString()})`;
+  }
+  if(cats.length === 0){ list.innerHTML = ''; return; }
+  list.innerHTML = cats.map((c, ci) => _rcRenderCard(c, ci)).join('');
+}
+
+function _rcRenderCard(cat, catIdx){
+  const enabled = cat.enabled !== false;
+  const locked = !!cat.locked;
+  const warn = _rcOptionWarning(cat);
+  const optsHtml = (cat.options || []).map((o, i) => {
+    const isLockedOpt = locked && cat.lockedOptionIdx === i;
+    const w = Number(o.weight);
+    const wDisplay = Number.isFinite(w) ? w.toFixed(1) : '1.0';
+    const isEmpty = !(o.text || '').trim();
+    return `
+      <div class="rc-option${isLockedOpt?' locked-opt':''}" data-opt-idx="${i}">
+        <input type="text" class="rc-opt-text${isEmpty?' placeholder':''}" data-act="edit-opt" data-cat-idx="${catIdx}" data-opt-idx="${i}" value="${esc(o.text || '')}" placeholder="(빈 옵션 — 아무것도 사용 안 함)" spellcheck="false">
+        ${isEmpty ? '<span class="rc-opt-empty-badge" title="빈 옵션 = 이 옵션이 선택되면 카테고리에서 아무 태그도 추가 안 함">∅</span>' : ''}
+        <span class="rc-weight-ctrl">
+          <button data-act="weight-down" data-cat-idx="${catIdx}" data-opt-idx="${i}" title="가중치 -0.2">−</button>
+          <span class="rc-weight-val ${_rcWeightClass(w)}" title="가중치 ${wDisplay}">${wDisplay}</span>
+          <button data-act="weight-up" data-cat-idx="${catIdx}" data-opt-idx="${i}" title="가중치 +0.2">＋</button>
+        </span>
+        <span class="rc-opt-actions">
+          <button class="lock-act" data-act="lock-opt" data-cat-idx="${catIdx}" data-opt-idx="${i}" title="${isLockedOpt?'고정 해제':'이 옵션 고정 (debug — 매 생성마다 이 옵션만)'}">${isLockedOpt?'🔒':'🔓'}</button>
+          <button class="del-act" data-act="del-opt" data-cat-idx="${catIdx}" data-opt-idx="${i}" title="옵션 삭제">✕</button>
+        </span>
+      </div>`;
+  }).join('');
+  const cls = ['rc-card'];
+  if(!enabled) cls.push('disabled');
+  if(warn) cls.push('warn');
+  if(locked) cls.push('locked');
+  return `
+    <div class="${cls.join(' ')}" data-cat-idx="${catIdx}" data-cat-id="${esc(cat.id || '')}">
+      <div class="rc-card-hdr">
+        <button class="rc-toggle${enabled?' act':' off'}" data-act="toggle-enabled" data-cat-idx="${catIdx}" title="${enabled?'비활성화':'활성화'}">${enabled?'✓':'○'}</button>
+        <input type="text" class="rc-label" data-act="edit-label" data-cat-idx="${catIdx}" value="${esc(cat.label || '')}" placeholder="카테고리 이름" maxlength="80">
+        <span class="rc-count">${(cat.options||[]).length} 옵션</span>
+        <button data-act="add-opt" data-cat-idx="${catIdx}" title="옵션 추가">＋</button>
+        <button data-act="add-empty" data-cat-idx="${catIdx}" title="빈 옵션 추가 (= '아무것도 사용 안 함')">∅</button>
+        <button data-act="move-up" data-cat-idx="${catIdx}" title="위로 이동" ${catIdx===0?'disabled':''}>▲</button>
+        <button data-act="move-down" data-cat-idx="${catIdx}" title="아래로 이동">▼</button>
+        <button data-act="del-cat" data-cat-idx="${catIdx}" title="카테고리 삭제" style="color:var(--red)">✕</button>
+      </div>
+      <div class="rc-options">${optsHtml || '<div style="font-size:11px;color:var(--t3);padding:6px;text-align:center">옵션 없음 — ＋ 로 추가</div>'}</div>
+      ${warn ? `<div class="rc-warn-bar">${warn}</div>` : ''}
+    </div>
+  `;
+}
+
+function rcSetCatField(catIdx, field, value){
+  const c = state.randomCategories?.[catIdx];
+  if(!c) return;
+  c[field] = value;
+  _saveRandomCategoriesDebounced();
+}
+function rcSetOptText(catIdx, optIdx, text){
+  const c = state.randomCategories?.[catIdx];
+  if(!c || !c.options?.[optIdx]) return;
+  c.options[optIdx].text = String(text || '').slice(0, 500);
+  _saveRandomCategoriesDebounced();
+}
+function rcAdjustOptWeight(catIdx, optIdx, delta){
+  const c = state.randomCategories?.[catIdx];
+  if(!c || !c.options?.[optIdx]) return;
+  const w = Number(c.options[optIdx].weight) || 1.0;
+  const next = Math.max(0, Math.min(10, +(w + delta).toFixed(1)));
+  c.options[optIdx].weight = next;
+  _saveRandomCategoriesDebounced();
+  rcRender();
+}
+function rcAddOption(catIdx, text){
+  const c = state.randomCategories?.[catIdx];
+  if(!c) return;
+  c.options = c.options || [];
+  c.options.push({text: String(text || '').slice(0, 500), weight: 1.0});
+  _saveRandomCategoriesDebounced();
+  rcRender();
+}
+function rcDelOption(catIdx, optIdx){
+  const c = state.randomCategories?.[catIdx];
+  if(!c || !c.options?.[optIdx]) return;
+  c.options.splice(optIdx, 1);
+  // 고정 옵션 인덱스 조정
+  if(c.locked && Number.isInteger(c.lockedOptionIdx)){
+    if(c.lockedOptionIdx === optIdx){ c.locked = false; c.lockedOptionIdx = null; }
+    else if(c.lockedOptionIdx > optIdx){ c.lockedOptionIdx -= 1; }
+  }
+  _saveRandomCategoriesDebounced();
+  rcRender();
+}
+function rcToggleEnabled(catIdx){
+  const c = state.randomCategories?.[catIdx];
+  if(!c) return;
+  c.enabled = !c.enabled;
+  _saveRandomCategoriesDebounced();
+  rcRender();
+}
+function rcLockOption(catIdx, optIdx){
+  const c = state.randomCategories?.[catIdx];
+  if(!c || !c.options?.[optIdx]) return;
+  if(c.locked && c.lockedOptionIdx === optIdx){
+    c.locked = false; c.lockedOptionIdx = null;
+  } else {
+    c.locked = true; c.lockedOptionIdx = optIdx;
+  }
+  _saveRandomCategoriesDebounced();
+  rcRender();
+}
+function rcMoveCategory(catIdx, dir){
+  const cats = state.randomCategories;
+  if(!cats) return;
+  const j = catIdx + dir;
+  if(j < 0 || j >= cats.length) return;
+  [cats[catIdx], cats[j]] = [cats[j], cats[catIdx]];
+  _saveRandomCategoriesDebounced();
+  rcRender();
+}
+function rcDelCategory(catIdx){
+  const c = state.randomCategories?.[catIdx];
+  if(!c) return;
+  const snap = state.randomCategories.slice();
+  state.randomCategories.splice(catIdx, 1);
+  _saveRandomCategoriesDebounced();
+  rcRender();
+  toastUndo(`🗑 카테고리 "${c.label}" 삭제`, () => {
+    state.randomCategories = snap;
+    _saveRandomCategoriesDebounced();
+    rcRender();
+  });
+}
+function rcAddCategory(label){
+  const c = rcNewCategory(label || `카테고리 ${(state.randomCategories?.length || 0) + 1}`);
+  state.randomCategories = state.randomCategories || [];
+  state.randomCategories.push(c);
+  _saveRandomCategoriesDebounced();
+  rcRender();
+  // 새 카테고리의 라벨 입력 필드에 자동 포커스
+  setTimeout(() => {
+    const lastIdx = state.randomCategories.length - 1;
+    const labelInput = document.querySelector(`#rcCategoryList .rc-card[data-cat-idx="${lastIdx}"] .rc-label`);
+    if(labelInput){ labelInput.focus(); labelInput.select(); }
+  }, 50);
+}
+function rcClearAllLocks(){
+  let count = 0;
+  for(const c of (state.randomCategories || [])){
+    if(c.locked){ c.locked = false; c.lockedOptionIdx = null; count++; }
+  }
+  if(count){
+    _saveRandomCategoriesDebounced();
+    rcRender();
+    toast(`🔓 ${count}개 카테고리의 옵션 고정 해제`, 'info');
+  } else {
+    toast('고정된 옵션이 없습니다', 'info');
+  }
+}
+
+// 🎲 한 번 시연 — 모든 활성 카테고리에서 옵션 선택해서 어떤 결과가 나오는지 보여줌
+function rcDemo(){
+  const cats = state.randomCategories || [];
+  const activeCats = cats.filter(c => c.enabled && (c.options?.length || 0) > 0);
+  if(activeCats.length === 0){
+    toast('활성 카테고리가 없습니다', 'warning');
+    return;
+  }
+  const rows = activeCats.map(c => {
+    let chosen;
+    if(c.locked && Number.isInteger(c.lockedOptionIdx) && c.options[c.lockedOptionIdx]){
+      chosen = c.options[c.lockedOptionIdx];
+    } else {
+      chosen = pickWeightedOption(c.options);
+    }
+    const text = chosen?.text || '';
+    const wt = chosen?.weight ?? 1.0;
+    const empty = !text.trim();
+    return {label: c.label, text, weight: wt, empty, locked: c.locked};
+  });
+  const finalTokens = rows.filter(r => !r.empty).map(r => r.text);
+  const html = `
+    <div style="font-size:12.5px;color:var(--t2);margin-bottom:10px;line-height:1.65">
+      현재 활성 카테고리 <b style="color:var(--t1)">${activeCats.length}개</b>에서 한 번 무작위 선택한 결과입니다. 매 생성마다 새 옵션이 뽑힙니다.
+    </div>
+    <fieldset style="border:1.5px solid var(--b1);border-radius:6px;padding:8px 12px 10px;margin-bottom:10px">
+      <legend style="font-weight:700;color:var(--acc);padding:0 6px;font-size:12.5px">카테고리별 선택 결과</legend>
+      <div style="display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;font-size:11.5px;align-items:baseline">
+        ${rows.map(r => `
+          <div style="font-weight:700;color:var(--t1)">${esc(r.label)}${r.locked?' 🔒':''}</div>
+          <div style="font-family:var(--mono);color:${r.empty?'var(--t3)':'var(--t1)'};font-style:${r.empty?'italic':'normal'}">${r.empty?'(빈 옵션 — 사용 안 함)':esc(r.text)}</div>
+          <div style="font-family:var(--mono);color:var(--t3);font-size:10.5px">w=${(Number(r.weight)||1).toFixed(1)}</div>
+        `).join('')}
+      </div>
+    </fieldset>
+    <fieldset style="border:1.5px solid var(--acc);border-radius:6px;padding:8px 12px 10px">
+      <legend style="font-weight:700;color:var(--acc);padding:0 6px;font-size:12.5px">🎯 최종 prompt 에 추가될 텍스트</legend>
+      <div style="font-family:var(--mono);font-size:11.5px;line-height:1.55;color:var(--t1);background:var(--card);padding:6px 8px;border-radius:4px;max-height:140px;overflow-y:auto;white-space:pre-wrap;word-break:break-word">${finalTokens.length ? esc(finalTokens.join(', ')) : '<span style="color:var(--t3)">(모든 카테고리가 빈 옵션을 골랐음 — 아무것도 추가 안 됨)</span>'}</div>
+      <div style="margin-top:6px;text-align:right">
+        <button type="button" id="_rcDemoRerollBtn" class="btn ghost" style="font-size:11.5px;padding:4px 10px">🎲 다시 시연</button>
+      </div>
+    </fieldset>
+    <div style="font-size:11px;color:var(--t3);margin-top:10px;line-height:1.5">
+      ℹ 실제 생성 시 매번 새로 선택됩니다. 결과는 EXIF 메타에 자동 기록됩니다.
+    </div>
+  `;
+  $('confirmTitle').innerHTML = '🎲 카테고리 시연 <span class="en">Demo</span>';
+  $('confirmBody').innerHTML = html;
+  $('confirmOk').style.display = 'none';
+  $('confirmCancel').innerHTML = '닫기 <span class="en">Close</span>';
+  $('confirmModal').classList.add('open');
+  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
+  const reroll = document.getElementById('_rcDemoRerollBtn');
+  if(reroll) reroll.onclick = () => rcDemo();
+}
+
+// 📥 텍스트에서 가져오기 — # 라벨 + ||A|B|C|| 패턴 자동 파싱
+function rcImportFromText(){
+  const text = window.prompt('카테고리 텍스트를 붙여넣으세요. 형식:\n\n# 카테고리명\n||옵션1|옵션2|옵션3| ||\n\n빈 라벨이면 자동 번호.', '');
+  if(text == null) return;
+  const trimmed = text.trim();
+  if(!trimmed) return;
+  // 줄 단위 파싱
+  const lines = trimmed.split('\n');
+  let pendingLabel = null;
+  const added = [];
+  for(const raw of lines){
+    const line = raw.trim();
+    if(!line) continue;
+    const labelMatch = line.match(/^#\s*(.+?)\s*,?\s*$/);
+    if(labelMatch){ pendingLabel = labelMatch[1].trim(); continue; }
+    // ||...|| 패턴
+    const patternMatch = line.match(/\|\|([^|]*(?:\|[^|]*)*?)\|\|/);
+    if(patternMatch){
+      const inner = patternMatch[1];
+      const options = inner.split('|').map(o => ({text: o.trim(), weight: 1.0}));
+      const cat = _normalizeRandomCategory({
+        label: pendingLabel || `가져옴 ${added.length + 1}`,
+        enabled: true,
+        options,
+      });
+      if(cat){ added.push(cat); state.randomCategories.push(cat); }
+      pendingLabel = null;
+    }
+  }
+  if(!added.length){
+    toast('인식 가능한 ||A|B|C|| 패턴이 없습니다', 'warning');
+    return;
+  }
+  _saveRandomCategoriesDebounced();
+  rcRender();
+  toast(`📥 ${added.length}개 카테고리 가져옴`, 'success');
+}
+
+function rcWireEvents(){
+  $('randomBuilderTab')?.addEventListener('click', () => rcToggleBuilder());
+  $('rcCloseBtn')?.addEventListener('click', () => rcToggleBuilder(false));
+  $('rcAddBtn')?.addEventListener('click', () => rcAddCategory());
+  $('rcDemoBtn')?.addEventListener('click', () => rcDemo());
+  $('rcImportBtn')?.addEventListener('click', () => rcImportFromText());
+  $('rcClearLocksBtn')?.addEventListener('click', () => rcClearAllLocks());
+
+  // 카드 목록 이벤트 위임
+  const list = $('rcCategoryList');
+  if(!list) return;
+  list.addEventListener('click', e => {
+    const btn = e.target.closest('[data-act]');
+    if(!btn) return;
+    const act = btn.dataset.act;
+    const catIdx = parseInt(btn.dataset.catIdx, 10);
+    const optIdx = parseInt(btn.dataset.optIdx, 10);
+    if(act === 'toggle-enabled') rcToggleEnabled(catIdx);
+    else if(act === 'add-opt'){
+      const cat = state.randomCategories?.[catIdx];
+      if(!cat) return;
+      const v = window.prompt(`"${cat.label}" 에 추가할 옵션 텍스트:`, '');
+      if(v != null && v.trim()) rcAddOption(catIdx, v.trim());
+    }
+    else if(act === 'add-empty') rcAddOption(catIdx, '');
+    else if(act === 'del-opt') rcDelOption(catIdx, optIdx);
+    else if(act === 'weight-up') rcAdjustOptWeight(catIdx, optIdx, +0.2);
+    else if(act === 'weight-down') rcAdjustOptWeight(catIdx, optIdx, -0.2);
+    else if(act === 'lock-opt') rcLockOption(catIdx, optIdx);
+    else if(act === 'move-up') rcMoveCategory(catIdx, -1);
+    else if(act === 'move-down') rcMoveCategory(catIdx, +1);
+    else if(act === 'del-cat'){
+      const cat = state.randomCategories?.[catIdx];
+      if(!cat) return;
+      confirmDialog(`"${cat.label}" 카테고리를 삭제할까요?\n옵션 ${cat.options?.length||0}개도 함께 사라집니다 (6초 안에 실행 취소 가능).`, () => rcDelCategory(catIdx));
+    }
+  });
+  // 텍스트 입력 (라벨 / 옵션) — input 이벤트로 즉시 저장
+  list.addEventListener('input', e => {
+    const t = e.target;
+    if(!t.dataset.act) return;
+    const catIdx = parseInt(t.dataset.catIdx, 10);
+    if(t.dataset.act === 'edit-label'){
+      rcSetCatField(catIdx, 'label', t.value);
+      // 카운트 라벨도 즉시 반영 (재렌더는 비용 큼 — DOM 직접 수정)
+    } else if(t.dataset.act === 'edit-opt'){
+      const optIdx = parseInt(t.dataset.optIdx, 10);
+      rcSetOptText(catIdx, optIdx, t.value);
+      // 빈 옵션 표시 즉시 갱신
+      t.classList.toggle('placeholder', !t.value.trim());
+    }
+  });
+}
+
 function showShortcutsHelp(){
   const groups = [
     {title: '🌐 전역', items: [
@@ -15162,6 +15688,7 @@ async function init(){
   document.body.dataset.mview = 'edit';
   $$('.mn-btn').forEach(b => b.classList.toggle('act', b.dataset.mview === 'edit'));
   wireEvents();
+  rcWireEvents();   // 🎲 랜덤 빌더 이벤트 바인딩
   setupPromptAutocomplete();
   await loadPresetsFromDB();
   // 📚 단부루 태그 사전 — 백그라운드 로드 (init 차단하지 않음, 끝나면 인덱스 갱신)
@@ -15169,6 +15696,7 @@ async function init(){
   await loadAlbums();
   await loadGalleryTagIndex();
   await loadWorkflows();
+  await loadRandomCategories();
   await tplLoadTemplates();
   // 📁 갤러리 저장 위치 드롭다운 초기 채움
   state.gallerySessions = await DB.getSessions();

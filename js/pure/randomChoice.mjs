@@ -53,3 +53,53 @@ export function countRandomCombinations(text){
   if(!list.length) return 1;
   return list.reduce((acc, x) => acc * Math.max(1, x.options.length), 1);
 }
+
+// 🎥 카메라 앵글·구도 토큰 — 다른 체위·표정과 모순 자주 발생.
+// 사용자 의도(설명문): "카메라 앵글은 일부러 제외 — NAI 가 알아서 매칭하도록 위임".
+// 단독 옵션으로 들어가면 경고. 'sex from behind' 같이 다른 토큰과 결합된 건 안전.
+const CAMERA_ANGLE_TOKENS = [
+  /^from above$/i, /^from below$/i, /^from side$/i, /^from front$/i,
+  /\blow angle\b/i, /\bhigh angle\b/i, /\bdutch angle\b/i,
+  /^bird'?s[-\s]?eye view$/i, /^worm'?s[-\s]?eye view$/i,
+  /^pov$/i, /^point of view$/i, /\bforeshortening\b/i,
+  /^wide shot$/i, /^close[-\s]?up$/i, /^medium shot$/i,
+  /^full body$/i, /^cowboy shot$/i, /^upper body$/i, /^lower body$/i,
+];
+
+/**
+ * 옵션 텍스트가 카메라 앵글 토큰을 (단독으로) 포함하는지.
+ * 옵션 내부를 콤마로 split → 가중치 표기 ::body:: 만 추출 → 카메라 앵글 매칭.
+ * 예: "from above" → true
+ *     "sex from behind, indoors" → false (sex from behind 는 단독 카메라 앵글 아님)
+ *     "2::from above::" → true (가중치 보존, 본문 검사)
+ */
+export function hasCameraAngle(optionText){
+  if(!optionText || typeof optionText !== 'string') return false;
+  const tokens = optionText.split(',').map(t => t.trim()).filter(Boolean);
+  return tokens.some(tok => {
+    const m = tok.match(/^-?\d+(?:\.\d+)?::([\s\S]*?)::$/);
+    const body = (m ? m[1] : tok).trim();
+    return CAMERA_ANGLE_TOKENS.some(re => re.test(body));
+  });
+}
+
+/**
+ * 가중치 기반 랜덤 선택. options: [{text, weight}].
+ * weight 가 0 이하면 그 옵션은 선택 안 됨. 모두 0 이하면 균등 분포.
+ * 빈 text 옵션도 그대로 반환 (호출자가 "사용 안 함" 의미로 처리).
+ */
+export function pickWeightedOption(options, rng){
+  if(!Array.isArray(options) || options.length === 0) return null;
+  const random = (typeof rng === 'function') ? rng : Math.random;
+  const total = options.reduce((s, o) => s + Math.max(0, Number(o?.weight) || 0), 0);
+  if(total <= 0){
+    return options[Math.floor(random() * options.length)];
+  }
+  const target = random() * total;
+  let acc = 0;
+  for(const o of options){
+    acc += Math.max(0, Number(o?.weight) || 0);
+    if(target < acc) return o;
+  }
+  return options[options.length - 1];
+}

@@ -13,7 +13,7 @@ import { RAND_SEED_MAX, randomSeed, parseSeedInput } from '../js/pure/seed.mjs';
 import { MEGAPIXEL, isSmallTier, aspectRatio, snapTo8 } from '../js/pure/image.mjs';
 import { toChosung, isAllChosung, koMatch, highlightMatch } from '../js/pure/korean.mjs';
 import { pickFirst, sanitizeCharacter, sanitizeCharacters, extractNaiFields } from '../js/pure/naiMeta.mjs';
-import { expandRandomChoices, listRandomChoices, countRandomCombinations } from '../js/pure/randomChoice.mjs';
+import { expandRandomChoices, listRandomChoices, countRandomCombinations, hasCameraAngle, pickWeightedOption } from '../js/pure/randomChoice.mjs';
 
 // ────────────── utils ──────────────
 test('esc: HTML 특수문자 5종 이스케이프', () => {
@@ -406,4 +406,52 @@ test('countRandomCombinations: 옵션 수 곱', () => {
   assert.equal(countRandomCombinations('||A|B|C|D|E||'), 5);
   assert.equal(countRandomCombinations('no patterns'), 1);
   assert.equal(countRandomCombinations(''), 1);
+});
+
+test('hasCameraAngle: 단독 카메라 앵글 감지', () => {
+  assert.equal(hasCameraAngle('from above'), true);
+  assert.equal(hasCameraAngle('from below'), true);
+  assert.equal(hasCameraAngle('low angle, indoors'), true);
+  assert.equal(hasCameraAngle('pov'), true);
+});
+test('hasCameraAngle: 다른 토큰과 결합된 건 안전 (false)', () => {
+  assert.equal(hasCameraAngle('sex from behind'), false);
+  assert.equal(hasCameraAngle('cat girl'), false);
+  assert.equal(hasCameraAngle('smile'), false);
+});
+test('hasCameraAngle: 가중치 표기 안 본문 검사', () => {
+  assert.equal(hasCameraAngle('2::from above::'), true);
+  assert.equal(hasCameraAngle('1.5::low angle::'), true);
+});
+test('hasCameraAngle: null/빈 입력 안전', () => {
+  assert.equal(hasCameraAngle(''), false);
+  assert.equal(hasCameraAngle(null), false);
+  assert.equal(hasCameraAngle(undefined), false);
+});
+
+test('pickWeightedOption: 균등 분포 (모두 weight 1)', () => {
+  const opts = [{text:'A', weight:1}, {text:'B', weight:1}];
+  assert.equal(pickWeightedOption(opts, () => 0).text, 'A');
+  assert.equal(pickWeightedOption(opts, () => 0.99).text, 'B');
+});
+test('pickWeightedOption: 가중치 비례 선택', () => {
+  // A=1, B=3 → A 25%, B 75%. rng=0.2 → A, rng=0.5 → B
+  const opts = [{text:'A', weight:1}, {text:'B', weight:3}];
+  assert.equal(pickWeightedOption(opts, () => 0.2).text, 'A');
+  assert.equal(pickWeightedOption(opts, () => 0.5).text, 'B');
+  assert.equal(pickWeightedOption(opts, () => 0.99).text, 'B');
+});
+test('pickWeightedOption: 모두 weight 0 → 균등 fallback', () => {
+  const opts = [{text:'A', weight:0}, {text:'B', weight:0}, {text:'C', weight:0}];
+  assert.equal(pickWeightedOption(opts, () => 0).text, 'A');
+  assert.equal(pickWeightedOption(opts, () => 0.99).text, 'C');
+});
+test('pickWeightedOption: 빈 옵션 text 그대로 (사용 안 함 의미)', () => {
+  const opts = [{text:'A', weight:1}, {text:'', weight:1}];
+  assert.equal(pickWeightedOption(opts, () => 0.99).text, '');
+});
+test('pickWeightedOption: 비배열·빈 배열 → null', () => {
+  assert.equal(pickWeightedOption([]), null);
+  assert.equal(pickWeightedOption(null), null);
+  assert.equal(pickWeightedOption('x'), null);
 });
