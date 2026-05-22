@@ -9118,8 +9118,8 @@ function captureWorkflowState(){
     inpAddOrig: f('inpAddOrig'),
     i2iStrength: f('i2iStrength'),
     i2iNoise: f('i2iNoise'),
-    // 캐릭터 카드 — 외형/액션/네거티브/이름/썸네일은 data URL이라 JSON 가능
-    characters: JSON.parse(JSON.stringify(state.characters || [])),
+    // 캐릭터 카드 깊은 복사 — structuredClone 은 data URL / Blob 도 처리, JSON 왕복보다 빠르고 안전.
+    characters: _deepClone(state.characters || []),
   };
 }
 
@@ -9164,9 +9164,9 @@ function applyWorkflowState(d){
   apply('inpAddOrig', d.inpAddOrig);
   apply('i2iStrength', d.i2iStrength);
   apply('i2iNoise', d.i2iNoise);
-  // 캐릭터 카드 — 깊은 복사로 적용
+  // 캐릭터 카드 — 깊은 복사로 적용 (structuredClone 폴백)
   if(Array.isArray(d.characters)){
-    state.characters = JSON.parse(JSON.stringify(d.characters));
+    state.characters = _deepClone(d.characters);
     renderCharacters();
   }
   // 모드는 마지막에 — 가시성 토글 발생
@@ -13089,6 +13089,13 @@ function debounce(fn, ms){
   return (...args) => { clearTimeout(t); t = setTimeout(()=>fn(...args), ms); };
 }
 
+// 🪞 깊은 복사 — structuredClone (모든 모던 브라우저 지원, Blob·ArrayBuffer 포함) + JSON 폴백.
+// 워크플로우 캡처·복원에 사용 — JSON 왕복은 큰 캐릭터 배열에서 비효율적이고 typed array를 잃음.
+function _deepClone(v){
+  try { return structuredClone(v); }
+  catch(_) { return JSON.parse(JSON.stringify(v)); }
+}
+
 async function loadSettings(){
   const s = await DB.appGet();
   if(!s) return;
@@ -14295,7 +14302,8 @@ function wireGenerationAndPresetEvents(){
     const b = e.target.closest('.preset-tab');
     if(b && b.dataset.ptype) setPresetType(b.dataset.ptype);
   });
-  $('presetSearch').addEventListener('input', renderPresets);
+  // 키타이핑마다 grid.innerHTML 재구성 → 200+ 프리셋에서 input race. 다른 검색바와 동일하게 80ms debounce.
+  $('presetSearch').addEventListener('input', debounce(renderPresets, 80));
 
   // Tag Codex 이벤트
   $('tagCats').addEventListener('click', e => {
