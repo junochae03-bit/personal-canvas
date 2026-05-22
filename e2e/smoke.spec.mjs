@@ -65,6 +65,24 @@ test.describe('NAI Studio smoke', () => {
     expect(hasEmpty + hasCards).toBeGreaterThan(0);
   });
 
+  test('만화 페인 — 레이아웃 5개 노출 + 선택', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#prompt')).toBeVisible({timeout: 10000});
+
+    await page.evaluate(() => window.setMainPane && window.setMainPane('comic'));
+    await expect(page.locator('[data-pane="comic"].main-pane')).toBeVisible();
+
+    // 5개 레이아웃 카드 노출
+    const cards = page.locator('.comic-layout-card');
+    await expect(cards).toHaveCount(5);
+
+    // 첫 카드 클릭 → aria-checked 가 'true' 로
+    await cards.first().click();
+    await expect(cards.first()).toHaveAttribute('aria-checked', 'true');
+    await expect(page.locator('#comicSelected')).toBeVisible();
+    await expect(page.locator('#comicSelectedName')).not.toBeEmpty();
+  });
+
   test('CSP 메타 + 외부 script crossorigin 강제', async ({ page }) => {
     await page.goto('/');
     const csp = await page.locator('meta[http-equiv="Content-Security-Policy"]').count();

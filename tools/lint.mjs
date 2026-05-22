@@ -175,6 +175,46 @@ for(const {mod, fn} of MIRRORED){
   }
 }
 
+// 6b. 데이터 상수 미러 — 함수가 아닌 const 객체 배열의 정합성 검증.
+//     비교: 의미상 동일한 JSON 직렬화. 키 순서·공백 무시.
+const MIRRORED_DATA = [
+  {mod: 'js/pure/comic.mjs', modConst: 'LAYOUTS', inlineConst: 'COMIC_LAYOUTS'},
+];
+function extractConstArray(src, name){
+  // const NAME = [ ... ];  — 단순 brace/bracket balance
+  const re = new RegExp(`(?:export\\s+)?const\\s+${name}\\s*=\\s*\\[`);
+  const m = src.match(re);
+  if(!m) return null;
+  let depth = 1, i = m.index + m[0].length;
+  while(i < src.length && depth > 0){
+    const c = src[i];
+    if(c === '[') depth++;
+    else if(c === ']') depth--;
+    i++;
+  }
+  return src.slice(m.index + m[0].length - 1, i);   // '[' 부터 ']' 까지
+}
+function normalizeData(src){
+  // 주석 제거 + 공백/콤마 정규화. 문자열 리터럴 내부 공백은 보존 (콜론·콤마 주변만 압축).
+  return src
+    .replace(/\/\/[^\n]*/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/,\s*([\]}])/g, '$1')      // trailing comma
+    .replace(/\s+/g, ' ')                // 연속 공백 → 1
+    .replace(/\s*([:,{}\[\]])\s*/g, '$1')// 구두점 양옆 공백 제거 (문자열 외부)
+    .trim();
+}
+for(const {mod, modConst, inlineConst} of MIRRORED_DATA){
+  const modSrc = readFileSync(join(ROOT, mod), 'utf8');
+  const modArr = extractConstArray(modSrc, modConst);
+  const inlineArr = extractConstArray(inlineSrc, inlineConst);
+  if(!modArr) { fail(mod, `${modConst} 상수를 찾을 수 없음`); continue; }
+  if(!inlineArr) { fail('index.html', `${inlineConst} 인라인 미러 누락 — ${mod} 의 ${modConst} 와 동기화 필요`); continue; }
+  if(normalizeData(modArr) !== normalizeData(inlineArr)){
+    fail('index.html', `${inlineConst} 인라인이 ${mod} 의 ${modConst} 와 불일치 — 단일 소스 위반`);
+  }
+}
+
 // 6. 결과 요약
 if(failures === 0){
   ok(`lint passed — ${jsFiles.length} JS files, ${htmlFiles.length} HTML files`);
