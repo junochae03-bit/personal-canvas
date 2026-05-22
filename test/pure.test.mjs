@@ -13,6 +13,7 @@ import { RAND_SEED_MAX, randomSeed, parseSeedInput } from '../js/pure/seed.mjs';
 import { MEGAPIXEL, isSmallTier, aspectRatio, snapTo8 } from '../js/pure/image.mjs';
 import { toChosung, isAllChosung, koMatch, highlightMatch } from '../js/pure/korean.mjs';
 import { pickFirst, sanitizeCharacter, sanitizeCharacters, extractNaiFields } from '../js/pure/naiMeta.mjs';
+import { expandRandomChoices, listRandomChoices, countRandomCombinations } from '../js/pure/randomChoice.mjs';
 
 // ────────────── utils ──────────────
 test('esc: HTML 특수문자 5종 이스케이프', () => {
@@ -348,4 +349,61 @@ test('extractNaiFields: 잘못된 값 무시 (NaN seed, 빈 모델)', () => {
 test('extractNaiFields: null/non-object 안전', () => {
   assert.deepEqual(extractNaiFields(null), {});
   assert.deepEqual(extractNaiFields('x'), {});
+});
+
+// ────────────── randomChoice ──────────────
+test('expandRandomChoices: 단일 옵션', () => {
+  assert.equal(expandRandomChoices('||A||', () => 0), 'A');
+});
+test('expandRandomChoices: 결정적 rng 로 옵션 선택', () => {
+  const text = '||A|B|C||';
+  assert.equal(expandRandomChoices(text, () => 0), 'A');
+  assert.equal(expandRandomChoices(text, () => 0.5), 'B');
+  assert.equal(expandRandomChoices(text, () => 0.99), 'C');
+});
+test('expandRandomChoices: 빈 옵션 = 빈 문자열', () => {
+  // ||A|B| || → 4 옵션 중 마지막은 공백 → trim 시 빈 문자열
+  assert.equal(expandRandomChoices('||A|B| ||', () => 0.99), '');
+  assert.equal(expandRandomChoices('||A| ||', () => 0.99), '');
+});
+test('expandRandomChoices: 옵션 안 콤마 보존', () => {
+  assert.equal(expandRandomChoices('||a, b|c, d||', () => 0), 'a, b');
+  assert.equal(expandRandomChoices('||a, b|c, d||', () => 0.6), 'c, d');
+});
+test('expandRandomChoices: 가중치 표기 ::tag:: 보존', () => {
+  assert.equal(expandRandomChoices('||2::angel::|2::demon::||', () => 0), '2::angel::');
+  assert.equal(expandRandomChoices('||2::asymmetrical eyes::, -1::heterochromia::|empty eyes||', () => 0),
+    '2::asymmetrical eyes::, -1::heterochromia::');
+});
+test('expandRandomChoices: 여러 패턴 같은 텍스트', () => {
+  const rngSeq = [0, 0.99];   // 첫 매칭은 0, 둘째 매칭은 0.99
+  let i = 0;
+  const out = expandRandomChoices('||A|B||, ||X|Y||', () => rngSeq[i++]);
+  assert.equal(out, 'A, Y');
+});
+test('expandRandomChoices: 패턴 없으면 그대로', () => {
+  assert.equal(expandRandomChoices('plain prompt, no random', () => 0), 'plain prompt, no random');
+  assert.equal(expandRandomChoices('', () => 0), '');
+  assert.equal(expandRandomChoices(null, () => 0), null);
+});
+test('expandRandomChoices: 옵션 양끝 공백 trim', () => {
+  assert.equal(expandRandomChoices('||  A  |  B  ||', () => 0), 'A');
+});
+
+test('listRandomChoices: 모든 매칭 + 옵션 수집', () => {
+  const list = listRandomChoices('a, ||X|Y|Z||, b, ||P|Q||');
+  assert.equal(list.length, 2);
+  assert.deepEqual(list[0].options, ['X', 'Y', 'Z']);
+  assert.deepEqual(list[1].options, ['P', 'Q']);
+});
+test('listRandomChoices: 패턴 없으면 빈 배열', () => {
+  assert.deepEqual(listRandomChoices('plain'), []);
+  assert.deepEqual(listRandomChoices(''), []);
+});
+
+test('countRandomCombinations: 옵션 수 곱', () => {
+  assert.equal(countRandomCombinations('||A|B|C||, ||X|Y||'), 6);   // 3*2
+  assert.equal(countRandomCombinations('||A|B|C|D|E||'), 5);
+  assert.equal(countRandomCombinations('no patterns'), 1);
+  assert.equal(countRandomCombinations(''), 1);
 });

@@ -128,6 +128,9 @@ const MIRRORED = [
   {mod: 'js/pure/korean.mjs', fn: 'toChosung'},
   {mod: 'js/pure/korean.mjs', fn: 'isAllChosung'},
   {mod: 'js/pure/korean.mjs', fn: 'koMatch'},
+  {mod: 'js/pure/randomChoice.mjs', fn: 'expandRandomChoices'},
+  {mod: 'js/pure/randomChoice.mjs', fn: 'listRandomChoices'},
+  {mod: 'js/pure/randomChoice.mjs', fn: 'countRandomCombinations'},
 ];
 const inlineSrc = readFileSync(join(ROOT, 'index.html'), 'utf8');
 for(const {mod, fn} of MIRRORED){

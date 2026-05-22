@@ -1609,6 +1609,7 @@ mark{
           <!-- 유틸 아이콘들 — 섹션 헤더로 옮겨 본문 액션 행을 단순화 -->
           <span class="sec-utils" onclick="event.stopPropagation()">
             <button class="iconbtn sec-util-btn" id="importExifBtn" title="📁 EXIF 복원 — NAI PNG에서 프롬프트·파라미터 가져오기">📁</button>
+            <button class="iconbtn sec-util-btn" id="randomChoicePreviewBtn" title="🎲 동적 선택 미리보기 — ||A|B|C|| 문법이 어떻게 expand 되는지 한 번 시연">🎲</button>
             <button class="iconbtn sec-util-btn" id="expandPromptBtn" title="⛶ 확대 — 큰 창에서 프롬프트/네거티브 편집">⛶</button>
             <button class="iconbtn sec-util-btn" id="openTagsBtn" title="📖 태그 도감 열기">📖</button>
             <button class="iconbtn sec-util-btn" id="openGuideBtn" title="📘 NAI 4.5 가이드">📘</button>
@@ -2676,6 +2677,38 @@ function highlightMatch(text, query){
     return '<mark>' + safe + '</mark>';
   }
   return safe;
+}
+
+// 🎲 NovelAI 동적 선택 ||A|B|C|| — 매 호출마다 옵션 중 하나 무작위 선택.
+// js/pure/randomChoice.mjs 와 동일 (lint MIRRORED 검증). 브라우저는 인라인 사용.
+const RC_PATTERN = /\|\|([^|]*(?:\|[^|]*)*?)\|\|/g;
+function expandRandomChoices(text, rng){
+  if(!text || typeof text !== 'string') return text;
+  const random = (typeof rng === 'function') ? rng : Math.random;
+  return text.replace(RC_PATTERN, (full, inner) => {
+    if(inner == null) return '';
+    const options = inner.split('|');
+    if(options.length === 0) return '';
+    const choice = options[Math.floor(random() * options.length)];
+    return (choice || '').trim();
+  });
+}
+function listRandomChoices(text){
+  if(!text || typeof text !== 'string') return [];
+  const out = [];
+  let m;
+  RC_PATTERN.lastIndex = 0;
+  while((m = RC_PATTERN.exec(text)) !== null){
+    const inner = m[1] == null ? '' : m[1];
+    const options = inner.split('|').map(s => s.trim());
+    out.push({offset: m.index, full: m[0], options});
+  }
+  return out;
+}
+function countRandomCombinations(text){
+  const list = listRandomChoices(text);
+  if(!list.length) return 1;
+  return list.reduce((acc, x) => acc * Math.max(1, x.options.length), 1);
 }
 
 // 🎲 시드 상수 — uint32 max. NovelAI seed는 0..0xFFFFFFFF 범위.
@@ -4222,6 +4255,18 @@ function buildGenBody(opts){
   //        ucPreset, variety, decrisper, smea, smeaDyn,
   //        characters, useCoords, baseImageB64, strength, noise, maskB64, addOrig,
   //        vibeRefs (array of {b64, info, strength}), action='generate'|'img2img'|'infill'}
+  // 🎲 NAI 동적 선택 ||A|B|C|| — 매 호출마다 옵션 무작위 expand.
+  //    원본 opts 는 보존, 얕은 복사 후 prompt/neg/characters[*].prompt/neg 만 갱신.
+  opts = {
+    ...opts,
+    prompt: expandRandomChoices(opts.prompt || ''),
+    neg: expandRandomChoices(opts.neg || ''),
+    characters: Array.isArray(opts.characters) ? opts.characters.map(c => ({
+      ...c,
+      prompt: expandRandomChoices(c?.prompt || ''),
+      neg: expandRandomChoices(c?.neg || ''),
+    })) : opts.characters,
+  };
   const mi = modelInfo(opts.model);
   const isV4 = mi.isV4;
   const params = {
@@ -13655,6 +13700,9 @@ function wireGenerationAndPresetEvents(){
   $('guideClose').addEventListener('click', () => $('guideModal').classList.remove('open'));
   $('guideModal').addEventListener('click', e => { if(e.target === $('guideModal')) $('guideModal').classList.remove('open'); });
 
+  // 🎲 동적 선택 ||A|B|C|| 미리보기
+  $('randomChoicePreviewBtn')?.addEventListener('click', () => showRandomChoicePreview());
+
   // ⛶ 프롬프트 확대 편집
   $('expandPromptBtn').addEventListener('click', () => {
     $('expandPromptTa').value = $('prompt').value;
@@ -14745,6 +14793,75 @@ function wireMiscEvents(){
 }
 
 // ⌨️ 키보드 단축키 도움말 — '?' 키로 호출. confirmModal 재사용.
+// 🎲 동적 선택 미리보기 — 현재 프롬프트/네거티브의 ||A|B|C|| 패턴을 분석.
+// 각 패턴의 옵션 목록 + 한 번 expand 한 결과 + 총 조합 수 표시.
+function showRandomChoicePreview(){
+  const prompt = ($('prompt')?.value || '').trim();
+  const neg = ($('negPrompt')?.value || '').trim();
+  const promptList = listRandomChoices(prompt);
+  const negList = listRandomChoices(neg);
+  const promptCount = countRandomCombinations(prompt);
+  const negCount = countRandomCombinations(neg);
+  const totalCount = promptCount * negCount;
+  const sample = {
+    prompt: expandRandomChoices(prompt),
+    neg: expandRandomChoices(neg),
+  };
+  if(!promptList.length && !negList.length){
+    confirmDialog(
+      '현재 프롬프트와 네거티브에 ||A|B|C|| 동적 선택 패턴이 없습니다.\n\n사용법: 옵션을 | 로 구분해 || 로 감싸면 매 생성마다 무작위로 하나가 선택됩니다. 빈 공백은 "아무것도 사용 안 함" 의미입니다.\n\n예: ||cat girl|fox girl| ||',
+      () => {}, '🎲 동적 선택 미리보기'
+    );
+    return;
+  }
+  const renderPatterns = (list, label) => {
+    if(!list.length) return '';
+    const rows = list.map((p, i) => `
+      <details style="margin-bottom:4px;border:1px solid var(--b1);border-radius:5px;background:var(--card);padding:4px 8px">
+        <summary style="font-size:11.5px;color:var(--t2);cursor:pointer;font-weight:600">패턴 ${i+1} <span style="font-family:var(--mono);color:var(--t3)">(${p.options.length}개 옵션)</span></summary>
+        <div style="margin-top:6px;font-size:11.5px;line-height:1.6;font-family:var(--mono);color:var(--t1);max-height:140px;overflow-y:auto">
+          ${p.options.map((o, k) => `<div>${k+1}. ${o ? esc(o) : '<span style="color:var(--t3);font-style:italic">(빈 옵션 — 아무것도 사용 안 함)</span>'}</div>`).join('')}
+        </div>
+      </details>
+    `).join('');
+    return `<fieldset style="border:1.5px solid var(--b1);border-radius:6px;padding:8px 12px 10px;margin-bottom:10px">
+      <legend style="font-weight:700;color:var(--acc);padding:0 6px;font-size:12.5px">${label} (${list.length} 패턴)</legend>
+      ${rows}
+    </fieldset>`;
+  };
+  const html = `
+    <div style="font-size:12.5px;color:var(--t2);margin-bottom:12px;line-height:1.65">
+      매 생성마다 옵션 중 하나가 무작위로 선택됩니다. 빈 공백 옵션은 "아무것도 사용 안 함" 의미.<br>
+      <b style="color:var(--t1)">총 조합 수: ${totalCount.toLocaleString()}</b>
+      (프롬프트 ${promptCount.toLocaleString()} × 네거티브 ${negCount.toLocaleString()})
+    </div>
+    ${renderPatterns(promptList, '📝 프롬프트')}
+    ${renderPatterns(negList, '🚫 네거티브')}
+    <fieldset style="border:1.5px solid var(--acc);border-radius:6px;padding:8px 12px 10px">
+      <legend style="font-weight:700;color:var(--acc);padding:0 6px;font-size:12.5px">🎲 시연 — 한 번 무작위 선택한 결과</legend>
+      <div style="font-size:11.5px;color:var(--t2);margin-bottom:4px;font-weight:600">프롬프트</div>
+      <div style="font-family:var(--mono);font-size:11.5px;line-height:1.55;color:var(--t1);background:var(--card);padding:6px 8px;border-radius:4px;max-height:120px;overflow-y:auto;white-space:pre-wrap;word-break:break-word">${esc(sample.prompt) || '<span style="color:var(--t3)">(비어 있음)</span>'}</div>
+      ${sample.neg ? `<div style="font-size:11.5px;color:var(--t2);margin:8px 0 4px;font-weight:600">네거티브</div>
+      <div style="font-family:var(--mono);font-size:11.5px;line-height:1.55;color:var(--t1);background:var(--card);padding:6px 8px;border-radius:4px;max-height:120px;overflow-y:auto;white-space:pre-wrap;word-break:break-word">${esc(sample.neg)}</div>` : ''}
+      <div style="margin-top:6px;text-align:right">
+        <button type="button" id="_rcRerollBtn" class="btn ghost" style="font-size:11.5px;padding:4px 10px">🎲 다시 시연</button>
+      </div>
+    </fieldset>
+    <div style="font-size:11px;color:var(--t3);margin-top:10px;line-height:1.5">
+      ℹ 실제 생성 시점에 매번 새로 선택됩니다. EXIF 메타에는 실제 선택된 결과(expanded prompt)가 기록되어 어떤 옵션이 뽑혔는지 나중에 확인 가능.
+    </div>
+  `;
+  $('confirmTitle').innerHTML = '🎲 동적 선택 미리보기 <span class="en">Random Choices</span>';
+  $('confirmBody').innerHTML = html;
+  $('confirmOk').style.display = 'none';
+  $('confirmCancel').innerHTML = '닫기 <span class="en">Close</span>';
+  $('confirmModal').classList.add('open');
+  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
+  // 다시 시연 — 같은 입력으로 새 옵션 뽑아서 결과 영역만 갱신
+  const reroll = document.getElementById('_rcRerollBtn');
+  if(reroll) reroll.onclick = () => showRandomChoicePreview();
+}
+
 function showShortcutsHelp(){
   const groups = [
     {title: '🌐 전역', items: [
@@ -14759,6 +14876,12 @@ function showShortcutsHelp(){
       ['🗑 모두 닫기', '활성 알림 일괄 제거 (2개 이상일 때)'],
       ['호버', '자동 닫힘 일시정지'],
       ['기본', 'info/success 0.5초, warning 1.5초, error 무한 (수동 닫기)'],
+    ]},
+    {title: '🎲 동적 선택 (||A|B|C||)', items: [
+      ['📝 sec-utils → 🎲', '현재 프롬프트의 ||...|| 패턴 미리보기 + 시연'],
+      ['||A|B|C||', '매 생성마다 A/B/C 중 하나 무작위 선택'],
+      ['||A|B| ||', '공백 옵션 = 아무것도 사용 안 함'],
+      ['EXIF', '실제 선택된 결과(expanded)가 PNG 메타에 기록됨'],
     ]},
     {title: '🖼 갤러리', items: [
       ['/', '검색 포커스'],
