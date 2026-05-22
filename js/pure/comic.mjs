@@ -59,6 +59,7 @@ export const LAYOUTS = [
 
 export const BUBBLE_SHAPES = ['round', 'spike', 'thought'];
 export const BUBBLE_TAIL_DIRS = ['bl', 'br', 'tl', 'tr', 'none'];
+export const BUBBLE_FONTS = ['sans', 'sans-bold', 'serif', 'mono'];
 
 const SCHEMA_VERSION = 1;
 const MAX_TEXT_LEN = 500;        // 말풍선 1개 최대 글자
@@ -196,8 +197,17 @@ export function bubbleSvgString(bubble){
     body = `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="white" stroke="black" stroke-width="3" stroke-dasharray="6 4"/>`;
   }
 
-  // 텍스트 (워드랩 → tspan 줄별)
-  const fontSize = Math.max(11, Math.min(20, Math.floor(h / 8)));
+  // 텍스트 (워드랩 → tspan 줄별). fontFamily/fontSize 사용자 설정 가능.
+  // fontSize: 0/누락 = 자동 (높이 비례), 양수 = 명시 (8~72 clamp)
+  const baseFs = Math.max(11, Math.min(20, Math.floor(h / 8)));
+  const userFs = Number(bubble.fontSize);
+  const fontSize = (Number.isFinite(userFs) && userFs > 0) ? Math.max(8, Math.min(72, userFs)) : baseFs;
+  const fontKey = BUBBLE_FONTS.includes(bubble.fontFamily) ? bubble.fontFamily : 'sans';
+  let ff, fw;
+  if(fontKey === 'sans-bold'){ ff = "Pretendard, 'Apple SD Gothic Neo', sans-serif"; fw = '900'; }
+  else if(fontKey === 'serif'){ ff = "'Noto Serif KR', serif"; fw = '600'; }
+  else if(fontKey === 'mono'){ ff = "'JetBrains Mono', monospace"; fw = '600'; }
+  else { ff = "Pretendard, 'Noto Sans KR', sans-serif"; fw = '500'; }
   const maxChars = Math.max(4, Math.floor(w / (fontSize * 0.65)));
   const lines = wrapBubbleText(text, maxChars);
   const lineH = fontSize * 1.25;
@@ -207,7 +217,7 @@ export function bubbleSvgString(bubble){
     `<tspan x="${cx}" y="${(startY + i * lineH).toFixed(1)}">${escXml(line)}</tspan>`
   ).join('');
   const textSvg = lines.length
-    ? `<text text-anchor="middle" font-family="Pretendard, sans-serif" font-size="${fontSize}" fill="black">${textEls}</text>`
+    ? `<text text-anchor="middle" font-family="${ff}" font-size="${fontSize}" font-weight="${fw}" fill="black">${textEls}</text>`
     : '';
 
   // 꼬리는 본체보다 먼저 (본체가 위에서 자연스럽게 덮음)
@@ -243,6 +253,12 @@ export function serializeProject(project){
         h: dim(b?.h, MIN_BUBBLE_H, DEFAULT_BUBBLE_H),
         text: String(b?.text || '').slice(0, MAX_TEXT_LEN),
         tailDir: BUBBLE_TAIL_DIRS.includes(b?.tailDir) ? b.tailDir : 'bl',
+        fontFamily: BUBBLE_FONTS.includes(b?.fontFamily) ? b.fontFamily : 'sans',
+        fontSize: (() => {
+          const n = Number(b?.fontSize);
+          if(!Number.isFinite(n) || n <= 0) return 0;   // 0 = 자동
+          return Math.max(8, Math.min(72, Math.round(n)));
+        })(),
       }))
     : [];
   return {

@@ -366,11 +366,16 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .comic-shared-hint.warn{color:var(--yellow)}
 .comic-auto-hint{font-size:12px;color:var(--t2);line-height:1.55;background:var(--card);padding:7px 11px;border-radius:5px;border-left:3px solid var(--blue);margin-bottom:2px}
 .comic-auto-hint strong{color:var(--acc);font-weight:700}
-.comic-panel-preset-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}
-.comic-panel-preset-row .lbl{font-size:11.5px;color:var(--t3)}
-.comic-panel-preset-sel{flex:1;font-size:12px;padding:4px 7px;background:var(--card);border:1px solid var(--b1);color:var(--t1);border-radius:4px;font-family:inherit;cursor:pointer;min-height:28px;max-width:280px}
+.comic-panel-preset-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap}
+.comic-panel-preset-sel{flex:1;font-size:12px;padding:4px 7px;background:var(--card);border:1px solid var(--b1);color:var(--t1);border-radius:4px;font-family:inherit;cursor:pointer;min-height:28px;min-width:0}
+.comic-panel-preset-sel.cps-char{border-left:3px solid var(--acc)}
+.comic-panel-preset-sel.cps-action{border-left:3px solid var(--blue)}
 .comic-panel-preset-sel:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
-.comic-panel-preset-save{font-size:11px;padding:3px 8px;min-height:26px}
+.comic-panel-extra-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap}
+.comic-panel-extra-row .btn.small{font-size:11px;padding:3px 8px;min-height:26px}
+.cpm-mapped{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--green);background:rgba(93,138,48,.1);padding:2px 8px;border-radius:11px;border:1px solid rgba(93,138,48,.3);font-weight:600}
+.cpm-detach{background:none;border:none;color:var(--red);cursor:pointer;padding:0 2px;font-size:13px;line-height:1;font-family:inherit}
+.cpm-detach:hover{color:var(--acc2)}
 /* 컷 프리셋 관리 모달 */
 .comic-presets-modal{width:min(640px,94vw)}
 .cpp-intro{font-size:12.5px;color:var(--t2);line-height:1.6;background:var(--panel);padding:9px 12px;border-radius:5px;border-left:3px solid var(--acc);margin-bottom:12px}
@@ -507,6 +512,11 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .bubble-tail-btn:hover:not(:disabled){border-color:var(--acc);color:var(--acc);background:var(--card)}
 .bubble-tail-btn[aria-checked="true"]{border-color:var(--acc);color:var(--acc);background:rgba(162,90,31,.12)}
 .bubble-tail-btn:disabled{opacity:.35;cursor:not-allowed}
+.bubble-font-row{display:flex;flex-direction:column;gap:6px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--b1)}
+.bubble-font-label{font-size:11.5px;color:var(--t2);font-weight:600;display:flex;align-items:center;gap:6px}
+.bubble-font-label select,.bubble-font-label input[type=range]{flex:1;font-size:11.5px;padding:3px 6px;font-family:inherit}
+.bubble-font-label select{background:var(--card);border:1px solid var(--b1);color:var(--t1);border-radius:4px;cursor:pointer;min-height:26px}
+.bubble-font-label:has(select:disabled),.bubble-font-label:has(input:disabled){opacity:.45}
 .bubble-text-modal{width:min(440px,92vw)}
 @media (max-width:880px){
   .bubble-modal{width:96vw}
@@ -3367,6 +3377,20 @@ coffee shop, latte art"></textarea>
             <button type="button" class="bubble-tail-btn" data-tail="none" title="꼬리 없음" disabled>·</button>
             <button type="button" class="bubble-tail-btn" data-tail="bl" title="왼쪽 아래" disabled>↙</button>
             <button type="button" class="bubble-tail-btn" data-tail="br" title="오른쪽 아래" disabled>↘</button>
+          </div>
+          <div class="bubble-font-row">
+            <label class="bubble-font-label">폰트
+              <select id="bubbleFontSel" disabled>
+                <option value="sans">기본 (산세리프)</option>
+                <option value="sans-bold">굵게 (만화체)</option>
+                <option value="serif">세리프</option>
+                <option value="mono">고정폭</option>
+              </select>
+            </label>
+            <label class="bubble-font-label">크기
+              <input type="range" id="bubbleFontSize" min="0" max="48" step="1" value="0" disabled>
+              <span class="bubble-tool-meta" id="bubbleFontSizeVal">자동</span>
+            </label>
           </div>
         </div>
         <div class="bubble-tool-group">
@@ -13334,14 +13358,20 @@ function _renderComicPanelInputs(){
       +     `컷 ${i+1} <span class="muted">${p.w}×${p.h}</span>`
       +   `</label>`
       +   `<div class="comic-panel-preset-row">`
-      +     `<span class="lbl">프리셋</span>`
-      +     `<select class="comic-panel-preset-sel" data-act="preset-sel" data-panel-idx="${i}">`
-      +       _comicPanelPresetOptions(i)
+      +     `<select class="comic-panel-preset-sel cps-char" data-act="preset-char" data-panel-idx="${i}" title="이 컷에 사용할 캐릭터 프리셋 (편집 모드에 저장된 character 프리셋)">`
+      +       _comicCharPresetOptions(i)
       +     `</select>`
-      +     `<button type="button" class="btn ghost comic-panel-preset-save" data-act="preset-save" data-panel-idx="${i}" title="이 컷 텍스트를 새 프리셋으로 저장">💾 저장</button>`
+      +     `<select class="comic-panel-preset-sel cps-action" data-act="preset-action" data-panel-idx="${i}" title="이 컷의 액션·의상·자세·상황 등 (캐릭터와 합쳐서 사용)">`
+      +       _comicActionPresetOptions(i)
+      +     `</select>`
+      +   `</div>`
+      +   `<div class="comic-panel-extra-row">`
+      +     `<button type="button" class="btn ghost small" data-act="preset-save" data-panel-idx="${i}" title="이 컷 textarea 텍스트를 새 컷 프리셋으로 저장">💾 저장</button>`
+      +     `<button type="button" class="btn ghost small" data-act="cut-from-gallery" data-panel-idx="${i}" title="이 컷에 갤러리 이미지 직접 배치 (NAI 호출 안 함)">📁 갤러리 이미지</button>`
+      +     _renderCutMappedInfo(i)
       +   `</div>`
       +   `<textarea id="comicPrompt${i}" class="ta comic-prompt-ta" rows="2" `
-      +     `placeholder="이 컷만의 차이점 (공통·프리셋 위에 추가) · ||A|B|C|| 가능 — 예: close-up, smiling, blushing" `
+      +     `placeholder="이 컷만의 차이점 (위 캐릭터/액션 + 공통 + 메인 위에 추가) · ||A|B|C|| 가능 — 예: close-up, smiling, blushing" `
       +     `data-panel-idx="${i}">${val}</textarea>`
       + `</div>`;
   }).join('');
@@ -13634,9 +13664,21 @@ async function _comicVibeAddFromFiles(fileList, role){
 // 📁 갤러리 picker — 모든 세션 이미지를 그리드로 표시. 클릭 시 vibe 로 추가.
 const _cvgUrls = [];   // 메모리 누수 방지용 createObjectURL 리스트
 
-function openComicVibeGalModal(){
+function openComicVibeGalModal(mode){
   const modal = $('comicVibeGalModal');
   if(!modal) return;
+  state._cvgMode = (mode === 'cut') ? 'cut' : 'vibe';
+  // 제목·역할 라디오는 모드별 표시
+  const title = $('cvgTitle');
+  const roleRow = modal.querySelector('.cvg-role-row');
+  if(state._cvgMode === 'cut'){
+    if(title) title.textContent = `📁 컷 ${(state._cvgTargetCut ?? 0)+1} 에 갤러리 이미지 배치`;
+    // 역할 라디오 부분만 숨김 (검색·grow·검색박스는 유지)
+    modal.querySelectorAll('.cvg-role-opt, .cvg-label').forEach(el => el.style.display = 'none');
+  } else {
+    if(title) title.textContent = '📁 갤러리에서 일관성 참조 선택';
+    modal.querySelectorAll('.cvg-role-opt, .cvg-label').forEach(el => el.style.display = '');
+  }
   $('cvgSearch').value = '';
   modal.classList.add('open');
   _renderComicVibeGalGrid();
@@ -13730,92 +13772,6 @@ function _refreshComicConsistencyStatus(){
 // 🎴 컷 프리셋 — state.comicPanelPresets 헬퍼·렌더링·CRUD.
 // state._comicPanelPresetUse[idx] = '' (직접) | 'random' | 'preset:ID' — 컷별 select 값 영구화.
 
-// 컷 select 옵션 — 직접 입력 / 랜덤 / 저장된 컷 프리셋 / NAI 캐릭터·액션 프리셋 (char + char-action 카테고리).
-//   value 형식:
-//     ''                           = 직접 입력만
-//     'random'                     = 저장된 컷 프리셋 중 랜덤
-//     'preset:CPP_ID'              = 저장된 컷 프리셋
-//     'nai:CAT_ID:PRESET_NAME'     = NAI 프리셋 (state.presets[catId] 에서 찾음)
-//     'nai-random:char-action'     = char-action 모든 카테고리에서 랜덤
-function _comicPanelPresetOptions(panelIdx){
-  const cppList = Array.isArray(state.comicPanelPresets) ? state.comicPanelPresets : [];
-  const cur = (state._comicPanelPresetUse || {})[panelIdx] || '';
-  const opts = [
-    `<option value="" ${cur===''?'selected':''}>직접 입력만</option>`,
-    `<option value="random" ${cur==='random'?'selected':''} ${cppList.length===0?'disabled':''}>🎲 저장된 컷 프리셋 중 랜덤${cppList.length===0?' (저장된 것 없음)':''}</option>`,
-  ];
-  // NAI 액션 카테고리에서 랜덤 — 매 컷마다 다른 액션
-  const charActionCats = PRESET_TYPES.filter(t => t.target === 'char-action');
-  const hasAnyNaiAction = charActionCats.some(t => Array.isArray(state.presets?.[t.id]) && state.presets[t.id].length > 0);
-  if(hasAnyNaiAction){
-    opts.push(`<option value="nai-random:char-action" ${cur==='nai-random:char-action'?'selected':''}>🎲 NAI 액션 프리셋 중 랜덤 (의상·자세·상황·헤어·콤보·인원)</option>`);
-  }
-  // 저장된 컷 프리셋
-  if(cppList.length){
-    opts.push(`<option disabled>── 저장된 컷 프리셋 ──</option>`);
-    for(const p of cppList){
-      const val = `preset:${p.id}`;
-      opts.push(`<option value="${val}" ${cur===val?'selected':''}>${esc(p.name)}</option>`);
-    }
-  }
-  // NAI 캐릭터·액션 프리셋 — 카테고리별 그룹
-  for(const cat of [...PRESET_TYPES.filter(t => t.target === 'char'), ...charActionCats]){
-    const list = state.presets?.[cat.id] || [];
-    if(!list.length) continue;
-    opts.push(`<option disabled>── ${esc(cat.ico)} ${esc(cat.label)} (${cat.en}) ──</option>`);
-    for(const p of list){
-      const val = `nai:${cat.id}:${p.name}`;
-      opts.push(`<option value="${val}" ${cur===val?'selected':''}>${esc(p.name)}</option>`);
-    }
-  }
-  return opts.join('');
-}
-
-// 컷 N 의 프리셋 선택값 → 실제 프롬프트 텍스트.
-function _resolveComicPanelPreset(panelIdx){
-  const sel = (state._comicPanelPresetUse || {})[panelIdx] || '';
-  if(!sel) return '';
-  const cppList = Array.isArray(state.comicPanelPresets) ? state.comicPanelPresets : [];
-  if(sel === 'random'){
-    if(!cppList.length) return '';
-    return cppList[Math.floor(Math.random() * cppList.length)]?.prompt || '';
-  }
-  if(sel === 'nai-random:char-action'){
-    // 모든 char-action 카테고리의 프리셋을 합쳐서 1개 무작위
-    const charActionCats = PRESET_TYPES.filter(t => t.target === 'char-action');
-    const pool = [];
-    for(const cat of charActionCats){
-      const list = state.presets?.[cat.id] || [];
-      for(const p of list){ pool.push(p.text || p.prompt || ''); }
-    }
-    if(!pool.length) return '';
-    return pool[Math.floor(Math.random() * pool.length)] || '';
-  }
-  if(sel.startsWith('preset:')){
-    const id = sel.slice(7);
-    return cppList.find(p => p.id === id)?.prompt || '';
-  }
-  if(sel.startsWith('nai:')){
-    // nai:catId:presetName
-    const rest = sel.slice(4);
-    const colonIdx = rest.indexOf(':');
-    if(colonIdx < 0) return '';
-    const catId = rest.slice(0, colonIdx);
-    const name = rest.slice(colonIdx + 1);
-    const list = state.presets?.[catId] || [];
-    const p = list.find(x => x.name === name);
-    return p ? (p.text || p.prompt || '') : '';
-  }
-  return '';
-}
-
-function _setComicPanelPresetUse(panelIdx, value){
-  if(!state._comicPanelPresetUse) state._comicPanelPresetUse = {};
-  if(value){ state._comicPanelPresetUse[panelIdx] = value; }
-  else { delete state._comicPanelPresetUse[panelIdx]; }
-  saveSettingsDebounced();
-}
-
 function _newComicPresetId(){ return 'cpp_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 
 function addComicPanelPreset(name, prompt){
@@ -13899,6 +13855,150 @@ function saveCurrentCutAsPreset(panelIdx){
   }
 }
 
+// 컷 select 분리 — 캐릭터 select 와 액션 select 두 개.
+//   state._comicPanelPresetUse[idx] 가 객체 {char, action}.
+//   value 형식:
+//     ''                       = 없음
+//     'random-cpp'             = 저장된 컷 프리셋 중 랜덤 (action select 전용)
+//     'random-char-action'     = NAI char-action 카테고리 중 랜덤 (action select 전용)
+//     'cpp:CPP_ID'             = 저장된 컷 프리셋 ID (action select 전용)
+//     'nai:CAT_ID:NAME'        = NAI 프리셋
+function _getCutSel(panelIdx, key){
+  const use = state._comicPanelPresetUse?.[panelIdx];
+  if(!use || typeof use !== 'object') return '';
+  return use[key] || '';
+}
+
+function _comicCharPresetOptions(panelIdx){
+  const cur = _getCutSel(panelIdx, 'char');
+  const list = state.presets?.character || [];
+  const opts = [`<option value="" ${cur===''?'selected':''}>🎴 캐릭터: 없음</option>`];
+  if(list.length){
+    opts.push(`<option value="nai-random:character" ${cur==='nai-random:character'?'selected':''}>🎲 캐릭터 랜덤</option>`);
+    opts.push(`<option disabled>── 저장된 캐릭터 ──</option>`);
+    for(const p of list){
+      const val = `nai:character:${p.name}`;
+      opts.push(`<option value="${val}" ${cur===val?'selected':''}>${esc(p.name)}</option>`);
+    }
+  } else {
+    opts.push(`<option disabled>편집 → 프리셋 → 👤 캐릭터에 저장 후 사용</option>`);
+  }
+  return opts.join('');
+}
+
+function _comicActionPresetOptions(panelIdx){
+  const cur = _getCutSel(panelIdx, 'action');
+  const cppList = Array.isArray(state.comicPanelPresets) ? state.comicPanelPresets : [];
+  const charActionCats = PRESET_TYPES.filter(t => t.target === 'char-action');
+  const hasAnyNaiAction = charActionCats.some(t => Array.isArray(state.presets?.[t.id]) && state.presets[t.id].length > 0);
+  const opts = [`<option value="" ${cur===''?'selected':''}>🎭 액션: 없음</option>`];
+  if(cppList.length){
+    opts.push(`<option value="random-cpp" ${cur==='random-cpp'?'selected':''}>🎲 컷 프리셋 랜덤</option>`);
+  }
+  if(hasAnyNaiAction){
+    opts.push(`<option value="random-char-action" ${cur==='random-char-action'?'selected':''}>🎲 NAI 액션 랜덤 (의상·자세·상황·…)</option>`);
+  }
+  if(cppList.length){
+    opts.push(`<option disabled>── 저장된 컷 프리셋 ──</option>`);
+    for(const p of cppList){
+      const val = `cpp:${p.id}`;
+      opts.push(`<option value="${val}" ${cur===val?'selected':''}>${esc(p.name)}</option>`);
+    }
+  }
+  for(const cat of charActionCats){
+    const list = state.presets?.[cat.id] || [];
+    if(!list.length) continue;
+    opts.push(`<option disabled>── ${esc(cat.ico)} ${esc(cat.label)} ──</option>`);
+    for(const p of list){
+      const val = `nai:${cat.id}:${p.name}`;
+      opts.push(`<option value="${val}" ${cur===val?'selected':''}>${esc(p.name)}</option>`);
+    }
+  }
+  return opts.join('');
+}
+
+function _resolveCutSel(panelIdx, key){
+  const sel = _getCutSel(panelIdx, key);
+  if(!sel) return '';
+  const cppList = Array.isArray(state.comicPanelPresets) ? state.comicPanelPresets : [];
+  if(sel === 'random-cpp'){
+    if(!cppList.length) return '';
+    return cppList[Math.floor(Math.random() * cppList.length)]?.prompt || '';
+  }
+  if(sel === 'random-char-action'){
+    const charActionCats = PRESET_TYPES.filter(t => t.target === 'char-action');
+    const pool = [];
+    for(const cat of charActionCats){
+      const list = state.presets?.[cat.id] || [];
+      for(const p of list){ pool.push(p.text || p.prompt || ''); }
+    }
+    return pool.length ? (pool[Math.floor(Math.random() * pool.length)] || '') : '';
+  }
+  if(sel === 'nai-random:character'){
+    const list = state.presets?.character || [];
+    if(!list.length) return '';
+    const pick = list[Math.floor(Math.random() * list.length)];
+    return pick?.text || pick?.prompt || '';
+  }
+  if(sel.startsWith('cpp:')){
+    const id = sel.slice(4);
+    return cppList.find(p => p.id === id)?.prompt || '';
+  }
+  if(sel.startsWith('nai:')){
+    const rest = sel.slice(4);
+    const ci = rest.indexOf(':');
+    if(ci < 0) return '';
+    const catId = rest.slice(0, ci);
+    const name = rest.slice(ci + 1);
+    const list = state.presets?.[catId] || [];
+    const p = list.find(x => x.name === name);
+    return p ? (p.text || p.prompt || '') : '';
+  }
+  return '';
+}
+
+function _resolveComicPanelPreset(panelIdx){
+  // 캐릭터 + 액션 둘 다 가져와서 콤마로 결합. 둘 다 비면 빈 문자열.
+  const charText = _resolveCutSel(panelIdx, 'char');
+  const actionText = _resolveCutSel(panelIdx, 'action');
+  return [charText, actionText].filter(Boolean).join(', ');
+}
+
+function _setCutSel(panelIdx, key, value){
+  if(!state._comicPanelPresetUse) state._comicPanelPresetUse = {};
+  if(!state._comicPanelPresetUse[panelIdx] || typeof state._comicPanelPresetUse[panelIdx] !== 'object'){
+    state._comicPanelPresetUse[panelIdx] = {char:'', action:''};
+  }
+  state._comicPanelPresetUse[panelIdx][key] = value || '';
+  // 빈 객체면 삭제
+  const u = state._comicPanelPresetUse[panelIdx];
+  if(!u.char && !u.action) delete state._comicPanelPresetUse[panelIdx];
+  saveSettingsDebounced();
+}
+
+// 갤러리 매핑 표시 — 컷마다 매핑된 이미지가 있으면 작은 정보 라인 (썸네일 + 해제 버튼)
+function _renderCutMappedInfo(panelIdx){
+  const map = state._comicPanelCutImages?.[panelIdx];
+  if(!map) return '';
+  return `<span class="cpm-mapped" data-act="cut-mapped-info" data-panel-idx="${panelIdx}">`
+    + `📁 갤러리 매핑됨 `
+    + `<button type="button" class="cpm-detach" data-act="cut-detach" data-panel-idx="${panelIdx}" title="갤러리 매핑 해제 (NAI 로 다시 생성)">✕</button>`
+    + `</span>`;
+}
+
+function attachCutImg(panelIdx, sesId, imgId){
+  if(!state._comicPanelCutImages) state._comicPanelCutImages = {};
+  state._comicPanelCutImages[panelIdx] = {sesId, imgId};
+  saveSettingsDebounced();
+  _renderComicPanelInputs();
+}
+
+function detachCutImg(panelIdx){
+  if(state._comicPanelCutImages) delete state._comicPanelCutImages[panelIdx];
+  saveSettingsDebounced();
+  _renderComicPanelInputs();
+}
+
 // 📝 공통 프롬프트 hint — 사용자가 ||A|B|C|| 적었으면 조합 수, 안 적었으면 격려.
 function _refreshComicSharedHint(){
   const ta = $('comicShared');
@@ -13976,26 +14076,102 @@ async function startComicGeneration(){
     toast(`만화 페이지 준비 실패 — ${e.message||e}\n브라우저 캔버스가 차단됐을 수 있어요. 새로고침 후 재시도`, 'error');
     return;
   }
+  // 📁 갤러리 매핑 — 컷에 미리 배치된 이미지가 있으면 페이지 베이스에 합성 후 그 컷 NAI 호출 스킵.
+  const cutImgMap = state._comicPanelCutImages || {};
+  const mappedIndices = Object.keys(cutImgMap).map(Number).filter(n => Number.isFinite(n) && n >= 0 && n < layout.panels.length);
+  if(mappedIndices.length > 0){
+    try {
+      // 페이지 PNG 위에 갤러리 이미지들을 contain-fit 으로 합성
+      const baseImgEl = await _loadB64ToImage(pageB64);
+      const cv = document.createElement('canvas');
+      cv.width = layout.w; cv.height = layout.h;
+      const ctx = cv.getContext('2d');
+      ctx.drawImage(baseImgEl, 0, 0);
+      for(const idx of mappedIndices){
+        const {sesId, imgId} = cutImgMap[idx];
+        const imgs = await DB.getSessionImages(sesId);
+        const img = imgs.find(i => i.id === imgId);
+        if(!img?.blob){ console.warn('[comic:cutImg] 갤러리 이미지 못 찾음', {idx, sesId, imgId}); continue; }
+        const panel = layout.panels[idx];
+        const galImg = await _bubbleBlobToImg(img.blob);
+        // contain: 패널 안에 들어가게 종횡비 유지
+        const scale = Math.min(panel.w / galImg.naturalWidth, panel.h / galImg.naturalHeight);
+        const drawW = galImg.naturalWidth * scale;
+        const drawH = galImg.naturalHeight * scale;
+        const dx = panel.x + (panel.w - drawW) / 2;
+        const dy = panel.y + (panel.h - drawH) / 2;
+        ctx.drawImage(galImg, dx, dy, drawW, drawH);
+      }
+      pageB64 = cv.toDataURL('image/png').split(',')[1];
+    } catch(e){
+      console.error('[comic:cutImgComposite]', e);
+      toast(`갤러리 매핑 합성 실패 — ${e.message||e}. 매핑 무시하고 진행`, 'warning');
+      mappedIndices.length = 0;
+    }
+  }
   // 페이지 템플릿을 베이스 이미지로 주입 (data URL 포함 — 정밀한 b64 그대로 보존)
   const pageDataURL = 'data:image/png;base64,' + pageB64;
   state.baseImage = { blob: null, dataURL: pageDataURL, w: layout.w, h: layout.h, b64: pageB64 };
   state.inpaintMask = maskB64s[0];   // runOne 의 기본 inpaint 분기가 안전하게 통과하도록
   state._comicPrevMode = state.mode; // 만화 완료 후 복구할 모드 백업
   state.mode = 'inpaint';            // validateForGeneration 통과용 (만화 큐는 자체 분기)
-  // 만화 큐 빌드 — _comic 표식 + 라벨 사전 확정 (자동 라벨 우회)
-  state.queue = layout.panels.map((_, i) => ({
-    id: _qSeq++,
-    status: 'wait',
-    label: `컷${i+1}`,
-    _labelFinalized: true,
-    _labelIsName: true,
-    promptOverride: prompts[i],
-    _comic: { layoutId: layout.id, panelIndex: i, maskB64: maskB64s[i] },
-  }));
+  // 만화 큐 빌드 — 갤러리 매핑된 컷은 큐에서 제외 (이미 페이지에 그려짐)
+  state.queue = layout.panels
+    .map((_, i) => i)
+    .filter(i => !mappedIndices.includes(i))
+    .map(i => ({
+      id: _qSeq++,
+      status: 'wait',
+      label: `컷${i+1}`,
+      _labelFinalized: true,
+      _labelIsName: true,
+      promptOverride: prompts[i],
+      _comic: { layoutId: layout.id, panelIndex: i, maskB64: maskB64s[i] },
+    }));
   state._customQueue = true;
-  state._comicActive = true;          // afterImage 가 만화 분기 인지하도록
-  toast(`🎞 만화 생성 시작 — ${layout.panels.length}컷 (${layout.w}×${layout.h})`, 'info');
+  state._comicActive = true;
+  // 모든 컷이 매핑되면 NAI 호출 없이 페이지만 갤러리에 저장
+  if(state.queue.length === 0){
+    try {
+      const blob = await new Promise(res => {
+        const cv2 = document.createElement('canvas');
+        cv2.width = layout.w; cv2.height = layout.h;
+        const ctx2 = cv2.getContext('2d');
+        _loadB64ToImage(pageB64).then(img => {
+          ctx2.drawImage(img, 0, 0);
+          cv2.toBlob(res, 'image/png');
+        });
+      });
+      const fname = `comic_${Date.now()}.png`;
+      await DB.saveImage(blob, fname, '만화 페이지 (갤러리 매핑)', '', {w: layout.w, h: layout.h, comicLayout: layout.id});
+      await refreshGallerySize();
+      toast(`🎞 만화 페이지 저장 — ${layout.panels.length}컷 모두 갤러리 매핑, NAI 호출 없음`, 'success');
+      state.baseImage = null;
+      state.inpaintMask = null;
+      if(state._comicPrevMode){ try { setMode(state._comicPrevMode); } catch(_){} state._comicPrevMode = null; }
+      state._comicActive = false;
+      // 자동으로 말풍선 편집기 진입
+      setTimeout(() => {
+        try { _lbCurrent = {blob, label: '만화 페이지', prompt: '', meta: {w: layout.w, h: layout.h}}; openBubbleEditor(); } catch(_){}
+      }, 400);
+      return;
+    } catch(e){
+      toast(`페이지 저장 실패 — ${e.message||e}`, 'error');
+      return;
+    }
+  }
+  toast(`🎞 만화 생성 시작 — NAI 컷 ${state.queue.length}개${mappedIndices.length?` (+갤러리 컷 ${mappedIndices.length}개 미리 합성)`:''}`, 'info');
   startGeneration();
+}
+
+// PNG b64 → Image 객체. _bubbleBlobToImg 와 비슷하지만 data URL 입력.
+function _loadB64ToImage(b64){
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.onerror = () => rej(new Error('PNG 로드 실패'));
+    img.src = 'data:image/png;base64,' + b64;
+  });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -14042,6 +14218,7 @@ function wrapBubbleText(text, maxCharsPerLine){
 // 인라인 미러 상수 — comic.mjs 의 동일 이름과 정확히 일치해야 lint MIRRORED 통과.
 const BUBBLE_SHAPES = ['round', 'spike', 'thought'];
 const BUBBLE_TAIL_DIRS = ['bl', 'br', 'tl', 'tr', 'none'];
+const BUBBLE_FONTS = ['sans', 'sans-bold', 'serif', 'mono'];
 const MIN_BUBBLE_W = 40;
 const MIN_BUBBLE_H = 30;
 const DEFAULT_BUBBLE_W = 120;
@@ -14106,7 +14283,15 @@ function bubbleSvgString(bubble){
   } else {
     body = `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="white" stroke="black" stroke-width="3" stroke-dasharray="6 4"/>`;
   }
-  const fontSize = Math.max(11, Math.min(20, Math.floor(h / 8)));
+  const baseFs = Math.max(11, Math.min(20, Math.floor(h / 8)));
+  const userFs = Number(bubble.fontSize);
+  const fontSize = (Number.isFinite(userFs) && userFs > 0) ? Math.max(8, Math.min(72, userFs)) : baseFs;
+  const fontKey = BUBBLE_FONTS.includes(bubble.fontFamily) ? bubble.fontFamily : 'sans';
+  let ff, fw;
+  if(fontKey === 'sans-bold'){ ff = "Pretendard, 'Apple SD Gothic Neo', sans-serif"; fw = '900'; }
+  else if(fontKey === 'serif'){ ff = "'Noto Serif KR', serif"; fw = '600'; }
+  else if(fontKey === 'mono'){ ff = "'JetBrains Mono', monospace"; fw = '600'; }
+  else { ff = "Pretendard, 'Noto Sans KR', sans-serif"; fw = '500'; }
   const maxChars = Math.max(4, Math.floor(w / (fontSize * 0.65)));
   const lines = wrapBubbleText(text, maxChars);
   const lineH = fontSize * 1.25;
@@ -14116,7 +14301,7 @@ function bubbleSvgString(bubble){
     `<tspan x="${cx}" y="${(startY + i * lineH).toFixed(1)}">${escXml(line)}</tspan>`
   ).join('');
   const textSvg = lines.length
-    ? `<text text-anchor="middle" font-family="Pretendard, sans-serif" font-size="${fontSize}" fill="black">${textEls}</text>`
+    ? `<text text-anchor="middle" font-family="${ff}" font-size="${fontSize}" font-weight="${fw}" fill="black">${textEls}</text>`
     : '';
   return `<g class="comic-bubble" data-shape="${shape}">${tail}${body}${textSvg}</g>`;
 }
@@ -14223,6 +14408,23 @@ function _renderBubbleEditor(){
     btn.disabled = tailLocked;
     btn.setAttribute('aria-checked', (sel && btn.dataset.tail === (sel.tailDir || 'bl')) ? 'true' : 'false');
   });
+  // 폰트·크기 컨트롤 동기화
+  const fontSel = $('bubbleFontSel');
+  const fontSize = $('bubbleFontSize');
+  const fontSizeVal = $('bubbleFontSizeVal');
+  if(fontSel && fontSize && fontSizeVal){
+    fontSel.disabled = !hasSel;
+    fontSize.disabled = !hasSel;
+    if(hasSel){
+      fontSel.value = BUBBLE_FONTS.includes(sel.fontFamily) ? sel.fontFamily : 'sans';
+      const fs = Number(sel.fontSize);
+      fontSize.value = (Number.isFinite(fs) && fs > 0) ? Math.max(0, Math.min(48, fs)) : 0;
+      fontSizeVal.textContent = (Number(fontSize.value) > 0) ? `${fontSize.value}px` : '자동';
+    } else {
+      fontSize.value = 0;
+      fontSizeVal.textContent = '자동';
+    }
+  }
 }
 
 // SVG 마우스 좌표 → viewBox 좌표 변환 (CSS 축소·DPR 무관)
@@ -14247,7 +14449,7 @@ function _bubbleAdd(shape){
   const off = (_bub.bubbles.length % 6) * 24;
   const x = Math.round((W - w) / 2) + off;
   const y = Math.round((H - h) / 2) + off;
-  _bub.bubbles.push({shape, x, y, w, h, text: '', tailDir: 'bl'});
+  _bub.bubbles.push({shape, x, y, w, h, text: '', tailDir: 'bl', fontFamily: 'sans', fontSize: 0});
   _bub.selIdx = _bub.bubbles.length - 1;
   _renderBubbleEditor();
 }
@@ -14858,6 +15060,7 @@ async function saveSettings(){
     // 컷 프리셋 + 컷별 선택값
     comicPanelPresets: Array.isArray(state.comicPanelPresets) ? state.comicPanelPresets : [],
     comicPanelPresetUse: state._comicPanelPresetUse || {},
+    comicPanelCutImages: state._comicPanelCutImages || {},
   };
   await DB.appSet(payload);
 }
@@ -15018,7 +15221,26 @@ async function loadSettings(){
     ).slice(0, 200);   // cap 200개
   }
   if(s.comicPanelPresetUse && typeof s.comicPanelPresetUse === 'object'){
-    state._comicPanelPresetUse = {...s.comicPanelPresetUse};
+    // 마이그레이션: 기존 string 값 → {char, action} 객체로 변환
+    const migrated = {};
+    for(const k in s.comicPanelPresetUse){
+      const v = s.comicPanelPresetUse[k];
+      if(typeof v === 'string'){
+        if(v.startsWith('nai:character:')){ migrated[k] = {char: v, action: ''}; }
+        else if(v === 'nai-random:character'){ migrated[k] = {char: v, action: ''}; }
+        else if(v === 'random'){ migrated[k] = {char: '', action: 'random-cpp'}; }
+        else if(v === 'nai-random:char-action'){ migrated[k] = {char: '', action: 'random-char-action'}; }
+        else if(v.startsWith('preset:')){ migrated[k] = {char: '', action: 'cpp:' + v.slice(7)}; }
+        else if(v.startsWith('nai:')){ migrated[k] = {char: '', action: v}; }
+        else migrated[k] = {char: '', action: ''};
+      } else if(v && typeof v === 'object'){
+        migrated[k] = {char: v.char || '', action: v.action || ''};
+      }
+    }
+    state._comicPanelPresetUse = migrated;
+  }
+  if(s.comicPanelCutImages && typeof s.comicPanelCutImages === 'object'){
+    state._comicPanelCutImages = {...s.comicPanelCutImages};
   }
 }
 
@@ -16210,7 +16432,15 @@ function wireGenerationAndPresetEvents(){
     const imgId = parseInt(item.dataset.imgId, 10);
     const sesId = parseInt(item.dataset.sesId, 10);
     if(!Number.isFinite(imgId) || !Number.isFinite(sesId)) return;
-    _comicVibeFromGalImg(imgId, sesId);
+    if(state._cvgMode === 'cut'){
+      const cutIdx = state._cvgTargetCut;
+      if(!Number.isFinite(cutIdx)) return;
+      attachCutImg(cutIdx, sesId, imgId);
+      closeComicVibeGalModal();
+      toast(`📁 컷 ${cutIdx+1} 에 갤러리 이미지 배치됨 (NAI 호출 생략)`, 'success');
+    } else {
+      _comicVibeFromGalImg(imgId, sesId);
+    }
   });
   $('comicVibeList')?.addEventListener('click', e => {
     const del = e.target.closest('[data-act="cv-del"]');
@@ -16268,18 +16498,36 @@ function wireGenerationAndPresetEvents(){
   });
   // 컷 textarea 영역 — select 변경 + 저장 버튼 (위임)
   $('comicPanelInputs')?.addEventListener('change', e => {
-    const sel = e.target.closest('[data-act="preset-sel"]');
-    if(!sel) return;
-    const idx = parseInt(sel.dataset.panelIdx, 10);
-    if(!Number.isFinite(idx)) return;
-    _setComicPanelPresetUse(idx, sel.value);
+    const charSel = e.target.closest('[data-act="preset-char"]');
+    const actSel = e.target.closest('[data-act="preset-action"]');
+    if(charSel){
+      const idx = parseInt(charSel.dataset.panelIdx, 10);
+      if(Number.isFinite(idx)) _setCutSel(idx, 'char', charSel.value);
+    } else if(actSel){
+      const idx = parseInt(actSel.dataset.panelIdx, 10);
+      if(Number.isFinite(idx)) _setCutSel(idx, 'action', actSel.value);
+    }
   });
   $('comicPanelInputs')?.addEventListener('click', e => {
     const saveBtn = e.target.closest('[data-act="preset-save"]');
-    if(!saveBtn) return;
-    const idx = parseInt(saveBtn.dataset.panelIdx, 10);
-    if(!Number.isFinite(idx)) return;
-    saveCurrentCutAsPreset(idx);
+    const galBtn = e.target.closest('[data-act="cut-from-gallery"]');
+    const detBtn = e.target.closest('[data-act="cut-detach"]');
+    if(saveBtn){
+      const idx = parseInt(saveBtn.dataset.panelIdx, 10);
+      if(Number.isFinite(idx)) saveCurrentCutAsPreset(idx);
+    } else if(galBtn){
+      const idx = parseInt(galBtn.dataset.panelIdx, 10);
+      if(Number.isFinite(idx)){
+        state._cvgTargetCut = idx;
+        openComicVibeGalModal('cut');
+      }
+    } else if(detBtn){
+      const idx = parseInt(detBtn.dataset.panelIdx, 10);
+      if(Number.isFinite(idx)){
+        detachCutImg(idx);
+        toast(`📁 컷 ${idx+1} 갤러리 매핑 해제됨`, 'info');
+      }
+    }
   });
   // 셀 드래그·리사이즈 (pointer events)
   const ccSvg = $('comicCustomSvg');
@@ -16364,6 +16612,21 @@ function wireGenerationAndPresetEvents(){
     const dir = btn.dataset.tail;
     if(!BUBBLE_TAIL_DIRS.includes(dir)) return;
     _bub.bubbles[_bub.selIdx].tailDir = dir;
+    _renderBubbleEditor();
+  });
+  // 폰트·크기 컨트롤
+  $('bubbleFontSel')?.addEventListener('change', e => {
+    if(_bub.selIdx < 0) return;
+    const v = e.target.value;
+    if(!BUBBLE_FONTS.includes(v)) return;
+    _bub.bubbles[_bub.selIdx].fontFamily = v;
+    _renderBubbleEditor();
+  });
+  $('bubbleFontSize')?.addEventListener('input', e => {
+    if(_bub.selIdx < 0) return;
+    const v = parseInt(e.target.value, 10);
+    _bub.bubbles[_bub.selIdx].fontSize = Number.isFinite(v) && v > 0 ? v : 0;
+    $('bubbleFontSizeVal').textContent = (v > 0) ? `${v}px` : '자동';
     _renderBubbleEditor();
   });
 
