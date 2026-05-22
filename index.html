@@ -13268,7 +13268,7 @@ function pageTemplateSvg(layout){
     + `fill="white" stroke="black" stroke-width="${border}"/>`
   ).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.w}" height="${layout.h}" viewBox="0 0 ${layout.w} ${layout.h}">`
-    + `<rect width="${layout.w}" height="${layout.h}" fill="black"/>`
+    + `<rect width="${layout.w}" height="${layout.h}" fill="white"/>`
     + panelRects
     + `</svg>`;
 }

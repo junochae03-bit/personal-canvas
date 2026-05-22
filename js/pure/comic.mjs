@@ -273,14 +273,15 @@ export function pageTemplateSvg(layout){
   if(!layout) return '';
   const border = Math.max(2, Math.floor((layout.gutter || 12) * 0.7));
   const half = border / 2;
-  // 외곽 검은 테두리 + 각 패널 영역 안쪽 흰색 + 패널 보더.
-  // stroke 가 좌표 중심 기준이므로 inset 처리로 패널 안쪽 흰색 영역을 보존.
+  // 외곽 흰색 페이지 + 각 패널 영역도 흰색 + 패널 stroke(검정) 가 보더 역할.
+  // (이전엔 외곽이 검정이라 NAI 가 add_original_image 로 검정 영역을 보존하면서
+  //  결과가 검정에 끌려가는 문제 → 외곽 white 로 변경, gutter 효과는 stroke 만으로.)
   const panelRects = layout.panels.map(p =>
     `<rect x="${p.x + half}" y="${p.y + half}" width="${p.w - border}" height="${p.h - border}" `
     + `fill="white" stroke="black" stroke-width="${border}"/>`
   ).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.w}" height="${layout.h}" viewBox="0 0 ${layout.w} ${layout.h}">`
-    + `<rect width="${layout.w}" height="${layout.h}" fill="black"/>`
+    + `<rect width="${layout.w}" height="${layout.h}" fill="white"/>`
     + panelRects
     + `</svg>`;
 }
