@@ -6765,6 +6765,7 @@ function openBackupModal(){
     <fieldset style="border:1.5px solid var(--b1);border-radius:6px;padding:10px 14px 12px;margin-bottom:10px">
       <legend style="font-weight:700;color:var(--acc);padding:0 6px;font-size:13px">💾 워크플로 슬롯</legend>
       <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="bk_workflows" ${(state.workflows||[]).length>0?'checked':'disabled'}>저장된 워크플로 ${(state.workflows||[]).length>0?`(${state.workflows.length}개)`:'(없음)'} + 즐겨찾기·잠금 상태</label>
+      <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="bk_random" ${(state.randomCategories||[]).length>0?'checked':'disabled'}>🎲 랜덤 카테고리 빌더 ${(state.randomCategories||[]).length>0?`(${state.randomCategories.length}개)`:'(없음)'} + 옵션·가중치·노트</label>
     </fieldset>
 
     <div style="font-size:11.5px;color:var(--t3);padding:4px 4px 0;line-height:1.55">
@@ -6807,6 +6808,10 @@ async function doSelectiveBackup(){
     out.workflows = state.workflows;
     parts.push('workflows');
   }
+  if($('bk_random')?.checked && (state.randomCategories||[]).length){
+    out.randomCategories = state.randomCategories;
+    parts.push('randomCategories');
+  }
   if(parts.length === 0){
     toast('선택한 항목이 없습니다', 'warning');
     return;
@@ -6843,6 +6848,7 @@ function renderRestoreOptions(filename, data){
     apikey: !!data.apiKey,
     albums: !!(data.userAlbums && data.userAlbums.length),
     workflows: !!(Array.isArray(data.workflows) && data.workflows.length),
+    randomCategories: !!(Array.isArray(data.randomCategories) && data.randomCategories.length),
     presets: {},
   };
   let totalPresets = 0;
@@ -6904,6 +6910,7 @@ function renderRestoreOptions(filename, data){
     <fieldset style="border:1.5px solid var(--b1);border-radius:6px;padding:10px 14px 12px;margin-bottom:10px">
       <legend style="font-weight:700;color:var(--acc);padding:0 6px;font-size:13px">💾 워크플로 슬롯</legend>
       <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_workflows" ${has.workflows?'checked':'disabled'}>저장된 워크플로 ${has.workflows?`(${data.workflows.length}개)`:'(파일에 없음)'}</label>
+      <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_random" ${has.randomCategories?'checked':'disabled'}>🎲 랜덤 카테고리 빌더 ${has.randomCategories?`(${data.randomCategories.length}개)`:'(파일에 없음)'}</label>
     </fieldset>
 
     <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_autoclassify" checked>복원 후 이름 접두사로 자동 분류 (🪄)</label>
@@ -6950,6 +6957,7 @@ async function computeRestoreDiff(data){
   }
   if($('rs_albums')?.checked && data.userAlbums) diff.albums = `사용자 앨범 ${data.userAlbums.length}개 전체 교체`;
   if($('rs_workflows')?.checked && Array.isArray(data.workflows)) diff.workflows = `워크플로 ${data.workflows.length}개 전체 교체`;
+  if($('rs_random')?.checked && Array.isArray(data.randomCategories)) diff.randomCategories = `🎲 랜덤 카테고리 ${data.randomCategories.length}개 전체 교체`;
   return diff;
 }
 
@@ -6968,6 +6976,7 @@ function renderRestoreDiff(diff){
   }
   if(diff.albums) rows.push(`<div style="padding:6px 10px;background:rgba(58,99,152,.05);border-left:3px solid var(--blue);margin-bottom:4px;border-radius:0 4px 4px 0"><b>📁 앨범</b> — ${diff.albums}</div>`);
   if(diff.workflows) rows.push(`<div style="padding:6px 10px;background:rgba(58,99,152,.05);border-left:3px solid var(--blue);margin-bottom:4px;border-radius:0 4px 4px 0"><b>💾 워크플로</b> — ${diff.workflows}</div>`);
+  if(diff.randomCategories) rows.push(`<div style="padding:6px 10px;background:rgba(58,99,152,.05);border-left:3px solid var(--blue);margin-bottom:4px;border-radius:0 4px 4px 0"><b>🎲 랜덤 카테고리</b> — ${diff.randomCategories}</div>`);
   if(!rows.length) return '<div style="text-align:center;color:var(--t3);padding:20px">변경될 항목 없음 (선택된 항목 없음)</div>';
   return `<div style="font-size:12.5px">${rows.join('')}</div>`;
 }
@@ -7064,6 +7073,16 @@ async function doSelectiveRestore(){
       })).slice(0, 50);
       if(typeof saveWorkflows === 'function') await saveWorkflows();
       restored.push(`워크플로 ${state.workflows.length}개`);
+    }
+    if($('rs_random')?.checked && Array.isArray(data.randomCategories)){
+      // 🎲 랜덤 카테고리 — 전체 교체. _normalizeRandomCategory 로 모든 필드 정제.
+      state.randomCategories = data.randomCategories
+        .map(_normalizeRandomCategory)
+        .filter(Boolean)
+        .slice(0, 200);
+      if(typeof saveRandomCategories === 'function') await saveRandomCategories();
+      if(typeof rcRender === 'function' && state.randomBuilderOpen) rcRender();
+      restored.push(`🎲 랜덤 카테고리 ${state.randomCategories.length}개`);
     }
     // 자동 분류
     if($('rs_autoclassify')?.checked){
@@ -16536,6 +16555,18 @@ function rcWireEvents(){
       if(debId) clearTimeout(debId);
       debId = setTimeout(rcRender, 80);
     });
+    // Esc 키 — 검색·필터 일괄 초기화 (input focus 중)
+    searchInp.addEventListener('keydown', e => {
+      if(e.key === 'Escape'){
+        e.preventDefault();
+        e.stopPropagation();
+        _rcSearch.query = ''; _rcSearch.filter = 'all';
+        searchInp.value = '';
+        if(filterSel) filterSel.value = 'all';
+        rcRender();
+        searchInp.blur();
+      }
+    });
   }
   if(filterSel){
     filterSel.addEventListener('change', () => {
@@ -16617,8 +16648,11 @@ function showShortcutsHelp(){
       ['기본', 'info/success 0.5초, warning 1.5초, error 무한 (수동 닫기)'],
     ]},
     {title: '🎲 동적 선택 (||A|B|C||)', items: [
-      ['📝 sec-utils → 🎲', '현재 프롬프트의 ||...|| 패턴 미리보기 + 시연'],
-      ['||A|B|C||', '매 생성마다 A/B/C 중 하나 무작위 선택'],
+      ['모드바 🎲', '랜덤 카테고리 빌더 열기/닫기 — GUI 로 카테고리 관리'],
+      ['빌더 검색 + Esc', '검색·필터 일괄 초기화 (input focus 중)'],
+      ['빌더 ⋮⋮ 드래그', '카드/옵션 순서 변경 (데스크탑)'],
+      ['빌더 ⋯ 메뉴', '노트·일괄 추가·복제·export·이동 (자주 안 쓰는 액션)'],
+      ['||A|B|C||', '매 생성마다 A/B/C 중 하나 무작위 선택 (textarea 인라인)'],
       ['||A|B| ||', '공백 옵션 = 아무것도 사용 안 함'],
       ['EXIF', '실제 선택된 결과(expanded)가 PNG 메타에 기록됨'],
     ]},
