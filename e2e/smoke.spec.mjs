@@ -89,6 +89,9 @@ test.describe('NAI Studio smoke', () => {
     expect(count).toBeGreaterThanOrEqual(1);
     await expect(page.locator('#comicStartBtn')).toBeVisible();
     await expect(page.locator('#comicCostInfo')).toContainText('Anlas');
+    // 🎯 일관성 모드 토글이 기본 ON 상태로 노출되고 상태 한 줄이 보임
+    await expect(page.locator('#comicConsistencyToggle')).toBeChecked();
+    await expect(page.locator('#comicConsistencyStatus')).toContainText('시드');
   });
 
   test('말풍선 편집기 — 마크업 + 도구 노출 (모달 닫힘 상태)', async ({ page }) => {
