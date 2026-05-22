@@ -84,11 +84,22 @@ for(const f of [...jsFiles, ...htmlFiles]){
   }
 }
 
-// 5. index.html CSP 메타 + 외부 script crossorigin
+// 5. index.html CSP 메타 + 외부 script crossorigin + CSP 필수 디렉티브
 for(const f of htmlFiles){
   const src = readFileSync(f, 'utf8');
-  if(!/<meta\s+http-equiv=["']Content-Security-Policy["']/i.test(src)){
+  // content 속성은 double-quote 로 감싸지고 내부 single-quote('self','none' 등) 를 그대로 포함하므로
+  // 인용부호 종류를 캡처(1) 한 뒤 동일 종류만 종결자로 인정.
+  const cspMatch = src.match(/<meta\s+http-equiv=["']Content-Security-Policy["']\s+content=(["'])([\s\S]+?)\1/i);
+  if(!cspMatch){
     fail(f, 'CSP <meta http-equiv="Content-Security-Policy"> 누락');
+  } else {
+    const csp = cspMatch[2];
+    // 플러그인/iframe/base 변조 차단 디렉티브 — XSS 표면 축소
+    for(const req of ['object-src', 'frame-ancestors', 'base-uri', 'form-action']){
+      if(!csp.includes(req)){
+        fail(f, `CSP 에 ${req} 디렉티브 누락`);
+      }
+    }
   }
   // <script src="http..."> 마다 crossorigin 속성 확인
   const scripts = [...src.matchAll(/<script\b[^>]*\bsrc=["']https?:\/\/[^"']+["'][^>]*>/gi)];

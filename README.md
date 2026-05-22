@@ -34,8 +34,8 @@ npm run lint     # 자체 lint (eval/var/CSP/순수성 검증)
 | PIN 보호 (선택) | **PBKDF2 250k iter** + 16B salt → AES-GCM key, 메모리 캐시 |
 | Brute-force 방어 | 3회 실패부터 지수 백오프 (최대 ~128초 잠금) |
 | 평문 폴백 | 제거됨 — Web Crypto 실패 시 저장 거부 + 구버전 자동 업그레이드 |
-| CSP | `<meta http-equiv>` 로 `script-src` 도메인 화이트리스트 |
-| CDN 무결성 | 버전 핀 + `crossorigin="anonymous"` (SRI hash 는 빌드 도입 시 추가 예정) |
+| CSP | `<meta http-equiv>` — `script/style/connect/object/frame-src` 화이트리스트 + base/form 잠금 |
+| CDN 무결성 | 버전 핀 + `crossorigin="anonymous"` (SRI hash 는 `release.yml` 워크플로의 `npm run sri` 로 주입) |
 | 전역 에러 바운더리 | `unhandledrejection` + `error` 전역 핸들러 + 토스트 표시 |
 
 API 키는 **동일 도메인 XSS**에 대해서는 여전히 노출 가능하므로 PIN 모드 활성화를 권장합니다.
