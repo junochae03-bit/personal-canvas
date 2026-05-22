@@ -391,8 +391,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .cpp-item-edit textarea{font-family:var(--mono);min-height:50px}
 .cpp-item .btn.small{padding:4px 9px;font-size:11.5px;min-height:28px}
 .cpp-empty{color:var(--t3);text-align:center;padding:24px;font-size:13px;background:var(--card);border-radius:5px}
-.comic-layout-card.is-custom{border-style:dashed}
+.comic-layout-card.is-custom{border-style:dashed;position:relative}
 .comic-layout-card.is-custom-add{background:var(--card2);border-style:dashed;justify-content:center;align-items:center;text-align:center}
+.comic-layout-actions{position:absolute;top:6px;right:6px;display:flex;gap:3px;opacity:0;transition:opacity .15s;z-index:2}
+.comic-layout-card.is-custom:hover .comic-layout-actions,.comic-layout-card.is-custom:focus-within .comic-layout-actions{opacity:1}
+.cla-btn{width:24px;height:24px;border-radius:50%;background:rgba(20,14,4,.78);color:#fff;border:none;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;padding:0;font-family:inherit;line-height:1}
+.cla-btn:hover{background:var(--acc)}
+.cla-btn.danger:hover{background:var(--red)}
 .comic-custom-modal{width:min(640px,94vw)}
 .custom-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-bottom:14px}
 .custom-ctl{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--t2);font-weight:600}
@@ -439,6 +444,26 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .comic-consistency-desc{font-size:12.5px;color:var(--t2);line-height:1.55}
 .comic-consistency-desc strong{color:var(--acc)}
 .comic-consistency-status{font-size:11.5px;color:var(--t3);font-family:var(--mono);margin-top:4px}
+.comic-vibe-mirror{background:var(--panel);border:1.5px solid var(--b1);border-radius:7px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.cv-header{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--t1)}
+.cv-header .muted{color:var(--t3);font-size:11.5px;font-weight:500;font-family:var(--mono)}
+.cv-header .tb-grow{flex:1}
+.cv-header .btn.small{font-size:11.5px;padding:4px 9px;min-height:28px}
+.cv-list{display:flex;flex-wrap:wrap;gap:8px}
+.cv-list:empty{display:none}
+.cv-item{position:relative;width:88px;display:flex;flex-direction:column;gap:3px;background:var(--card);border-radius:5px;padding:5px;border:1px solid var(--b1)}
+.cv-item[data-role="style"]{border-left:3px solid var(--blue)}
+.cv-item[data-role="character"]{border-left:3px solid var(--acc)}
+.cv-thumb{width:100%;aspect-ratio:1;background-size:cover;background-position:center;border-radius:3px;background-color:#000}
+.cv-role-line{display:flex;justify-content:space-between;font-size:10.5px;color:var(--t2);font-weight:600}
+.cv-meta{font-size:10px;color:var(--t3);font-family:var(--mono);text-align:center;line-height:1.3}
+.cv-del{position:absolute;top:2px;right:2px;width:20px;height:20px;background:rgba(20,14,4,.65);color:#fff;border:none;border-radius:50%;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.cv-del:hover{background:var(--red)}
+.cv-empty{font-size:12px;color:var(--t3);text-align:center;padding:14px;background:var(--card);border-radius:5px;line-height:1.5}
+@media (max-width:880px){
+  .cv-header{flex-wrap:wrap}
+  .cv-item{width:72px}
+}
 .vibe-role-row{display:flex;margin-bottom:4px}
 .vibe-role-sel{flex:1;font-size:11.5px;padding:3px 6px;background:var(--card);border:1px solid var(--b1);color:var(--t1);border-radius:4px;font-family:inherit;cursor:pointer;min-height:26px}
 .vibe-role-sel:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
@@ -2652,11 +2677,22 @@ mark{
                   생성 시작 시 자동 적용:
                   <strong>시드 잠금</strong> · <strong>V4 좌표 사용</strong> ·
                   <strong>Vibe 역할별 권장값</strong> (그림체 0.35/0.50, 캐릭터 0.90/0.60).
-                  편집 모드에서 Vibe 이미지의 역할(🎨 그림체 / 🎴 캐릭터) 만 선택해두면 됩니다.
                 </div>
                 <div class="comic-consistency-status" id="comicConsistencyStatus"></div>
               </div>
             </label>
+            <div class="comic-vibe-mirror">
+              <div class="cv-header">
+                <span>🎨 일관성 참조 이미지</span>
+                <span class="muted" id="comicVibeCount">0장</span>
+                <span class="tb-grow"></span>
+                <button type="button" class="btn ghost small" id="comicVibeAddStyleBtn" title="화풍 참조 — 작가/시리즈 이미지 (info 0.35 / str 0.5)">+ 🎨 그림체</button>
+                <button type="button" class="btn ghost small" id="comicVibeAddCharBtn" title="캐릭터 참조 — 같은 인물 이미지 (info 0.9 / str 0.6)">+ 🎴 캐릭터</button>
+                <input type="file" id="comicVibeFile" accept="image/*" hidden multiple>
+              </div>
+              <div class="cv-list" id="comicVibeList"></div>
+              <div class="cv-empty" id="comicVibeEmpty" hidden>참조 이미지 없음 — 위 버튼으로 추가하세요. V4 모델은 다중 참조 지원.</div>
+            </div>
             <div class="comic-actions">
               <button type="button" class="btn primary" id="comicStartBtn">🎞 만화 생성 시작 <span class="en">Generate Comic</span></button>
               <button type="button" class="btn ghost small" id="comicPanelPresetsBtn" title="컷 프리셋 관리 — 저장된 컷 프롬프트 목록·수정·삭제">🎴 컷 프리셋 관리</button>
@@ -9255,7 +9291,28 @@ async function runOne(q, apiKey){
   const inpAddOrig = snap ? snap.inpAddOrig : !!$('inpAddOrig').checked;
   // Build body based on mode
   let body;
-  if(mode === 't2i'){
+  // 🎞 만화 큐 — mode 분기 우선. 사용자가 만화 시작 후 사이드바 모드 바꿔도 항상 infill 강제.
+  //   베이스는 state.baseImage (afterImage 가 전 패널 결과로 매번 갱신), 마스크는 큐 아이템에서.
+  //   add_original_image: true 강제 — 다른 패널 영역을 보존해야 함.
+  if(q._comic){
+    if(!state.baseImage){ throw new Error('만화 페이지 베이스가 없습니다 — 큐 시작 전 페이지 템플릿 누락'); }
+    if(!q._comic.maskB64){ throw new Error(`컷 ${q._comic.panelIndex+1} 의 마스크가 없습니다`); }
+    body = buildGenBody({
+      ...opts,
+      action: 'infill',
+      baseImageB64: state.baseImage.b64,
+      maskB64: q._comic.maskB64,
+      addOrig: true,
+    });
+    body.parameters.width = state.baseImage.w;
+    body.parameters.height = state.baseImage.h;
+    console.log('[comic:infill]', {
+      panel: q._comic.panelIndex,
+      baseB64Len: state.baseImage.b64?.length,
+      maskB64Len: q._comic.maskB64?.length,
+      w: state.baseImage.w, h: state.baseImage.h,
+    });
+  } else if(mode === 't2i'){
     body = buildGenBody({...opts, action: 'generate'});
   } else if(mode === 'i2i'){
     if(!baseImage){ throw new Error('베이스 이미지가 필요합니다'); }
@@ -9270,21 +9327,16 @@ async function runOne(q, apiKey){
     body.parameters.height = baseImage.h;
   } else if(mode === 'inpaint'){
     if(!baseImage){ throw new Error('베이스 이미지가 필요합니다'); }
-    // 🎞 만화 큐 — 베이스는 state.baseImage (전 패널 결과로 매번 갱신), 마스크는 큐 아이템에서.
-    //   add_original_image 는 항상 true — 다른 패널을 그대로 보존해야 함.
-    const isComic = !!q._comic;
-    const activeBase = isComic ? state.baseImage : baseImage;
-    const activeMask = isComic ? q._comic.maskB64 : inpaintMask;
-    if(!activeMask){ throw new Error('마스크가 필요합니다'); }
+    if(!inpaintMask){ throw new Error('마스크가 필요합니다'); }
     body = buildGenBody({
       ...opts,
       action: 'infill',
-      baseImageB64: activeBase.b64,
-      maskB64: activeMask,
-      addOrig: isComic ? true : inpAddOrig
+      baseImageB64: baseImage.b64,
+      maskB64: inpaintMask,
+      addOrig: inpAddOrig,
     });
-    body.parameters.width = activeBase.w;
-    body.parameters.height = activeBase.h;
+    body.parameters.width = baseImage.w;
+    body.parameters.height = baseImage.h;
   } else if(mode === 'vibe'){
     if(!vibeRefs?.length){ throw new Error('Vibe 참조 이미지가 필요합니다'); }
     body = buildGenBody({
@@ -11049,11 +11101,19 @@ async function afterImage(blob, q){
   }
   q.blobId = id;
   // 🎞 만화 모드 — 결과를 다음 패널의 베이스로 사용 (체이닝).
-  //   마지막 패널이면 만화 모드 플래그 해제 + 완료 토스트.
+  //   실패 시 silent 가 아니라 toast 로 사용자에게 알림 (다음 컷이 빈 페이지로 시작될 위험).
   if(q._comic && state._comicActive){
     try {
       state.baseImage = await _comicBlobToBaseImage(blob, q.meta.w, q.meta.h);
-    } catch(e){ _swallow(e, 'comic:nextBase'); }
+      console.log('[comic:baseUpdate]', {
+        panel: q._comic.panelIndex,
+        w: state.baseImage.w, h: state.baseImage.h,
+        b64Len: state.baseImage.b64?.length,
+      });
+    } catch(e){
+      console.error('[comic:baseFail]', e);
+      toast(`만화 베이스 갱신 실패 — ${e.message||e}\n다음 컷이 빈 페이지로 시작될 수 있어요. 새로고침 후 재시도`, 'error');
+    }
     const remaining = state.queue.some(x => x !== q && x._comic && x.status === 'wait');
     if(!remaining){
       state._comicActive = false;
@@ -12987,7 +13047,7 @@ function setMainPane(pane){
   else if(pane === 'presets'){ renderPresetTabs(); renderPresets(); }
   else if(pane === 'templates'){ tplRenderCatChips(); tplRenderRoll(); tplRenderSavedList(); }
   else if(pane === 'tags'){ loadDanbooruTags(); renderTagCats(); renderTagBody(); }
-  else if(pane === 'comic'){ renderComicLayoutPicker(); _refreshComicConsistencyStatus(); }
+  else if(pane === 'comic'){ renderComicLayoutPicker(); _refreshComicConsistencyStatus(); _renderComicVibeMirror(); }
   // 페인 변경 이벤트 발행 — 캐릭터 네거티브 모드 등이 자동 해제 가능
   if(prev !== pane) document.dispatchEvent(new CustomEvent('mview-change', {detail:{prev, next:pane}}));
 }
@@ -13073,7 +13133,15 @@ function renderComicLayoutPicker(){
   const cards = _allComicLayouts().map(layout => {
     const isSel = layout.id === selectedId;
     const customCls = layout.isCustom ? ' is-custom' : '';
+    // 사용자 정의 카드에는 ✎ 수정 / ✕ 삭제 버튼 (hover 시 노출)
+    const customActions = layout.isCustom ? (
+      `<div class="comic-layout-actions" aria-label="레이아웃 액션">`
+      + `<button type="button" class="cla-btn" data-act="layout-edit" data-layout-id="${esc(layout.id)}" title="이 레이아웃 편집">✎</button>`
+      + `<button type="button" class="cla-btn danger" data-act="layout-del" data-layout-id="${esc(layout.id)}" title="이 레이아웃 삭제">✕</button>`
+      + `</div>`
+    ) : '';
     return `<button type="button" class="comic-layout-card${customCls}" role="radio" aria-checked="${isSel}" data-layout-id="${esc(layout.id)}">`
+      + customActions
       + `<div class="comic-layout-thumb">${_comicLayoutThumbSvg(layout)}</div>`
       + `<div class="comic-layout-meta">`
       +   `<div class="comic-layout-name">${esc(layout.name)}</div>`
@@ -13476,6 +13544,49 @@ function _applyComicConsistencyMode(){
   if(applied > 0) renderVibeList();
   toast(`🎯 일관성 모드 — 시드 ${seedInput?.value} 잠금·좌표 ON${applied?`·Vibe ${applied}장 보정`:''}`, 'info');
   saveSettingsDebounced();
+  _refreshComicConsistencyStatus();
+}
+
+// 🎨 만화 모드 Vibe 미러 — 편집 모드 Vibe 슬롯을 만화 페인에서도 보고 관리.
+//   추가 버튼 ('+ 그림체' / '+ 캐릭터') 은 파일 선택 → addVibeRef + role 자동 설정.
+let _comicVibeRole = 'style';   // 다음 파일 선택의 role (버튼이 미리 설정)
+
+function _renderComicVibeMirror(){
+  const list = $('comicVibeList');
+  const empty = $('comicVibeEmpty');
+  const count = $('comicVibeCount');
+  if(!list || !empty || !count) return;
+  const refs = Array.isArray(state.vibeRefs) ? state.vibeRefs : [];
+  count.textContent = `${refs.length}장`;
+  if(refs.length === 0){
+    list.innerHTML = '';
+    empty.hidden = false;
+    return;
+  }
+  empty.hidden = true;
+  list.innerHTML = refs.map((v, i) => {
+    const role = v.role || 'custom';
+    const preset = VIBE_ROLE_PRESETS[role] || VIBE_ROLE_PRESETS.custom;
+    return `<div class="cv-item" data-vibe-idx="${i}" data-role="${role}" title="${esc(preset.hint)}">`
+      + `<div class="cv-thumb" style="background-image:url('${v.dataURL}')"></div>`
+      + `<div class="cv-role-line"><span>${preset.label}</span></div>`
+      + `<div class="cv-meta">info ${Number(v.info).toFixed(2)}<br>str ${Number(v.strength).toFixed(2)}</div>`
+      + `<button type="button" class="cv-del" data-act="cv-del" data-idx="${i}" aria-label="제거" title="제거">✕</button>`
+      + `</div>`;
+  }).join('');
+}
+
+async function _comicVibeAddFromFiles(fileList, role){
+  for(const f of fileList){
+    if(!f) continue;
+    await addVibeRef(f);
+    // addVibeRef 가 자동 role 추정 (첫=style, 둘째=character...) — 만화 모드 버튼이 명시한 role 로 덮어쓰기
+    const v = state.vibeRefs[state.vibeRefs.length - 1];
+    if(v && VIBE_ROLE_PRESETS[role]){
+      setVibeRole(state.vibeRefs.length - 1, role);
+    }
+  }
+  _renderComicVibeMirror();
   _refreshComicConsistencyStatus();
 }
 
@@ -15843,6 +15954,15 @@ function wireGenerationAndPresetEvents(){
   const comicPicker = $('comicLayoutPicker');
   if(comicPicker){
     comicPicker.addEventListener('click', e => {
+      // ✎ 편집 / ✕ 삭제 액션 — 카드 선택보다 우선
+      const actBtn = e.target.closest('[data-act="layout-edit"], [data-act="layout-del"]');
+      if(actBtn){
+        e.stopPropagation();
+        e.preventDefault();
+        const act = actBtn.dataset.act;
+        if(act === 'layout-edit'){ openComicCustomModal(); return; }
+        if(act === 'layout-del'){ removeComicCustomLayout(); return; }
+      }
       const card = e.target.closest('.comic-layout-card');
       if(card && card.dataset.layoutId) selectComicLayout(card.dataset.layoutId);
     });
@@ -15890,6 +16010,30 @@ function wireGenerationAndPresetEvents(){
   $('comicCustomApply')?.addEventListener('click', applyComicCustomLayout);
   // 컷 입력 일괄 비우기
   $('comicClearInputsBtn')?.addEventListener('click', clearComicInputs);
+  // 🎨 만화 모드 Vibe 미러 — 그림체/캐릭터 추가 + 삭제 위임
+  $('comicVibeAddStyleBtn')?.addEventListener('click', () => {
+    _comicVibeRole = 'style';
+    $('comicVibeFile').click();
+  });
+  $('comicVibeAddCharBtn')?.addEventListener('click', () => {
+    _comicVibeRole = 'character';
+    $('comicVibeFile').click();
+  });
+  $('comicVibeFile')?.addEventListener('change', async e => {
+    if(!e.target.files?.length) return;
+    await _comicVibeAddFromFiles(e.target.files, _comicVibeRole);
+    e.target.value = '';
+  });
+  $('comicVibeList')?.addEventListener('click', e => {
+    const del = e.target.closest('[data-act="cv-del"]');
+    if(!del) return;
+    const idx = parseInt(del.dataset.idx, 10);
+    if(!Number.isFinite(idx)) return;
+    state.vibeRefs.splice(idx, 1);
+    renderVibeList();   // 편집 모드 Vibe 카드도 갱신
+    _renderComicVibeMirror();
+    _refreshComicConsistencyStatus();
+  });
   // 🎴 컷 프리셋 관리 모달 진입
   $('comicPanelPresetsBtn')?.addEventListener('click', openComicPresetsModal);
   $('cppCloseBtn')?.addEventListener('click', () => $('comicPresetsModal').classList.remove('open'));
