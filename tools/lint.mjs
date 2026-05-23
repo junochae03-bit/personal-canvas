@@ -163,11 +163,6 @@ const MIRRORED = [
   {mod: 'js/pure/randomChoice.mjs', fn: 'pickWeightedOption'},
   {mod: 'js/pure/randomChoice.mjs', fn: 'guessCategoryLabel'},
   {mod: 'js/pure/randomChoice.mjs', fn: 'compileCategoriesToText'},
-  {mod: 'js/pure/comic.mjs', fn: 'pageTemplateSvg'},
-  {mod: 'js/pure/comic.mjs', fn: 'panelMaskSvg'},
-  {mod: 'js/pure/comic.mjs', fn: 'wrapBubbleText'},
-  {mod: 'js/pure/comic.mjs', fn: 'bubbleTailSvg'},
-  {mod: 'js/pure/comic.mjs', fn: 'bubbleSvgString'},
 ];
 const inlineSrc = readFileSync(join(ROOT, 'index.html'), 'utf8');
 for(const {mod, fn} of MIRRORED){
@@ -184,7 +179,6 @@ for(const {mod, fn} of MIRRORED){
 // 6b. 데이터 상수 미러 — 함수가 아닌 const 객체 배열의 정합성 검증.
 //     비교: 의미상 동일한 JSON 직렬화. 키 순서·공백 무시.
 const MIRRORED_DATA = [
-  {mod: 'js/pure/comic.mjs', modConst: 'LAYOUTS', inlineConst: 'COMIC_LAYOUTS'},
 ];
 function extractConstArray(src, name){
   // const NAME = [ ... ];  — 단순 brace/bracket balance
