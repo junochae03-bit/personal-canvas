@@ -2276,6 +2276,7 @@ mark{
               </div>
             </div>
             <button class="iconbtn" id="randSeedBtn" title="랜덤 시드 (Random)" style="margin-top:21px">🎲</button>
+            <button class="iconbtn" id="likedSeedBtn" title="❤️ 좋아요한 이미지의 시드 중에서 랜덤 — 검증된 시드만 사용" style="margin-top:21px;color:#e25b6f">❤️🎲</button>
             <button class="iconbtn" id="lockSeedBtn" title="마지막 시드 고정 (Lock)" style="margin-top:21px">🔓</button>
             <button class="iconbtn" id="seedHistBtn" title="시드 히스토리·즐겨찾기 (Seed history)" style="margin-top:21px">⏱</button>
           </div>
@@ -3146,14 +3147,6 @@ coffee shop, latte art"></textarea>
           <ol class="stats-list" id="statsTopSeeds"><li class="muted">아직 좋아요 표시한 이미지가 없어요</li></ol>
         </div>
         <div class="stats-card">
-          <h4>좋아요 많은 프롬프트 <span class="en">Top Prompts</span></h4>
-          <ol class="stats-list" id="statsTopPrompts"><li class="muted">—</li></ol>
-        </div>
-        <div class="stats-card">
-          <h4>좋아요 많은 모델 <span class="en">Top Models</span></h4>
-          <ol class="stats-list" id="statsTopModels"><li class="muted">—</li></ol>
-        </div>
-        <div class="stats-card">
           <h4>👥 가장 많이 뽑은 캐릭터 <span class="en">Top Characters</span></h4>
           <ol class="stats-list" id="statsTopChars"><li class="muted">전체 이미지 기준</li></ol>
         </div>
@@ -3165,21 +3158,13 @@ coffee shop, latte art"></textarea>
           <ol class="stats-list" id="statsBadSeeds"><li class="muted">아직 👎 표시한 이미지가 없어요</li></ol>
         </div>
         <div class="stats-card stats-bad">
-          <h4>자주 실패하는 프롬프트 <span class="en">Bad Prompts</span></h4>
-          <ol class="stats-list" id="statsBadPrompts"><li class="muted">—</li></ol>
-        </div>
-        <div class="stats-card stats-bad">
-          <h4>자주 실패하는 모델 <span class="en">Bad Models</span></h4>
-          <ol class="stats-list" id="statsBadModels"><li class="muted">—</li></ol>
-        </div>
-        <div class="stats-card stats-bad">
-          <h4>자주 실패하는 캐릭터 <span class="en">Bad Characters</span></h4>
-          <ol class="stats-list" id="statsBadChars"><li class="muted">—</li></ol>
-        </div>
-        <div class="stats-card stats-bad" style="grid-column:1/-1">
-          <h4>🧨 toxic 토큰 <span class="en">Toxic Tokens</span> <span style="font-size:10.5px;color:var(--t3);font-weight:400">— 좋아요/별로 합산 3회 이상 + dislike rate &gt; 60%</span></h4>
+          <h4>🧨 toxic 토큰 <span class="en">Toxic Tokens</span> <span style="font-size:10.5px;color:var(--t3);font-weight:400">— dislike rate &gt; 60% (3회 이상)</span></h4>
           <ol class="stats-list" id="statsToxicTokens"><li class="muted">분석에 데이터 부족 (좋아요 + 👎 합 3개 이상 필요)</li></ol>
         </div>
+      </div>
+      <div style="margin-top:18px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button type="button" class="btn danger" id="statsBulkTrashDislike" title="👎 표시한 이미지를 모두 휴지통으로 (7일 안에 복원 가능)" style="display:flex;align-items:center;gap:6px">🗑 👎 일괄 휴지통으로</button>
+        <span style="font-size:11.5px;color:var(--t3)">— 별로 표시한 이미지 한꺼번에 정리</span>
       </div>
       <div style="margin-top:18px;padding:12px;background:var(--card2);border:1px solid var(--b1);border-radius:8px">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
@@ -9732,8 +9717,7 @@ async function openStatsModal(){
   const modal = $('statsModal');
   if(!modal) return;
   $('statsIntro').textContent = '집계 중…';
-  for(const id of ['statsTopSeeds','statsTopPrompts','statsTopModels','statsTopChars',
-                   'statsBadSeeds','statsBadPrompts','statsBadModels','statsBadChars','statsToxicTokens']){
+  for(const id of ['statsTopSeeds','statsTopChars','statsBadSeeds','statsToxicTokens']){
     const el = $(id); if(el) el.innerHTML = '<li class="muted">로딩…</li>';
   }
   modal.classList.add('open');
@@ -9766,21 +9750,9 @@ async function openStatsModal(){
       return `<li><span class="stats-cnt${colorClass?' '+colorClass:''}">${n}</span><span class="stats-text">${text}</span></li>`;
     }).join('');
   };
-  const promptKey = i => {
-    const p = (i.meta?.prompt || i.prompt || '').replace(/\s+/g, ' ').trim();
-    return p ? p.slice(0, 60) : null;
-  };
-  // ❤️ Top — 인기
+  // ❤️ 좋아요 시드 + 👥 캐릭터
   renderList('statsTopSeeds', tally(liked, i => i.meta?.seed ?? null), '', k => `🌱 ${esc(String(k))}`);
-  renderList('statsTopPrompts', tally(liked, promptKey), '', k => esc(String(k)) + (String(k).length >= 60 ? '…' : ''));
-  renderList('statsTopModels', tally(liked, i => i.meta?.model || null), '', k => esc(String(k)));
-  // 👎 Bad — 자주 실패
-  renderList('statsBadSeeds', tally(disliked, i => i.meta?.seed ?? null), 'bad', k => `🌱 ${esc(String(k))}`);
-  renderList('statsBadPrompts', tally(disliked, promptKey), 'bad', k => esc(String(k)) + (String(k).length >= 60 ? '…' : ''));
-  renderList('statsBadModels', tally(disliked, i => i.meta?.model || null), 'bad', k => esc(String(k)));
-  // 👥 캐릭터 사용량 (전체 이미지)
   const charMap = new Map();
-  const badCharMap = new Map();
   for(const it of imgs){
     const arr = it.meta?.characters;
     if(!Array.isArray(arr)) continue;
@@ -9788,13 +9760,12 @@ async function openStatsModal(){
       const k = (typeof name === 'string' ? name : name?.name || '').trim();
       if(!k) continue;
       charMap.set(k, (charMap.get(k) || 0) + 1);
-      if(it.disliked) badCharMap.set(k, (badCharMap.get(k) || 0) + 1);
     }
   }
   const charRows = [...charMap.entries()].sort((a,b) => b[1] - a[1]).slice(0, TOP_N);
   renderList('statsTopChars', charRows, 'char', k => `👤 ${esc(String(k))}`);
-  const badCharRows = [...badCharMap.entries()].sort((a,b) => b[1] - a[1]).slice(0, TOP_N);
-  renderList('statsBadChars', badCharRows, 'bad', k => `👤 ${esc(String(k))}`);
+  // 👎 시드 + 🧨 toxic 토큰
+  renderList('statsBadSeeds', tally(disliked, i => i.meta?.seed ?? null), 'bad', k => `🌱 ${esc(String(k))}`);
   // 🧨 toxic 토큰 — 토큰별 dislike rate
   const toxic = await getToxicTokens();
   // toxic 의 각 토큰을 dislike 카운트로 다시 정렬
@@ -14666,6 +14637,22 @@ function wireTopbarAndFormEvents(){
 
   // Seed buttons
   $('randSeedBtn').addEventListener('click', () => $('seed').value = randomSeed());
+  // ❤️🎲 좋아요 표시한 이미지의 시드 중에서 랜덤 선택 — 검증된 시드만 사용.
+  //   동일 시드 여러 번 사용해도 가중치 균등 (Set 으로 중복 제거).
+  $('likedSeedBtn')?.addEventListener('click', async () => {
+    try {
+      const imgs = await DB.getAllImagesForStats();
+      const seeds = [...new Set(imgs.filter(i => i.liked && i.meta?.seed != null).map(i => i.meta.seed))];
+      if(!seeds.length){
+        toast('❤️ 좋아요 표시한 이미지가 아직 없어요 — 라이트박스에서 ❤️ 먼저 표시', 'warning', {timeoutMs: 6000});
+        return;
+      }
+      const picked = seeds[Math.floor(Math.random() * seeds.length)];
+      $('seed').value = picked;
+      saveSettingsDebounced();
+      toast(`❤️ 좋아요 시드 ${picked} 선택됨 (전체 ${seeds.length}개 중)`, 'success');
+    } catch(e){ toast(`좋아요 시드 조회 실패 — ${e.message||e}`, 'error'); }
+  });
   $('seedClearBtn')?.addEventListener('click', () => { $('seed').value = ''; $('seed').dispatchEvent(new Event('input',{bubbles:true})); });
   $('lockSeedBtn').addEventListener('click', () => {
     state.seedLocked = !state.seedLocked;
@@ -15547,6 +15534,23 @@ function wireGalleryEvents(){
   $('reloadGalBtn').addEventListener('click', loadGallery);
   $('galStatsBtn')?.addEventListener('click', openStatsModal);
   $('statsCloseBtn')?.addEventListener('click', () => $('statsModal').classList.remove('open'));
+  // 🗑 👎 일괄 휴지통 — 통계 모달에서 한 번에 정리
+  $('statsBulkTrashDislike')?.addEventListener('click', async () => {
+    try {
+      const all = await DB.getAllImagesForStats();
+      const targets = all.filter(i => i.disliked).map(i => i.id);
+      if(!targets.length){ toast('👎 표시한 이미지가 없어요', 'info'); return; }
+      if(!confirm(`👎 표시한 ${targets.length}장을 모두 휴지통으로 이동할까요?\n(7일 안에 복원 가능)`)) return;
+      for(const id of targets){
+        try { await DB.trashImage(id); } catch(_){}
+      }
+      await loadGallery();
+      await refreshGallerySize();
+      toast(`✅ ${targets.length}장 휴지통으로 이동됨`, 'success');
+      // 통계 새로고침
+      openStatsModal();
+    } catch(e){ toast(`일괄 삭제 실패 — ${e.message||e}`, 'error'); }
+  });
   // 👎 시드 blocklist 자동 제외 토글 (모달 열릴 때 현재 상태 반영, 클릭 시 저장)
   const blToggle = $('statsSeedBlocklistToggle');
   if(blToggle){
