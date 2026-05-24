@@ -1675,6 +1675,18 @@ body:not([data-mview="edit"]) #randomBuilderSec{display:none !important}
 /* 빌더 프리셋 버튼 강조 — 더 큰 시각적 분리 */
 .rcp-btn{background:rgba(162,90,31,.10);border-color:rgba(162,90,31,.4)}
 .rcp-btn:hover{background:rgba(162,90,31,.18);border-color:var(--acc)}
+/* 📂 그룹 탭 바 — 여러 그룹 동시 운용 */
+.rc-groups-bar{display:flex;gap:4px;padding:6px 8px;background:var(--card2);border-bottom:1px solid var(--b1);overflow-x:auto;flex-wrap:nowrap}
+.rc-groups-bar::-webkit-scrollbar{height:6px}
+.rcg-tab{flex-shrink:0;background:var(--panel);border:1.5px solid var(--b1);color:var(--t2);padding:5px 12px;font-size:12px;font-weight:600;border-radius:5px 5px 0 0;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;min-height:30px;white-space:nowrap;transition:all .12s}
+.rcg-tab:hover{border-color:var(--acc);color:var(--t1)}
+.rcg-tab.act{background:var(--card);border-color:var(--acc);color:var(--acc);box-shadow:0 -2px 0 var(--acc) inset}
+.rcg-tab .rcg-count{font-size:10px;color:var(--t3);font-family:var(--mono);font-weight:500}
+.rcg-tab.act .rcg-count{color:var(--acc)}
+.rcg-tab-menu{background:none;border:none;color:var(--t3);cursor:pointer;padding:0 2px;font-size:11px;line-height:1;border-radius:3px;font-family:inherit}
+.rcg-tab-menu:hover{background:rgba(162,90,31,.15);color:var(--acc)}
+.rcg-add{flex-shrink:0;background:transparent;border:1.5px dashed var(--b2);color:var(--t3);padding:5px 12px;font-size:12px;font-weight:600;border-radius:5px;cursor:pointer;font-family:inherit;min-height:30px;white-space:nowrap;transition:all .12s}
+.rcg-add:hover{border-color:var(--acc);color:var(--acc);background:rgba(162,90,31,.05)}
 /* 베이스 이미지 영역 — 갤러리 가져오기 버튼 */
 .img-source-row{display:flex;gap:6px;margin-top:6px;justify-content:flex-end}
 .img-source-row .btn.small{font-size:11.5px;padding:5px 10px;min-height:28px}
@@ -2010,6 +2022,8 @@ mark{
           <span class="caret">▾</span>
         </div>
         <div class="sec-body">
+          <!-- 📂 그룹 탭 바 — 여러 그룹을 탭처럼 동시 운용, 클릭으로 전환 -->
+          <div class="rc-groups-bar" id="rcGroupsBar" role="tablist" aria-label="RC 빌더 그룹 탭"></div>
           <!-- 🔍 카테고리·옵션 검색 + 필터 -->
           <div class="rc-search-row">
             <input type="text" id="rcSearchInp" class="inp" placeholder="🔍 카테고리 라벨·옵션 텍스트 검색 (한글 초성 가능)" spellcheck="false" autocomplete="off">
@@ -4206,9 +4220,11 @@ const state = {
   outputDirName: '',      // 표시용 폴더명
   seedHistory: [],        // ⏱ [{seed, ts, fav, note}] — 최근 시드 + 즐겨찾기 (최대 100)
   workflows: [],          // 💾 [{id, name, ts, thumb, data}] — 워크플로우 스냅샷 슬롯
-  randomCategories: [],   // 🎲 [{id, label, enabled, locked, lockedOptionIdx, options:[{text, weight}]}] — 동적 선택 빌더
+  randomCategories: [],   // 🎲 활성 그룹의 카테고리 (rcGroups[rcActiveGroupIdx].categories 의 live reference)
   randomBuilderOpen: false,   // 빌더 sec 토글 (모드 바의 🎲 버튼)
-  randomBuilderPresets: [],   // 🎴 [{id, name, ts, categories}] — RC 빌더 전체 세트 저장
+  randomBuilderPresets: [],   // 🎴 [{id, name, ts, categories}] — RC 빌더 전체 세트 저장 (별도 라이브러리)
+  rcGroups: [],           // 📂 [{id, name, categories}] — 여러 그룹을 탭처럼 동시 보유, 자유 전환
+  rcActiveGroupIdx: 0,    // 현재 활성 그룹 인덱스
   gallerySessions: [],
   galleryImages: {},     // sessionId -> [{id, blob, thumbURL, prompt, ts, label, fname, meta}]
   selectedSessionId: null,
@@ -9425,12 +9441,122 @@ async function saveWorkflows(){
 
 // 🎲 RANDOM CATEGORIES — 빌더 UI 로 관리, buildGenBody 가 매 생성마다 활성 카테고리에서 옵션 무작위 선택.
 //    카테고리 모델: {id, label, enabled, locked, lockedOptionIdx, options: [{text, weight}]}
-async function loadRandomCategories(){
-  const saved = await DB.getFlag('random_categories');
-  state.randomCategories = Array.isArray(saved) ? saved.map(_normalizeRandomCategory).filter(Boolean) : [];
+// 📂 RC 그룹 — 카테고리 묶음을 여러 개 동시 보유, 빌더 상단 탭으로 전환.
+//   state.rcGroups = [{id, name, categories: [...]}]
+//   state.rcActiveGroupIdx = 활성 그룹 인덱스
+//   state.randomCategories = rcGroups[active].categories (live reference)
+
+function _rcNewGroupId(){ return 'rcg_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+
+function _ensureRcGroups(){
+  if(!Array.isArray(state.rcGroups) || state.rcGroups.length === 0){
+    state.rcGroups = [{id: _rcNewGroupId(), name: '기본', categories: state.randomCategories || []}];
+    state.rcActiveGroupIdx = 0;
+  }
+  if(!Number.isInteger(state.rcActiveGroupIdx) || state.rcActiveGroupIdx < 0 || state.rcActiveGroupIdx >= state.rcGroups.length){
+    state.rcActiveGroupIdx = 0;
+  }
+  // live reference 동기화
+  state.randomCategories = state.rcGroups[state.rcActiveGroupIdx].categories;
 }
+
+function rcSwitchGroup(idx){
+  if(!Array.isArray(state.rcGroups) || idx < 0 || idx >= state.rcGroups.length) return;
+  state.rcActiveGroupIdx = idx;
+  state.randomCategories = state.rcGroups[idx].categories;
+  saveRandomCategories();
+  rcRender();
+  if(typeof _renderRcGroupsBar === 'function') _renderRcGroupsBar();
+}
+
+function rcAddGroup(name){
+  if(!Array.isArray(state.rcGroups)) state.rcGroups = [];
+  const n = String(name||'').trim().slice(0, 30) || `그룹 ${state.rcGroups.length+1}`;
+  state.rcGroups.push({id: _rcNewGroupId(), name: n, categories: []});
+  state.rcActiveGroupIdx = state.rcGroups.length - 1;
+  state.randomCategories = state.rcGroups[state.rcActiveGroupIdx].categories;
+  saveRandomCategories();
+  rcRender();
+  if(typeof _renderRcGroupsBar === 'function') _renderRcGroupsBar();
+  toast(`📂 '${n}' 그룹 추가 + 활성화`, 'success');
+}
+
+function rcRenameGroup(idx, name){
+  const g = state.rcGroups?.[idx];
+  if(!g) return;
+  const n = String(name||'').trim().slice(0, 30);
+  if(!n) return;
+  g.name = n;
+  saveRandomCategories();
+  if(typeof _renderRcGroupsBar === 'function') _renderRcGroupsBar();
+}
+
+function rcDeleteGroup(idx){
+  if(!Array.isArray(state.rcGroups) || state.rcGroups.length <= 1){
+    toast('그룹이 최소 1개는 있어야 해요', 'warning');
+    return;
+  }
+  const g = state.rcGroups[idx];
+  if(!g) return;
+  if(!confirm(`'${g.name}' 그룹을 삭제할까요?\n(카테고리 ${g.categories.length}개 함께 삭제. 복원 불가)`)) return;
+  state.rcGroups.splice(idx, 1);
+  if(state.rcActiveGroupIdx >= state.rcGroups.length) state.rcActiveGroupIdx = state.rcGroups.length - 1;
+  if(state.rcActiveGroupIdx < 0) state.rcActiveGroupIdx = 0;
+  state.randomCategories = state.rcGroups[state.rcActiveGroupIdx].categories;
+  saveRandomCategories();
+  rcRender();
+  if(typeof _renderRcGroupsBar === 'function') _renderRcGroupsBar();
+  toast(`🗑 '${g.name}' 그룹 삭제`, 'info');
+}
+
+function rcDuplicateGroup(idx){
+  const g = state.rcGroups?.[idx];
+  if(!g) return;
+  const copy = {id: _rcNewGroupId(), name: g.name + ' (사본)', categories: JSON.parse(JSON.stringify(g.categories)).map(_normalizeRandomCategory).filter(Boolean)};
+  state.rcGroups.splice(idx+1, 0, copy);
+  state.rcActiveGroupIdx = idx + 1;
+  state.randomCategories = state.rcGroups[state.rcActiveGroupIdx].categories;
+  saveRandomCategories();
+  rcRender();
+  if(typeof _renderRcGroupsBar === 'function') _renderRcGroupsBar();
+  toast(`📋 '${g.name}' 복제됨`, 'success');
+}
+
+async function loadRandomCategories(){
+  // 새 키 'rc_groups' 우선 로드 — 없으면 옛 'random_categories' (단일 배열) 마이그레이션
+  // 저장 포맷: {groups: [...], activeIdx: 0} (구버전 호환: 그냥 배열일 수도 있음)
+  const savedGroups = await DB.getFlag('rc_groups');
+  const groupArr = Array.isArray(savedGroups) ? savedGroups : (Array.isArray(savedGroups?.groups) ? savedGroups.groups : null);
+  if(groupArr && groupArr.length){
+    state.rcGroups = groupArr.map(g => ({
+      id: String(g?.id || _rcNewGroupId()),
+      name: String(g?.name || '그룹').slice(0, 30),
+      categories: Array.isArray(g?.categories) ? g.categories.map(_normalizeRandomCategory).filter(Boolean) : [],
+    }));
+    const ai = (savedGroups && Number.isInteger(savedGroups.activeIdx)) ? savedGroups.activeIdx : 0;
+    state.rcActiveGroupIdx = (ai >= 0 && ai < state.rcGroups.length) ? ai : 0;
+  } else {
+    const saved = await DB.getFlag('random_categories');
+    const cats = Array.isArray(saved) ? saved.map(_normalizeRandomCategory).filter(Boolean) : [];
+    state.rcGroups = [{id: _rcNewGroupId(), name: '기본', categories: cats}];
+    state.rcActiveGroupIdx = 0;
+  }
+  _ensureRcGroups();
+}
+
 async function saveRandomCategories(){
-  await DB.setFlag('random_categories', state.randomCategories);
+  // 새 키 'rc_groups' — {groups, activeIdx} 래핑(Array 추가 속성은 structured clone 시 손실)
+  _ensureRcGroups();
+  // 동기화 — import/undo/preset 등 외부 코드가 state.randomCategories 를 새 배열로 교체한 경우 활성 그룹에 반영
+  const activeIdx = state.rcActiveGroupIdx;
+  if(state.randomCategories !== state.rcGroups[activeIdx].categories){
+    state.rcGroups[activeIdx].categories = state.randomCategories || [];
+  }
+  const payload = {
+    groups: state.rcGroups.map(g => ({id: g.id, name: g.name, categories: g.categories})),
+    activeIdx,
+  };
+  await DB.setFlag('rc_groups', payload);
 }
 
 // 📁 공용 갤러리 picker — i2i/inpaint(베이스), vibe(추가) 어디서든 호출.
@@ -16062,6 +16188,7 @@ function rcToggleBuilder(force){
   if(tab){ tab.classList.toggle('act', open); tab.setAttribute('aria-pressed', String(open)); }
   if(sec) sec.style.display = open ? '' : 'none';
   if(open){
+    _renderRcGroupsBar();
     rcRender();
     // 🎴 빌더 프리셋 안내 — 첫 진입 시 1회 (localStorage 영구화)
     try {
@@ -16223,6 +16350,7 @@ function rcRender(){
   const searchEmpty = $('rcSearchEmptyState');
   const statsBadge = $('rcStatsBadge');
   if(!list) return;
+  if(typeof _renderRcGroupsBar === 'function') _renderRcGroupsBar();
   const cats = state.randomCategories || [];
   if(empty) empty.style.display = cats.length === 0 ? '' : 'none';
   if(statsBadge){
@@ -16729,7 +16857,25 @@ function rcOpenAddOptionModal(catIdx){
 }
 
 // 📝 카테고리 노트 편집 — 큰 textarea 모달 (500자, 모바일 친화)
-// 📂 그룹 변경 — 카테고리를 폴더처럼 묶기. 같은 그룹명 입력 시 같은 묶음으로 정렬.
+// 📂 그룹 탭 바 렌더링 — 여러 그룹 탭 + 추가 버튼.
+function _renderRcGroupsBar(){
+  const bar = $('rcGroupsBar');
+  if(!bar) return;
+  _ensureRcGroups();
+  const groups = state.rcGroups || [];
+  const active = state.rcActiveGroupIdx || 0;
+  bar.innerHTML = groups.map((g, i) => {
+    const cls = i === active ? 'rcg-tab act' : 'rcg-tab';
+    const enabledN = (g.categories || []).filter(c => c.enabled).length;
+    return `<div class="${cls}" role="tab" aria-selected="${i===active}" data-gidx="${i}" title="클릭=전환 · ⋯ 메뉴=이름변경·복제·삭제">`
+      + `<span class="rcg-tab-label" data-act="rcg-switch" data-gidx="${i}">${esc(g.name)}</span>`
+      + `<span class="rcg-count">${enabledN}/${g.categories.length}</span>`
+      + `<button class="rcg-tab-menu" data-act="rcg-menu" data-gidx="${i}" title="이 그룹 메뉴 (이름변경·복제·삭제)" aria-label="그룹 메뉴">⋯</button>`
+      + `</div>`;
+  }).join('') + `<button class="rcg-add" data-act="rcg-add" title="새 그룹 추가">＋ 새 그룹</button>`;
+}
+
+// 📂 카테고리 그룹 라벨 — 카드 헤더 chip (rcEditGroup 은 카드 안의 group 필드, 위 그룹과 별개).
 function rcEditGroup(catIdx){
   const c = state.randomCategories?.[catIdx];
   if(!c) return;
@@ -17329,6 +17475,36 @@ function rcWireEvents(){
   $('rcEmptyLoadBtn')?.addEventListener('click', openRcpModal);
   $('rcEmptyImportBtn')?.addEventListener('click', () => rcImportFromText());
   $('rcPresetsBtn')?.addEventListener('click', openRcpModal);
+  // 📂 그룹 탭 바 — 클릭 위임 (전환·메뉴·추가)
+  $('rcGroupsBar')?.addEventListener('click', e => {
+    const t = e.target;
+    const act = t.dataset?.act || t.closest('[data-act]')?.dataset?.act;
+    const gidx = parseInt(t.dataset?.gidx || t.closest('[data-gidx]')?.dataset?.gidx, 10);
+    if(act === 'rcg-add'){
+      const name = prompt('새 그룹 이름:', `그룹 ${(state.rcGroups?.length || 0)+1}`);
+      if(name === null) return;
+      rcAddGroup(name);
+    } else if(act === 'rcg-switch' && Number.isFinite(gidx)){
+      rcSwitchGroup(gidx);
+    } else if(act === 'rcg-menu' && Number.isFinite(gidx)){
+      e.stopPropagation();
+      const g = state.rcGroups?.[gidx];
+      if(!g) return;
+      // 간단 메뉴 — confirm 으로 분기 (별도 popover 없이)
+      const choice = prompt(`'${g.name}' 그룹 작업:\n\n1 = 이름 변경\n2 = 복제\n3 = 삭제 (카테고리 ${g.categories.length}개 함께)\n\n번호 입력 (취소=닫기):`, '1');
+      if(choice === '1'){
+        const n = prompt('새 그룹 이름:', g.name);
+        if(n) rcRenameGroup(gidx, n);
+      } else if(choice === '2'){
+        rcDuplicateGroup(gidx);
+      } else if(choice === '3'){
+        rcDeleteGroup(gidx);
+      }
+    } else if(Number.isFinite(gidx) && t.classList.contains('rcg-tab')){
+      // 탭 자체 클릭 (라벨/카운트 영역)
+      rcSwitchGroup(gidx);
+    }
+  });
   $('rcpCloseBtn')?.addEventListener('click', () => $('rcPresetsModal').classList.remove('open'));
   $('rcpAddBtn')?.addEventListener('click', () => {
     const p = rcpSaveCurrent($('rcpNewName').value);
