@@ -7468,10 +7468,10 @@ async function doSelectiveRestore(){
     }
     if($('rs_random')?.checked && Array.isArray(data.randomCategories)){
       // 🎲 랜덤 카테고리 — 전체 교체. _normalizeRandomCategory 로 모든 필드 정제.
-      state.randomCategories = data.randomCategories
+      _rcSetCategories(data.randomCategories
         .map(_normalizeRandomCategory)
         .filter(Boolean)
-        .slice(0, 200);
+        .slice(0, 200));
       if(typeof saveRandomCategories === 'function') await saveRandomCategories();
       if(typeof rcRender === 'function' && state.randomBuilderOpen) rcRender();
       restored.push(`🎲 랜덤 카테고리 ${state.randomCategories.length}개`);
@@ -9465,6 +9465,17 @@ async function saveWorkflows(){
 
 function _rcNewGroupId(){ return 'rcg_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
 
+// 🔄 외부 코드가 state.randomCategories 를 새 배열로 교체할 때 항상 이 함수 사용.
+//   직접 reassign 하면 _ensureRcGroups() 가 다음 render 에서 활성 그룹 빈 배열로 덮어쓰는 버그 발생.
+//   이 헬퍼는 양쪽(state.randomCategories + rcGroups[active].categories)을 동시에 갱신.
+function _rcSetCategories(arr){
+  const a = Array.isArray(arr) ? arr : [];
+  state.randomCategories = a;
+  if(Array.isArray(state.rcGroups) && state.rcGroups[state.rcActiveGroupIdx]){
+    state.rcGroups[state.rcActiveGroupIdx].categories = a;
+  }
+}
+
 function _ensureRcGroups(){
   if(!Array.isArray(state.rcGroups) || state.rcGroups.length === 0){
     state.rcGroups = [{id: _rcNewGroupId(), name: '기본', categories: state.randomCategories || []}];
@@ -9741,8 +9752,8 @@ function rcpApply(id){
   const p = state.randomBuilderPresets?.find(x => x.id === id);
   if(!p) return false;
   if(!confirm(`'${p.name}' 프리셋을 불러올까요?\n현재 카테고리 ${state.randomCategories.length}개가 모두 교체됩니다.`)) return false;
-  state.randomCategories = JSON.parse(JSON.stringify(p.categories || []))
-    .map(_normalizeRandomCategory).filter(Boolean);
+  _rcSetCategories(JSON.parse(JSON.stringify(p.categories || []))
+    .map(_normalizeRandomCategory).filter(Boolean));
   _saveRandomCategoriesDebounced();
   rcRender();
   toast(`🎴 '${p.name}' 프리셋 적용됨 — ${state.randomCategories.length}개 카테고리`, 'success');
@@ -16771,14 +16782,14 @@ function rcDelCategory(catIdx){
   _saveRandomCategoriesDebounced();
   rcRender();
   toastUndo(`🗑 카테고리 "${c.label}" 삭제`, () => {
-    state.randomCategories = snap;
+    _rcSetCategories(snap);
     _saveRandomCategoriesDebounced();
     rcRender();
   });
 }
 function rcAddCategory(label){
   const c = rcNewCategory(label || `카테고리 ${(state.randomCategories?.length || 0) + 1}`);
-  state.randomCategories = state.randomCategories || [];
+  if(!Array.isArray(state.randomCategories)) _rcSetCategories([]);
   state.randomCategories.push(c);
   _saveRandomCategoriesDebounced();
   rcRender();
@@ -17679,17 +17690,17 @@ function rcDoImport(text, opts){
     toast('인식 가능한 패턴이 없습니다 — ||A|B|C|| 또는 {A|B|C} 형식이어야 해요 (각 그룹 옵션 ≥ 2개)', 'warning', {timeoutMs: 8000});
     return;
   }
-  // 기존 교체 vs 추가
+  // 기존 교체 vs 추가 — _rcSetCategories 로 활성 그룹까지 동시 갱신 (직접 reassign 시 _ensureRcGroups 가 덮어씀)
   const snap = state.randomCategories ? state.randomCategories.slice() : [];
   if(replace){
-    state.randomCategories = added;
+    _rcSetCategories(added);
   } else {
-    state.randomCategories = (state.randomCategories || []).concat(added);
+    _rcSetCategories((state.randomCategories || []).concat(added));
   }
   _saveRandomCategoriesDebounced();
   rcRender();
   toastUndo(`📥 ${added.length}개 카테고리 ${replace?'교체':'추가'}됨 ${autoLabel?'(라벨 자동 추측)':''}`, () => {
-    state.randomCategories = snap;
+    _rcSetCategories(snap);
     _saveRandomCategoriesDebounced();
     rcRender();
   });
