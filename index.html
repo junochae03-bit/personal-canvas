@@ -359,6 +359,18 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 /* GALLERY — 갤러리 */
 .gallery-bar{padding:13px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--b1);background:var(--panel);flex-shrink:0;flex-wrap:wrap;box-shadow:var(--shadow)}
+.gal-fav-toggle{color:var(--t3);border-color:var(--b1)}
+.gal-fav-toggle.act{color:#f5b80a;border-color:#f5b80a;background:rgba(245,184,10,.10)}
+.gal-trash-toggle{color:var(--t3);border-color:var(--b1)}
+.gal-trash-toggle.act{color:var(--red);border-color:var(--red);background:rgba(181,67,56,.08)}
+.gal-fav-toggle .muted,.gal-trash-toggle .muted{font-size:11px;font-family:var(--mono)}
+.g-item.fav{box-shadow:0 0 0 2px #f5b80a inset}
+.g-item .g-fav{position:absolute;top:6px;right:6px;background:rgba(20,14,4,.55);color:#f5b80a;border:none;width:26px;height:26px;border-radius:50%;font-size:14px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;z-index:2}
+.g-item .g-fav:hover{background:rgba(20,14,4,.85)}
+.g-item .g-fav.off{color:rgba(255,255,255,.45)}
+.g-item .g-fav.off:hover{color:#f5b80a}
+.gallery-trash-mode .g-item{filter:saturate(.5) opacity(.85)}
+.gallery-trash-mode .g-item::after{content:'🗑';position:absolute;top:6px;left:6px;font-size:18px;background:rgba(181,67,56,.85);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:2}
 .gallery-bar .inp{width:240px}
 .gv-toggle{display:flex;background:var(--card);padding:3px;border-radius:6px;border:1.5px solid var(--b1)}
 .gv-toggle button{background:transparent;border:none;color:var(--t2);padding:5px 11px;font-size:12px;font-weight:600;border-radius:3px;cursor:pointer;font-family:inherit;transition:all .15s}
@@ -2342,6 +2354,8 @@ mark{
       <div class="main-pane" data-pane="gallery">
         <div class="gallery-bar">
           <input type="text" class="inp" id="gallerySearch" placeholder="🔍 프롬프트·캐릭터·앨범·시드…">
+          <button class="btn ghost gal-fav-toggle" id="galFavToggle" type="button" title="★ 즐겨찾기만 보기" aria-pressed="false">★ 즐겨찾기 <span class="muted" id="galFavCount"></span></button>
+          <button class="btn ghost gal-trash-toggle" id="galTrashToggle" type="button" title="🗑 휴지통 보기 — 7일 안에 복원 가능" aria-pressed="false">🗑 휴지통 <span class="muted" id="galTrashCount"></span></button>
           <select id="galleryFilter" class="inp tiny" title="세션 선택 — 특정 세션의 이미지만 보기">
             <option value="all">모든 세션 (All)</option>
             <!-- 세션 옵션들은 loadGallery에서 동적 채움 -->
@@ -2606,7 +2620,9 @@ mark{
     <button class="iconbtn lb-act-btn" id="lbExtractTags" title="📋 이 이미지의 태그를 도감에 추출"><span class="lb-act-ico">📋</span><span class="lb-act-lbl">태그</span></button>
     <div style="height:1px;background:var(--b1);margin:2px 0"></div>
     <button class="iconbtn lb-act-btn" id="lbInfoBtn" title="ℹ 상세정보 펼치기/접기 (메타·프롬프트)" aria-pressed="false"><span class="lb-act-ico">ℹ</span><span class="lb-act-lbl">정보</span></button>
-    <button class="iconbtn lb-act-btn" id="lbDelete" title="삭제 (Delete)" style="color:var(--red);border-color:rgba(181,67,56,.3)"><span class="lb-act-ico">🗑</span><span class="lb-act-lbl">삭제</span></button>
+    <button class="iconbtn lb-act-btn" id="lbFav" title="★ 즐겨찾기 — 갤러리에서 ★만 필터로 빠르게 찾기" aria-pressed="false"><span class="lb-act-ico">☆</span><span class="lb-act-lbl">★</span></button>
+    <button class="iconbtn lb-act-btn" id="lbRestore" title="↺ 휴지통에서 복원" style="display:none;color:var(--green);border-color:rgba(93,138,48,.4)"><span class="lb-act-ico">↺</span><span class="lb-act-lbl">복원</span></button>
+    <button class="iconbtn lb-act-btn" id="lbDelete" title="🗑 휴지통으로 이동 (7일 보관 후 자동 영구 삭제)" style="color:var(--red);border-color:rgba(181,67,56,.3)"><span class="lb-act-ico">🗑</span><span class="lb-act-lbl">휴지통</span></button>
     <button class="iconbtn lb-act-btn" id="lbClose" title="닫기 (Close)"><span class="lb-act-ico">✕</span><span class="lb-act-lbl">닫기</span></button>
   </div>
 </div>
@@ -4591,11 +4607,13 @@ const DB = {
       req.onerror = () => res([]);
     });
   },
-  async getSessionImages(sessionId){
+  // 🗑 휴지통 옵션 — getSessionImages(sid) 기본은 deletedAt 없는 것만, getSessionImages(sid, {includeTrashed:true}) 면 전부.
+  async getSessionImages(sessionId, opts){
     if(!this.db) return [];
-    // 🚀 C1: 인메모리 캐시 — 검색 키타이핑마다 IDB 재조회 회피.
-    //    saveImage/deleteImage/deleteSession/clearAll 가 _invalidateImgCache 호출.
-    if(this._imgCache?.has(sessionId)) return this._imgCache.get(sessionId);
+    if(this._imgCache?.has(sessionId)){
+      const cached = this._imgCache.get(sessionId);
+      return (opts?.includeTrashed) ? cached : cached.filter(i => !i.deletedAt);
+    }
     return new Promise(res => {
       const tx = this.tx(this.IMG, 'readonly');
       const idx = tx.objectStore(this.IMG).index('sessionId');
@@ -4604,7 +4622,21 @@ const DB = {
         const imgs = req.result || [];
         if(!this._imgCache) this._imgCache = new Map();
         this._imgCache.set(sessionId, imgs);
-        res(imgs);
+        res((opts?.includeTrashed) ? imgs : imgs.filter(i => !i.deletedAt));
+      };
+      req.onerror = () => res([]);
+    });
+  },
+  // 🗑 모든 휴지통 이미지 수집 (세션 무관) — 휴지통 뷰용.
+  async getAllTrashed(){
+    if(!this.db) return [];
+    return new Promise(res => {
+      const tx = this.tx(this.IMG, 'readonly');
+      const store = tx.objectStore(this.IMG);
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const all = req.result || [];
+        res(all.filter(i => i && typeof i.deletedAt === 'number' && i.deletedAt > 0));
       };
       req.onerror = () => res([]);
     });
@@ -4633,7 +4665,9 @@ const DB = {
         label: label || '',
         prompt: prompt || '',
         meta: meta || null,
-        ts: Date.now()
+        ts: Date.now(),
+        fav: false,        // ⭐ 즐겨찾기 (라이트박스 ★ 버튼)
+        deletedAt: null,   // 🗑 휴지통 (null = 정상, 값=삭제 시각, 7일 후 자동 영구삭제)
       });
       let newId = null;
       addReq.onsuccess = () => { newId = addReq.result; };
@@ -4646,6 +4680,96 @@ const DB = {
       tx.oncomplete = () => { this._invalidateImgCache(sid); res(newId); };
       tx.onerror = e => rej(e);
     });
+  },
+  // ⭐ 즐겨찾기 토글 — IDB 의 단일 이미지 fav 필드 갱신.
+  async setImageFav(imgId, fav){
+    if(!this.db) return;
+    return new Promise((res, rej) => {
+      const tx = this.tx([this.IMG], 'readwrite');
+      const store = tx.objectStore(this.IMG);
+      const req = store.get(imgId);
+      let sid = null;
+      req.onsuccess = () => {
+        const img = req.result;
+        if(!img){ res(false); return; }
+        img.fav = !!fav;
+        store.put(img);
+        sid = img.sessionId;
+      };
+      tx.oncomplete = () => { if(sid != null) this._invalidateImgCache(sid); res(true); };
+      tx.onerror = e => rej(e);
+    });
+  },
+  // 🗑 휴지통으로 이동 (soft delete) — 7일 후 purgeOldDeleted 가 영구 삭제.
+  async trashImage(imgId){
+    if(!this.db) return;
+    return new Promise((res, rej) => {
+      const tx = this.tx([this.IMG], 'readwrite');
+      const store = tx.objectStore(this.IMG);
+      const req = store.get(imgId);
+      let sid = null;
+      req.onsuccess = () => {
+        const img = req.result;
+        if(!img){ res(false); return; }
+        img.deletedAt = Date.now();
+        store.put(img);
+        sid = img.sessionId;
+      };
+      tx.oncomplete = () => { if(sid != null) this._invalidateImgCache(sid); res(true); };
+      tx.onerror = e => rej(e);
+    });
+  },
+  // ↺ 휴지통에서 복원 — deletedAt 제거.
+  async restoreImage(imgId){
+    if(!this.db) return;
+    return new Promise((res, rej) => {
+      const tx = this.tx([this.IMG], 'readwrite');
+      const store = tx.objectStore(this.IMG);
+      const req = store.get(imgId);
+      let sid = null;
+      req.onsuccess = () => {
+        const img = req.result;
+        if(!img){ res(false); return; }
+        img.deletedAt = null;
+        store.put(img);
+        sid = img.sessionId;
+      };
+      tx.oncomplete = () => { if(sid != null) this._invalidateImgCache(sid); res(true); };
+      tx.onerror = e => rej(e);
+    });
+  },
+  // 🧹 7일 지난 휴지통 영구 삭제 — 부트 시 자동 호출.
+  async purgeOldDeleted(daysCap){
+    if(!this.db) return 0;
+    const cutoff = Date.now() - (daysCap || 7) * 86400000;
+    return new Promise(res => {
+      const tx = this.tx([this.IMG], 'readwrite');
+      const store = tx.objectStore(this.IMG);
+      const affectedSids = new Set();
+      const purgedIds = [];
+      const cReq = store.openCursor();
+      cReq.onsuccess = e => {
+        const cur = e.target.result;
+        if(!cur){ return; }
+        const v = cur.value;
+        if(v && typeof v.deletedAt === 'number' && v.deletedAt > 0 && v.deletedAt < cutoff){
+          affectedSids.add(v.sessionId);
+          purgedIds.push(v.id);
+          cur.delete();
+        }
+        cur.continue();
+      };
+      tx.oncomplete = () => {
+        for(const sid of affectedSids) this._invalidateImgCache(sid);
+        if(purgedIds.length) pruneAlbumMembership(purgedIds).catch(()=>{});
+        res(purgedIds.length);
+      };
+      tx.onerror = () => res(0);
+    });
+  },
+  // 🗑 휴지통 즉시 비우기 — 사용자 명시 호출.
+  async emptyTrash(){
+    return this.purgeOldDeleted(0);
   },
   async deleteImage(imgId){
     if(!this.db) return;
@@ -11128,11 +11252,17 @@ async function loadGallery(){
     const names = img.meta?.characters || [];
     return names.some(n => (typeof getCharGroup === 'function' ? getCharGroup(n) : '') === selWork);
   };
+  const trashMode = !!state._galTrashMode;
+  const favOnly = !!state._galFavOnly;
+  grid.classList.toggle('gallery-trash-mode', trashMode);
   for(const ses of sessions){
     if(selSesId != null && ses.id !== selSesId) continue;
-    const imgs = await DB.getSessionImages(ses.id);
+    const imgs = await DB.getSessionImages(ses.id, {includeTrashed: trashMode});
     if(!imgs.length) continue;
     let filtered = imgs;
+    // 휴지통 모드: deletedAt 있는 것만 / 일반 모드: getSessionImages 가 이미 deletedAt 제외
+    if(trashMode) filtered = filtered.filter(i => typeof i.deletedAt === 'number' && i.deletedAt > 0);
+    if(favOnly) filtered = filtered.filter(i => i.fav);
     if(selWork) filtered = filtered.filter(matchesWork);
     if(search){
       // 🇰🇷 koMatch — 한국어 초성 검색 지원
@@ -11688,7 +11818,7 @@ async function showLightboxAt(idx){
   if(idx < 0 || idx >= _lbList.length) return;
   _lbIdx = idx;
   const ref = _lbList[idx];
-  const imgs = await DB.getSessionImages(ref.sid);
+  const imgs = await DB.getSessionImages(ref.sid, {includeTrashed: true});
   const img = imgs.find(i => i.id === ref.id);
   if(!img) return;
   // 이전 URL 해제
@@ -11697,17 +11827,49 @@ async function showLightboxAt(idx){
   const url = URL.createObjectURL(img.blob);
   $('lbImg').src = url;
   $('lbImg').dataset.url = url;
-  // 메타데이터
+  // ★ 즐겨찾기 버튼 상태 동기화
+  const favBtn = $('lbFav');
+  if(favBtn){
+    const isFav = !!img.fav;
+    favBtn.setAttribute('aria-pressed', String(isFav));
+    favBtn.querySelector('.lb-act-ico').textContent = isFav ? '★' : '☆';
+    favBtn.style.color = isFav ? '#f5b80a' : '';
+  }
+  // 메타데이터 — EXIF 외 추가 필드들 풍부하게 표시
   const m = img.meta || (await readPngMetadata(img.blob))?.parsed || {};
   const lines = [];
   if(img.label) lines.push(`<b>라벨</b> · ${esc(img.label)}`);
+  if(img.fav) lines.push(`<b>⭐ 즐겨찾기</b>`);
+  if(img.deletedAt) lines.push(`<b style="color:var(--red)">🗑 휴지통</b> · ${new Date(img.deletedAt).toLocaleString()} (7일 후 영구 삭제)`);
+  // 라이트박스 액션: 휴지통 이미지면 복원 버튼 노출 + 🗑 라벨이 '영구 삭제' 의미
+  const restoreBtn = $('lbRestore');
+  if(restoreBtn) restoreBtn.style.display = img.deletedAt ? '' : 'none';
+  const delBtn = $('lbDelete');
+  if(delBtn){
+    const delLbl = delBtn.querySelector('.lb-act-lbl');
+    if(delLbl) delLbl.textContent = img.deletedAt ? '영구' : '휴지통';
+    delBtn.title = img.deletedAt ? '🗑 영구 삭제 (복원 불가)' : '🗑 휴지통으로 이동 (7일 보관 후 자동 영구 삭제)';
+  }
   if(m.model) lines.push(`<b>모델</b> · ${esc(m.model)}`);
+  if(m.mode) lines.push(`<b>모드</b> · ${esc(m.mode)}`);
   if(m.seed != null) lines.push(`<b>시드</b> · ${m.seed}`);
   if(m.steps) lines.push(`<b>스텝</b> · ${m.steps}`);
   if(m.cfg) lines.push(`<b>CFG</b> · ${m.cfg}`);
+  if(m.cfg_rescale != null || m.cfgRescale != null) lines.push(`<b>CFG Rescale</b> · ${m.cfg_rescale ?? m.cfgRescale}`);
   if(m.sampler) lines.push(`<b>샘플러</b> · ${esc(m.sampler)}`);
   if(m.schedule) lines.push(`<b>스케줄</b> · ${esc(m.schedule)}`);
-  if(m.w && m.h) lines.push(`<b>크기</b> · ${m.w}×${m.h}`);
+  if(m.w && m.h) lines.push(`<b>크기</b> · ${m.w}×${m.h} <span class="muted">(${(m.w*m.h/1048576).toFixed(2)}MP)</span>`);
+  if(m.sm != null || m.smea != null) lines.push(`<b>SMEA</b> · ${m.sm || m.smea ? 'ON' : 'OFF'}${m.sm_dyn || m.smeaDyn ? ' + Dyn' : ''}`);
+  if(m.dynamic_thresholding || m.decrisper) lines.push(`<b>Decrisper</b> · ON`);
+  if(m.variety_plus || m.variety) lines.push(`<b>Variety+</b> · ON`);
+  if(m.uncond_scale != null) lines.push(`<b>Uncond Scale</b> · ${m.uncond_scale}`);
+  if(m.use_coords || m.useCoords) lines.push(`<b>좌표 사용</b> · ON`);
+  if(Array.isArray(m.characters) && m.characters.length) lines.push(`<b>캐릭터</b> · ${m.characters.map(c => typeof c === 'string' ? c : (c.name || '?')).join(', ')}`);
+  if(Array.isArray(m.reference_image_multiple)) lines.push(`<b>Vibe 참조</b> · ${m.reference_image_multiple.length}장`);
+  else if(m.reference_image) lines.push(`<b>Vibe 참조</b> · 1장`);
+  if(img.ts) lines.push(`<b>생성</b> · ${new Date(img.ts).toLocaleString()}`);
+  if(img.blob?.size) lines.push(`<b>파일 크기</b> · ${(img.blob.size/1024).toFixed(1)} KB`);
+  if(img.fname) lines.push(`<b>파일명</b> · ${esc(img.fname)}`);
   if(img.prompt || m.prompt){
     lines.push(`<div class="lb-prompt"><b>프롬프트 (Prompt)</b><br>${esc(img.prompt || m.prompt || '')}</div>`);
   }
@@ -15441,24 +15603,75 @@ function wireLightboxEvents(){
       console.error('Upscale', e);
     }
   });
+  // ★ 즐겨찾기 토글
+  $('lbFav')?.addEventListener('click', async () => {
+    if(!_lbCurrent) return;
+    const next = !_lbCurrent.fav;
+    await DB.setImageFav(_lbCurrent.id, next);
+    _lbCurrent.fav = next;
+    const favBtn = $('lbFav');
+    favBtn.setAttribute('aria-pressed', String(next));
+    favBtn.querySelector('.lb-act-ico').textContent = next ? '★' : '☆';
+    favBtn.style.color = next ? '#f5b80a' : '';
+    if(state.mainPane === 'gallery') loadGallery();
+    toast(next ? '★ 즐겨찾기 추가' : '☆ 즐겨찾기 해제', 'info');
+  });
+  // ↺ 휴지통 복원
+  $('lbRestore')?.addEventListener('click', async () => {
+    if(!_lbCurrent || !_lbCurrent.deletedAt) return;
+    const id = _lbCurrent.id;
+    await DB.restoreImage(id);
+    closeLightbox();
+    await loadGallery();
+    await refreshGallerySize();
+    toast('↺ 복원됨 — 일반 갤러리에서 확인 가능', 'success');
+  });
+  // 갤러리 ★ 필터 토글
+  $('galFavToggle')?.addEventListener('click', () => {
+    state._galFavOnly = !state._galFavOnly;
+    $('galFavToggle').classList.toggle('act', state._galFavOnly);
+    $('galFavToggle').setAttribute('aria-pressed', String(!!state._galFavOnly));
+    loadGallery();
+  });
+  // 갤러리 🗑 휴지통 모드 토글
+  $('galTrashToggle')?.addEventListener('click', () => {
+    state._galTrashMode = !state._galTrashMode;
+    $('galTrashToggle').classList.toggle('act', state._galTrashMode);
+    $('galTrashToggle').setAttribute('aria-pressed', String(!!state._galTrashMode));
+    // 휴지통 모드면 즐겨찾기 필터 자동 해제 (충돌 방지)
+    if(state._galTrashMode && state._galFavOnly){
+      state._galFavOnly = false;
+      $('galFavToggle').classList.remove('act');
+      $('galFavToggle').setAttribute('aria-pressed', 'false');
+    }
+    loadGallery();
+    if(state._galTrashMode){
+      toast('🗑 휴지통 모드 — 라이트박스에서 복원 또는 영구 삭제', 'info');
+    }
+  });
   $('lbDelete').addEventListener('click', () => {
     if(!_lbCurrent) return;
-    confirmDialog('이 이미지를 삭제하시겠습니까?\n(실행 취소는 토스트 안 ↶ 버튼으로 6초 안에)', async () => {
-      // 복원용 스냅샷
-      const snap = {
-        blob: _lbCurrent.blob,
-        fname: _lbCurrent.fname,
-        label: _lbCurrent.label,
-        prompt: _lbCurrent.prompt,
-        meta: _lbCurrent.meta,
-      };
-      await DB.deleteImage(_lbCurrent.id);
+    // 휴지통 모드에서 🗑 클릭 = 영구 삭제 (이미 trashed 상태)
+    if(_lbCurrent.deletedAt){
+      confirmDialog('이 이미지를 영구 삭제할까요?\n(복원 불가)', async () => {
+        const id = _lbCurrent.id;
+        await DB.deleteImage(id);
+        closeLightbox();
+        await loadGallery();
+        await refreshGallerySize();
+        toast('영구 삭제됨', 'info');
+      });
+      return;
+    }
+    confirmDialog('이 이미지를 휴지통으로 이동할까요?\n(7일간 보관 후 자동 영구 삭제. 갤러리 상단 🗑 휴지통 보기에서 복원 가능)', async () => {
+      const trashedId = _lbCurrent.id;
+      await DB.trashImage(trashedId);
       closeLightbox();
       await loadGallery();
       await refreshGallerySize();
-      toastUndo('이미지 1장 삭제됨', async () => {
+      toastUndo('이미지 1장 휴지통으로 이동', async () => {
         try {
-          await DB.saveImage(snap.blob, snap.fname, snap.label, snap.prompt, snap.meta);
+          await DB.restoreImage(trashedId);
           await loadGallery();
           await refreshGallerySize();
           toast('복원됨', 'success');
@@ -17459,6 +17672,8 @@ async function init(){
   // 샘플러 옵션을 loadSettings 호출 전에 먼저 채워야 saved sampler 값이 정상 복원됨
   refreshSamplerListByModel();
   await DB.init();
+  // 🗑 휴지통 7일 자동 영구 삭제 — 부트 시 1회 (fire-and-forget, 빠른 부트 우선)
+  DB.purgeOldDeleted(7).then(n => { if(n > 0) console.log(`[trash] ${n}개 영구 삭제 (7일 이상)`); }).catch(()=>{});
   await loadApiKey();   // DB.init 이후에 호출 (암호화 키가 IDB에 있음)
   await loadSettings();
   // 설정 복원 후 한 번 더 갱신 (모델별 호환 표시·prev 보존)
