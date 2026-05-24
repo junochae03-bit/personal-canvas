@@ -3034,6 +3034,7 @@ coffee shop, latte art"></textarea>
         <div id="pgSeedRow" style="display:none;margin-top:6px;padding-left:22px;align-items:center;gap:6px">
           <input id="pgFixedSeed" class="inp" type="number" inputmode="numeric" placeholder="시드 값 (비우면 한 번 랜덤 결정)" style="flex:1;min-width:0;font-family:var(--mono);font-size:12.5px" min="0" max="4294967295">
           <button class="iconbtn" id="pgSeedRand" type="button" title="🎲 랜덤 시드 생성 (4294967295까지)">🎲</button>
+          <button class="iconbtn" id="pgSeedLiked" type="button" title="❤️ 좋아요 표시한 이미지의 시드 중에서 랜덤 선택 — 검증된 시드만" style="color:#e25b6f">❤️🎲</button>
           <button class="iconbtn" id="pgSeedFromForm" type="button" title="↻ 메인 폼의 시드값 가져오기">↻</button>
         </div>
       </div>
@@ -15716,6 +15717,16 @@ function wireGalleryEvents(){
   $('pgLockSeed')?.addEventListener('change', pgRefreshSeedRow);
   $('pgSeedRand')?.addEventListener('click', () => {
     if($('pgFixedSeed')) $('pgFixedSeed').value = randomSeed();
+  });
+  $('pgSeedLiked')?.addEventListener('click', async () => {
+    try {
+      const imgs = await DB.getAllImagesForStats();
+      const seeds = [...new Set(imgs.filter(i => i.liked && i.meta?.seed != null).map(i => i.meta.seed))];
+      if(!seeds.length){ toast('❤️ 좋아요 표시한 이미지가 없어요', 'warning'); return; }
+      const picked = seeds[Math.floor(Math.random() * seeds.length)];
+      if($('pgFixedSeed')) $('pgFixedSeed').value = picked;
+      toast(`❤️ 좋아요 시드 ${picked} 적용 (전체 ${seeds.length}개 중)`, 'success');
+    } catch(e){ toast(`좋아요 시드 조회 실패 — ${e.message||e}`, 'error'); }
   });
   $('pgSeedFromForm')?.addEventListener('click', () => {
     const formSeed = ($('seed')?.value || '').trim();
