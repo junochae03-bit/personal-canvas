@@ -369,6 +369,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .g-item .g-fav:hover{background:rgba(20,14,4,.85)}
 .g-item .g-fav.off{color:rgba(255,255,255,.45)}
 .g-item .g-fav.off:hover{color:#f5b80a}
+.g-item .g-like{position:absolute;top:6px;left:6px;background:rgba(20,14,4,.55);color:rgba(255,255,255,.6);border:none;width:26px;height:26px;border-radius:50%;font-size:14px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;z-index:2;opacity:0;transition:opacity .12s, color .12s, background .12s}
+.g-item:hover .g-like, .g-item.liked .g-like{opacity:1}
+.g-item .g-like[aria-pressed="true"]{color:#e25b6f;background:rgba(226,91,111,.18)}
+.g-item .g-like:hover{background:rgba(20,14,4,.85);color:#e25b6f}
+.g-item.liked{box-shadow:0 0 0 2px rgba(226,91,111,.55) inset}
+.g-item.liked.fav{box-shadow:0 0 0 2px #f5b80a inset, 0 0 0 4px rgba(226,91,111,.55) inset}
+.gallery-grid.selection-mode .g-item .g-like{display:none}
 .gallery-trash-mode .g-item{filter:saturate(.5) opacity(.85)}
 .gallery-trash-mode .g-item::after{content:'🗑';position:absolute;top:6px;left:6px;font-size:18px;background:rgba(181,67,56,.85);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:2}
 .gallery-bar .inp{width:240px}
@@ -1692,6 +1699,19 @@ body:not([data-mview="edit"]) #randomBuilderSec{display:none !important}
 .img-source-row .btn.small{font-size:11.5px;padding:5px 10px;min-height:28px}
 /* 📁 공용 갤러리 picker 모달 */
 .gp-modal{width:min(820px,94vw)}
+.stats-modal{width:min(900px,95vw)}
+.stats-intro{font-size:12.5px;color:var(--t3);margin-bottom:14px;line-height:1.6;font-family:var(--mono)}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px}
+.stats-card{background:var(--card2);border:1.5px solid var(--b1);border-radius:8px;padding:12px 14px}
+.stats-card h4{margin:0 0 8px 0;font-size:13px;font-weight:700;color:var(--t1);display:flex;align-items:baseline;gap:6px}
+.stats-card h4 .en{font-size:10px;color:var(--t3);font-weight:500;text-transform:uppercase;letter-spacing:.3px}
+.stats-list{margin:0;padding-left:22px;font-size:12.5px;line-height:1.7;font-family:var(--mono);max-height:280px;overflow-y:auto}
+.stats-list li{color:var(--t1);word-break:break-all}
+.stats-list li.muted{color:var(--t3);font-style:italic;list-style:none;margin-left:-22px}
+.stats-list .stats-cnt{display:inline-block;min-width:28px;color:#e25b6f;font-weight:700;margin-right:8px}
+.stats-list .stats-cnt.char{color:var(--acc)}
+.stats-list .stats-text{color:var(--t2);font-size:12px}
+@media (max-width:720px){.stats-grid{grid-template-columns:1fr}}
 .gp-controls{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
 .gp-controls .inp{font-size:12.5px;padding:5px 9px}
 .gp-hint{font-size:11.5px;color:var(--t3);font-family:var(--mono)}
@@ -2388,6 +2408,7 @@ mark{
           <input type="text" class="inp" id="gallerySearch" placeholder="🔍 프롬프트·캐릭터·앨범·시드…">
           <button class="btn ghost gal-fav-toggle" id="galFavToggle" type="button" title="★ 즐겨찾기만 보기" aria-pressed="false">★ 즐겨찾기 <span class="muted" id="galFavCount"></span></button>
           <button class="btn ghost gal-trash-toggle" id="galTrashToggle" type="button" title="🗑 휴지통 보기 — 7일 안에 복원 가능" aria-pressed="false">🗑 휴지통 <span class="muted" id="galTrashCount"></span></button>
+          <button class="btn ghost" id="galStatsBtn" type="button" title="📊 통계 — 좋아요 많은 시드·프롬·모델 + 자주 쓴 캐릭터" style="border-color:rgba(58,99,152,.4)">📊 통계 <span class="en">Stats</span></button>
           <select id="galleryFilter" class="inp tiny" title="세션 선택 — 특정 세션의 이미지만 보기">
             <option value="all">모든 세션 (All)</option>
             <!-- 세션 옵션들은 loadGallery에서 동적 채움 -->
@@ -2653,6 +2674,7 @@ mark{
     <div style="height:1px;background:var(--b1);margin:2px 0"></div>
     <button class="iconbtn lb-act-btn" id="lbInfoBtn" title="ℹ 상세정보 펼치기/접기 (메타·프롬프트)" aria-pressed="false"><span class="lb-act-ico">ℹ</span><span class="lb-act-lbl">정보</span></button>
     <button class="iconbtn lb-act-btn" id="lbFav" title="★ 즐겨찾기 — 갤러리에서 ★만 필터로 빠르게 찾기" aria-pressed="false"><span class="lb-act-ico">☆</span><span class="lb-act-lbl">★</span></button>
+    <button class="iconbtn lb-act-btn" id="lbLike" title="❤️ 좋아요 — 통계에서 가장 인기있는 시드·프롬·모델·캐릭터 집계 (★ 와 별개)" aria-pressed="false"><span class="lb-act-ico">♡</span><span class="lb-act-lbl">좋아요</span></button>
     <button class="iconbtn lb-act-btn" id="lbRestore" title="↺ 휴지통에서 복원" style="display:none;color:var(--green);border-color:rgba(93,138,48,.4)"><span class="lb-act-ico">↺</span><span class="lb-act-lbl">복원</span></button>
     <button class="iconbtn lb-act-btn" id="lbDelete" title="🗑 휴지통으로 이동 (7일 보관 후 자동 영구 삭제)" style="color:var(--red);border-color:rgba(181,67,56,.3)"><span class="lb-act-ico">🗑</span><span class="lb-act-lbl">휴지통</span></button>
     <button class="iconbtn lb-act-btn" id="lbClose" title="닫기 (Close)"><span class="lb-act-ico">✕</span><span class="lb-act-lbl">닫기</span></button>
@@ -3079,6 +3101,37 @@ coffee shop, latte art"></textarea>
     </div>
     <div class="modal-foot">
       <button class="btn ghost" id="gpCloseBtn">닫기 <span class="en">Close</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- 📊 STATS MODAL — 좋아요 기반 인기 시드·프롬·모델 + 캐릭터 사용량 -->
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="statsTitle" id="statsModal">
+  <div class="modal stats-modal">
+    <h3 id="statsTitle">📊 통계 <span class="en">Stats</span></h3>
+    <div class="modal-body">
+      <div class="stats-intro" id="statsIntro">집계 중…</div>
+      <div class="stats-grid">
+        <div class="stats-card">
+          <h4>❤️ 좋아요 많은 시드 <span class="en">Top Seeds</span></h4>
+          <ol class="stats-list" id="statsTopSeeds"><li class="muted">아직 좋아요 표시한 이미지가 없어요</li></ol>
+        </div>
+        <div class="stats-card">
+          <h4>❤️ 좋아요 많은 프롬프트 <span class="en">Top Prompts</span></h4>
+          <ol class="stats-list" id="statsTopPrompts"><li class="muted">—</li></ol>
+        </div>
+        <div class="stats-card">
+          <h4>❤️ 좋아요 많은 모델 <span class="en">Top Models</span></h4>
+          <ol class="stats-list" id="statsTopModels"><li class="muted">—</li></ol>
+        </div>
+        <div class="stats-card">
+          <h4>👥 가장 많이 뽑은 캐릭터 <span class="en">Top Characters</span></h4>
+          <ol class="stats-list" id="statsTopChars"><li class="muted">전체 이미지 기준</li></ol>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="statsCloseBtn">닫기 <span class="en">Close</span></button>
     </div>
   </div>
 </div>
@@ -4701,6 +4754,7 @@ const DB = {
         meta: meta || null,
         ts: Date.now(),
         fav: false,        // ⭐ 즐겨찾기 (라이트박스 ★ 버튼)
+        liked: false,      // ❤️ 좋아요 (통계 집계용 — 시드/프롬/모델/캐릭터 인기도)
         deletedAt: null,   // 🗑 휴지통 (null = 정상, 값=삭제 시각, 7일 후 자동 영구삭제)
       });
       let newId = null;
@@ -4732,6 +4786,35 @@ const DB = {
       };
       tx.oncomplete = () => { if(sid != null) this._invalidateImgCache(sid); res(true); };
       tx.onerror = e => rej(e);
+    });
+  },
+  // ❤️ 좋아요 토글 — IDB 의 단일 이미지 liked 필드 갱신 (통계용).
+  async setImageLike(imgId, liked){
+    if(!this.db) return;
+    return new Promise((res, rej) => {
+      const tx = this.tx([this.IMG], 'readwrite');
+      const store = tx.objectStore(this.IMG);
+      const req = store.get(imgId);
+      let sid = null;
+      req.onsuccess = () => {
+        const img = req.result;
+        if(!img){ res(false); return; }
+        img.liked = !!liked;
+        store.put(img);
+        sid = img.sessionId;
+      };
+      tx.oncomplete = () => { if(sid != null) this._invalidateImgCache(sid); res(true); };
+      tx.onerror = e => rej(e);
+    });
+  },
+  // 📊 통계용 — 전체 이미지 (휴지통 제외).
+  async getAllImagesForStats(){
+    if(!this.db) return [];
+    return new Promise(res => {
+      const tx = this.tx(this.IMG, 'readonly');
+      const req = tx.objectStore(this.IMG).getAll();
+      req.onsuccess = () => res((req.result || []).filter(i => i && !i.deletedAt));
+      req.onerror = () => res([]);
     });
   },
   // 🗑 휴지통으로 이동 (soft delete) — 7일 후 purgeOldDeleted 가 영구 삭제.
@@ -9559,6 +9642,70 @@ async function saveRandomCategories(){
   await DB.setFlag('rc_groups', payload);
 }
 
+// 📊 통계 모달 — IDB 의 모든 이미지(휴지통 제외) 순회하여 좋아요·캐릭터 집계.
+//   좋아요(❤️) 기반: 시드 / 프롬프트(첫 60자) / 모델 top 10
+//   전체 이미지: 캐릭터 이름(meta.characters) top 10
+async function openStatsModal(){
+  const modal = $('statsModal');
+  if(!modal) return;
+  $('statsIntro').textContent = '집계 중…';
+  $('statsTopSeeds').innerHTML = '<li class="muted">로딩…</li>';
+  $('statsTopPrompts').innerHTML = '<li class="muted">로딩…</li>';
+  $('statsTopModels').innerHTML = '<li class="muted">로딩…</li>';
+  $('statsTopChars').innerHTML = '<li class="muted">로딩…</li>';
+  modal.classList.add('open');
+  let imgs = [];
+  try { imgs = await DB.getAllImagesForStats(); } catch(e){ console.warn('stats load', e); }
+  const total = imgs.length;
+  const liked = imgs.filter(i => i.liked);
+  $('statsIntro').textContent = `전체 ${total.toLocaleString()}장 · ❤️ 좋아요 ${liked.length.toLocaleString()}장 · ⭐ 즐겨찾기 ${imgs.filter(i=>i.fav).length.toLocaleString()}장`;
+  const TOP_N = 10;
+  const tally = (items, keyFn) => {
+    const m = new Map();
+    for(const it of items){
+      const k = keyFn(it);
+      if(k == null || k === '') continue;
+      m.set(k, (m.get(k) || 0) + 1);
+    }
+    return [...m.entries()].sort((a,b) => b[1] - a[1]).slice(0, TOP_N);
+  };
+  const renderList = (id, rows, colorClass, fmt) => {
+    const el = $(id);
+    if(!el) return;
+    if(rows.length === 0){
+      el.innerHTML = '<li class="muted">데이터 없음</li>';
+      return;
+    }
+    el.innerHTML = rows.map(([k, n]) => {
+      const text = fmt ? fmt(k) : esc(String(k));
+      return `<li><span class="stats-cnt${colorClass?' '+colorClass:''}">${n}</span><span class="stats-text">${text}</span></li>`;
+    }).join('');
+  };
+  // 시드 — meta.seed (숫자) 우선
+  renderList('statsTopSeeds', tally(liked, i => i.meta?.seed ?? null), '', k => `🌱 ${esc(String(k))}`);
+  // 프롬프트 — 첫 60자 정규화 (공백 정리)
+  const promptKey = i => {
+    const p = (i.meta?.prompt || i.prompt || '').replace(/\s+/g, ' ').trim();
+    return p ? p.slice(0, 60) : null;
+  };
+  renderList('statsTopPrompts', tally(liked, promptKey), '', k => esc(String(k)) + (String(k).length >= 60 ? '…' : ''));
+  // 모델
+  renderList('statsTopModels', tally(liked, i => i.meta?.model || null), '', k => esc(String(k)));
+  // 캐릭터 — 전체 이미지에서 meta.characters 배열 펼쳐 카운트
+  const charMap = new Map();
+  for(const it of imgs){
+    const arr = it.meta?.characters;
+    if(!Array.isArray(arr)) continue;
+    for(const name of arr){
+      const k = (typeof name === 'string' ? name : name?.name || '').trim();
+      if(!k) continue;
+      charMap.set(k, (charMap.get(k) || 0) + 1);
+    }
+  }
+  const charRows = [...charMap.entries()].sort((a,b) => b[1] - a[1]).slice(0, TOP_N);
+  renderList('statsTopChars', charRows, 'char', k => `👤 ${esc(String(k))}`);
+}
+
 // 📁 공용 갤러리 picker — i2i/inpaint(베이스), vibe(추가) 어디서든 호출.
 //   openGalleryPicker({onPick: blob => ..., title?, hint?}) — 클릭 시 callback + 모달 닫힘.
 //   createObjectURL 추적 → 모달 닫을 때 일괄 revoke (메모리 누수 차단).
@@ -11298,12 +11445,14 @@ function renderGalleryItemHtml(img, sesId){
   // 🔍 갤러리 검색 하이라이트 — 라벨에 매칭된 부분 강조
   const search = ($('gallerySearch')?.value || '').trim();
   // 자세한 메타는 lightbox(🔍)에서만 — 카드는 깨끗하게
-  return `<div class="g-item${expanded?' expanded':''}" data-id="${img.id}" data-sid="${sesId}" data-url="${url}">
+  const liked = !!img.liked;
+  return `<div class="g-item${expanded?' expanded':''}${liked?' liked':''}" data-id="${img.id}" data-sid="${sesId}" data-url="${url}">
     <div class="g-thumb">
       <img src="${url}" loading="lazy" decoding="async" alt="${esc(label)}">
       <button class="g-album-btn" data-act="album" title="앨범에 추가/제거">📁</button>
       <button class="g-exif-btn" data-act="exif" title="↻ EXIF로 폼 복원 (프롬프트·시드·모델 등)">↻</button>
       <button class="open-lb" data-act="lb" title="크게 보기 (Lightbox)">🔍</button>
+      <button class="g-like" data-act="like" title="❤️ 좋아요 (통계 집계)" aria-pressed="${liked}">${liked?'❤':'♡'}</button>
     </div>
     <div class="g-head" title="펼치기/접기">
       <span class="expand-mark">▶</span>
@@ -11979,6 +12128,14 @@ async function showLightboxAt(idx){
     favBtn.setAttribute('aria-pressed', String(isFav));
     favBtn.querySelector('.lb-act-ico').textContent = isFav ? '★' : '☆';
     favBtn.style.color = isFav ? '#f5b80a' : '';
+  }
+  // ❤️ 좋아요 버튼 상태 동기화
+  const likeBtn = $('lbLike');
+  if(likeBtn){
+    const isLiked = !!img.liked;
+    likeBtn.setAttribute('aria-pressed', String(isLiked));
+    likeBtn.querySelector('.lb-act-ico').textContent = isLiked ? '❤' : '♡';
+    likeBtn.style.color = isLiked ? '#e25b6f' : '';
   }
   // 메타데이터 — EXIF 외 추가 필드들 풍부하게 표시
   const m = img.meta || (await readPngMetadata(img.blob))?.parsed || {};
@@ -15111,6 +15268,8 @@ function wireGalleryEvents(){
   $('gallerySearch').addEventListener('input', debounce(loadGallery, 250));
   $('galleryFilter').addEventListener('change', loadGallery);
   $('reloadGalBtn').addEventListener('click', loadGallery);
+  $('galStatsBtn')?.addEventListener('click', openStatsModal);
+  $('statsCloseBtn')?.addEventListener('click', () => $('statsModal').classList.remove('open'));
   $('newSessionBtn').addEventListener('click', async () => {
     DB.currentSessionId = null;  // next save creates new
     toast('새 세션 시작', 'info');
@@ -15493,6 +15652,18 @@ function wireGalleryEvents(){
       }
       return;
     }
+    // ❤️ 좋아요 버튼 — 카드에서 즉시 토글, 라이트박스 안 열림
+    const likeBtn = e.target.closest('[data-act="like"]');
+    if(likeBtn){
+      e.stopPropagation();
+      const card = likeBtn.closest('.g-item');
+      const next = likeBtn.getAttribute('aria-pressed') !== 'true';
+      await DB.setImageLike(id, next);
+      likeBtn.setAttribute('aria-pressed', String(next));
+      likeBtn.textContent = next ? '❤' : '♡';
+      if(card) card.classList.toggle('liked', next);
+      return;
+    }
     // ↻ EXIF 복원 버튼 — 이 이미지의 메타로 폼 채우기 (현재 폼 덮어쓰므로 확인)
     const exifBtn = e.target.closest('[data-act="exif"]');
     if(exifBtn){
@@ -15760,6 +15931,19 @@ function wireLightboxEvents(){
     favBtn.style.color = next ? '#f5b80a' : '';
     if(state.mainPane === 'gallery') loadGallery();
     toast(next ? '★ 즐겨찾기 추가' : '☆ 즐겨찾기 해제', 'info');
+  });
+  // ❤️ 좋아요 토글 — 통계 집계용
+  $('lbLike')?.addEventListener('click', async () => {
+    if(!_lbCurrent) return;
+    const next = !_lbCurrent.liked;
+    await DB.setImageLike(_lbCurrent.id, next);
+    _lbCurrent.liked = next;
+    const likeBtn = $('lbLike');
+    likeBtn.setAttribute('aria-pressed', String(next));
+    likeBtn.querySelector('.lb-act-ico').textContent = next ? '❤' : '♡';
+    likeBtn.style.color = next ? '#e25b6f' : '';
+    if(state.mainPane === 'gallery') loadGallery();
+    toast(next ? '❤️ 좋아요' : '♡ 좋아요 해제', 'info');
   });
   // ↺ 휴지통 복원
   $('lbRestore')?.addEventListener('click', async () => {
