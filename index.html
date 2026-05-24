@@ -2415,6 +2415,7 @@ mark{
           <input type="text" class="inp" id="gallerySearch" placeholder="🔍 프롬프트·캐릭터·앨범·시드…">
           <button class="btn ghost gal-fav-toggle" id="galFavToggle" type="button" title="★ 즐겨찾기만 보기" aria-pressed="false">★ 즐겨찾기 <span class="muted" id="galFavCount"></span></button>
           <button class="btn ghost gal-trash-toggle" id="galTrashToggle" type="button" title="🗑 휴지통 보기 — 7일 안에 복원 가능" aria-pressed="false">🗑 휴지통 <span class="muted" id="galTrashCount"></span></button>
+          <button class="btn danger" id="galEmptyTrashBtn" type="button" title="휴지통의 모든 이미지를 즉시 영구 삭제 (복원 불가)" style="display:none">🗑 휴지통 비우기 <span class="en">Empty</span></button>
           <button class="btn ghost" id="galStatsBtn" type="button" title="📊 통계 — 좋아요 많은 시드·프롬·모델 + 자주 쓴 캐릭터" style="border-color:rgba(58,99,152,.4)">📊 통계 <span class="en">Stats</span></button>
           <select id="galleryFilter" class="inp tiny" title="세션 선택 — 특정 세션의 이미지만 보기">
             <option value="all">모든 세션 (All)</option>
@@ -4792,7 +4793,10 @@ const DB = {
   // 🧹 7일 지난 휴지통 영구 삭제 — 부트 시 자동 호출.
   async purgeOldDeleted(daysCap){
     if(!this.db) return 0;
-    const cutoff = Date.now() - (daysCap || 7) * 86400000;
+    // 🐛 fix: daysCap=0 (즉시 비우기) 가 || 연산자로 7로 fallback 되던 버그.
+    //   emptyTrash() → purgeOldDeleted(0) 호출했을 때 7일 규칙이 그대로 적용됐었음.
+    const days = (typeof daysCap === 'number') ? daysCap : 7;
+    const cutoff = Date.now() - days * 86400000;
     return new Promise(res => {
       const tx = this.tx([this.IMG], 'readwrite');
       const store = tx.objectStore(this.IMG);
@@ -5167,6 +5171,8 @@ function buildGenBody(opts){
       },
       use_coords: false, use_order: false, legacy_uc: false
     };
+    // 🐛 fix: V4 는 negative_prompt 를 v4_negative_prompt 로 전송. top-level negative_prompt 중복 → 서버 동작 예측 불가.
+    delete params.negative_prompt;
   } else {
     params.sm = !!opts.smea;
     params.sm_dyn = !!opts.smeaDyn;
@@ -8424,7 +8430,9 @@ async function blobToCompressedThumb(blob, maxDim){
   } finally { URL.revokeObjectURL(url); }
 }
 
-async function openGalleryPicker(onPick){
+// 🖼 썸네일 전용 picker — callback 으로 압축 dataURL 반환 (캐릭터·프리셋·템플릿 썸네일용).
+//   ⚠ openGalleryPicker (line 9660) 와 시그니처가 달라 hoisting 충돌 발생했었음 — 별도 이름으로 유지.
+async function openGalleryThumbPicker(onPick){
   // 모든 세션의 이미지 평면화 (최근 200장)
   const sessions = await DB.getSessions();
   let allImgs = [];
@@ -8880,7 +8888,11 @@ async function savePresetEdit(){
   if(_editingPreset.originalName && _editingPreset.originalName !== name){
     await DB.presetDelete(type, _editingPreset.originalName);
   }
-  await DB.presetPut(type, {name, text, thumb});
+  // 🐛 fix: 기존 필드(fav, _origTarget, action, neg, pool, params, pinnedPrompt/Neg 등) 보존.
+  //   이전 코드는 {name, text, thumb} 만 저장 → 편집 시 별표·풀·migration 마커 전부 사라짐.
+  //   originalName 과 internal _ 접두 필드는 저장 제외 (DB.presetPut 가 키로 사용).
+  const {originalName: _on, type: _t, ...preserved} = _editingPreset;
+  await DB.presetPut(type, {...preserved, name, text, thumb});
   $('presetModal').classList.remove('open');
   _editingPreset = null;
   await loadPresetsFromDB();
@@ -10127,11 +10139,15 @@ function applyCbSelection(){
     'success');
 }
 
-// 한 캐릭터 슬롯에 프리셋 적용 (이름/외형/썸네일 동기)
+// 한 캐릭터 슬롯에 프리셋 적용 (이름/외형/액션/네거/풀/썸네일 동기)
+//   기존엔 appearance 만 적용 → 프리셋의 action/neg/pool 가 사용 불가였음 (savePresetEdit 버그와 묶임)
 function applyCharPresetToSlot(c, p){
   if(!c || !p) return;
   c.name = p.name;
-  c.appearance = p.text || '';
+  c.appearance = p.text || p.appearance || '';
+  // 추가 필드는 있을 때만 덮어씀 — 풀 모드는 호출자가 별도 처리
+  if(typeof p.action === 'string') c.action = p.action;
+  if(typeof p.neg === 'string') c.neg = p.neg;
   if(p.thumb) c.thumb = p.thumb;
 }
 
@@ -13213,7 +13229,7 @@ function tplSetThumbnail(i){
 }
 
 function _tplPickThumb(i){
-  openGalleryPicker(async (dataURL) => {
+  openGalleryThumbPicker(async (dataURL) => {
     if(!dataURL) return;
     const t = state.templates?.[i];
     if(!t) return;
@@ -14172,7 +14188,17 @@ async function saveApiKey(k){
     }
     // 혹시 남아있을 평문 키도 정리
     if(localStorage.getItem(LEGACY_LS_KEY)) localStorage.removeItem(LEGACY_LS_KEY);
-  } catch(e){ console.warn('[apikey] save fail', e); }
+  } catch(e){
+    // 🐛 fix: PIN 모드 활성 + 미잠금해제 상태에서 _getOrCreateCryptoKey 가 'PIN_REQUIRED' 던짐.
+    //   기존 catch 는 console.warn 만 → 사용자는 저장된 줄 알지만 IDB ciphertext 갱신 안 됨 (옛 키 그대로).
+    //   토스트로 명확히 알림 + UI 상태 갱신은 그대로 진행 (메모리 키는 갱신됨).
+    if(e && e.message === 'PIN_REQUIRED'){
+      toast('🔒 PIN 모드가 잠겨있어요 — 먼저 PIN 으로 잠금 해제 후 다시 저장 시도', 'error', {timeoutMs: 7000});
+    } else {
+      console.warn('[apikey] save fail', e);
+      toast(`API 키 저장 실패 — ${e?.message || e}`, 'error', {timeoutMs: 6000});
+    }
+  }
   updateKeyMiniState();
   updateSettingsKeyStatus();
 }
@@ -14635,7 +14661,7 @@ function wireCharacterEvents(){
       $('confirmCancel').onclick = close;
       $('thumbFromGallery').onclick = ()=>{
         close();
-        openGalleryPicker(async dataURL => {
+        openGalleryThumbPicker(async dataURL => {
           state.characters[idx].thumb = dataURL;
           renderCharacters(); saveSettingsDebounced();
         });
@@ -15225,7 +15251,7 @@ function wireGenerationAndPresetEvents(){
   });
   $('pickGalleryThumb').addEventListener('click', () => {
     if(!_editingPreset){ toast('프리셋 편집 중이 아닙니다', 'warning'); return; }
-    openGalleryPicker(dataURL => {
+    openGalleryThumbPicker(dataURL => {
       _editingPreset.thumb = dataURL;
       $('presetThumbInner').innerHTML = `<img src="${dataURL}" alt="프리셋 썸네일" decoding="async" style="max-height:120px">`;
       toast('갤러리 이미지로 썸네일 지정됨', 'success');
@@ -15441,15 +15467,23 @@ function wireGalleryEvents(){
   $('galSelDelete').addEventListener('click', () => {
     const ids = [..._gallerySel];
     if(!ids.length) return;
-    confirmDialog(`선택한 ${ids.length}장의 이미지를 모두 삭제하시겠습니까?\n(되돌릴 수 없음)`, async () => {
+    // 🗑 휴지통 모드면 영구 삭제 / 일반 모드면 휴지통으로 이동 (7일 복원 가능)
+    const isTrashMode = state._galTrashMode;
+    const verb = isTrashMode ? '영구 삭제' : '휴지통으로 이동';
+    const warn = isTrashMode
+      ? `선택한 ${ids.length}장을 영구 삭제할까요?\n(휴지통에서 완전 제거 — 복원 불가)`
+      : `선택한 ${ids.length}장을 휴지통으로 이동할까요?\n(7일 안에 복원 가능)`;
+    confirmDialog(warn, async () => {
       for(const id of ids){
-        try { await DB.deleteImage(id); }
-        catch(e){ console.warn('delete failed', id, e); }
+        try {
+          if(isTrashMode) await DB.deleteImage(id);
+          else await DB.trashImage(id);
+        } catch(e){ console.warn(verb + ' failed', id, e); }
       }
       clearGallerySelection();
       await loadGallery();
       await refreshGallerySize();
-      toast(`✅ ${ids.length}장 삭제됨`, 'success');
+      toast(`✅ ${ids.length}장 ${verb}`, 'success');
     });
   });
   $('galSelAlbum').addEventListener('click', () => {
@@ -15975,10 +16009,24 @@ function wireLightboxEvents(){
       $('galFavToggle').classList.remove('act');
       $('galFavToggle').setAttribute('aria-pressed', 'false');
     }
+    // 휴지통 모드일 때만 '비우기' 버튼 노출
+    const emptyBtn = $('galEmptyTrashBtn');
+    if(emptyBtn) emptyBtn.style.display = state._galTrashMode ? '' : 'none';
     loadGallery();
     if(state._galTrashMode){
       toast('🗑 휴지통 모드 — 라이트박스에서 복원 또는 영구 삭제', 'info');
     }
+  });
+  // 🗑 휴지통 비우기 — 모든 휴지통 이미지 즉시 영구 삭제
+  $('galEmptyTrashBtn')?.addEventListener('click', () => {
+    confirmDialog('휴지통의 모든 이미지를 영구 삭제할까요?\n(7일 대기 없이 즉시 — 복원 불가)', async () => {
+      try {
+        const n = await DB.emptyTrash();
+        await loadGallery();
+        await refreshGallerySize();
+        toast(`✅ 휴지통 ${n}장 영구 삭제됨`, 'success');
+      } catch(e){ toast(`휴지통 비우기 실패 — ${e.message || e}`, 'error'); }
+    });
   });
   $('lbDelete').addEventListener('click', () => {
     if(!_lbCurrent) return;
