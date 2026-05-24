@@ -12,11 +12,14 @@
 //     ETag/Content-Length 변경을 감지하면 NEW_VERSION_AVAILABLE 메시지를
 //     보내서 사용자에게 새로고침을 안내.
 
-const CACHE_NAME = 'nai-studio-fa9e470f';
+const CACHE_NAME = 'nai-studio-bf986738';
 const CORE = [
   './',
   './index.html',
   './tags-danbooru.json',
+  './manifest.webmanifest',
+  './icon-192.png',
+  './icon-512.png',
 ];
 const CDN_PATTERNS = [
   'cdnjs.cloudflare.com',

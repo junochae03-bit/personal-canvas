@@ -1,0 +1,45 @@
+{
+  "id": "/?source=pwa",
+  "name": "NAI Studio",
+  "short_name": "NAI",
+  "description": "NovelAI 이미지 생성 스튜디오 — 모바일 친화 PWA",
+  "start_url": ".",
+  "scope": ".",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#ebe2cd",
+  "theme_color": "#a25a1f",
+  "lang": "ko",
+  "dir": "ltr",
+  "categories": ["art", "productivity", "graphics"],
+  "icons": [
+    {"src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+    {"src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "shortcuts": [
+    {
+      "name": "새 이미지 생성",
+      "short_name": "생성",
+      "description": "미리보기 페인 열기 — 바로 생성",
+      "url": "./?source=pwa-shortcut#pane=preview",
+      "icons": [{"src": "./icon-192.png", "sizes": "192x192", "type": "image/png"}]
+    },
+    {
+      "name": "갤러리 열기",
+      "short_name": "갤러리",
+      "description": "저장된 이미지 보기",
+      "url": "./?source=pwa-shortcut#pane=gallery",
+      "icons": [{"src": "./icon-192.png", "sizes": "192x192", "type": "image/png"}]
+    },
+    {
+      "name": "템플릿",
+      "short_name": "템플릿",
+      "description": "저장된 템플릿 / 자연어 매칭",
+      "url": "./?source=pwa-shortcut#pane=templates",
+      "icons": [{"src": "./icon-192.png", "sizes": "192x192", "type": "image/png"}]
+    }
+  ]
+}

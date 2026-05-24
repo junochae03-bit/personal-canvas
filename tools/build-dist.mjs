@@ -12,6 +12,9 @@ const ASSETS = [
   'index.html',
   'sw.js',
   'tags-danbooru.json',
+  'manifest.webmanifest',
+  'icon-192.png',
+  'icon-512.png',
 ];
 const DIRS = [
   'js',   // js/pure/*.mjs — 인라인 동형 모듈
