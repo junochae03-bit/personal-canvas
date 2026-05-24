@@ -5285,7 +5285,8 @@ async function _naiGenerateOnce(apiKey, body, signal){
   const isV4 = (body.model||'').startsWith('nai-diffusion-4');
   let resp;
   try {
-    resp = await fetch(NAI_BASE + '/ai/' + (body.action === 'generate' ? 'generate-image' : 'generate-image'), {
+    // NAI 의 t2i/i2i/inpaint 모두 /ai/generate-image 단일 엔드포인트 사용 (action 은 body 안에 들어감)
+    resp = await fetch(NAI_BASE + '/ai/generate-image', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -7109,17 +7110,10 @@ async function downloadSessionAsZip(sesId){
 async function downloadSelectedAsZip(){
   const ids = [..._gallerySel];
   if(!ids.length){ toast('선택된 이미지가 없습니다', 'warning'); return; }
-  // DB에서 모두 가져오기 (세션 가로지를 수 있어 전 세션 스캔)
+  // 🚀 perf: 모든 세션 IDB read 병렬화 + 휴지통 모드 이미지도 포함 (선택된 ID 만 필터)
   const sessions = await DB.getSessions();
-  const picked = [];
-  for(const s of sessions){
-    const imgs = await DB.getSessionImages(s.id);
-    for(const im of imgs){
-      if(_gallerySel.has(im.id)) picked.push(im);
-      if(picked.length === ids.length) break;
-    }
-    if(picked.length === ids.length) break;
-  }
+  const all = (await Promise.all(sessions.map(s => DB.getSessionImages(s.id, {includeTrashed: true})))).flat();
+  const picked = all.filter(im => _gallerySel.has(im.id));
   if(!picked.length){ toast('선택한 이미지를 찾지 못했습니다', 'error'); return; }
   const stamp = new Date().toISOString().slice(0,10);
   await downloadImagesAsZip(picked, `selected_${picked.length}장_${stamp}`);
@@ -7134,14 +7128,10 @@ async function downloadAlbumAsZip(albumId){
     if(arr.includes(albumId)) memberIds.add(parseInt(imgId, 10));
   }
   if(!memberIds.size){ toast(`"${a.name}" 앨범이 비어있습니다`, 'warning'); return; }
+  // 🚀 perf: 병렬 + 휴지통 포함 (앨범 멤버였던 이미지가 휴지통에 있어도 접근 가능)
   const sessions = await DB.getSessions();
-  const picked = [];
-  for(const s of sessions){
-    const imgs = await DB.getSessionImages(s.id);
-    for(const im of imgs){
-      if(memberIds.has(im.id)) picked.push(im);
-    }
-  }
+  const all = (await Promise.all(sessions.map(s => DB.getSessionImages(s.id, {includeTrashed: true})))).flat();
+  const picked = all.filter(im => memberIds.has(im.id));
   const safe = (a.name || 'album').replace(/[^\w가-힣 -]/g, '_');
   await downloadImagesAsZip(picked, `앨범_${safe}`);
 }
@@ -9294,11 +9284,18 @@ function recordSeedHistory(seed){
     entry = {seed, ts: Date.now(), fav: false, note: ''};
   }
   state.seedHistory.unshift(entry);
-  // 100개 한도 — 단, 즐겨찾기는 항상 보존
+  // 100개 한도 — 단, 즐겨찾기는 항상 보존 + 시간순(최신 우선) 유지
+  //   🐛 fix: 기존 [...recent, ...favs] 는 favs 가 끝으로 밀려 '최신순' 깨짐.
+  //   원본 순서를 유지하면서 non-fav 만 trimming 하도록 변경.
   if(state.seedHistory.length > 100){
-    const favs = state.seedHistory.filter(s => s.fav);
-    const recent = state.seedHistory.filter(s => !s.fav).slice(0, Math.max(0, 100 - favs.length));
-    state.seedHistory = [...recent, ...favs];
+    const favCount = state.seedHistory.filter(s => s.fav).length;
+    const nonFavBudget = Math.max(0, 100 - favCount);
+    let kept = 0;
+    state.seedHistory = state.seedHistory.filter(s => {
+      if(s.fav) return true;
+      if(kept < nonFavBudget){ kept++; return true; }
+      return false;
+    });
   }
   saveSettingsDebounced();
 }
@@ -11534,17 +11531,20 @@ async function loadGallery(){
   const trashMode = !!state._galTrashMode;
   const favOnly = !!state._galFavOnly;
   grid.classList.toggle('gallery-trash-mode', trashMode);
-  for(const ses of sessions){
-    if(selSesId != null && ses.id !== selSesId) continue;
+  // 🚀 perf: 세션별 IDB 조회를 병렬화 (이전엔 N개 세션 = N회 순차 RTT).
+  //   필터로 빠른 세션은 즉시 건너뛰고, 나머지만 Promise.all 로 동시 조회.
+  const targetSessions = selSesId != null ? sessions.filter(s => s.id === selSesId) : sessions;
+  const sesResults = await Promise.all(targetSessions.map(async ses => {
     const imgs = await DB.getSessionImages(ses.id, {includeTrashed: trashMode});
+    return {ses, imgs};
+  }));
+  for(const {ses, imgs} of sesResults){
     if(!imgs.length) continue;
     let filtered = imgs;
-    // 휴지통 모드: deletedAt 있는 것만 / 일반 모드: getSessionImages 가 이미 deletedAt 제외
     if(trashMode) filtered = filtered.filter(i => typeof i.deletedAt === 'number' && i.deletedAt > 0);
     if(favOnly) filtered = filtered.filter(i => i.fav);
     if(selWork) filtered = filtered.filter(matchesWork);
     if(search){
-      // 🇰🇷 koMatch — 한국어 초성 검색 지원
       filtered = filtered.filter(i => {
         const t = (i.prompt||'') + ' ' + (i.label||'') + ' ' + (i.meta?.prompt||'') + ' ' + (i.meta?.characters||[]).join(' ') + ' ' + (i.meta?.sceneLabel||'') + ' ' + (i.meta?.sceneCharPreset||'') + ' ' + (i.meta?.seed!=null?i.meta.seed:'');
         return koMatch(t, search).match;
@@ -15859,7 +15859,19 @@ function wireLightboxEvents(){
     a.href = url;
     a.download = _lbCurrent.fname || `nai_${_lbCurrent.id}.png`;
     a.click();
-    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    // 🐛 fix: 1초 후 revoke 는 사용자가 다운로드 다이얼로그 늦게 확인하면 URL 죽음 (특히 Safari)
+    //   대신 페이지 visibility change(블러)일 때 revoke — 다이얼로그가 떴다 닫혔다는 신호
+    const cleanup = () => {
+      URL.revokeObjectURL(url);
+      window.removeEventListener('focus', cleanup);
+      window.removeEventListener('pagehide', cleanup);
+    };
+    // 안전망: 60초 후에도 cleanup (메모리 보호)
+    setTimeout(cleanup, 60000);
+    setTimeout(() => {
+      window.addEventListener('focus', cleanup, {once: true});
+      window.addEventListener('pagehide', cleanup, {once: true});
+    }, 500);
   });
   // 🌱 시드만 추출 — 다른 파라미터는 건드리지 않고 시드만
   $('lbSeedOnly').addEventListener('click', async () => {
