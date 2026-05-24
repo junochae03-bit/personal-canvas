@@ -40,6 +40,28 @@ npm run lint     # 자체 lint (eval/var/CSP/순수성 검증)
 
 API 키는 **동일 도메인 XSS**에 대해서는 여전히 노출 가능하므로 PIN 모드 활성화를 권장합니다.
 
+## 📱 모바일 네이티브 빌드 (Capacitor)
+
+웹 그대로 iOS/Android 네이티브 앱으로 래핑. 코드 수정 없음, 빌드만 추가.
+
+```bash
+# 1회: Capacitor 의존성 설치
+npm install
+
+# 2회: 네이티브 플랫폼 추가 (한 번만)
+npx cap add android   # Android Studio 필요
+npx cap add ios       # macOS + Xcode 필요
+
+# 매 배포: 웹 자산 빌드 + sync + IDE 열기
+npm run cap:android   # → Android Studio 에서 Run
+npm run cap:ios       # → Xcode 에서 Run
+```
+
+- `npm run dist` 가 `dist/` 에 웹 자산(index.html, sw.js, tags-danbooru.json, js/)을 복사
+- `capacitor.config.json` 의 `webDir: "dist"` 가 그 폴더를 가리킴
+- App Store / Play Store 배포 — 각 IDE 에서 빌드 → archive → 업로드
+- `appId` 는 `studio.nai.app` (배포 전 본인 ID 로 변경)
+
 ## 접근성
 
 - 모든 모달에 `role="dialog" aria-modal="true" aria-labelledby` + JS focus trap + Esc 닫기
