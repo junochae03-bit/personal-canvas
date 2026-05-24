@@ -12491,6 +12491,10 @@ function setMode(mode){
     const allowed = Array.from(el.classList).filter(c => ['t2i','i2i','inpaint','vibe','director'].includes(c));
     el.style.display = allowed.includes(mode) ? '' : 'none';
   });
+  // 🎲 RC 빌더 자동 닫힘 — 모드 전환 시 거슬리지 않게 (사용자 보고: "편집모드까지 따라옴")
+  if(state.randomBuilderOpen && typeof rcToggleBuilder === 'function'){
+    rcToggleBuilder(false);
+  }
   refreshCost();
 }
 
@@ -17574,11 +17578,15 @@ function rcImportFromText(){
 function rcOpenImportModal(){
   const html = `
     <div style="font-size:12.5px;color:var(--t2);margin-bottom:10px;line-height:1.7">
-      프롬프트 전체를 통째로 붙여넣으세요. <b style="color:var(--t1)">||A|B|C||</b> 패턴이 있는 줄을 자동으로 카테고리로 분리하고, 옵션 내용을 보고 라벨을 추측해 부여합니다.<br>
+      프롬프트 전체를 통째로 붙여넣으세요. <b style="color:var(--t1)">||A|B|C||</b> 또는 <b style="color:var(--t1)">{A|B|C}</b> 패턴이 있는 줄을 자동으로 카테고리로 분리합니다.<br>
       <span style="font-size:11px;color:var(--t3)">힌트: <code style="background:var(--card);padding:1px 4px;border-radius:3px;font-family:var(--mono)"># 라벨명</code> 주석 줄이 있으면 그 라벨을 그대로 사용. 일반 태그 줄(고정 프롬프트)은 무시.</span>
     </div>
-    <textarea id="_rcImportTa" class="ta" style="min-height:200px;font-family:var(--mono);font-size:12px;line-height:1.6" placeholder="여기에 ||simple background|location|indoors|outdoors| ||,&#10;||horse girl|cat girl|fox girl| ||,&#10;||missionary|cowgirl position|doggystyle| ||,&#10;...&#10;식으로 통째로 붙여넣기" autofocus></textarea>
-    <div style="margin-top:10px;display:flex;gap:8px;align-items:center;font-size:11.5px;color:var(--t3)">
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+      <button type="button" class="btn ghost" id="_rcImportFromPromptBtn" style="font-size:12px;padding:5px 10px;border-color:rgba(58,99,152,.4);color:var(--blue)" title="현재 편집 중인 프롬프트(긍정) 텍스트를 그대로 가져옴">📋 현재 프롬프트에서</button>
+      <button type="button" class="btn ghost" id="_rcImportClearTaBtn" style="font-size:12px;padding:5px 10px" title="입력란 비우기">🗑 비우기</button>
+    </div>
+    <textarea id="_rcImportTa" class="ta" style="min-height:200px;font-family:var(--mono);font-size:12px;line-height:1.6" placeholder="여기에 ||simple background|location|indoors|outdoors||,&#10;||horse girl|cat girl|fox girl||,&#10;{missionary|cowgirl position|doggystyle},&#10;...&#10;식으로 통째로 붙여넣기" autofocus></textarea>
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center;font-size:11.5px;color:var(--t3);flex-wrap:wrap">
       <label style="display:flex;align-items:center;gap:5px;cursor:pointer">
         <input type="checkbox" id="_rcImportAutoLabel" checked> 카테고리 라벨 자동 추측
       </label>
@@ -17595,6 +17603,15 @@ function rcOpenImportModal(){
   $('confirmModal').classList.add('open');
   setTimeout(() => $('_rcImportTa')?.focus(), 50);
   $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
+  $('_rcImportFromPromptBtn').onclick = () => {
+    const ta = $('_rcImportTa');
+    const cur = ($('prompt')?.value || '').trim();
+    if(!cur){ toast('현재 프롬프트가 비어있어요', 'warning'); return; }
+    ta.value = cur;
+    ta.focus();
+    toast('📋 프롬프트 복사됨 — ||A|B|C|| 패턴이 있으면 가져오기 클릭', 'info');
+  };
+  $('_rcImportClearTaBtn').onclick = () => { $('_rcImportTa').value = ''; $('_rcImportTa').focus(); };
   $('confirmOk').onclick = () => {
     const text = $('_rcImportTa')?.value || '';
     const autoLabel = $('_rcImportAutoLabel')?.checked !== false;
@@ -17608,7 +17625,16 @@ function rcDoImport(text, opts){
   if(!text || !text.trim()){ toast('붙여넣은 텍스트가 없습니다', 'warning'); return; }
   const autoLabel = opts?.autoLabel !== false;
   const replace = opts?.replace === true;
-  const lines = text.split('\n');
+  // 정규화: 비표준 공백(non-breaking 등)·전각 파이프 등 표준화 → 패턴 인식률 향상
+  //   - U+00A0(NBSP) → 일반 공백
+  //   - U+FF5C(전각 |) → ASCII |
+  //   - U+2502(BOX VERT) → ASCII | (모바일 자판 잘못된 입력 보호)
+  //   - {A|B|C} 대체 표기 → ||A|B|C|| 표준 표기로 변환 (NAI/SD wildcards 호환)
+  const normalized = text
+    .replace(/ /g, ' ')
+    .replace(/[｜│]/g, '|')
+    .replace(/\{([^{}]+\|[^{}]+)\}/g, '||$1||');   // {A|B|C} → ||A|B|C||
+  const lines = normalized.split('\n');
   let pendingLabel = null;
   const added = [];
   for(const raw of lines){
@@ -17632,7 +17658,8 @@ function rcDoImport(text, opts){
           return {text: wm[2].trim(), weight: parseFloat(wm[1]) || 1.0};
         }
         return {text: trimmed, weight: 1.0};
-      });
+      }).filter(o => o.text);   // 빈 옵션 제거 (||A|B|C| || 형식의 trailing 공백)
+      if(options.length < 2) continue;   // 옵션 2개 미만은 카테고리로 의미 없음
       // 카테고리 라벨 결정: 사용자 주석 > 휴리스틱 추측 > 기본값
       let label = pendingLabel;
       if(!label && autoLabel){
@@ -17649,7 +17676,7 @@ function rcDoImport(text, opts){
     }
   }
   if(!added.length){
-    toast('인식 가능한 ||A|B|C|| 패턴이 없습니다', 'warning');
+    toast('인식 가능한 패턴이 없습니다 — ||A|B|C|| 또는 {A|B|C} 형식이어야 해요 (각 그룹 옵션 ≥ 2개)', 'warning', {timeoutMs: 8000});
     return;
   }
   // 기존 교체 vs 추가
