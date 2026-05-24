@@ -719,6 +719,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 /* LIGHTBOX — 확대 뷰 */
 #lightbox{position:fixed;inset:0;z-index:9000;background:rgba(20,14,4,.94);display:none;align-items:center;justify-content:center;padding:max(36px, env(safe-area-inset-top, 0px)) 36px max(36px, env(safe-area-inset-bottom, 0px))}
 #lightbox.open{display:flex}
+/* 🖥 순수 전체화면 — 이미지 외 모든 UI 가림. 화면 한 번 탭하면 복귀. */
+#lightbox.pure-view{padding:0;background:#000;cursor:zoom-out}
+#lightbox.pure-view .lb-nav,
+#lightbox.pure-view .lb-counter,
+#lightbox.pure-view .lb-meta,
+#lightbox.pure-view .lb-actions{display:none !important}
+#lightbox.pure-view .lb-img{max-width:100vw;max-height:100vh;border-radius:0;box-shadow:none}
 #lightbox .lb-img{max-width:90%;max-height:90%;object-fit:contain;cursor:zoom-out;border-radius:4px;box-shadow:0 12px 48px rgba(0,0,0,.5);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;transform-origin:center center;will-change:transform}
 /* ℹ 상세정보 패널 — 기본 숨김, .info-open 토글되면 노출 */
 #lightbox .lb-meta{position:absolute;left:24px;top:24px;background:var(--panel);border:1.5px solid var(--b2);border-radius:8px;padding:16px 18px;max-width:360px;max-height:80vh;overflow-y:auto;font-size:12.5px;color:var(--t2);line-height:1.7;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none;animation:fadeIn .15s ease-out}
@@ -2677,6 +2684,7 @@ mark{
     <button class="iconbtn lb-act-btn" id="lbLike" title="❤️ 좋아요 — 통계에서 가장 인기있는 시드·프롬·모델·캐릭터 집계 (★ 와 별개)" aria-pressed="false"><span class="lb-act-ico">♡</span><span class="lb-act-lbl">좋아요</span></button>
     <button class="iconbtn lb-act-btn" id="lbRestore" title="↺ 휴지통에서 복원" style="display:none;color:var(--green);border-color:rgba(93,138,48,.4)"><span class="lb-act-ico">↺</span><span class="lb-act-lbl">복원</span></button>
     <button class="iconbtn lb-act-btn" id="lbDelete" title="🗑 휴지통으로 이동 (7일 보관 후 자동 영구 삭제)" style="color:var(--red);border-color:rgba(181,67,56,.3)"><span class="lb-act-ico">🗑</span><span class="lb-act-lbl">휴지통</span></button>
+    <button class="iconbtn lb-act-btn" id="lbPure" title="🖥 순수 전체화면 — 모든 UI 숨김 + 브라우저 chrome 까지 가림 (ESC 또는 화면 한 번 탭으로 복귀)"><span class="lb-act-ico">🖥</span><span class="lb-act-lbl">전체</span></button>
     <button class="iconbtn lb-act-btn" id="lbClose" title="닫기 (Close)"><span class="lb-act-ico">✕</span><span class="lb-act-lbl">닫기</span></button>
   </div>
 </div>
@@ -12129,11 +12137,43 @@ function lbPrev(){ if(_lbIdx > 0) showLightboxAt(_lbIdx - 1); }
 
 function closeLightbox(){
   if($('lbImg').dataset.url) URL.revokeObjectURL($('lbImg').dataset.url);
+  // 🖥 순수 전체화면 모드였다면 같이 해제 + Fullscreen API 종료
+  exitPureView();
   $('lightbox').classList.remove('open');
   if(window._lbResetZoom) window._lbResetZoom();
   _lbCurrent = null;
   _lbList = [];
   _lbIdx = -1;
+}
+
+// 🖥 순수 전체화면 — 모든 UI 가림 + 브라우저 chrome 까지 Fullscreen API 로 가림.
+//   진입: lbPure 버튼. 복귀: ESC / lightbox 자체 클릭(이미지 외) / 다시 lbPure 버튼 / Fullscreen API 종료 이벤트.
+function enterPureView(){
+  const lb = $('lightbox');
+  if(!lb) return;
+  lb.classList.add('pure-view');
+  // Fullscreen API — 모바일 브라우저 UI(주소창 등)까지 가림. iOS Safari 는 미지원이라 best-effort.
+  if(lb.requestFullscreen){
+    lb.requestFullscreen().catch(e => _swallow(e, 'pureView:fullscreen'));
+  } else if(lb.webkitRequestFullscreen){
+    try { lb.webkitRequestFullscreen(); } catch(e){ _swallow(e, 'pureView:webkitFs'); }
+  }
+}
+function exitPureView(){
+  const lb = $('lightbox');
+  if(!lb) return;
+  lb.classList.remove('pure-view');
+  if(document.fullscreenElement && document.exitFullscreen){
+    document.exitFullscreen().catch(e => _swallow(e, 'pureView:exit'));
+  } else if(document.webkitFullscreenElement && document.webkitExitFullscreen){
+    try { document.webkitExitFullscreen(); } catch(e){ _swallow(e, 'pureView:webkitExit'); }
+  }
+}
+function togglePureView(){
+  const lb = $('lightbox');
+  if(!lb) return;
+  if(lb.classList.contains('pure-view')) exitPureView();
+  else enterPureView();
 }
 
 // 🔍 라이트박스 핀치 줌 + 팬 — 모바일에서 이미지 확대
@@ -15627,7 +15667,28 @@ function wireGalleryEvents(){
 function wireLightboxEvents(){
   // Lightbox
   $('lbClose').addEventListener('click', closeLightbox);
-  $('lightbox').addEventListener('click', e => { if(e.target === $('lightbox')) closeLightbox(); });
+  // 🖥 순수 전체화면 토글
+  $('lbPure')?.addEventListener('click', e => { e.stopPropagation(); togglePureView(); });
+  // 배경 클릭 — pure-view 면 UI 복귀, 아니면 라이트박스 닫기
+  $('lightbox').addEventListener('click', e => {
+    if(e.target !== $('lightbox')) return;
+    if($('lightbox').classList.contains('pure-view')) exitPureView();
+    else closeLightbox();
+  });
+  // pure-view 중 이미지 자체 클릭 → UI 복귀 (탭 한번으로 빠져나오기)
+  $('lbImg')?.addEventListener('click', e => {
+    if($('lightbox').classList.contains('pure-view')){
+      e.stopPropagation();
+      exitPureView();
+    }
+  });
+  // Fullscreen API 가 다른 경로(ESC, OS 제스처)로 종료된 경우 클래스 동기화
+  document.addEventListener('fullscreenchange', () => {
+    if(!document.fullscreenElement) $('lightbox')?.classList.remove('pure-view');
+  });
+  document.addEventListener('webkitfullscreenchange', () => {
+    if(!document.webkitFullscreenElement) $('lightbox')?.classList.remove('pure-view');
+  });
   // ⟨ / ⟩ 내비게이션 버튼
   $('lbPrev').addEventListener('click', e => { e.stopPropagation(); lbPrev(); });
   $('lbNext').addEventListener('click', e => { e.stopPropagation(); lbNext(); });
@@ -16194,6 +16255,7 @@ function wireMiscEvents(){
   document.addEventListener('keydown', e => {
     if(e.ctrlKey && e.key === 'Enter'){ e.preventDefault(); startGeneration(); }
     else if(e.key === 'Escape'){
+      if($('lightbox').classList.contains('pure-view')) { exitPureView(); return; }
       if($('lightbox').classList.contains('open')) closeLightbox();
       else if($('confirmModal').classList.contains('open')) $('confirmModal').classList.remove('open');
       else if($('presetModal').classList.contains('open')) $('presetModal').classList.remove('open');
