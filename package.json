@@ -10,6 +10,10 @@
     "lint": "node tools/lint.mjs",
     "sri": "node tools/build-sri.mjs",
     "bump-sw-cache": "node tools/bump-sw-cache.mjs",
+    "dist": "node tools/build-dist.mjs",
+    "cap:sync": "npm run dist && cap sync",
+    "cap:android": "npm run dist && cap sync android && cap open android",
+    "cap:ios": "npm run dist && cap sync ios && cap open ios",
     "release": "npm run sri && npm run bump-sw-cache && npm run check && npm run lint && npm test",
     "e2e": "playwright test"
   },
@@ -17,6 +21,10 @@
     "node": ">=18"
   },
   "devDependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/ios": "^6.1.2",
     "@playwright/test": "^1.49.0"
   }
 }

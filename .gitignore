@@ -9,3 +9,9 @@ package-lock.json
 /test-results/
 /blob-report/
 /playwright/.cache/
+
+# Capacitor 빌드 산출물 — native 프로젝트와 dist/ 는 로컬에서 npm run cap:sync 시 생성
+/dist/
+/android/
+/ios/
+/.gradle/

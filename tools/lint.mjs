@@ -23,7 +23,7 @@ function walk(dir, out = []){
     const p = join(dir, name);
     const s = statSync(p);
     if(s.isDirectory()){
-      if(name === '.git' || name === 'node_modules') continue;
+      if(name === '.git' || name === 'node_modules' || name === 'dist' || name === 'android' || name === 'ios') continue;
       walk(p, out);
     } else {
       out.push(p);
