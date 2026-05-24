@@ -12,7 +12,7 @@
 //     ETag/Content-Length 변경을 감지하면 NEW_VERSION_AVAILABLE 메시지를
 //     보내서 사용자에게 새로고침을 안내.
 
-const CACHE_NAME = 'nai-studio-6cce9a27';
+const CACHE_NAME = 'nai-studio-c611c3d6';
 const CORE = [
   './',
   './index.html',
@@ -94,10 +94,21 @@ async function notifyClientsOfUpdate(){
   }
 }
 
+// 🛡 보안: 캡티브 포털·중간자가 200 으로 응답하는 경우 캐시 오염 방지.
+//   동일 출처 + response.type === 'basic' (CORS·opaque 거부) 만 저장.
+function _isSafeToCache(req, resp){
+  if(!resp || !resp.ok) return false;
+  try {
+    if(new URL(req.url).origin !== self.location.origin) return false;
+  } catch(_) { return false; }
+  if(resp.type && resp.type !== 'basic') return false;
+  return true;
+}
+
 function staleWhileRevalidate(req, opts){
   return caches.match(req).then(cached => {
     const network = fetch(req).then(async resp => {
-      if(resp && resp.ok){
+      if(_isSafeToCache(req, resp)){
         const clone = resp.clone();
         // HTML이면 ETag/Content-Length 변경 감지 → 클라이언트에 알림
         if(opts?.notifyOnChange && cached){
