@@ -1648,6 +1648,21 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   cursor:default
 }
 .rc-builder-sec .sec-utils{flex-wrap:wrap;gap:3px;justify-content:flex-end;flex-shrink:0}
+/* 베이스 이미지 영역 — 갤러리 가져오기 버튼 */
+.img-source-row{display:flex;gap:6px;margin-top:6px;justify-content:flex-end}
+.img-source-row .btn.small{font-size:11.5px;padding:5px 10px;min-height:28px}
+/* 📁 공용 갤러리 picker 모달 */
+.gp-modal{width:min(820px,94vw)}
+.gp-controls{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.gp-controls .inp{font-size:12.5px;padding:5px 9px}
+.gp-hint{font-size:11.5px;color:var(--t3);font-family:var(--mono)}
+.gp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;max-height:480px;overflow-y:auto;padding:4px}
+.gp-item{background:#1a130a;border:2px solid var(--b1);border-radius:5px;cursor:pointer;padding:0;overflow:hidden;display:flex;flex-direction:column;font-family:inherit;transition:border-color .12s}
+.gp-item:hover{border-color:var(--acc)}
+.gp-item:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.gp-item img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.gp-item-meta{font-size:10.5px;color:var(--t3);padding:4px 6px;background:var(--card);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.gp-loading,.gp-empty{grid-column:1/-1;text-align:center;color:var(--t3);padding:30px;font-size:13px}
 /* 🎴 빌더 프리셋 모달 */
 .rcp-modal{width:min(560px,92vw)}
 .rcp-intro{font-size:12.5px;color:var(--t2);line-height:1.6;background:var(--panel);padding:9px 12px;border-radius:5px;border-left:3px solid var(--acc);margin-bottom:12px}
@@ -2042,6 +2057,9 @@ mark{
             <input type="file" id="imgFile" accept="image/*" style="display:none">
             <div id="imgDropInner">📁 클릭하거나 드래그로 이미지 업로드</div>
           </div>
+          <div class="img-source-row">
+            <button class="btn ghost small" id="imgFromGalleryBtn" type="button" title="이 도구의 갤러리에서 이미지 선택 → 베이스로 사용">📁 갤러리에서 가져오기</button>
+          </div>
           <div id="imgActions" class="img-actions" style="display:none">
             <button class="btn ghost" id="useLastBtn">최근 결과 사용 <span class="en">Use Last</span></button>
             <button class="btn ghost" id="clearImgBtn">제거 <span class="en">Clear</span></button>
@@ -2065,7 +2083,8 @@ mark{
       <div class="sec mode-show vibe" style="display:none">
         <div class="sec-title">참조 이미지 <span class="en">Vibe References</span><span class="caret">▾</span></div>
         <div class="sec-body">
-          <button class="btn ghost" id="addVibeBtn" style="width:100%;margin-bottom:8px;justify-content:center">＋ 참조 이미지 추가 <span class="en">Add Reference</span></button>
+          <button class="btn ghost" id="addVibeBtn" style="width:100%;margin-bottom:6px;justify-content:center">＋ 참조 이미지 추가 <span class="en">Add Reference</span></button>
+          <button class="btn ghost small" id="vibeFromGalleryBtn" type="button" style="width:100%;margin-bottom:8px;justify-content:center" title="이 도구의 갤러리에서 이미지 선택 → Vibe 참조로 추가">📁 갤러리에서 가져오기</button>
           <input type="file" id="vibeFile" accept="image/*" style="display:none">
           <div class="vibe-list" id="vibeList"></div>
         </div>
@@ -2993,6 +3012,23 @@ coffee shop, latte art"></textarea>
     <div class="modal-foot">
       <button class="btn ghost" id="inpaintCancel">취소 <span class="en">Cancel</span></button>
       <button class="btn primary" id="inpaintSave">저장 <span class="en">Save</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- 📁 GALLERY PICKER MODAL — i2i/inpaint/vibe 베이스 이미지 선택 (공용) -->
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="galPickTitle" id="galPickerModal">
+  <div class="modal gp-modal">
+    <h3 id="galPickTitle">📁 갤러리에서 이미지 선택</h3>
+    <div class="modal-body">
+      <div class="gp-controls">
+        <input type="text" class="inp" id="gpSearch" placeholder="🔍 라벨·세션·프롬프트 검색" style="flex:1">
+        <span class="gp-hint" id="gpHint">클릭 = 선택 후 닫힘</span>
+      </div>
+      <div class="gp-grid" id="gpGrid"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="gpCloseBtn">닫기 <span class="en">Close</span></button>
     </div>
   </div>
 </div>
@@ -9253,6 +9289,72 @@ async function saveRandomCategories(){
   await DB.setFlag('random_categories', state.randomCategories);
 }
 
+// 📁 공용 갤러리 picker — i2i/inpaint(베이스), vibe(추가) 어디서든 호출.
+//   openGalleryPicker({onPick: blob => ..., title?, hint?}) — 클릭 시 callback + 모달 닫힘.
+//   createObjectURL 추적 → 모달 닫을 때 일괄 revoke (메모리 누수 차단).
+const _gpUrls = [];
+let _gpOnPick = null;
+
+function openGalleryPicker(opts){
+  const modal = $('galPickerModal');
+  if(!modal) return;
+  _gpOnPick = (opts && typeof opts.onPick === 'function') ? opts.onPick : null;
+  $('galPickTitle').textContent = (opts && opts.title) || '📁 갤러리에서 이미지 선택';
+  $('gpHint').textContent = (opts && opts.hint) || '클릭 = 선택 후 닫힘';
+  $('gpSearch').value = '';
+  modal.classList.add('open');
+  _renderGpGrid();
+}
+
+function closeGalleryPicker(){
+  $('galPickerModal').classList.remove('open');
+  for(const u of _gpUrls){ try { URL.revokeObjectURL(u); } catch(_){} }
+  _gpUrls.length = 0;
+  _gpOnPick = null;
+}
+
+async function _renderGpGrid(){
+  const grid = $('gpGrid');
+  if(!grid) return;
+  grid.innerHTML = '<div class="gp-loading">갤러리 로딩 중...</div>';
+  for(const u of _gpUrls){ try { URL.revokeObjectURL(u); } catch(_){} }
+  _gpUrls.length = 0;
+  const q = ($('gpSearch')?.value || '').trim().toLowerCase();
+  const sessions = state.gallerySessions || [];
+  if(sessions.length === 0){
+    grid.innerHTML = '<div class="gp-empty">갤러리가 비어있어요 — 먼저 이미지를 생성하세요</div>';
+    return;
+  }
+  const items = [];
+  for(const ses of sessions){
+    try {
+      const imgs = await DB.getSessionImages(ses.id);
+      for(const img of imgs){
+        if(q){
+          const hay = `${ses.label||''} ${img.label||''} ${img.prompt||''}`.toLowerCase();
+          if(!hay.includes(q)) continue;
+        }
+        items.push({img, sesName: ses.label || `세션 ${ses.id}`, sesId: ses.id});
+      }
+    } catch(e){ _swallow(e, 'gp:getSession'); }
+  }
+  if(!items.length){
+    grid.innerHTML = q
+      ? `<div class="gp-empty">'${esc(q)}' 매칭 없음</div>`
+      : '<div class="gp-empty">갤러리가 비어있어요</div>';
+    return;
+  }
+  grid.innerHTML = items.map(({img, sesName, sesId}) => {
+    const url = URL.createObjectURL(img.blob);
+    _gpUrls.push(url);
+    const labelText = img.label || img.prompt?.slice(0, 30) || sesName;
+    return `<button type="button" class="gp-item" data-img-id="${img.id}" data-ses-id="${sesId}" title="${esc(sesName)} · ${esc(img.label||img.prompt||'')}">`
+      + `<img src="${url}" alt="${esc(img.label||'갤러리 이미지')}" loading="lazy" decoding="async">`
+      + `<div class="gp-item-meta">${esc(labelText.slice(0, 24))}</div>`
+      + `</button>`;
+  }).join('');
+}
+
 // 🎴 RC 빌더 프리셋 — 카테고리 전체를 이름 붙여 저장. 별도 DB 키.
 async function loadRandomBuilderPresets(){
   const saved = await DB.getFlag('random_builder_presets');
@@ -14388,6 +14490,13 @@ function wireGenerationAndPresetEvents(){
   $('useLastBtn').addEventListener('click', async () => {
     if(state.lastImage){ await setBaseImage(state.lastImage.blob); }
   });
+  $('imgFromGalleryBtn')?.addEventListener('click', () => {
+    openGalleryPicker({
+      title: '📁 베이스 이미지로 사용할 갤러리 이미지',
+      hint: '클릭 = 베이스로 설정',
+      onPick: async blob => { await setBaseImage(blob); }
+    });
+  });
   $('clearImgBtn').addEventListener('click', () => {
     state.baseImage = null;
     state.inpaintMask = null;
@@ -14401,6 +14510,33 @@ function wireGenerationAndPresetEvents(){
   $('vibeFile').addEventListener('change', async e => {
     for(const f of e.target.files) await addVibeRef(f);
     e.target.value = '';
+  });
+  $('vibeFromGalleryBtn')?.addEventListener('click', () => {
+    openGalleryPicker({
+      title: '📁 Vibe 참조로 사용할 갤러리 이미지',
+      hint: '클릭 = Vibe 참조로 추가 (여러 장이면 다시 열어 반복)',
+      onPick: async blob => { await addVibeRef(blob); }
+    });
+  });
+  // 갤러리 picker 공용 — 닫기 + 검색 + 이미지 클릭
+  $('gpCloseBtn')?.addEventListener('click', closeGalleryPicker);
+  $('gpSearch')?.addEventListener('input', debounce(_renderGpGrid, 200));
+  $('gpGrid')?.addEventListener('click', async e => {
+    const item = e.target.closest('.gp-item');
+    if(!item) return;
+    const imgId = parseInt(item.dataset.imgId, 10);
+    const sesId = parseInt(item.dataset.sesId, 10);
+    if(!Number.isFinite(imgId) || !Number.isFinite(sesId)) return;
+    try {
+      const imgs = await DB.getSessionImages(sesId);
+      const img = imgs.find(i => i.id === imgId);
+      if(!img?.blob){ toast('이미지를 찾을 수 없어요', 'warning'); return; }
+      const cb = _gpOnPick;
+      closeGalleryPicker();
+      if(cb) await cb(img.blob);
+    } catch(e2){
+      toast(`갤러리 이미지 로드 실패 — ${e2.message||e2}`, 'error');
+    }
   });
   $('vibeList').addEventListener('input', e => {
     const t = e.target;
