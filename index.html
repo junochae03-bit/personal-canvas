@@ -2591,6 +2591,10 @@ mark{
               <div class="label">갤러리 전체 삭제 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Purge</span><div class="desc" style="color:var(--red)">⚠ 모든 이미지가 영구 삭제됩니다</div></div>
               <button class="btn danger" id="purgeGalBtn">갤러리 초기화 <span class="en">Purge</span></button>
             </div>
+            <div class="set-row">
+              <div class="label">앱 업데이트 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Update</span><div class="desc">PWA·APK 에서 새 빌드를 즉시 받아오기 — Service Worker 캐시 비우고 재로딩 (데이터·갤러리·설정 보존)</div></div>
+              <button class="btn ghost" id="forceUpdateBtn" title="🔄 캐시 비우고 새로고침 — 최신 빌드 즉시 반영" style="border-color:rgba(58,99,152,.4);color:var(--blue)">🔄 캐시 비우고 새로고침 <span class="en">Force Update</span></button>
+            </div>
           </div>
 
           <div class="set-card">
@@ -16224,6 +16228,36 @@ function wireMiscEvents(){
 
   $('exportAllBtn').addEventListener('click', openBackupModal);
   $('importAllBtn').addEventListener('click', openRestoreModal);
+  // 🔄 PWA/APK 강제 업데이트 — SW 캐시 비우고 자동 새로고침. 데이터(IDB)·설정(localStorage)은 보존.
+  $('forceUpdateBtn')?.addEventListener('click', async () => {
+    const btn = $('forceUpdateBtn');
+    if(btn._busy) return;
+    btn._busy = true;
+    const orig = btn.innerHTML;
+    btn.innerHTML = '⏳ 캐시 비우는 중…';
+    btn.disabled = true;
+    try {
+      // SW 가 등록돼있으면 캐시 삭제 메시지. 없으면 그냥 새로고침.
+      const reg = await navigator.serviceWorker?.getRegistration();
+      if(reg){
+        // 모든 활성 SW 워커에 CLEAR_CACHE 전파
+        const targets = [reg.active, reg.waiting, reg.installing].filter(Boolean);
+        for(const w of targets){ try { w.postMessage('CLEAR_CACHE'); } catch(_){} }
+        // 잠시 기다려 caches.delete 가 끝날 시간 확보 (CACHE_CLEARED 메시지 도착하기 전이라도 안전)
+        await new Promise(r => setTimeout(r, 400));
+        // SW 자체도 갱신 — 새 sw.js 가 있다면 install 트리거
+        try { await reg.update(); } catch(_){}
+      }
+      // 강제 하드 리로드 — 캐시 무시
+      toast('🔄 최신 빌드 받는 중…', 'info');
+      setTimeout(() => location.reload(), 300);
+    } catch(e){
+      btn.innerHTML = orig;
+      btn.disabled = false;
+      btn._busy = false;
+      toast(`업데이트 실패 — ${e.message || e}`, 'error');
+    }
+  });
   // (옛 PWA 설치 안내 카드 제거됨 — 브라우저 ⋮ 메뉴의 "앱 설치"로 직접 설치)
   $('backupCancel').addEventListener('click', () => $('backupModal').classList.remove('open'));
   $('backupGo').addEventListener('click', doSelectiveBackup);
