@@ -2432,6 +2432,16 @@ mark{
             <option value="all">모든 세션 (All)</option>
             <!-- 세션 옵션들은 loadGallery에서 동적 채움 -->
           </select>
+          <select id="gallerySort" class="inp tiny" title="정렬 방식 — 앨범 보기에서는 무시" style="max-width:150px">
+            <option value="session">📂 세션별 (기본)</option>
+            <option value="new">🕒 최신순</option>
+            <option value="old">⏳ 오래된순</option>
+            <option value="liked">❤️ 좋아요 우선</option>
+            <option value="seed_asc">🌱 시드 ↑</option>
+            <option value="seed_desc">🌱 시드 ↓</option>
+            <option value="model">🎨 모델별</option>
+            <option value="label">🔤 라벨 가나다순</option>
+          </select>
           <div class="gv-toggle" id="galleryView" title="보기 모드 (View mode)">
             <button data-gv="detail" class="act">상세 <span class="en">Detail</span></button>
             <button data-gv="compact">간단 <span class="en">Compact</span></button>
@@ -11675,6 +11685,21 @@ async function loadGallery(){
       allImages.push({img, sesId:ses.id, sesLabel:ses.label, ts:img.ts||ses.ts});
     }
   }
+  // 🔀 정렬 — 앨범 보기는 자체 그룹화라서 적용 안 함, 그 외 detail/compact 만 적용.
+  //   기본 'session' 은 세션별 묶음(현재 push 순서) 유지.
+  const sortKey = ($('gallerySort')?.value || state._gallerySort || 'session');
+  if(sortKey !== 'session' && viewMode !== 'album'){
+    const cmp = {
+      new:     (a,b) => (b.ts||0) - (a.ts||0),
+      old:     (a,b) => (a.ts||0) - (b.ts||0),
+      liked:   (a,b) => (b.img.liked?1:0) - (a.img.liked?1:0) || (b.ts||0) - (a.ts||0),
+      seed_asc:  (a,b) => (a.img.meta?.seed ?? Infinity) - (b.img.meta?.seed ?? Infinity),
+      seed_desc: (a,b) => (b.img.meta?.seed ?? -Infinity) - (a.img.meta?.seed ?? -Infinity),
+      model:   (a,b) => String(a.img.meta?.model||'').localeCompare(String(b.img.meta?.model||'')) || (b.ts||0) - (a.ts||0),
+      label:   (a,b) => String(a.img.label||'').localeCompare(String(b.img.label||''), 'ko') || (b.ts||0) - (a.ts||0),
+    }[sortKey];
+    if(cmp) allImages.sort(cmp);
+  }
   // tokens: 개별 HTML 조각 배열 — 가상 스크롤을 위해 청크 렌더링 가능
   let tokens = [];
   if(viewMode === 'album'){
@@ -15548,6 +15573,17 @@ function wireGalleryEvents(){
   // Gallery
   $('gallerySearch').addEventListener('input', debounce(loadGallery, 250));
   $('galleryFilter').addEventListener('change', loadGallery);
+  // 🔀 정렬 변경 + 영속화 (localStorage)
+  const sortSel = $('gallerySort');
+  if(sortSel){
+    try { sortSel.value = localStorage.getItem('nai_gal_sort') || 'session'; } catch(_){}
+    state._gallerySort = sortSel.value;
+    sortSel.addEventListener('change', () => {
+      state._gallerySort = sortSel.value;
+      try { localStorage.setItem('nai_gal_sort', sortSel.value); } catch(_){}
+      loadGallery();
+    });
+  }
   $('reloadGalBtn').addEventListener('click', loadGallery);
   $('galStatsBtn')?.addEventListener('click', openStatsModal);
   $('statsCloseBtn')?.addEventListener('click', () => $('statsModal').classList.remove('open'));
