@@ -2621,7 +2621,10 @@ mark{
               <div class="label">PIN 상태 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Status</span>
                 <div class="desc" id="pinStatusDesc">잠금 활성화됨</div>
               </div>
-              <button class="btn ghost" id="pinChangeBtn">PIN 변경 <span class="en">Change</span></button>
+              <div style="display:flex;gap:6px">
+                <button class="btn ghost" id="pinLockNowBtn" title="지금 즉시 잠금 — 메모리의 PIN 파생키 폐기">🔒 지금 잠금 <span class="en">Lock</span></button>
+                <button class="btn ghost" id="pinChangeBtn">PIN 변경 <span class="en">Change</span></button>
+              </div>
             </div>
           </div>
 
@@ -5248,24 +5251,37 @@ async function naiGenerate(apiKey, body, signal, opts){
       if(typeof toast === 'function'){
         toast(`⏳ NAI ${e?.status||'네트워크'} — ${delay/1000}초 후 재시도 (${attempt}/${maxRetries-1})`, 'warning');
       }
-      // abort 신호 존중하면서 sleep
+      // abort 신호 존중하면서 sleep — 이미 abort 됐으면 즉시 reject + 리스너 leak 방지
+      if(signal?.aborted) throw new DOMException('aborted', 'AbortError');
       await new Promise((res, rej) => {
-        const t = setTimeout(res, delay);
-        if(signal){
-          const onAbort = () => { clearTimeout(t); rej(new DOMException('aborted', 'AbortError')); };
-          signal.addEventListener('abort', onAbort, {once: true});
-        }
+        const t = setTimeout(() => {
+          if(signal) signal.removeEventListener('abort', onAbort);
+          res();
+        }, delay);
+        function onAbort(){ clearTimeout(t); rej(new DOMException('aborted', 'AbortError')); }
+        if(signal) signal.addEventListener('abort', onAbort, {once: true});
       });
     }
   }
 }
 
 async function _naiGenerateOnce(apiKey, body, signal){
+  // 🐛 fix: 기존엔 외부 signal 이 있으면 client timeout 안 걸렸음 → 큐 무한 정지.
+  //   이제 외부 signal 과 timeout 을 OR 결합 (AbortSignal.any 가 있으면 사용, 아니면 수동 fallback).
   const TIMEOUT_MS = 180000;
   const ctrl = new AbortController();
-  let timer = null;
-  if(!signal){ timer = setTimeout(()=>ctrl.abort('timeout'), TIMEOUT_MS); }
-  const useSignal = signal || ctrl.signal;
+  const timer = setTimeout(() => ctrl.abort('timeout'), TIMEOUT_MS);
+  let useSignal;
+  if(signal && typeof AbortSignal !== 'undefined' && typeof AbortSignal.any === 'function'){
+    useSignal = AbortSignal.any([signal, ctrl.signal]);
+  } else if(signal){
+    // 폴백: 외부 signal 이 abort 되면 내부 ctrl 도 abort.
+    if(signal.aborted) ctrl.abort(signal.reason);
+    else signal.addEventListener('abort', () => ctrl.abort(signal.reason), {once: true});
+    useSignal = ctrl.signal;
+  } else {
+    useSignal = ctrl.signal;
+  }
   const isV4 = (body.model||'').startsWith('nai-diffusion-4');
   let resp;
   try {
@@ -11000,7 +11016,7 @@ async function pgStartScenes(){
         sceneCharPreset: presetChar?.name || null,
       };
       const imgLabel = presetChar?.name ? `${presetChar.name} · ${s.label}` : s.label;
-      await DB.saveImage(blob, fname, imgLabel, opts.prompt, meta);
+      await _saveImageWithSideEffects(blob, fname, imgLabel, opts.prompt, meta);
       recordSeedHistory(opts.seed);
       // 시나리오 프리셋 썸네일 자동 저장 (체크리스트에서 온 시나리오만 — 직접 입력은 출처 없음)
       if(updateThumb && s.cat && s.presetName){
@@ -11146,7 +11162,7 @@ async function pgStart(){
         previewBatch: true,
         charsPerImage: cnt,
       };
-      await DB.saveImage(blob, fname, labelNames, opts.prompt, meta);
+      await _saveImageWithSideEffects(blob, fname, labelNames, opts.prompt, meta);
       recordSeedHistory(opts.seed);
 
       // 썸네일 업데이트 — K=1일 때만 캐릭터 프리셋에 적용 (K>1이면 어느 캐릭터에 저장할지 모호)
@@ -11157,7 +11173,8 @@ async function pgStart(){
           await DB.presetPut('character', chunk[0]);
         } catch(e){ console.warn('[pg thumb]', e); }
       }
-      // 미리보기 영역에 마지막 생성물 표시
+      // 미리보기 영역에 마지막 생성물 표시 — 이전 URL revoke 필수 (장시간 배치에서 누수)
+      if(state.lastImage?.url) URL.revokeObjectURL(state.lastImage.url);
       state.lastImage = {blob, url: URL.createObjectURL(blob), meta};
       const pi = $('previewImg');
       if(pi){ pi.src = state.lastImage.url; pi.style.display = ''; }
@@ -11275,28 +11292,19 @@ function makeFilename(q){
   }
 }
 
-async function afterImage(blob, q){
-  // Show in preview
-  if(state.lastImage?.url) URL.revokeObjectURL(state.lastImage.url);
-  const url = URL.createObjectURL(blob);
-  state.lastImage = {blob, url, meta: q.meta || {}};
-  $('previewImg').src = url;
-  $('previewImg').style.display = '';
-  $('previewEmpty').style.display = 'none';
-
-  // Save to gallery
-  const fname = makeFilename(q);
-  const label = q.label || '';
-  const prompt = q.meta?.prompt || '';
+// 🖼 공통 저장 사이드이펙트 — auto-IP 세션 + saveImage + 출력 폴더 + 앨범 자동 추가 + 갤러리 새로고침.
+//   pgStart/pgStartScenes 도 이 함수를 호출해 일관된 후처리를 받도록 통일 (이전엔 DB.saveImage 만 호출 → 출력폴더·앨범·auto-IP 모두 스킵).
+//   반환: 저장된 이미지의 IDB id (또는 null).
+async function _saveImageWithSideEffects(blob, fname, label, prompt, meta){
   // 🎴 캐릭터 IP별 자동 분류 모드 — 저장 직전 매번 적절한 세션으로 전환
   if($('targetSession')?.value === 'auto-ip'){
-    const primary = (q.meta?.characters || [])[0];
+    const primary = (meta?.characters || [])[0];
     if(primary){ try { await ensureIpSessionForChar(primary); } catch(e){ _swallow(e, 'ipSession:ensure'); } }
   }
-  const id = await DB.saveImage(blob, fname, label, prompt, q.meta);
+  const id = await DB.saveImage(blob, fname, label, prompt, meta);
   // 📂 출력 폴더가 설정돼 있으면 파일로도 저장
   if(state.outputDirHandle){
-    await writeImageToOutputDir(blob, fname);
+    try { await writeImageToOutputDir(blob, fname); } catch(e){ _swallow(e, 'outputDir:write'); }
   }
   // 📁 선택된 앨범에 자동 추가
   const targetAlbumId = $('targetAlbum')?.value || '';
@@ -11307,7 +11315,23 @@ async function afterImage(blob, q){
       await saveAlbumsState();
     }
   }
-  q.blobId = id;
+  return id;
+}
+
+async function afterImage(blob, q){
+  // Show in preview
+  if(state.lastImage?.url) URL.revokeObjectURL(state.lastImage.url);
+  const url = URL.createObjectURL(blob);
+  state.lastImage = {blob, url, meta: q.meta || {}};
+  $('previewImg').src = url;
+  $('previewImg').style.display = '';
+  $('previewEmpty').style.display = 'none';
+
+  // Save to gallery + 부수 작업
+  const fname = makeFilename(q);
+  const label = q.label || '';
+  const prompt = q.meta?.prompt || '';
+  q.blobId = await _saveImageWithSideEffects(blob, fname, label, prompt, q.meta);
   // Refresh gallery if visible
   if(state.mainPane === 'gallery') await loadGallery();
   await refreshGallerySize();
@@ -13948,6 +13972,38 @@ const PIN_ITER = 250000;
 const PIN_MAX_FAILS_BEFORE_DELAY = 3;
 const PIN_BASE_DELAY_MS = 2000;               // 3회 실패부터 (실패-2)^2 * 2초 잠금
 let _pinDerivedKey = null;   // 메모리 캐시 (탭 세션 내 재사용)
+// 🔒 PIN auto-lock — 15분 무활동 또는 탭 숨김 시 _pinDerivedKey 폐기.
+//   _markPinActivity() 를 PIN 관련 액션 후 호출 → 타이머 리셋.
+const _PIN_IDLE_MS = 15 * 60 * 1000;
+let _pinIdleTimer = null;
+function _markPinActivity(){
+  if(_pinIdleTimer) clearTimeout(_pinIdleTimer);
+  if(!_pinDerivedKey) return;
+  _pinIdleTimer = setTimeout(() => {
+    if(_pinDerivedKey){
+      _pinDerivedKey = null;
+      if(typeof toast === 'function') toast('🔒 PIN 자동 잠금 (15분 무활동)', 'info');
+      if(typeof updateSettingsKeyStatus === 'function') updateSettingsKeyStatus();
+    }
+  }, _PIN_IDLE_MS);
+}
+// 탭이 숨겨지면 즉시 잠금 (옵션 — 보수적 default)
+if(typeof document !== 'undefined'){
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'hidden' && _pinDerivedKey){
+      _pinDerivedKey = null;
+      if(typeof updateSettingsKeyStatus === 'function') updateSettingsKeyStatus();
+    }
+  });
+}
+// 수동 잠금 — 사용자가 명시적으로 호출 (PIN 설정 카드에 버튼 노출)
+function lockPinNow(){
+  if(!_pinDerivedKey){ if(typeof toast === 'function') toast('이미 잠긴 상태', 'info'); return; }
+  _pinDerivedKey = null;
+  if(_pinIdleTimer){ clearTimeout(_pinIdleTimer); _pinIdleTimer = null; }
+  if(typeof updateSettingsKeyStatus === 'function') updateSettingsKeyStatus();
+  if(typeof toast === 'function') toast('🔒 PIN 잠김 — 다음 API 호출 시 PIN 입력 필요', 'info');
+}
 
 // 실패 카운터 — 시도 전 호출. blockedUntil 까지 throw.
 async function _checkPinThrottle(){
@@ -14005,19 +14061,24 @@ async function _getOrCreateCryptoKey(){
 }
 
 // PIN 모드 ON: 새 salt 생성 + PIN으로 유도한 키로 기존 API 키 재암호화
+//   🐛 fix (C10): currentApiKey 가 비어있으면 디바이스 키 폐기 거부 (영구 손실 방지).
+//     기존엔 state.apiKey 가 stale/empty 일 때 device key 만 폐기하고 ciphertext 안 갱신 → 다음 부트에서 옛 ciphertext 를 새 PIN 으로 풀려 시도 → 영구 실패.
 async function enablePinLock(pin){
   if(!pin || pin.length < 4 || pin.length > 12) throw new Error('PIN은 4~12자');
   const currentApiKey = state.apiKey || '';
+  if(!currentApiKey){
+    // 메모리에 API 키가 없으면 IDB 의 ciphertext 도 풀어볼 수 없음 — 안전하게 거부
+    throw new Error('API 키를 먼저 저장한 뒤 PIN 을 설정하세요');
+  }
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const derived = await _deriveKeyFromPin(pin, salt);
   _pinDerivedKey = derived;
+  _markPinActivity();
   await DB.setFlag(KEY_PIN_SALT, Array.from(salt));
-  if(currentApiKey){
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, derived, new TextEncoder().encode(currentApiKey));
-    await DB.setFlag(KEY_STORE_KEY, {iv: Array.from(iv), ct: Array.from(new Uint8Array(ct))});
-  }
-  await DB.setFlag(KEY_CRYPTOKEY, null);  // 디바이스 키 폐기
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, derived, new TextEncoder().encode(currentApiKey));
+  await DB.setFlag(KEY_STORE_KEY, {iv: Array.from(iv), ct: Array.from(new Uint8Array(ct))});
+  await DB.setFlag(KEY_CRYPTOKEY, null);  // 디바이스 키 폐기 (이 시점엔 ciphertext 가 새 키로 갱신됨)
 }
 
 // PIN 모드 OFF: 현재 API 키를 디바이스 키로 다시 암호화 후 salt 제거
@@ -14056,6 +14117,7 @@ async function unlockWithPin(pin){
     }
   }
   _pinDerivedKey = derived;
+  _markPinActivity();   // 🔒 auto-lock 타이머 시작
   await _resetPinFails();
   return _pinDerivedKey;
 }
@@ -16234,6 +16296,7 @@ function wireMiscEvents(){
   });
 
   // PIN 변경 — 현재 PIN 확인 → 새 PIN 설정
+  $('pinLockNowBtn')?.addEventListener('click', () => { lockPinNow(); refreshPinUI(); });
   $('pinChangeBtn')?.addEventListener('click', async () => {
     if(!_pinDerivedKey){
       const old = await promptForPin('현재 PIN을 입력하세요');
@@ -16300,20 +16363,30 @@ function wireMiscEvents(){
     btn.innerHTML = '⏳ 캐시 비우는 중…';
     btn.disabled = true;
     try {
-      // SW 가 등록돼있으면 캐시 삭제 메시지. 없으면 그냥 새로고침.
       const reg = await navigator.serviceWorker?.getRegistration();
       if(reg){
-        // 모든 활성 SW 워커에 CLEAR_CACHE 전파
         const targets = [reg.active, reg.waiting, reg.installing].filter(Boolean);
+        // 🐛 fix: CACHE_CLEARED ack 대기 (최대 3초) — 느린 기기에서 race 방지
+        const ackPromise = new Promise(res => {
+          const onMsg = e => {
+            if(e.data?.type === 'CACHE_CLEARED'){
+              navigator.serviceWorker.removeEventListener('message', onMsg);
+              res(true);
+            }
+          };
+          navigator.serviceWorker.addEventListener('message', onMsg);
+          setTimeout(() => {
+            navigator.serviceWorker.removeEventListener('message', onMsg);
+            res(false);   // timeout — 그래도 진행
+          }, 3000);
+        });
         for(const w of targets){ try { w.postMessage('CLEAR_CACHE'); } catch(_){} }
-        // 잠시 기다려 caches.delete 가 끝날 시간 확보 (CACHE_CLEARED 메시지 도착하기 전이라도 안전)
-        await new Promise(r => setTimeout(r, 400));
-        // SW 자체도 갱신 — 새 sw.js 가 있다면 install 트리거
+        const acked = await ackPromise;
+        if(!acked) console.warn('[forceUpdate] CACHE_CLEARED ack timeout — proceeding anyway');
         try { await reg.update(); } catch(_){}
       }
-      // 강제 하드 리로드 — 캐시 무시
       toast('🔄 최신 빌드 받는 중…', 'info');
-      setTimeout(() => location.reload(), 300);
+      setTimeout(() => location.reload(), 200);
     } catch(e){
       btn.innerHTML = orig;
       btn.disabled = false;
