@@ -3040,6 +3040,7 @@ coffee shop, latte art"></textarea>
       </div>
       <div style="padding:10px 13px;background:var(--card);border-radius:6px;border:1.5px solid var(--b1);font-size:13px;color:var(--t2)">
         총 <b id="pgTotalCount" style="color:var(--acc);font-family:var(--mono);font-size:15px">0</b>장 생성 · 예상 비용 <b id="pgCost" style="color:var(--acc);font-family:var(--mono)">0 Anlas</b>
+        <div id="pgVibeHint" style="display:none;margin-top:6px;font-size:11.5px;color:var(--blue)">🎨 Vibe Transfer <span id="pgVibeCount">0</span>개 적용 — 그림체 일관성 유지</div>
       </div>
       <div id="pgProgress" style="display:none;margin-top:10px;padding:10px 13px;background:rgba(162,90,31,.06);border-radius:6px;font-size:13px;color:var(--t1)">
         <div style="display:flex;justify-content:space-between;margin-bottom:4px">
@@ -11025,6 +11026,13 @@ function pgRefreshCost(){
   }
   $('pgTotalCount').textContent = total;
   $('pgCost').textContent = `${(per * total).toLocaleString()} Anlas`;
+  // 🎨 Vibe Transfer hint — 적용될 vibe 참조 수 표시
+  const vibeN = Array.isArray(state.vibeRefs) ? state.vibeRefs.length : 0;
+  const vh = $('pgVibeHint');
+  if(vh){
+    vh.style.display = vibeN ? '' : 'none';
+    const vc = $('pgVibeCount'); if(vc) vc.textContent = vibeN;
+  }
 }
 
 // 🎬 시나리오별 일괄 — 현재 폼 캐릭터 유지, 시나리오만 차례로 적용
@@ -11106,6 +11114,8 @@ async function pgStartScenes(){
           prompt: combinedBase || s.prompt,
           characters: charactersArr,
           useCoords: cnt > 1,
+          // 🎨 Vibe Transfer 보존 — 그림체 일관성 적용
+          vibeRefs: Array.isArray(state.vibeRefs) && state.vibeRefs.length ? state.vibeRefs.map(v => ({...v})) : undefined,
         };
       } else {
         // 현재 폼 캐릭터·useCoords·characters 그대로
@@ -11113,6 +11123,7 @@ async function pgStartScenes(){
           ...baseOpts,
           seed: lockSeed ? lockedSeedValue : randomSeed(),
           prompt: combinedBase || s.prompt,
+          vibeRefs: Array.isArray(state.vibeRefs) && state.vibeRefs.length ? state.vibeRefs.map(v => ({...v})) : undefined,
         };
       }
       const body = buildGenBody({...opts, action: 'generate'});
@@ -11263,6 +11274,9 @@ async function pgStart(){
         prompt: combinedBase || fallbackChar,
         characters: charactersArr,
         useCoords: cnt > 1,  // 다중 캐릭터일 때만 좌표 사용
+        // 🎨 Vibe Transfer — 사용자가 그림체 일관성용으로 설정한 vibe refs 를 배치에서도 적용
+        //   (이전 버그: 배치는 항상 t2i 로 빌드 → vibe 무시되어 스타일 깨짐)
+        vibeRefs: Array.isArray(state.vibeRefs) && state.vibeRefs.length ? state.vibeRefs.map(v => ({...v})) : undefined,
       };
       const body = buildGenBody({...opts, action: 'generate'});
       const blob = await naiGenerate(apiKey, body, _pgAbort.signal);
