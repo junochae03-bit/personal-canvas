@@ -2423,7 +2423,7 @@ mark{
       <div class="main-pane" data-pane="gallery">
         <div class="gallery-bar">
           <input type="text" class="inp" id="gallerySearch" placeholder="🔍 프롬프트·캐릭터·앨범·시드…">
-          <button class="btn ghost gal-fav-toggle" id="galFavToggle" type="button" title="★ 즐겨찾기만 보기" aria-pressed="false">★ 즐겨찾기 <span class="muted" id="galFavCount"></span></button>
+          <button class="btn ghost" id="galLikeToggle" type="button" title="❤️ 좋아요만 보기 — 마음에 든 결과물만 모아보기" aria-pressed="false" style="color:var(--t3);border-color:var(--b1)">❤️ 좋아요만 <span class="muted" id="galLikeCount"></span></button>
           <button class="btn ghost" id="galDislikeToggle" type="button" title="👎 별로 표시한 이미지만 — 자주 실패 패턴 분석" aria-pressed="false" style="color:var(--t3);border-color:var(--b1)">👎 별로만 <span class="muted" id="galDislikeCount"></span></button>
           <button class="btn ghost gal-trash-toggle" id="galTrashToggle" type="button" title="🗑 휴지통 보기 — 7일 안에 복원 가능" aria-pressed="false">🗑 휴지통 <span class="muted" id="galTrashCount"></span></button>
           <button class="btn danger" id="galEmptyTrashBtn" type="button" title="휴지통의 모든 이미지를 즉시 영구 삭제 (복원 불가)" style="display:none">🗑 휴지통 비우기 <span class="en">Empty</span></button>
@@ -2458,6 +2458,8 @@ mark{
           <span class="sel-count" id="galSelCount">0장</span>
           <button class="btn" id="galSelAll" title="화면에 보이는 모든 이미지를 선택">☰ 전체 선택</button>
           <button class="btn" id="galSelAlbum" title="선택한 이미지를 앨범에 추가">📁 앨범에</button>
+          <button class="btn" id="galSelLike" title="선택한 이미지 모두 ❤️ 좋아요" style="color:#e25b6f;border-color:rgba(226,91,111,.4)">❤️ 좋아요</button>
+          <button class="btn" id="galSelDislike" title="선택한 이미지 모두 👎 별로" style="color:#b54338;border-color:rgba(181,67,56,.4)">👎 별로</button>
           <button class="btn" id="galSelClear" title="선택 해제하고 선택 모드 종료">✕ 닫기</button>
           <div style="flex:1"></div>
           <button class="btn" id="galSelDownload" title="선택한 이미지를 ZIP으로 다운로드" style="background:rgba(58,99,152,.18);border-color:rgba(255,255,255,.45)">⬇ 다운로드</button>
@@ -2472,6 +2474,7 @@ mark{
           <div class="preset-tabs" id="presetTabs"></div>
           <div style="flex-basis:100%;height:0"></div>
           <input type="text" class="inp" id="presetSearch" placeholder="🔍 이름·내용 검색...">
+          <button class="btn ghost" id="presetFavToggle" type="button" title="⭐ 즐겨찾기 프리셋만 보기" aria-pressed="false" style="color:var(--t3);border-color:var(--b1)">⭐ 즐겨찾기만</button>
           <div class="gal-zoom" title="프리셋 카드 크기 조절 (모바일: 두 손가락 핀치)">
             <button class="iconbtn" id="presetZoomOut" title="작게 보기 (−)">−</button>
             <span class="gz-ind" id="presetZoomInd" title="현재 크기">M</span>
@@ -2518,6 +2521,9 @@ mark{
                 <label class="chk" style="font-size:12px" title="첫 캐릭터 슬롯의 액션·의상에 콤마로 이어 붙임 (기존 내용 유지)"><input type="radio" name="tplApplyMode" value="merge" checked>＋ 병합</label>
                 <label class="chk" style="font-size:12px" title="첫 캐릭터 슬롯의 액션·의상을 통째로 교체 (기존 내용 덮어씀)"><input type="radio" name="tplApplyMode" value="replace">↻ 변경</label>
               </div>
+              <label class="chk" style="font-size:12px;color:var(--t2);margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:6px" title="체크 시 ⭐ 즐겨찾기 표시한 프리셋만 랜덤 풀에 포함">
+                <input type="checkbox" id="tplFavOnlyToggle"> ⭐ 즐겨찾기 프리셋만 사용
+              </label>
               <div style="display:flex;gap:6px">
                 <button class="btn primary" id="tplRollBtn" type="button" style="flex:1;padding:11px;font-size:14px">🎲 랜덤 조합 생성 <span class="en">Roll</span></button>
                 <button class="btn ghost" id="tplApplyBtn" type="button" title="현재 조합을 메인 폼에 적용 (위 적용 방식대로)" style="flex:1;padding:11px;font-size:13px;border-color:rgba(58,99,152,.4);color:var(--blue)">✅ 폼에 적용</button>
@@ -2699,8 +2705,7 @@ mark{
     <button class="iconbtn lb-act-btn" id="lbExtractTags" title="📋 이 이미지의 태그를 도감에 추출"><span class="lb-act-ico">📋</span><span class="lb-act-lbl">태그</span></button>
     <div style="height:1px;background:var(--b1);margin:2px 0"></div>
     <button class="iconbtn lb-act-btn" id="lbInfoBtn" title="ℹ 상세정보 펼치기/접기 (메타·프롬프트)" aria-pressed="false"><span class="lb-act-ico">ℹ</span><span class="lb-act-lbl">정보</span></button>
-    <button class="iconbtn lb-act-btn" id="lbFav" title="★ 즐겨찾기 — 갤러리에서 ★만 필터로 빠르게 찾기" aria-pressed="false"><span class="lb-act-ico">☆</span><span class="lb-act-lbl">★</span></button>
-    <button class="iconbtn lb-act-btn" id="lbLike" title="❤️ 좋아요 — 통계에서 가장 인기있는 시드·프롬·모델·캐릭터 집계 (★ 와 별개)" aria-pressed="false"><span class="lb-act-ico">♡</span><span class="lb-act-lbl">좋아요</span></button>
+    <button class="iconbtn lb-act-btn" id="lbLike" title="❤️ 좋아요 — 마음에 든 결과물 표시 + 통계 집계 + ❤️🎲 시드 풀에 추가" aria-pressed="false"><span class="lb-act-ico">♡</span><span class="lb-act-lbl">좋아요</span></button>
     <button class="iconbtn lb-act-btn" id="lbDislike" title="👎 별로 — 깨지거나 의도와 다른 결과. 통계에서 자주 실패하는 시드·프롬·모델·캐릭터·토큰 추적" aria-pressed="false"><span class="lb-act-ico">👎</span><span class="lb-act-lbl">별로</span></button>
     <button class="iconbtn lb-act-btn" id="lbEditPrompt" title="✏️ 이 이미지 프롬프트 → 편집화면 + 자주 실패하는 toxic 토큰 강조" style="display:none;border-color:rgba(181,67,56,.4)"><span class="lb-act-ico">✏️</span><span class="lb-act-lbl">수정</span></button>
     <button class="iconbtn lb-act-btn" id="lbRestore" title="↺ 휴지통에서 복원" style="display:none;color:var(--green);border-color:rgba(93,138,48,.4)"><span class="lb-act-ico">↺</span><span class="lb-act-lbl">복원</span></button>
@@ -6796,6 +6801,8 @@ function renderPresets(){
   const type = state.presetType;
   const search = ($('presetSearch').value||'').trim();
   let list = state.presets[type] || [];
+  // ⭐ 즐겨찾기만 필터
+  if(state._presetFavOnly) list = list.filter(p => p.fav);
   // 🇰🇷 koMatch — 초성 검색 ("ㅂㅅ" → "붕스타") 지원
   if(search) list = list.filter(p => koMatch(p.name||'', search).match || koMatch(p.text||'', search).match);
   // ⭐ 즐겨찾기 우선 정렬 (그룹화 안 되는 카테고리에서만 의미. 그룹화 카테고리는 groupCharsByWork 내부 정렬 유지)
@@ -11638,7 +11645,8 @@ async function loadGallery(){
     return names.some(n => (typeof getCharGroup === 'function' ? getCharGroup(n) : '') === selWork);
   };
   const trashMode = !!state._galTrashMode;
-  const favOnly = !!state._galFavOnly;
+  // ❤️ 좋아요만 필터 — 옛 fav 필터 데이터도 호환 (마이그레이션 이전 사용자의 ⭐ 데이터)
+  const likeOnly = !!state._galLikeOnly;
   const dislikeOnly = !!state._galDislikeOnly;
   grid.classList.toggle('gallery-trash-mode', trashMode);
   // 🚀 perf: 세션별 IDB 조회를 병렬화 (이전엔 N개 세션 = N회 순차 RTT).
@@ -11652,7 +11660,7 @@ async function loadGallery(){
     if(!imgs.length) continue;
     let filtered = imgs;
     if(trashMode) filtered = filtered.filter(i => typeof i.deletedAt === 'number' && i.deletedAt > 0);
-    if(favOnly) filtered = filtered.filter(i => i.fav);
+    if(likeOnly) filtered = filtered.filter(i => i.liked || i.fav);   // 옛 fav 도 포함
     if(dislikeOnly) filtered = filtered.filter(i => i.disliked);
     if(selWork) filtered = filtered.filter(matchesWork);
     if(search){
@@ -12217,21 +12225,14 @@ async function showLightboxAt(idx){
   const url = URL.createObjectURL(img.blob);
   $('lbImg').src = url;
   $('lbImg').dataset.url = url;
-  // ★ 즐겨찾기 버튼 상태 동기화
-  const favBtn = $('lbFav');
-  if(favBtn){
-    const isFav = !!img.fav;
-    favBtn.setAttribute('aria-pressed', String(isFav));
-    favBtn.querySelector('.lb-act-ico').textContent = isFav ? '★' : '☆';
-    favBtn.style.color = isFav ? '#f5b80a' : '';
-  }
   // ❤️ 좋아요 / 👎 별로 버튼 상태 동기화 + ✏️ 수정 버튼 노출 (👎 일 때만)
   _refreshLbLikeDislikeUI();
   // 메타데이터 — EXIF 외 추가 필드들 풍부하게 표시
   const m = img.meta || (await readPngMetadata(img.blob))?.parsed || {};
   const lines = [];
   if(img.label) lines.push(`<b>라벨</b> · ${esc(img.label)}`);
-  if(img.fav) lines.push(`<b>⭐ 즐겨찾기</b>`);
+  if(img.liked) lines.push(`<b style="color:#e25b6f">❤️ 좋아요</b>`);
+  if(img.disliked) lines.push(`<b style="color:#b54338">👎 별로</b>`);
   if(img.deletedAt) lines.push(`<b style="color:var(--red)">🗑 휴지통</b> · ${new Date(img.deletedAt).toLocaleString()} (7일 후 영구 삭제)`);
   // 라이트박스 액션: 휴지통 이미지면 복원 버튼 노출 + 🗑 라벨이 '영구 삭제' 의미
   const restoreBtn = $('lbRestore');
@@ -12853,7 +12854,13 @@ function tplRoll(){
       _tplCurrentRoll.push(lockedEntries.get(cid));
       continue;
     }
-    const list = state.presets[cid] || [];
+    let list = state.presets[cid] || [];
+    // ⭐ 옵션 켜져있으면 즐겨찾기만 — 없으면 카테고리 스킵 (랜덤 풀이 비어있음)
+    if(state._tplFavOnly){
+      const favList = list.filter(p => p.fav);
+      if(!favList.length) continue;
+      list = favList;
+    }
     if(!list.length) continue;
     const pick = list[Math.floor(Math.random() * list.length)];
     _tplCurrentRoll.push({cat: cid, preset: pick});
@@ -15327,6 +15334,16 @@ function wireGenerationAndPresetEvents(){
   });
   // 키타이핑마다 grid.innerHTML 재구성 → 200+ 프리셋에서 input race. 다른 검색바와 동일하게 80ms debounce.
   $('presetSearch').addEventListener('input', debounce(renderPresets, 80));
+  // ⭐ 즐겨찾기 프리셋만 보기 토글
+  $('presetFavToggle')?.addEventListener('click', () => {
+    state._presetFavOnly = !state._presetFavOnly;
+    const b = $('presetFavToggle');
+    b.classList.toggle('act', state._presetFavOnly);
+    b.setAttribute('aria-pressed', String(!!state._presetFavOnly));
+    b.style.color = state._presetFavOnly ? '#f5b80a' : 'var(--t3)';
+    b.style.borderColor = state._presetFavOnly ? '#f5b80a' : 'var(--b1)';
+    renderPresets();
+  });
 
   // Tag Codex 이벤트
   $('tagCats').addEventListener('click', e => {
@@ -15750,9 +15767,35 @@ function wireGalleryEvents(){
     if(!_selectionMode) setSelectionMode(true);
     selectAllVisibleImages();
   });
-  // 일괄 작업 — 선택 해제 / 삭제 / 앨범 추가
+  // 일괄 작업 — 선택 해제 / 삭제 / 앨범 추가 / 좋아요 / 별로
   $('galSelClear').addEventListener('click', clearGallerySelection);
   $('galSelDownload').addEventListener('click', downloadSelectedAsZip);
+  $('galSelLike')?.addEventListener('click', async () => {
+    const ids = [..._gallerySel];
+    if(!ids.length) return;
+    for(const id of ids){ try { await DB.setImageLike(id, true); } catch(_){} }
+    clearGallerySelection();
+    await loadGallery();
+    toast(`❤️ ${ids.length}장 좋아요 표시됨`, 'success');
+  });
+  $('galSelDislike')?.addEventListener('click', async () => {
+    const ids = [..._gallerySel];
+    if(!ids.length) return;
+    for(const id of ids){ try { await DB.setImageDislike(id, true); } catch(_){} }
+    // 시드 blocklist 자동 추가 (옵션)
+    if(state.seedBlocklistAuto){
+      try {
+        const all = await DB.getAllImagesForStats();
+        for(const id of ids){
+          const it = all.find(x => x.id === id);
+          if(it?.meta?.seed != null) await addSeedToBlocklist(it.meta.seed);
+        }
+      } catch(_){}
+    }
+    clearGallerySelection();
+    await loadGallery();
+    toast(`👎 ${ids.length}장 별로 표시됨`, 'info');
+  });
   $('galSelDelete').addEventListener('click', () => {
     const ids = [..._gallerySel];
     if(!ids.length) return;
@@ -16282,20 +16325,7 @@ function wireLightboxEvents(){
       console.error('Upscale', e);
     }
   });
-  // ★ 즐겨찾기 토글
-  $('lbFav')?.addEventListener('click', async () => {
-    if(!_lbCurrent) return;
-    const next = !_lbCurrent.fav;
-    await DB.setImageFav(_lbCurrent.id, next);
-    _lbCurrent.fav = next;
-    const favBtn = $('lbFav');
-    favBtn.setAttribute('aria-pressed', String(next));
-    favBtn.querySelector('.lb-act-ico').textContent = next ? '★' : '☆';
-    favBtn.style.color = next ? '#f5b80a' : '';
-    if(state.mainPane === 'gallery') loadGallery();
-    toast(next ? '★ 즐겨찾기 추가' : '☆ 즐겨찾기 해제', 'info');
-  });
-  // ❤️ 좋아요 토글 — 통계 집계용
+  // ❤️ 좋아요 토글 — 통계 집계용 (옛 ⭐ 기능 통합됨)
   $('lbLike')?.addEventListener('click', async () => {
     if(!_lbCurrent) return;
     const next = !_lbCurrent.liked;
@@ -16350,19 +16380,27 @@ function wireLightboxEvents(){
     b.setAttribute('aria-pressed', String(!!state._galDislikeOnly));
     b.style.color = state._galDislikeOnly ? '#b54338' : 'var(--t3)';
     b.style.borderColor = state._galDislikeOnly ? '#b54338' : 'var(--b1)';
-    // 별로 + 즐겨찾기 동시 필터 의미 없음 — 즐겨찾기 해제
-    if(state._galDislikeOnly && state._galFavOnly){
-      state._galFavOnly = false;
-      $('galFavToggle').classList.remove('act');
-      $('galFavToggle').setAttribute('aria-pressed', 'false');
+    // 별로 + 좋아요 동시 필터 의미 없음 — 좋아요 해제
+    if(state._galDislikeOnly && state._galLikeOnly){
+      state._galLikeOnly = false;
+      const lb = $('galLikeToggle');
+      if(lb){ lb.classList.remove('act'); lb.setAttribute('aria-pressed', 'false'); lb.style.color = 'var(--t3)'; lb.style.borderColor = 'var(--b1)'; }
     }
     loadGallery();
   });
-  // 갤러리 ★ 필터 토글
-  $('galFavToggle')?.addEventListener('click', () => {
-    state._galFavOnly = !state._galFavOnly;
-    $('galFavToggle').classList.toggle('act', state._galFavOnly);
-    $('galFavToggle').setAttribute('aria-pressed', String(!!state._galFavOnly));
+  // 갤러리 ❤️ 좋아요 필터 토글 (옛 ⭐ 필터를 대체)
+  $('galLikeToggle')?.addEventListener('click', () => {
+    state._galLikeOnly = !state._galLikeOnly;
+    const b = $('galLikeToggle');
+    b.classList.toggle('act', state._galLikeOnly);
+    b.setAttribute('aria-pressed', String(!!state._galLikeOnly));
+    b.style.color = state._galLikeOnly ? '#e25b6f' : 'var(--t3)';
+    b.style.borderColor = state._galLikeOnly ? '#e25b6f' : 'var(--b1)';
+    if(state._galLikeOnly && state._galDislikeOnly){
+      state._galDislikeOnly = false;
+      const db = $('galDislikeToggle');
+      if(db){ db.classList.remove('act'); db.setAttribute('aria-pressed','false'); db.style.color='var(--t3)'; db.style.borderColor='var(--b1)'; }
+    }
     loadGallery();
   });
   // 갤러리 🗑 휴지통 모드 토글
@@ -16370,11 +16408,10 @@ function wireLightboxEvents(){
     state._galTrashMode = !state._galTrashMode;
     $('galTrashToggle').classList.toggle('act', state._galTrashMode);
     $('galTrashToggle').setAttribute('aria-pressed', String(!!state._galTrashMode));
-    // 휴지통 모드면 즐겨찾기 필터 자동 해제 (충돌 방지)
-    if(state._galTrashMode && state._galFavOnly){
-      state._galFavOnly = false;
-      $('galFavToggle').classList.remove('act');
-      $('galFavToggle').setAttribute('aria-pressed', 'false');
+    // 휴지통 모드면 좋아요·별로 필터 자동 해제
+    if(state._galTrashMode){
+      if(state._galLikeOnly){ state._galLikeOnly = false; const b=$('galLikeToggle'); if(b){ b.classList.remove('act'); b.setAttribute('aria-pressed','false'); b.style.color='var(--t3)'; b.style.borderColor='var(--b1)'; } }
+      if(state._galDislikeOnly){ state._galDislikeOnly = false; const b=$('galDislikeToggle'); if(b){ b.classList.remove('act'); b.setAttribute('aria-pressed','false'); b.style.color='var(--t3)'; b.style.borderColor='var(--b1)'; } }
     }
     // 휴지통 모드일 때만 '비우기' 버튼 노출
     const emptyBtn = $('galEmptyTrashBtn');
@@ -16449,6 +16486,21 @@ function wireMiscEvents(){
     if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){ e.preventDefault(); tplApplyNaturalLanguage(); }
   });
   $('tplRollBtn')?.addEventListener('click', tplRoll);
+  // ⭐ 템플릿 랜덤 — 즐겨찾기 프리셋만 사용 토글 (영속화)
+  const tfoToggle = $('tplFavOnlyToggle');
+  if(tfoToggle){
+    DB.getFlag('tpl_fav_only').then(v => {
+      state._tplFavOnly = !!v;
+      tfoToggle.checked = state._tplFavOnly;
+    }).catch(()=>{});
+    tfoToggle.addEventListener('change', async () => {
+      state._tplFavOnly = tfoToggle.checked;
+      await DB.setFlag('tpl_fav_only', state._tplFavOnly);
+      toast(state._tplFavOnly
+        ? '⭐ 즐겨찾기 프리셋만 사용 — 다음 🎲 부터 적용'
+        : '⭐ 필터 해제 — 모든 프리셋에서 랜덤', 'info');
+    });
+  }
   $('tplApplyBtn')?.addEventListener('click', tplApplyRoll);
   // ➕ 현재 조합에 캐릭터 항목 추가 — 캐릭터 선택 모달 (검색 + 랜덤)
   $('tplAddCharSlotBtn')?.addEventListener('click', () => {
@@ -18608,6 +18660,19 @@ async function init(){
     if(Array.isArray(bl)) state.seedBlocklist = bl;
     const auto = await DB.getFlag('seed_blocklist_auto');
     state.seedBlocklistAuto = !!auto;
+  } catch(_){}
+  // 🔄 마이그레이션: 갤러리 ⭐ → ❤️ (한 번만, 옛 사용자의 fav 데이터를 liked 로 승격)
+  try {
+    const done = await DB.getFlag('migration_fav2liked_v1');
+    if(!done){
+      const imgs = await DB.getAllImagesForStats();
+      const targets = imgs.filter(i => i.fav && !i.liked);
+      for(const it of targets){
+        try { await DB.setImageLike(it.id, true); } catch(_){}
+      }
+      await DB.setFlag('migration_fav2liked_v1', {ts: Date.now(), migrated: targets.length});
+      if(targets.length) console.log(`[migrate] ⭐→❤️ ${targets.length}장 이전`);
+    }
   } catch(_){}
   // 📁 갤러리 저장 위치 드롭다운 초기 채움
   state.gallerySessions = await DB.getSessions();
