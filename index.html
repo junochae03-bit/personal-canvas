@@ -4737,6 +4737,8 @@ const DB = {
     if(!this.db) return [];
     if(this._imgCache?.has(sessionId)){
       const cached = this._imgCache.get(sessionId);
+      // LRU 터치 — 최근 접근 세션을 맨 뒤로 이동 (가장 오래 미접근 세션부터 evict)
+      this._imgCache.delete(sessionId); this._imgCache.set(sessionId, cached);
       return (opts?.includeTrashed) ? cached : cached.filter(i => !i.deletedAt);
     }
     return new Promise(res => {
@@ -4747,6 +4749,12 @@ const DB = {
         const imgs = req.result || [];
         if(!this._imgCache) this._imgCache = new Map();
         this._imgCache.set(sessionId, imgs);
+        // 🚀 메모리 상한 — 세션별 풀해상도 blob 캐시가 페이지 수명 동안 무한 증가하지 않도록
+        //    최근 12개 세션만 유지. 순수 perf 캐시라 evict 해도 재조회로 복구되어 정합성 영향 없음.
+        while(this._imgCache.size > 12){
+          const oldest = this._imgCache.keys().next().value;
+          this._imgCache.delete(oldest);
+        }
         res((opts?.includeTrashed) ? imgs : imgs.filter(i => !i.deletedAt));
       };
       req.onerror = () => res([]);
@@ -4755,15 +4763,21 @@ const DB = {
   // 🗑 모든 휴지통 이미지 수집 (세션 무관) — 휴지통 뷰용.
   async getAllTrashed(){
     if(!this.db) return [];
+    // 커서로 순회하며 휴지통(deletedAt>0) 항목만 수집 — getAll() 처럼 모든 세션 blob 을
+    // 한꺼번에 메모리에 올리지 않아 대형 갤러리에서 피크 메모리 절감.
     return new Promise(res => {
       const tx = this.tx(this.IMG, 'readonly');
       const store = tx.objectStore(this.IMG);
-      const req = store.getAll();
-      req.onsuccess = () => {
-        const all = req.result || [];
-        res(all.filter(i => i && typeof i.deletedAt === 'number' && i.deletedAt > 0));
+      const out = [];
+      const req = store.openCursor();
+      req.onsuccess = e => {
+        const cur = e.target.result;
+        if(!cur){ res(out); return; }
+        const v = cur.value;
+        if(v && typeof v.deletedAt === 'number' && v.deletedAt > 0) out.push(v);
+        cur.continue();
       };
-      req.onerror = () => res([]);
+      req.onerror = () => res(out);
     });
   },
   // 캐시 무효화 — sid=null 이면 전체 비우기.
@@ -5187,9 +5201,12 @@ function setAnlasPill(){
 
 async function naiFetchAnlas(apiKey){
   if(!apiKey) return null;
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), 15000);
   try {
     const r = await fetch(NAI_API_BASE + '/user/subscription', {
-      headers: {'Authorization': 'Bearer ' + apiKey, 'Accept':'application/json'}
+      headers: {'Authorization': 'Bearer ' + apiKey, 'Accept':'application/json'},
+      signal: ac.signal,
     });
     if(!r.ok){
       let detail = '';
@@ -5206,6 +5223,8 @@ async function naiFetchAnlas(apiKey){
   } catch(e){
     console.warn('[NAI] anlas fetch failed:', e);
     return {error: e.message || String(e), status: e.status||0};
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -5627,7 +5646,29 @@ async function naiAugment(apiKey, opts){
  * @param {Blob|File} blob
  * @returns {Promise<Object|null>}
  */
+// 🛡 임포트 이미지 최대 크기 — 이보다 큰 파일은 arrayBuffer() 로 통째로 읽기 전에 거부.
+const MAX_IMPORT_IMAGE_BYTES = 60 * 1024 * 1024;
+// 🛡 압축 해제 폭탄 방어 — zTXt/iTXt deflate 출력을 상한(32MB)까지만 허용.
+//    pako.inflate 는 출력 상한이 없어 작은 고압축 청크가 GB로 팽창해 탭을 OOM 시킬 수 있음.
+//    64KB 단위로 스트리밍 push 하며 누적 출력이 상한을 넘으면 중단하고 null 반환.
+const MAX_INFLATE_BYTES = 32 * 1024 * 1024;
+function _safeInflate(bytes){
+  if(typeof pako === 'undefined' || !pako?.Inflate) return null;
+  const inf = new pako.Inflate();
+  let total = 0, over = false;
+  inf.onData = chunk => { total += chunk.length; if(total > MAX_INFLATE_BYTES) over = true; };
+  const CH = 65536;
+  for(let i = 0; i < bytes.length && !over; i += CH){
+    inf.push(bytes.subarray(i, Math.min(i + CH, bytes.length)), i + CH >= bytes.length);
+    if(inf.err) return null;
+  }
+  if(over || inf.err) return null;
+  return inf.result || null;
+}
+
 async function readPngMetadata(blob){
+  // 🛡 비정상적으로 큰 파일은 통째로 읽기 전에 거부 (메모리 소진·DoS 방지).
+  if(blob && blob.size > MAX_IMPORT_IMAGE_BYTES) return null;
   try {
     const buf = await blob.arrayBuffer();
     const u8 = new Uint8Array(buf);
@@ -5658,10 +5699,8 @@ async function readPngMetadata(blob){
           const key = dec.decode(data.slice(0, nullIdx));
           const compressed = data.slice(nullIdx + 2);  // compressionMethod 1B 건너뛰기
           try {
-            if(typeof pako !== 'undefined' && pako?.inflate){
-              const text = dec.decode(pako.inflate(compressed));
-              meta[key] = text;
-            }
+            const inflated = _safeInflate(compressed);
+            if(inflated) meta[key] = dec.decode(inflated);
           } catch(e){ _swallow(e, 'exif:zTXt:inflate'); }
         }
       } else if(type === 'iTXt'){
@@ -5685,9 +5724,8 @@ async function readPngMetadata(blob){
             } else {
               // 압축 iTXt — pako로 디플레이트
               try {
-                if(typeof pako !== 'undefined' && pako?.inflate){
-                  meta[key] = dec.decode(pako.inflate(data.slice(textStart)));
-                }
+                const inflated = _safeInflate(data.slice(textStart));
+                if(inflated) meta[key] = dec.decode(inflated);
               } catch(e){ _swallow(e, 'exif:iTXt:inflate'); }
             }
           }
@@ -7567,8 +7605,14 @@ async function doSelectiveRestore(){
   let restored = [];
   showImportProgress('복원 시작...');
   try {
-    if($('rs_settings')?.checked && data.settings){
-      await DB.appSet(data.settings);
+    if($('rs_settings')?.checked && data.settings && typeof data.settings === 'object'){
+      if(mode === 'replace'){
+        await DB.appSet(data.settings);
+      } else {
+        // 병합 모드 — 백업에 없는 현재 필드는 보존 (구버전 백업 복원 시 신규 설정 유실 방지)
+        const cur = await DB.appGet() || {};
+        await DB.appSet({...cur, ...data.settings});
+      }
       await loadSettings();
       // 🐛 fix: SET-store 플래그 복원 (백업에 flags 있으면)
       if(data.flags && typeof data.flags === 'object'){
@@ -7580,7 +7624,7 @@ async function doSelectiveRestore(){
       }
       restored.push('설정');
     }
-    if($('rs_apikey')?.checked && data.apiKey){
+    if($('rs_apikey')?.checked && typeof data.apiKey === 'string' && data.apiKey){
       saveApiKey(data.apiKey);
       $('apiKey').value = data.apiKey;
       restored.push('API 키');
@@ -12474,7 +12518,7 @@ async function showLightboxAt(idx){
   if(m.variety_plus || m.variety) lines.push(`<b>Variety+</b> · ON`);
   if(m.uncond_scale != null) lines.push(`<b>Uncond Scale</b> · ${m.uncond_scale}`);
   if(m.use_coords || m.useCoords) lines.push(`<b>좌표 사용</b> · ON`);
-  if(Array.isArray(m.characters) && m.characters.length) lines.push(`<b>캐릭터</b> · ${m.characters.map(c => typeof c === 'string' ? c : (c.name || '?')).join(', ')}`);
+  if(Array.isArray(m.characters) && m.characters.length) lines.push(`<b>캐릭터</b> · ${m.characters.map(c => esc(typeof c === 'string' ? c : (c.name || '?'))).join(', ')}`);
   if(Array.isArray(m.reference_image_multiple)) lines.push(`<b>Vibe 참조</b> · ${m.reference_image_multiple.length}장`);
   else if(m.reference_image) lines.push(`<b>Vibe 참조</b> · 1장`);
   if(img.ts) lines.push(`<b>생성</b> · ${new Date(img.ts).toLocaleString()}`);
@@ -14377,9 +14421,15 @@ async function loadSettings(){
   applyUiScale(80);
   setTheme('default');
   if(Array.isArray(s.seedHistory)) state.seedHistory = s.seedHistory;
-  if(s.characters){
-    // 마이그레이션: 옛 c.prompt만 있고 appearance/action이 비어있으면 → appearance로 이동
-    state.characters = s.characters.map(c => {
+  // 🐛 마이그레이션 완료 표식 즉시 영속화 — 사용자 편집(저장 트리거) 없이 탭을 닫아도
+  //    다음 부트에서 v2/v3 마이그레이션이 재실행되지 않도록. saveSettings 가 migration_*_done:true 기록.
+  if(state._needMigrationV2Mark || state._needMigrationV3Mark){
+    if(typeof saveSettingsDebounced === 'function') saveSettingsDebounced();
+  }
+  if(Array.isArray(s.characters)){
+    // 마이그레이션: 옛 c.prompt만 있고 appearance/action이 비어있으면 → appearance로 이동.
+    // 손상된 저장값(배열 아님·비객체 요소)이 .map 에서 throw → 부트 전체로 전이되는 것 방지.
+    state.characters = s.characters.filter(c => c && typeof c === 'object').map(c => {
       const ap = (c.appearance||'').trim();
       const ac = (c.action||'').trim();
       if(!ap && !ac && c.prompt && c.prompt.trim()){
@@ -18944,6 +18994,15 @@ function installShortcutHandlers(){
   });
 }
 
+// 🛡 임포트 파일 크기 가드 — 상한 초과 시 토스트 안내 후 거부.
+function _checkImportSize(f){
+  if(f && f.size > MAX_IMPORT_IMAGE_BYTES){
+    toast(`이미지가 너무 큽니다 (${(f.size/1048576).toFixed(0)}MB) — 최대 ${MAX_IMPORT_IMAGE_BYTES/1048576}MB`, 'error');
+    return false;
+  }
+  return true;
+}
+
 function setupImageDrop(wrapId, fileId, handler){
   const wrap = $(wrapId);
   const file = $(fileId);
@@ -18952,7 +19011,8 @@ function setupImageDrop(wrapId, fileId, handler){
     file.click();
   });
   file.addEventListener('change', async e => {
-    if(e.target.files[0]) await handler(e.target.files[0]);
+    const f = e.target.files[0];
+    if(f && _checkImportSize(f)) await handler(f);
     e.target.value = '';
   });
   wrap.addEventListener('dragover', e => { e.preventDefault(); wrap.classList.add('dragover'); });
@@ -18960,7 +19020,7 @@ function setupImageDrop(wrapId, fileId, handler){
   wrap.addEventListener('drop', async e => {
     e.preventDefault(); wrap.classList.remove('dragover');
     const f = e.dataTransfer.files[0];
-    if(f && f.type.startsWith('image/')) await handler(f);
+    if(f && f.type.startsWith('image/') && _checkImportSize(f)) await handler(f);
   });
 }
 
@@ -19055,15 +19115,21 @@ async function init(){
   wireEvents();
   rcWireEvents();   // 🎲 랜덤 빌더 이벤트 바인딩
   setupPromptAutocomplete();
-  await loadPresetsFromDB();
+  // 🛡 비필수 기능 로더 격리 — 하나가 실패(손상 레코드·일시적 IDB 오류)해도
+  //    나머지 로더와 이후 부트 단계(드롭다운·갤러리 뷰 복원)는 계속 진행. 해당 기능만 비활성.
+  const _bootStep = async (label, fn) => {
+    try { await fn(); }
+    catch(e){ console.error(`[init:${label}] 로드 실패 — 이 기능만 비활성, 부트 계속`, e); }
+  };
+  await _bootStep('presets', loadPresetsFromDB);
   // 📚 단부루 태그 사전 — 백그라운드 로드 (init 차단하지 않음, 끝나면 인덱스 갱신)
   loadDanbooruTags();
-  await loadAlbums();
-  await loadGalleryTagIndex();
-  await loadWorkflows();
-  await loadRandomCategories();
-  await loadRandomBuilderPresets();
-  await tplLoadTemplates();
+  await _bootStep('albums', loadAlbums);
+  await _bootStep('galleryTagIndex', loadGalleryTagIndex);
+  await _bootStep('workflows', loadWorkflows);
+  await _bootStep('randomCategories', loadRandomCategories);
+  await _bootStep('randomBuilderPresets', loadRandomBuilderPresets);
+  await _bootStep('templates', tplLoadTemplates);
   // 👎 시드 blocklist + auto 토글 복원
   try {
     const bl = await DB.getFlag('seed_blocklist');
@@ -19100,8 +19166,8 @@ async function init(){
       updateOutputDirUI();
     }
   } catch(e){ console.warn('[OutputDir restore]', e); }
-  await refreshGallerySize();
-  renderVibeList();
+  await _bootStep('gallerySize', refreshGallerySize);
+  try { renderVibeList(); } catch(e){ console.error('[init:vibeList]', e); }
 
   // 갤러리 뷰 모드 복원
   const savedGv = localStorage.getItem('nai_gv') || 'detail';
