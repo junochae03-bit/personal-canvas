@@ -2929,6 +2929,7 @@ mark{
           <button class="cb-mode-btn" data-mode="pool" type="button" title="여러 명 골라서 풀로 만들면 생성할 때마다 자동 교체">🔄 후보 풀</button>
         </div>
         <button class="btn ghost" id="cbGroupsToggle" title="📚 작품/시리즈 그룹 모두 접기·펼치기" style="padding:5px 10px;font-size:11.5px;border-color:rgba(162,90,31,.4);color:var(--acc);flex-shrink:0">📚 그룹 일괄</button>
+        <button class="btn ghost" id="cbMaleToggle" type="button" title="프롬프트에 boy/male 이 들어간 남자 캐릭터만 필터" aria-pressed="false" style="padding:5px 10px;font-size:11.5px;flex-shrink:0;color:var(--t3);border-color:var(--b1)">♂ 남자만</button>
       </div>
       <div class="cb-actions" id="cbPoolActions" style="display:none">
         <button class="btn ghost" id="cbSelectAll" style="padding:5px 10px;font-size:11.5px">☑ 전체 선택</button>
@@ -10132,6 +10133,14 @@ function renderWorkflowList(){
 let _cbSlotIdx = -1;
 let _cbMode = 'single';   // 'single' | 'pool'
 let _cbPicks = new Set(); // 선택된 캐릭터 name 집합
+let _cbMaleOnly = false;  // ♂ 남자 캐릭터(boy/male)만 필터
+
+// ♂ 남자 캐릭터 판정 — 프롬프트(외형·액션)에 boy / male 토큰 (female 오탐 제외).
+function _isMaleChar(c){
+  const t = ((c?.text||'') + ' ' + (c?.appearance||'') + ' ' + (c?.action||'') + ' ' + (c?.prompt||'')).toLowerCase();
+  const cleaned = t.replace(/female/g, ' ');   // "female"/"shemale" 의 male 오탐 차단
+  return /\bmale\b/.test(cleaned) || /\bboys?\b/.test(cleaned) || /\d+\s*boys?\b/.test(cleaned);
+}
 
 // 🎲 캐릭터 슬롯에 랜덤 프리셋 즉시 적용
 function applyRandomCharacter(slotIdx, opts){
@@ -10189,10 +10198,15 @@ const _collapsedCbGroups = new Set();
 function renderCbGrid(){
   const chars = state.presets.character || [];
   const q = ($('cbSearch').value || '').toLowerCase().trim();
-  const filtered = q ? chars.filter(c => (c.name||'').toLowerCase().includes(q)) : chars;
+  let filtered = q ? chars.filter(c => (c.name||'').toLowerCase().includes(q)) : chars;
+  // ♂ 남자만 필터
+  if(_cbMaleOnly) filtered = filtered.filter(_isMaleChar);
   const grid = $('cbGrid');
   if(!filtered.length){
-    grid.innerHTML = `<div class="cb-empty-state">${chars.length === 0 ? '캐릭터 프리셋이 없습니다 — 프리셋 탭에서 먼저 추가하세요' : `"${esc(q)}" 검색 결과 없음`}</div>`;
+    const msg = chars.length === 0
+      ? '캐릭터 프리셋이 없습니다 — 프리셋 탭에서 먼저 추가하세요'
+      : (_cbMaleOnly ? '♂ boy/male 이 들어간 남자 캐릭터가 없어요' : `"${esc(q)}" 검색 결과 없음`);
+    grid.innerHTML = `<div class="cb-empty-state">${msg}</div>`;
     return;
   }
   const renderCard = (c) => {
@@ -15168,6 +15182,16 @@ function wireCharacterEvents(){
   $('cbSearch').addEventListener('input', debounce(renderCbGrid, 80));
   $$('#charBrowseModal .cb-mode-btn').forEach(b => b.addEventListener('click', () => setCbMode(b.dataset.mode)));
   $('cbGroupsToggle').addEventListener('click', toggleCbGroupsCollapseAll);
+  // ♂ 남자 캐릭터만 필터 토글
+  $('cbMaleToggle')?.addEventListener('click', () => {
+    _cbMaleOnly = !_cbMaleOnly;
+    const b = $('cbMaleToggle');
+    b.classList.toggle('act', _cbMaleOnly);
+    b.setAttribute('aria-pressed', String(_cbMaleOnly));
+    b.style.color = _cbMaleOnly ? 'var(--blue)' : 'var(--t3)';
+    b.style.borderColor = _cbMaleOnly ? 'var(--blue)' : 'var(--b1)';
+    renderCbGrid();
+  });
   $('cbSelectAll').addEventListener('click', () => {
     (state.presets.character || []).forEach(c => _cbPicks.add(c.name));
     renderCbMode(); renderCbGrid();
