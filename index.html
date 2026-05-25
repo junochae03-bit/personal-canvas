@@ -5247,14 +5247,18 @@ function buildGenBody(opts){
     params.variety_plus = !!opts.variety;
     if(opts.decrisper) params.dynamic_thresholding = true;
     const chars = (opts.characters||[]).filter(c => c.enabled && c.prompt && c.prompt.trim());
-    // 🐛 fix: 여러 캐릭터가 모두 기본 중앙(0.5,0.5)이면 use_coords 켜진 NAI 가 같은 위치에 겹쳐 한 명으로 합침.
-    //   사용자가 위치를 직접 안 정한(=전부 중앙) 다중 캐릭터는 가로로 자동 분산.
+    // 🐛 fix: 여러 캐릭터가 모두 기본 중앙(0.5,0.5)이면 같은 위치에 겹쳐 한 명으로 합침.
+    //   기본위치 다중 캐릭터는 가로로 자동 분산 + use_coords 강제 ON (안 그러면 NAI 가 centers 무시 → 분산 무효).
     let charCenters;
+    let forceCoords = false;
     if(chars.length > 1){
       const allDefault = chars.every(c => (c.pos?.x ?? 0.5) === 0.5 && (c.pos?.y ?? 0.5) === 0.5);
-      charCenters = chars.map((c, i) => allDefault
-        ? {x: (i + 1) / (chars.length + 1), y: 0.5}
-        : {x: c.pos?.x ?? 0.5, y: c.pos?.y ?? 0.5});
+      if(allDefault){
+        charCenters = chars.map((c, i) => ({x: (i + 1) / (chars.length + 1), y: 0.5}));
+        forceCoords = true;   // 분산 좌표가 실제로 적용되도록 강제
+      } else {
+        charCenters = chars.map(c => ({x: c.pos?.x ?? 0.5, y: c.pos?.y ?? 0.5}));
+      }
     } else {
       charCenters = chars.map(c => ({x: c.pos?.x ?? 0.5, y: c.pos?.y ?? 0.5}));
     }
@@ -5266,7 +5270,7 @@ function buildGenBody(opts){
           char_caption: c.prompt
         }))
       },
-      use_coords: !!opts.useCoords,
+      use_coords: forceCoords || !!opts.useCoords,
       use_order: true,
       legacy_uc: false
     };
@@ -7297,6 +7301,13 @@ async function doSelectiveBackup(){
   const parts = out._meta.parts;
   if($('bk_settings').checked){
     out.settings = await DB.appGet();
+    // 🐛 fix: SET-store 플래그는 appGet(APP store) 에 없음 → 별도 직렬화 (이전엔 백업/복원 시 손실)
+    out.flags = {
+      seed_blocklist: await DB.getFlag('seed_blocklist'),
+      seed_blocklist_auto: await DB.getFlag('seed_blocklist_auto'),
+      rc_enabled: await DB.getFlag('rc_enabled'),
+      tpl_fav_only: await DB.getFlag('tpl_fav_only'),
+    };
     parts.push('settings');
   }
   if($('bk_apikey').checked && state.apiKey){
@@ -7321,7 +7332,11 @@ async function doSelectiveBackup(){
     parts.push('workflows');
   }
   if($('bk_random')?.checked && (state.randomCategories||[]).length){
-    out.randomCategories = state.randomCategories;
+    out.randomCategories = state.randomCategories;   // 활성 그룹 (구버전 호환)
+    // 🐛 다중 그룹 전체 백업 — 비활성 그룹도 보존
+    if(Array.isArray(state.rcGroups) && state.rcGroups.length){
+      out.rcGroups = {groups: state.rcGroups.map(g => ({id:g.id, name:g.name, categories:g.categories})), activeIdx: state.rcActiveGroupIdx};
+    }
     parts.push('randomCategories');
   }
   if(parts.length === 0){
@@ -7523,6 +7538,14 @@ async function doSelectiveRestore(){
     if($('rs_settings')?.checked && data.settings){
       await DB.appSet(data.settings);
       await loadSettings();
+      // 🐛 fix: SET-store 플래그 복원 (백업에 flags 있으면)
+      if(data.flags && typeof data.flags === 'object'){
+        const f = data.flags;
+        if(Array.isArray(f.seed_blocklist)){ state.seedBlocklist = f.seed_blocklist; await DB.setFlag('seed_blocklist', f.seed_blocklist); }
+        if(typeof f.seed_blocklist_auto === 'boolean'){ state.seedBlocklistAuto = f.seed_blocklist_auto; await DB.setFlag('seed_blocklist_auto', f.seed_blocklist_auto); }
+        if(typeof f.rc_enabled === 'boolean'){ state.rcEnabled = f.rc_enabled; await DB.setFlag('rc_enabled', f.rc_enabled); if(typeof _refreshRcEnableUI==='function') _refreshRcEnableUI(); }
+        if(typeof f.tpl_fav_only === 'boolean'){ state._tplFavOnly = f.tpl_fav_only; await DB.setFlag('tpl_fav_only', f.tpl_fav_only); }
+      }
       restored.push('설정');
     }
     if($('rs_apikey')?.checked && data.apiKey){
@@ -7587,12 +7610,24 @@ async function doSelectiveRestore(){
       restored.push(`워크플로 ${state.workflows.length}개`);
     }
     if($('rs_random')?.checked && Array.isArray(data.randomCategories)){
-      // 🎲 랜덤 카테고리 — 전체 교체. _normalizeRandomCategory 로 모든 필드 정제.
-      _rcSetCategories(data.randomCategories
-        .map(_normalizeRandomCategory)
-        .filter(Boolean)
-        .slice(0, 200));
+      // 🎲 다중 그룹 백업(rcGroups) 이 있으면 그룹 전체 복원, 없으면 단일 배열만 (구버전 호환)
+      if(data.rcGroups && Array.isArray(data.rcGroups.groups) && data.rcGroups.groups.length){
+        state.rcGroups = data.rcGroups.groups.map(g => ({
+          id: String(g?.id || _rcNewGroupId()),
+          name: String(g?.name || '그룹').slice(0, 30),
+          categories: Array.isArray(g?.categories) ? g.categories.map(_normalizeRandomCategory).filter(Boolean) : [],
+        }));
+        const ai = Number.isInteger(data.rcGroups.activeIdx) ? data.rcGroups.activeIdx : 0;
+        state.rcActiveGroupIdx = (ai >= 0 && ai < state.rcGroups.length) ? ai : 0;
+        _ensureRcGroups();
+      } else {
+        _rcSetCategories(data.randomCategories
+          .map(_normalizeRandomCategory)
+          .filter(Boolean)
+          .slice(0, 200));
+      }
       if(typeof saveRandomCategories === 'function') await saveRandomCategories();
+      if(typeof _renderRcGroupsBar === 'function') _renderRcGroupsBar();
       if(typeof rcRender === 'function' && state.randomBuilderOpen) rcRender();
       restored.push(`🎲 랜덤 카테고리 ${state.randomCategories.length}개`);
     }
@@ -9093,6 +9128,9 @@ async function retryQueueItem(qi){
   q.status = 'run';
   q.error = '';
   renderQueue();
+  // 🐛 fix: runOne 이 state.abortCtrl.signal 을 무조건 참조. Stop 후엔 abort 된 채로 남아있고,
+  //   첫 배치 전엔 null → 재시도가 즉시 AbortError 또는 크래시. 새 컨트롤러로 리셋.
+  state.abortCtrl = new AbortController();
   try {
     const blob = await runOne(q, apiKey);
     if(blob){
@@ -9147,6 +9185,11 @@ function validateForGeneration(){
 
 async function startGeneration(){
   if(state.running){ stopGeneration(); return; }
+  // 🔒 PIN 잠긴 상태면 먼저 잠금 해제 (auto-lock 후 재생성 시 PIN 재입력)
+  if(typeof reUnlockPinIfNeeded === 'function' && !state.apiKey && _isPinModeActive()){
+    await reUnlockPinIfNeeded();
+  }
+  if(typeof _markPinActivity === 'function') _markPinActivity();   // 생성 = 활동 → idle 타이머 리셋
   // 🛡 통합 검증 — 실패 시 모든 사유를 한 토스트에 모아 안내 + 첫 입력 포커스
   const v = validateForGeneration();
   if(!v.ok){
@@ -9383,7 +9426,8 @@ async function runOne(q, apiKey){
   };
   state.lastSeed = q.seed;
   recordSeedHistory(q.seed);
-  return await naiGenerate(apiKey, body, state.abortCtrl.signal);
+  // state.abortCtrl 이 없으면 signal 없이 호출 (naiGenerate 가 자체 timeout 적용)
+  return await naiGenerate(apiKey, body, state.abortCtrl?.signal);
 }
 
 // ⏱ 시드 히스토리 — 생성 시 자동 기록
@@ -9735,19 +9779,20 @@ async function saveRandomCategories(){
 // 🧨 toxic 토큰 캐시 — 60초 TTL. 같은 세션 내 반복 호출 (👎 누를 때마다) 절약.
 let _toxicCache = {ts: 0, set: new Set()};
 const TOXIC_TTL_MS = 60000;
+// 공유 토크나이저 — getToxicTokens 의 키 생성과 hint/highlight 의 매칭이 동일해야 함 (가중치 표기 정규화 포함).
+function _toxicTokensOf(txt){
+  if(!txt) return [];
+  return String(txt).split(/[,;\n]/).map(t => {
+    // 가중치 표기 제거: 1.5::tag:: → tag, (tag:1.2) → tag
+    let s = t.trim().replace(/^[\d.]+::|::$/g, '').replace(/^\(([^):]+):[\d.]+\)$/, '$1');
+    return s.trim().toLowerCase();
+  }).filter(s => s && s.length >= 3 && s.length <= 40);
+}
 async function getToxicTokens(){
   if(Date.now() - _toxicCache.ts < TOXIC_TTL_MS) return _toxicCache.set;
   const imgs = await DB.getAllImagesForStats();
-  // 토큰별 like/dislike 카운트 — 콤마·세미콜론·줄바꿈 split, lowercase, trim, weight syntax 제거
   const stats = new Map();   // token → {like, dis}
-  const tokensOf = txt => {
-    if(!txt) return [];
-    return String(txt).split(/[,;\n]/).map(t => {
-      // 가중치 표기 제거: 1.5::tag::  → tag,  (tag:1.2) → tag
-      let s = t.trim().replace(/^[\d.]+::|::$/g, '').replace(/^\(([^):]+):[\d.]+\)$/, '$1');
-      return s.trim().toLowerCase();
-    }).filter(s => s && s.length >= 3 && s.length <= 40);   // 너무 짧/긴 토큰 제외
-  };
+  const tokensOf = _toxicTokensOf;
   for(const i of imgs){
     if(!i.liked && !i.disliked) continue;
     const toks = tokensOf(i.meta?.prompt || i.prompt);
@@ -9824,14 +9869,12 @@ async function openStatsModal(){
   renderList('statsBadSeeds', tally(disliked, i => i.meta?.seed ?? null), 'bad', k => `🌱 ${esc(String(k))}`);
   // 🧨 toxic 토큰 — 토큰별 dislike rate
   const toxic = await getToxicTokens();
-  // toxic 의 각 토큰을 dislike 카운트로 다시 정렬
+  // toxic 의 각 토큰을 dislike 카운트로 다시 정렬 — 토큰 단위 매칭 (substring 오탐 방지: art→artist)
+  const dislikedTokenSets = disliked.map(i => new Set(_toxicTokensOf(i.meta?.prompt || i.prompt)));
   const toxicRows = [];
   for(const t of toxic){
     let dis = 0;
-    for(const i of disliked){
-      const toks = (i.meta?.prompt || i.prompt || '').toLowerCase();
-      if(toks.includes(t)) dis++;
-    }
+    for(const s of dislikedTokenSets){ if(s.has(t)) dis++; }
     toxicRows.push([t, dis]);
   }
   toxicRows.sort((a,b) => b[1] - a[1]);
@@ -11772,8 +11815,8 @@ async function loadGallery(){
       new:     (a,b) => (b.ts||0) - (a.ts||0),
       old:     (a,b) => (a.ts||0) - (b.ts||0),
       liked:   (a,b) => (b.img.liked?1:0) - (a.img.liked?1:0) || (b.ts||0) - (a.ts||0),
-      seed_asc:  (a,b) => (a.img.meta?.seed ?? Infinity) - (b.img.meta?.seed ?? Infinity),
-      seed_desc: (a,b) => (b.img.meta?.seed ?? -Infinity) - (a.img.meta?.seed ?? -Infinity),
+      seed_asc:  (a,b) => { const x=Number(a.img.meta?.seed), y=Number(b.img.meta?.seed); return (Number.isFinite(x)?x:Infinity) - (Number.isFinite(y)?y:Infinity); },
+      seed_desc: (a,b) => { const x=Number(a.img.meta?.seed), y=Number(b.img.meta?.seed); return (Number.isFinite(y)?y:-Infinity) - (Number.isFinite(x)?x:-Infinity); },
       model:   (a,b) => String(a.img.meta?.model||'').localeCompare(String(b.img.meta?.model||'')) || (b.ts||0) - (a.ts||0),
       label:   (a,b) => String(a.img.label||'').localeCompare(String(b.img.label||''), 'ko') || (b.ts||0) - (a.ts||0),
     }[sortKey];
@@ -12439,8 +12482,8 @@ async function _showToxicHintForCurrent(){
   if(!prompt.trim()) return;
   const toxic = await getToxicTokens();
   if(!toxic.size) return;
-  // 현재 프롬프트의 토큰 중 toxic 매치
-  const tokens = prompt.split(/[,;\n]/).map(t => t.trim().toLowerCase()).filter(Boolean);
+  // 현재 프롬프트의 토큰 중 toxic 매치 — 동일 토크나이저로 가중치 표기까지 정규화
+  const tokens = _toxicTokensOf(prompt);
   const hits = [...new Set(tokens.filter(t => toxic.has(t)))].slice(0, 5);
   if(!hits.length) return;
   toast(`🧨 이 프롬프트의 toxic 토큰: ${hits.join(', ')} — ✏️ 수정 버튼으로 편집화면에서 강조 확인`, 'warning', {timeoutMs: 9000});
@@ -12471,9 +12514,10 @@ async function editPromptFromImage(img){
   if(toxic.size){
     const ta = $('prompt');
     if(ta && ta.value){
+      // 세그먼트별로 동일 토크나이저(가중치 정규화)로 키를 만들어 toxic 매칭
       const annotated = ta.value.split(',').map(seg => {
-        const trimmed = seg.trim().toLowerCase();
-        return toxic.has(trimmed) ? `${seg.replace(/\s+$/,'')} /*⚠TOXIC*/` : seg;
+        const key = _toxicTokensOf(seg)[0];
+        return (key && toxic.has(key)) ? `${seg.replace(/\s+$/,'')} /*⚠TOXIC*/` : seg;
       }).join(',');
       ta.value = annotated;
       saveSettingsDebounced();
@@ -12979,12 +13023,22 @@ function tplRoll(){
     const pick = list[Math.floor(Math.random() * list.length)];
     _tplCurrentRoll.push({cat: cid, preset: pick});
   }
+  // 🐛 fix: 즐겨찾기 필터가 모든 카테고리를 걸러내 빈 결과면 안내 (조용히 '아직 안 굴림' 표시되던 혼란)
+  if(state._tplFavOnly && _tplCurrentRoll.length === 0){
+    toast('⭐ 즐겨찾기 프리셋이 없어 조합이 비었어요 — 프리셋에 별표를 달거나 필터를 끄세요', 'warning', {timeoutMs: 7000});
+  }
   tplRenderRoll();
 }
 
 function tplRerollOne(cid){
   if(_tplLockedCats.has(cid)){ toast('🔒 잠긴 항목 — 잠금 해제 후 재시도', 'info'); return; }
-  const list = state.presets[cid] || [];
+  let list = state.presets[cid] || [];
+  // 🐛 fix: bulk Roll 과 동일하게 ⭐ 즐겨찾기 필터 적용 (이전엔 reroll 이 비-즐겨찾기도 뽑던 불일치)
+  if(state._tplFavOnly){
+    const favList = list.filter(p => p.fav);
+    if(!favList.length){ toast('⭐ 이 카테고리에 즐겨찾기 프리셋이 없어요', 'info'); return; }
+    list = favList;
+  }
   if(!list.length) return;
   const pick = list[Math.floor(Math.random() * list.length)];
   const i = _tplCurrentRoll.findIndex(r => r.cat === cid);
@@ -14272,37 +14326,41 @@ const PIN_ITER = 250000;
 const PIN_MAX_FAILS_BEFORE_DELAY = 3;
 const PIN_BASE_DELAY_MS = 2000;               // 3회 실패부터 (실패-2)^2 * 2초 잠금
 let _pinDerivedKey = null;   // 메모리 캐시 (탭 세션 내 재사용)
-// 🔒 PIN auto-lock — 15분 무활동 또는 탭 숨김 시 _pinDerivedKey 폐기.
-//   _markPinActivity() 를 PIN 관련 액션 후 호출 → 타이머 리셋.
+// 🔒 PIN auto-lock — 15분 무활동 시 잠금.
+//   🐛 fix: 이전엔 _pinDerivedKey 만 비우고 평문 state.apiKey/input 은 그대로 남아 '보안 효과 없음(theater)'.
+//   이제 _doLockPin 이 메모리 평문 키 + 입력칸까지 비워 실제로 잠금. 재사용 시 loadApiKey 가 PIN 재요청.
 const _PIN_IDLE_MS = 15 * 60 * 1000;
 let _pinIdleTimer = null;
+function _isPinModeActive(){ return !!_pinSaltCached; }   // salt 존재 = PIN 모드 (아래에서 캐시)
+let _pinSaltCached = false;   // refreshPinUI 에서 갱신
+function _doLockPin(reason){
+  if(!_pinDerivedKey) return false;
+  _pinDerivedKey = null;
+  // 평문 키를 메모리·입력칸에서 제거 — 재생성/조회 시 loadApiKey 가 PIN 재요청
+  state.apiKey = '';
+  if($('apiKey')) $('apiKey').value = '';
+  if($('apiKeySettings')) $('apiKeySettings').value = '';
+  if(_pinIdleTimer){ clearTimeout(_pinIdleTimer); _pinIdleTimer = null; }
+  if(typeof updateKeyMiniState === 'function') updateKeyMiniState();
+  if(typeof updateSettingsKeyStatus === 'function') updateSettingsKeyStatus();
+  if(reason && typeof toast === 'function') toast(reason, 'info');
+  return true;
+}
 function _markPinActivity(){
   if(_pinIdleTimer) clearTimeout(_pinIdleTimer);
   if(!_pinDerivedKey) return;
-  _pinIdleTimer = setTimeout(() => {
-    if(_pinDerivedKey){
-      _pinDerivedKey = null;
-      if(typeof toast === 'function') toast('🔒 PIN 자동 잠금 (15분 무활동)', 'info');
-      if(typeof updateSettingsKeyStatus === 'function') updateSettingsKeyStatus();
-    }
-  }, _PIN_IDLE_MS);
+  _pinIdleTimer = setTimeout(() => _doLockPin('🔒 PIN 자동 잠금 (15분 무활동) — 다음 사용 시 PIN 재입력'), _PIN_IDLE_MS);
 }
-// 탭이 숨겨지면 즉시 잠금 (옵션 — 보수적 default)
-if(typeof document !== 'undefined'){
-  document.addEventListener('visibilitychange', () => {
-    if(document.visibilityState === 'hidden' && _pinDerivedKey){
-      _pinDerivedKey = null;
-      if(typeof updateSettingsKeyStatus === 'function') updateSettingsKeyStatus();
-    }
-  });
+// 🔓 잠금 해제 — PIN 재입력 후 키 복원. loadApiKey 가 PIN_REQUIRED 처리.
+async function reUnlockPinIfNeeded(){
+  if(_pinDerivedKey || !_isPinModeActive()) return !!state.apiKey;
+  if(typeof loadApiKey === 'function') await loadApiKey();
+  return !!state.apiKey;
 }
 // 수동 잠금 — 사용자가 명시적으로 호출 (PIN 설정 카드에 버튼 노출)
 function lockPinNow(){
   if(!_pinDerivedKey){ if(typeof toast === 'function') toast('이미 잠긴 상태', 'info'); return; }
-  _pinDerivedKey = null;
-  if(_pinIdleTimer){ clearTimeout(_pinIdleTimer); _pinIdleTimer = null; }
-  if(typeof updateSettingsKeyStatus === 'function') updateSettingsKeyStatus();
-  if(typeof toast === 'function') toast('🔒 PIN 잠김 — 다음 API 호출 시 PIN 입력 필요', 'info');
+  _doLockPin('🔒 PIN 잠김 — 다음 API 호출 시 PIN 입력 필요');
 }
 
 // 실패 카운터 — 시도 전 호출. blockedUntil 까지 throw.
@@ -14521,6 +14579,7 @@ async function promptForPin(msg){
 
 async function refreshPinUI(){
   const enabled = await isPinLockEnabled();
+  _pinSaltCached = enabled;   // _isPinModeActive 동기 조회용 캐시
   const btn = $('pinToggleBtn');
   const row = $('pinStatusRow');
   if(!btn) return;
@@ -15932,13 +15991,16 @@ function wireGalleryEvents(){
     const ids = [..._gallerySel];
     if(!ids.length) return;
     for(const id of ids){ try { await DB.setImageDislike(id, true); } catch(_){} }
-    // 시드 blocklist 자동 추가 (옵션)
+    // 시드 blocklist 자동 추가 (옵션) — meta 없으면 PNG EXIF 폴백
     if(state.seedBlocklistAuto){
       try {
         const all = await DB.getAllImagesForStats();
         for(const id of ids){
           const it = all.find(x => x.id === id);
-          if(it?.meta?.seed != null) await addSeedToBlocklist(it.meta.seed);
+          if(!it) continue;
+          let seed = it.meta?.seed;
+          if(seed == null && it.blob){ try { seed = (await readPngMetadata(it.blob))?.parsed?.seed; } catch(_){} }
+          if(seed != null) await addSeedToBlocklist(seed);
         }
       } catch(_){}
     }
@@ -16160,7 +16222,14 @@ function wireGalleryEvents(){
       likeBtn.textContent = next ? '❤' : '♡';
       if(card){
         card.classList.toggle('liked', next);
-        if(next) card.classList.remove('disliked');
+        // 🐛 fix: 상호 배타 — 반대(👎) 버튼 상태도 갱신 (안 하면 새로고침 전까지 토글 반전)
+        if(next){
+          card.classList.remove('disliked');
+          const db2 = card.querySelector('[data-act="dislike"]');
+          if(db2) db2.setAttribute('aria-pressed', 'false');
+        }
+        // 활성 필터에서 벗어나면 카드 제거 (좋아요 해제→좋아요필터 / 좋아요→별로필터)
+        if((state._galLikeOnly && !next) || (state._galDislikeOnly && next)) card.remove();
       }
       return;
     }
@@ -16174,15 +16243,24 @@ function wireGalleryEvents(){
       disBtn.setAttribute('aria-pressed', String(next));
       if(card){
         card.classList.toggle('disliked', next);
-        if(next) card.classList.remove('liked');
+        if(next){
+          card.classList.remove('liked');
+          const lb2 = card.querySelector('[data-act="like"]');
+          if(lb2){ lb2.setAttribute('aria-pressed', 'false'); lb2.textContent = '♡'; }
+        }
+        // 활성 필터에서 벗어나면 카드 제거 (별로 해제→별로필터 / 별로→좋아요필터)
+        if((state._galDislikeOnly && !next) || (state._galLikeOnly && next)) card.remove();
       }
-      // 시드 blocklist 자동 추가
+      // 시드 blocklist 자동 추가 — meta 없으면 PNG EXIF 폴백
       if(next && state.seedBlocklistAuto){
-        // 카드의 meta 는 즉시 알 수 없으므로 IDB 에서 한 번 조회
         try {
           const all = await DB.getAllImagesForStats();
           const target = all.find(x => x.id === id);
-          if(target?.meta?.seed != null) await addSeedToBlocklist(target.meta.seed);
+          if(target){
+            let seed = target.meta?.seed;
+            if(seed == null && target.blob){ try { seed = (await readPngMetadata(target.blob))?.parsed?.seed; } catch(_){} }
+            if(seed != null) await addSeedToBlocklist(seed);
+          }
         } catch(_){}
       }
       return;
@@ -16239,7 +16317,10 @@ function wireLightboxEvents(){
   // pure-view 중 이미지 자체 클릭 → UI 복귀 (탭 한번으로 빠져나오기)
   $('lbImg')?.addEventListener('click', e => {
     if($('lightbox').classList.contains('pure-view')){
-      e.stopPropagation();
+      // 🐛 fix: stopPropagation 은 같은 요소의 형제 리스너를 못 막음 → 아래 close 리스너도 같이 실행돼 라이트박스가 닫히던 버그.
+      //   stopImmediatePropagation 으로 같은 노드의 후속 리스너까지 차단.
+      e.stopImmediatePropagation();
+      e.preventDefault();
       exitPureView();
     }
   });
@@ -16494,9 +16575,11 @@ function wireLightboxEvents(){
     _lbCurrent.disliked = next;
     if(next) _lbCurrent.liked = false;
     _refreshLbLikeDislikeUI();
-    // 시드 blocklist 자동 추가 (옵션 켜져있을 때만)
-    if(next && state.seedBlocklistAuto && _lbCurrent.meta?.seed != null){
-      await addSeedToBlocklist(_lbCurrent.meta.seed);
+    // 시드 blocklist 자동 추가 (옵션 켜져있을 때만) — 임포트 PNG 는 meta 없으므로 EXIF 폴백
+    if(next && state.seedBlocklistAuto){
+      let seed = _lbCurrent.meta?.seed;
+      if(seed == null){ try { seed = (await readPngMetadata(_lbCurrent.blob))?.parsed?.seed; } catch(_){} }
+      if(seed != null) await addSeedToBlocklist(seed);
     }
     if(state.mainPane === 'gallery') loadGallery();
     if(next){
@@ -18643,17 +18726,10 @@ function installShortcutHandlers(){
         if(typeof showLightboxAt === 'function' && _lbList?.length) showLightboxAt(_lbList.length - 1);
       } else if(e.key === 'Delete' || (e.key === 'Backspace' && (e.ctrlKey || e.metaKey))){
         e.preventDefault();
-        // 라이트박스 안의 삭제 버튼 클릭 위임 (확인 모달 그대로 유지)
-        const delBtn = document.querySelector('#lightbox [data-act="del"], #lightbox .del-btn, #lbDelBtn');
+        // 🐛 fix: 실제 라이트박스 삭제 버튼은 #lbDelete — 옛 셀렉터가 안 맞아 영구삭제로 폴백되던 데이터 손실 버그.
+        //   버튼 클릭 위임 → 휴지통 이동 + undo 흐름 그대로 재사용.
+        const delBtn = $('lbDelete');
         if(delBtn) delBtn.click();
-        else if(_lbCurrent?.id != null && typeof DB?.deleteImage === 'function'){
-          if(confirm('현재 이미지를 삭제할까요? (되돌릴 수 없음)')){
-            DB.deleteImage(_lbCurrent.id).then(() => {
-              if(typeof loadGallery === 'function') loadGallery();
-              if(typeof closeLightbox === 'function') closeLightbox();
-            });
-          }
-        }
       }
       return;
     }
