@@ -35,6 +35,12 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
 
+      # 캐시 히트 시 브라우저 바이너리는 복원되지만 OS 레벨 의존성(libnss 등)은 캐시되지 않음.
+      # 런처 실패를 막기 위해 시스템 의존성만 별도 설치.
+      - name: Install Playwright system deps (on cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
       - name: Run smoke tests
         run: npm run e2e
 

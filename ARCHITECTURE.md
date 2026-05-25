@@ -85,8 +85,10 @@ personal-canvas/
 - **준신뢰**: 자신의 갤러리에서 import 한 PNG·JSON. `applyParsedMetaToForm()` 이
   필드별 타입 강제 + `.slice(n)` 으로 길이 제한.
 - **외부 신뢰 없음**: NAI API 응답. 바이너리만 사용, JSON parse 결과는 표시 전에 escape.
-- **CDN 라이브러리**: 버전 고정 + CSP `script-src` 화이트리스트. SRI 는 빌드
-  파이프라인 도입 시 추가 예정.
+- **CDN 라이브러리**: 버전 고정 + CSP `script-src` 화이트리스트. SRI(integrity) 는
+  `tools/build-sri.mjs` + `.github/workflows/release.yml`(workflow_dispatch) 로 주입.
+  ⚠ 정적 main 상태에는 미적용일 수 있으므로 **배포 전 release 워크플로를 1회 실행**해야
+  CDN 침해 시 임의 스크립트 실행을 막을 수 있음.
 
 ## 6. 성능 가이드
 
@@ -118,5 +120,7 @@ personal-canvas/
 ## 8. 알려진 제약
 
 - **단일 파일 인라인 SPA**: 코드 스플리팅 불가. 추후 빌드 도입 시 분리.
-- **SRI 누락**: 빌드 단계가 없어 자동 hash 계산 불가. CSP + 버전 핀으로 보완.
+- **SRI 적용 시점**: `npm run sri`(= `tools/build-sri.mjs`) 가 CDN 3종 hash 를 계산해
+  주입하지만 네트워크가 필요. CI(빠른 검증)에는 없고 release 워크플로에서만 실행되므로,
+  배포 직전 워크플로를 돌리지 않으면 main 에 integrity 가 비어 있을 수 있음. CSP + 버전 핀이 1차 방어.
 - **localStorage 평문**: API 키는 IDB 암호화. UI 상태 (zoom, view 등) 만 평문.
