@@ -5247,11 +5247,22 @@ function buildGenBody(opts){
     params.variety_plus = !!opts.variety;
     if(opts.decrisper) params.dynamic_thresholding = true;
     const chars = (opts.characters||[]).filter(c => c.enabled && c.prompt && c.prompt.trim());
+    // 🐛 fix: 여러 캐릭터가 모두 기본 중앙(0.5,0.5)이면 use_coords 켜진 NAI 가 같은 위치에 겹쳐 한 명으로 합침.
+    //   사용자가 위치를 직접 안 정한(=전부 중앙) 다중 캐릭터는 가로로 자동 분산.
+    let charCenters;
+    if(chars.length > 1){
+      const allDefault = chars.every(c => (c.pos?.x ?? 0.5) === 0.5 && (c.pos?.y ?? 0.5) === 0.5);
+      charCenters = chars.map((c, i) => allDefault
+        ? {x: (i + 1) / (chars.length + 1), y: 0.5}
+        : {x: c.pos?.x ?? 0.5, y: c.pos?.y ?? 0.5});
+    } else {
+      charCenters = chars.map(c => ({x: c.pos?.x ?? 0.5, y: c.pos?.y ?? 0.5}));
+    }
     params.v4_prompt = {
       caption: {
         base_caption: opts.prompt || '',
-        char_captions: chars.map(c => ({
-          centers:[{x: c.pos?.x ?? 0.5, y: c.pos?.y ?? 0.5}],
+        char_captions: chars.map((c, i) => ({
+          centers:[charCenters[i]],
           char_caption: c.prompt
         }))
       },
@@ -5262,8 +5273,8 @@ function buildGenBody(opts){
     params.v4_negative_prompt = {
       caption: {
         base_caption: opts.neg || '',
-        char_captions: chars.map(c => ({
-          centers:[{x: c.pos?.x ?? 0.5, y: c.pos?.y ?? 0.5}],
+        char_captions: chars.map((c, i) => ({
+          centers:[charCenters[i]],
           char_caption: c.neg || ''
         }))
       },
