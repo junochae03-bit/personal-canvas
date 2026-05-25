@@ -14978,12 +14978,17 @@ function wireCharacterEvents(){
       const prev = c[field] || '';
       if(!prev.trim()) return;
       c[field] = '';
+      // 🐛 fix: 외형·액션 비울 때 레거시 c.prompt 도 함께 정리.
+      //   currentPromptOpts 가 derived 비면 c.prompt 로 폴백 → 비웠는데도 옛 내용(RC 등) 계속 적용되던 버그.
+      const prevPrompt = c.prompt || '';
+      if((field === 'appearance' || field === 'action') && prevPrompt) c.prompt = '';
       const ta = $('charList').querySelector(`textarea[data-act="${field}"][data-idx="${idx}"]`);
       if(ta) ta.value = '';
       saveSettingsDebounced();
       const labelMap = {appearance:'외형', action:'액션·의상', neg:'네거티브'};
       toastUndo(`#${idx+1} ${labelMap[field]||field} 비움`, () => {
         c[field] = prev;
+        if(prevPrompt) c.prompt = prevPrompt;
         if(ta) ta.value = prev;
         saveSettingsDebounced();
       });
@@ -14992,16 +14997,16 @@ function wireCharacterEvents(){
       // 🧹 외형·액션·네거티브 3개 한 번에 비우기 — 실행 취소 가능 (snapshot)
       const c = state.characters[idx];
       if(!c) return;
-      const snap = {appearance: c.appearance || '', action: c.action || '', neg: c.neg || ''};
-      if(!snap.appearance.trim() && !snap.action.trim() && !snap.neg.trim()) return;
-      c.appearance = ''; c.action = ''; c.neg = '';
+      const snap = {appearance: c.appearance || '', action: c.action || '', neg: c.neg || '', prompt: c.prompt || ''};
+      if(!snap.appearance.trim() && !snap.action.trim() && !snap.neg.trim() && !snap.prompt.trim()) return;
+      c.appearance = ''; c.action = ''; c.neg = ''; c.prompt = '';   // 🐛 레거시 prompt 도 정리
       for(const f of ['appearance','action','neg']){
         const ta = $('charList').querySelector(`textarea[data-act="${f}"][data-idx="${idx}"]`);
         if(ta) ta.value = '';
       }
       saveSettingsDebounced();
-      toastUndo(`🧹 #${idx+1} 캐릭터 텍스트 3개 모두 비움`, () => {
-        c.appearance = snap.appearance; c.action = snap.action; c.neg = snap.neg;
+      toastUndo(`🧹 #${idx+1} 캐릭터 텍스트 모두 비움`, () => {
+        c.appearance = snap.appearance; c.action = snap.action; c.neg = snap.neg; c.prompt = snap.prompt;
         for(const f of ['appearance','action','neg']){
           const ta = $('charList').querySelector(`textarea[data-act="${f}"][data-idx="${idx}"]`);
           if(ta) ta.value = snap[f];
@@ -18064,6 +18069,11 @@ function rcApplyToCharacter(){
 }
 
 async function _rcDoApply(target, compiled){
+  // 🎴 적용은 일회성 복사 — 빌더 '생성 시 적용'(rcEnabled) 이 켜져있으면 빌더가 별도로 또 주입함.
+  //   프리셋/캐릭터로만 쓰고 싶으면 빌더 토글을 꺼야 중복 안 됨. 적용 후 안내.
+  if(state.rcEnabled && target !== 'clipboard'){
+    setTimeout(() => toast('⚠ 빌더 「생성 시 적용」이 켜져 있어요 — 프리셋으로만 쓰려면 빌더 토글을 끄세요 (안 끄면 빌더도 따로 주입)', 'warning', {timeoutMs: 9000}), 600);
+  }
   if(target === 'clipboard'){
     try {
       await navigator.clipboard.writeText(compiled);
