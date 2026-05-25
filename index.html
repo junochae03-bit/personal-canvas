@@ -9358,7 +9358,16 @@ async function runOne(q, apiKey){
     seed: q.seed, steps: opts.steps, cfg: opts.cfg, sampler: opts.sampler,
     schedule: opts.schedule, w: body.parameters.width, h: body.parameters.height,
     mode: mode,
+    cfgRescale: opts.cfgRescale,
+    smea: !!opts.smea, smeaDyn: !!opts.smeaDyn,
+    variety: !!opts.variety, decrisper: !!opts.decrisper,
+    useCoords: !!opts.useCoords,
+    ucPreset: opts.ucPreset,
     characters: charNames,
+    // 🎴 캐릭터별 프롬프트(외형+액션) 보존 — V4 는 base prompt 와 분리 저장되므로 디테일 패널에서 별도 표시
+    charPrompts: (opts.characters || [])
+      .filter(c => c.enabled && (c.name || (c.prompt||'').trim()))
+      .map(c => ({name: (c.name||'').trim(), prompt: (c.prompt||'').trim(), neg: (c.neg||'').trim()})),
   };
   state.lastSeed = q.seed;
   recordSeedHistory(q.seed);
@@ -11153,12 +11162,19 @@ async function pgStartScenes(){
         seed: opts.seed,
         steps: opts.steps,
         cfg: opts.cfg,
+        cfgRescale: opts.cfgRescale,
         sampler: opts.sampler,
         schedule: opts.schedule,
         w: opts.w, h: opts.h,
+        smea: !!opts.smea, smeaDyn: !!opts.smeaDyn,
+        variety: !!opts.variety, decrisper: !!opts.decrisper,
+        useCoords: !!opts.useCoords, ucPreset: opts.ucPreset,
         characters: presetChar
           ? [presetChar.name].filter(Boolean)
           : (state.characters || []).map(c => c.name).filter(Boolean),
+        charPrompts: (opts.characters || [])
+          .filter(c => c.enabled && (c.name || (c.prompt||'').trim()))
+          .map(c => ({name: (c.name||'').trim(), prompt: (c.prompt||'').trim(), neg: (c.neg||'').trim()})),
         sceneBatch: true,
         sceneLabel: s.label,
         sceneCharPreset: presetChar?.name || null,
@@ -11306,10 +11322,17 @@ async function pgStart(){
         seed: opts.seed,
         steps: opts.steps,
         cfg: opts.cfg,
+        cfgRescale: opts.cfgRescale,
         sampler: opts.sampler,
         schedule: opts.schedule,
         w: opts.w, h: opts.h,
+        smea: !!opts.smea, smeaDyn: !!opts.smeaDyn,
+        variety: !!opts.variety, decrisper: !!opts.decrisper,
+        useCoords: !!opts.useCoords, ucPreset: opts.ucPreset,
         characters: chunk.map(c => c.name).filter(Boolean),
+        charPrompts: (charactersArr || [])
+          .filter(c => c.name || (c.prompt||'').trim())
+          .map(c => ({name: (c.name||'').trim(), prompt: (c.prompt||'').trim(), neg: (c.neg||'').trim()})),
         previewBatch: true,
         charsPerImage: cnt,
       };
@@ -12321,6 +12344,16 @@ async function showLightboxAt(idx){
   if(img.fname) lines.push(`<b>파일명</b> · ${esc(img.fname)}`);
   if(img.prompt || m.prompt){
     lines.push(`<div class="lb-prompt"><b>프롬프트 (Prompt)</b><br>${esc(img.prompt || m.prompt || '')}</div>`);
+  }
+  // 🎴 캐릭터별 프롬프트 — V4 는 base prompt 와 분리 저장. 프리셋 외형·액션 내용을 여기서 노출.
+  if(Array.isArray(m.charPrompts) && m.charPrompts.length){
+    const charHtml = m.charPrompts.map((c, i) => {
+      const head = c.name ? esc(c.name) : `캐릭터 ${i+1}`;
+      const body = c.prompt ? esc(c.prompt) : '<span class="muted">(프롬프트 없음)</span>';
+      const negPart = c.neg ? `<br><span style="color:var(--t3)">neg: ${esc(c.neg)}</span>` : '';
+      return `<div style="margin-top:4px"><b style="color:var(--acc)">▸ ${head}</b><br>${body}${negPart}</div>`;
+    }).join('');
+    lines.push(`<div class="lb-prompt"><b>🎴 캐릭터 프롬프트 (Characters)</b>${charHtml}</div>`);
   }
   if(m.neg){
     lines.push(`<div class="lb-prompt"><b>제외 (Negative)</b><br>${esc(m.neg)}</div>`);
