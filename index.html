@@ -1463,6 +1463,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .mode-btn.rc-tab{color:var(--blue);font-weight:700}
 .mode-btn.rc-tab.act{color:var(--blue);border-bottom-color:var(--blue);background:rgba(58,99,152,.08)}
 .mode-btn.rc-tab:hover{color:var(--blue);background:rgba(58,99,152,.06)}
+.mode-btn.rc-tab.rc-applying{position:relative}
+.mode-btn.rc-tab.rc-applying::after{content:'';position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 2px var(--panel)}
 
 /* 빌더 sec — 다른 sec 와 비슷한 톤, 좌측 보더로 정체성 표시 (전체 컬러 강조 톤다운) */
 /* 🎲 RC 빌더는 '편집 모드' 의 사이드바에서만 표시 — 다른 페인(미리보기/갤러리/...) 에선 강제 숨김. */
@@ -1697,6 +1699,12 @@ body:not([data-mview="edit"]) #randomBuilderSec{display:none !important}
 .rcp-btn:hover{background:rgba(162,90,31,.18);border-color:var(--acc)}
 /* 📂 그룹 탭 바 — 여러 그룹 동시 운용 */
 .rc-groups-bar{display:flex;gap:4px;padding:6px 8px;background:var(--card2);border-bottom:1px solid var(--b1);overflow-x:auto;flex-wrap:nowrap}
+.rc-enable-row{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:6px;background:var(--card2);border:1.5px solid var(--b1);border-radius:6px;cursor:pointer;user-select:none}
+.rc-enable-row input{width:auto;cursor:pointer}
+.rc-enable-label{font-size:13px;font-weight:700;color:var(--t1)}
+.rc-enable-state{margin-left:auto;font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 8px;border-radius:4px;background:var(--b1);color:var(--t3)}
+.rc-enable-row.on{border-color:var(--acc);background:rgba(162,90,31,.08)}
+.rc-enable-row.on .rc-enable-state{background:var(--acc);color:#fff8ec}
 .rc-groups-bar::-webkit-scrollbar{height:6px}
 .rcg-tab{flex-shrink:0;background:var(--panel);border:1.5px solid var(--b1);color:var(--t2);padding:5px 12px;font-size:12px;font-weight:600;border-radius:5px 5px 0 0;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;min-height:30px;white-space:nowrap;transition:all .12s}
 .rcg-tab:hover{border-color:var(--acc);color:var(--t1)}
@@ -2058,6 +2066,12 @@ mark{
           <span class="caret">▾</span>
         </div>
         <div class="sec-body">
+          <!-- 🔘 마스터 적용 토글 — OFF 면 생성 시 카테고리 주입 안 함 (사용자 보고: 적용 안 해도 자동 적용됨) -->
+          <label class="rc-enable-row" id="rcEnableRow" title="켜면 생성할 때마다 활성 카테고리에서 옵션을 무작위로 뽑아 프롬프트 끝에 추가합니다. 꺼두면 빌더는 편집만 하고 생성엔 영향 없음">
+            <input type="checkbox" id="rcEnableToggle">
+            <span class="rc-enable-label">🎲 생성 시 적용 <span class="en" style="opacity:.6;font-weight:400">Apply on generate</span></span>
+            <span class="rc-enable-state" id="rcEnableState">OFF</span>
+          </label>
           <!-- 📂 그룹 탭 바 — 여러 그룹을 탭처럼 동시 운용, 클릭으로 전환 -->
           <div class="rc-groups-bar" id="rcGroupsBar" role="tablist" aria-label="RC 빌더 그룹 탭"></div>
           <!-- 🔍 카테고리·옵션 검색 + 필터 -->
@@ -4266,6 +4280,7 @@ const state = {
   seedHistory: [],        // ⏱ [{seed, ts, fav, note}] — 최근 시드 + 즐겨찾기 (최대 100)
   seedBlocklist: [],      // 👎 별로 표시한 시드들 — randomSeed() 시 자동 회피 (최대 1000)
   seedBlocklistAuto: false,  // 👎 시드 자동 제외 옵션
+  rcEnabled: false,       // 🎲 RC 빌더 마스터 스위치 — OFF 면 생성 시 카테고리 주입 안 함
   workflows: [],          // 💾 [{id, name, ts, thumb, data}] — 워크플로우 스냅샷 슬롯
   randomCategories: [],   // 🎲 활성 그룹의 카테고리 (rcGroups[rcActiveGroupIdx].categories 의 live reference)
   randomBuilderOpen: false,   // 빌더 sec 토글 (모드 바의 🎲 버튼)
@@ -5177,7 +5192,8 @@ function buildGenBody(opts){
   // 🎲 RANDOM CATEGORY BUILDER — 활성 카테고리에서 옵션 선택해서 prompt 끝에 자동 추가.
   //    각 카테고리: locked 면 lockedOptionIdx 고정, 아니면 pickWeightedOption.
   //    빈 텍스트 옵션은 "사용 안 함" 의미 → 추가 안 함.
-  const cats = Array.isArray(state?.randomCategories) ? state.randomCategories : [];
+  //    🔘 마스터 스위치 state.rcEnabled 가 OFF 면 전혀 적용 안 함 (사용자 명시 ON 필요).
+  const cats = (state?.rcEnabled && Array.isArray(state?.randomCategories)) ? state.randomCategories : [];
   const extras = [];
   for(const cat of cats){
     if(!cat.enabled) continue;
@@ -16946,6 +16962,7 @@ function rcToggleBuilder(force){
   if(open){
     _renderRcGroupsBar();
     rcRender();
+    if(typeof _refreshRcEnableUI === 'function') _refreshRcEnableUI();
     // 🎴 빌더 프리셋 안내 — 첫 진입 시 1회 (localStorage 영구화)
     try {
       if(!localStorage.getItem('nai_rcp_hint_shown')){
@@ -18246,9 +18263,32 @@ function rcDoImport(text, opts){
   return;
 }
 
+function _refreshRcEnableUI(){
+  const row = $('rcEnableRow');
+  const cb = $('rcEnableToggle');
+  const st = $('rcEnableState');
+  const on = !!state.rcEnabled;
+  if(cb) cb.checked = on;
+  if(row) row.classList.toggle('on', on);
+  if(st) st.textContent = on ? 'ON' : 'OFF';
+  // 🎲 탭에도 활성 표시 — 닫혀있어도 적용 중인지 한눈에
+  const tab = $('randomBuilderTab');
+  if(tab) tab.classList.toggle('rc-applying', on);
+}
+
 function rcWireEvents(){
   $('randomBuilderTab')?.addEventListener('click', () => rcToggleBuilder());
   $('rcCloseBtn')?.addEventListener('click', () => rcToggleBuilder(false));
+  // 🔘 마스터 적용 토글
+  $('rcEnableToggle')?.addEventListener('change', async () => {
+    state.rcEnabled = $('rcEnableToggle').checked;
+    await DB.setFlag('rc_enabled', state.rcEnabled);
+    _refreshRcEnableUI();
+    if(typeof refreshCost === 'function') refreshCost();
+    toast(state.rcEnabled
+      ? '🎲 적용 ON — 생성마다 활성 카테고리에서 옵션 무작위 추가'
+      : '🎲 적용 OFF — 빌더는 편집만, 생성엔 영향 없음', 'info');
+  });
   $('rcAddBtn')?.addEventListener('click', () => rcAddCategory());
   $('rcEmptyAddBtn')?.addEventListener('click', () => rcAddCategory());
   $('rcEmptyLoadBtn')?.addEventListener('click', openRcpModal);
@@ -18721,6 +18761,9 @@ async function init(){
     if(Array.isArray(bl)) state.seedBlocklist = bl;
     const auto = await DB.getFlag('seed_blocklist_auto');
     state.seedBlocklistAuto = !!auto;
+    // 🎲 RC 마스터 스위치 복원
+    state.rcEnabled = !!(await DB.getFlag('rc_enabled'));
+    if(typeof _refreshRcEnableUI === 'function') _refreshRcEnableUI();
   } catch(_){}
   // 🔄 마이그레이션: 갤러리 ⭐ → ❤️ (한 번만, 옛 사용자의 fav 데이터를 liked 로 승격)
   try {
