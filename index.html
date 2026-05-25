@@ -14512,6 +14512,9 @@ async function _decryptApiKey(rec){
     const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv}, k, ct);
     return new TextDecoder().decode(pt);
   } catch(e){
+    // 🐛 fix: PIN_REQUIRED 는 호출자(loadApiKey)가 PIN 프롬프트를 띄울 수 있도록 전파.
+    //   이전엔 여기서 삼켜져 '' 반환 → 새로고침 시 PIN 안 묻고 키 빈값 → 생성 401 (PIN 기능 사실상 사망).
+    if(e?.message === 'PIN_REQUIRED') throw e;
     console.warn('[apikey] decrypt fail', e?.message);
     return '';
   }
