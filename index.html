@@ -4791,7 +4791,9 @@ const DB = {
       const getReq = sesStore.get(sid);
       getReq.onsuccess = () => {
         const ses = getReq.result;
-        if(ses){ ses.count = (ses.count||0)+1; ses.thumb = blob; sesStore.put(ses); }
+        // 🚀 perf: ses.thumb 는 어디서도 안 읽히는데 풀해상도 blob 을 세션마다 저장 → getSessions() 마다 전부 메모리 로드.
+        //   카운트만 갱신 (thumb 저장 제거).
+        if(ses){ ses.count = (ses.count||0)+1; sesStore.put(ses); }
       };
       tx.oncomplete = () => { this._invalidateImgCache(sid); res(newId); };
       tx.onerror = e => rej(e);
@@ -12024,6 +12026,7 @@ const _gallerySel = new Set();  // 선택된 image id 모음
 let _marquee = null;
 let _marqueeStart = null;
 let _marqueeBaseSel = null;  // 드래그 시작 시점의 선택 (Ctrl/Shift 누적용)
+let _marqueeCards = null;    // mousedown 시 캐시한 카드 offset 바운드 (perf)
 let _selectionMode = false;  // ☑ 선택 모드 (모바일 진입용)
 
 function refreshGalSelToolbar(){
@@ -12306,12 +12309,23 @@ function initGalleryMarquee(){
     _marquee.style.width = '0px';
     _marquee.style.height = '0px';
     grid.appendChild(_marquee);
+    // 🚀 perf: 카드 바운드를 mousedown 시 1회 캐시 (offset 좌표 = 스크롤 무관, 콘텐츠 좌표계).
+    //   이전엔 매 mousemove 마다 querySelectorAll + 카드별 getBoundingClientRect(동기 reflow) → 큰 갤러리 jank.
+    _marqueeCards = [...grid.querySelectorAll('.g-item')].map(el => ({
+      id: parseInt(el.dataset.id),
+      l: el.offsetLeft, t: el.offsetTop,
+      r: el.offsetLeft + el.offsetWidth, b: el.offsetTop + el.offsetHeight,
+    }));
     e.preventDefault();
   });
 
-  // 마우스 이동 + 종료는 document 레벨에서 (그리드 밖으로 나가도 추적)
-  document.addEventListener('mousemove', e => {
-    if(!_marquee || !_marqueeStart) return;
+  // 마우스 이동 — rAF 스로틀 (한 프레임당 1회만 계산)
+  let _rafPending = false;
+  let _lastMove = null;
+  const processMove = () => {
+    _rafPending = false;
+    if(!_marquee || !_marqueeStart || !_lastMove) return;
+    const e = _lastMove;
     const rect = grid.getBoundingClientRect();
     const x = e.clientX - rect.left + grid.scrollLeft;
     const y = e.clientY - rect.top + grid.scrollTop;
@@ -12323,29 +12337,24 @@ function initGalleryMarquee(){
     _marquee.style.top  = top  + 'px';
     _marquee.style.width  = w + 'px';
     _marquee.style.height = h + 'px';
-    // 충돌 판정
-    const items = grid.querySelectorAll('.g-item');
-    const gr = grid.getBoundingClientRect();
-    const mLeft = left + gr.left - grid.scrollLeft;
-    const mTop  = top  + gr.top  - grid.scrollTop;
-    const mRight = mLeft + w;
-    const mBottom = mTop + h;
+    // 콘텐츠 좌표계에서 직접 교차 판정 — getBoundingClientRect 호출 없음
+    const mRight = left + w, mBottom = top + h;
     const newSel = new Set(_marqueeBaseSel);
-    items.forEach(el => {
-      const r = el.getBoundingClientRect();
-      const intersects = !(r.right < mLeft || r.left > mRight || r.bottom < mTop || r.top > mBottom);
-      const id = parseInt(el.dataset.id);
-      if(intersects){
-        if(_marqueeBaseSel.has(id) && (e.ctrlKey)){
-          newSel.delete(id);  // Ctrl-드래그: 교집합 토글
-        } else {
-          newSel.add(id);
-        }
+    for(const c of _marqueeCards){
+      const hit = !(c.r < left || c.l > mRight || c.b < top || c.t > mBottom);
+      if(hit){
+        if(_marqueeBaseSel.has(c.id) && e.ctrlKey) newSel.delete(c.id);
+        else newSel.add(c.id);
       }
-    });
+    }
     _gallerySel.clear();
     newSel.forEach(id => _gallerySel.add(id));
     applySelStyles();
+  };
+  document.addEventListener('mousemove', e => {
+    if(!_marquee || !_marqueeStart) return;
+    _lastMove = e;
+    if(!_rafPending){ _rafPending = true; requestAnimationFrame(processMove); }
   });
 
   document.addEventListener('mouseup', () => {
@@ -12354,6 +12363,8 @@ function initGalleryMarquee(){
     _marquee = null;
     _marqueeStart = null;
     _marqueeBaseSel = null;
+    _marqueeCards = null;
+    _lastMove = null;
   });
 
   // 빈 영역 클릭 시 선택 해제 (드래그 아닐 때)
