@@ -1695,6 +1695,8 @@ body:not([data-mview="edit"]) #randomBuilderSec{display:none !important}
 .rc-group-header{font-size:12.5px;color:var(--t2);font-weight:700;padding:10px 12px 6px;border-top:1px dashed var(--b1);margin-top:8px;display:flex;align-items:center;gap:8px;background:linear-gradient(180deg, rgba(162,90,31,.04), transparent)}
 .rc-group-header:first-child{border-top:none;margin-top:0;padding-top:4px}
 .rc-group-header.rc-group-empty{color:var(--t3)}
+.rc-group-del{margin-left:auto;background:transparent;border:1px solid rgba(181,67,56,.35);color:var(--red);font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:inherit;flex-shrink:0}
+.rc-group-del:hover{background:rgba(181,67,56,.12)}
 .rc-group-count{font-size:11px;color:var(--t3);font-weight:500;font-family:var(--mono)}
 .rc-group-chip{background:rgba(162,90,31,.08);border:1px dashed rgba(162,90,31,.35);color:var(--acc);padding:2px 8px;border-radius:10px;font-size:10.5px;cursor:pointer;font-family:inherit;line-height:1.3;white-space:nowrap}
 .rc-group-chip:hover{background:rgba(162,90,31,.15);border-style:solid}
@@ -17403,7 +17405,8 @@ function rcRender(){
     const items = byGroup.get(g);
     const enabledN = items.filter(i => i.c.enabled).length;
     const header = g
-      ? `<div class="rc-group-header" data-group="${esc(g)}">📂 ${esc(g)} <span class="rc-group-count">${items.length}개 (활성 ${enabledN})</span></div>`
+      ? `<div class="rc-group-header" data-group="${esc(g)}">📂 ${esc(g)} <span class="rc-group-count">${items.length}개 (활성 ${enabledN})</span>`
+        + `<button class="rc-group-del" data-act="rc-group-dissolve" data-group="${esc(g)}" title="이 그룹 해제 — 카테고리는 유지하고 묶음만 풉니다" aria-label="그룹 해제">✕ 그룹 해제</button></div>`
       : (byGroup.size > 1 ? `<div class="rc-group-header rc-group-empty">📦 그룹 없음 <span class="rc-group-count">${items.length}개</span></div>` : '');
     return header + items.map(({c, ci}) => _rcRenderCard(c, ci)).join('');
   }).join('');
@@ -17896,6 +17899,24 @@ function rcEditGroup(catIdx){
   rcRender();
   if(c.group) toast(`📂 '${c.group}' 그룹으로 이동`, 'success');
   else toast(`📦 그룹 해제`, 'info');
+}
+
+// 📂 그룹 해제(dissolve) — 그 그룹 카테고리들의 group 만 비움 (카테고리 자체는 유지). undo 제공.
+function rcDissolveGroup(group){
+  if(!group) return;
+  const cats = state.randomCategories || [];
+  const members = cats.filter(c => c.group === group);
+  if(!members.length) return;
+  if(!confirm(`'${group}' 그룹을 해제할까요?\n카테고리 ${members.length}개는 그대로 남고 묶음만 풀립니다.`)) return;
+  const snap = members.map(c => ({c, prev: c.group}));
+  members.forEach(c => { c.group = ''; });
+  _saveRandomCategoriesDebounced();
+  rcRender();
+  toastUndo(`📦 '${group}' 그룹 해제 (${members.length}개)`, () => {
+    snap.forEach(({c, prev}) => { c.group = prev; });
+    _saveRandomCategoriesDebounced();
+    rcRender();
+  });
 }
 
 function rcEditNote(catIdx){
@@ -18689,6 +18710,7 @@ function rcWireEvents(){
     const act = btn.dataset.act;
     const catIdx = parseInt(btn.dataset.catIdx, 10);
     const optIdx = parseInt(btn.dataset.optIdx, 10);
+    if(act === 'rc-group-dissolve'){ rcDissolveGroup(btn.dataset.group); return; }
     if(act === 'toggle-enabled') rcToggleEnabled(catIdx);
     else if(act === 'toggle-collapse') rcToggleCollapse(catIdx);
     else if(act === 'edit-note') rcEditNote(catIdx);
