@@ -17480,7 +17480,8 @@ function _rcRenderCard(cat, catIdx){
         <span class="rc-count" title="${(cat.options||[]).length}개 옵션">${(cat.options||[]).length}</span>
         <span class="rc-hdr-actions">
           <button data-act="add-opt" data-cat-idx="${catIdx}" title="＋ 옵션 추가">＋</button>
-          <button data-act="more-menu" data-cat-idx="${catIdx}" title="⋯ 더보기 — 색상·노트·일괄 추가·프리셋·도감·이동·복제" class="${note?'has-note':''}" aria-haspopup="menu">⋯</button>
+          <button data-act="add-from-preset" data-cat-idx="${catIdx}" title="📚 프리셋에서 옵션 채우기 (그룹별·썸네일·다중선택)" style="color:var(--acc)">📚</button>
+          <button data-act="more-menu" data-cat-idx="${catIdx}" title="⋯ 더보기 — 색상·노트·일괄 추가·도감·이동·복제" class="${note?'has-note':''}" aria-haspopup="menu">⋯</button>
           <button data-act="del-cat" data-cat-idx="${catIdx}" title="✕ 카테고리 삭제" style="color:var(--red)">✕</button>
         </span>
       </div>
