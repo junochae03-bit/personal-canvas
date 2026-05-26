@@ -2035,6 +2035,14 @@ mark{
 .wc-empty{text-align:center;color:var(--t3);padding:26px 16px;font-size:12.5px;line-height:1.7}
 .wc-sec.wc-drag{outline:2px dashed var(--acc);outline-offset:-4px}
 #wildcardBtn.act{background:var(--acc);color:#fff;border-color:var(--acc)}
+/* 🎲 캐릭터 랜덤 선택 메뉴 */
+.char-rand-menu{position:absolute;z-index:9000;background:var(--panel);border:1.5px solid var(--b2);border-radius:8px;box-shadow:var(--shadow);padding:5px;min-width:190px;max-height:60vh;overflow-y:auto}
+.char-rand-menu .crm-item{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;border:0;background:transparent;color:var(--t1);font-family:var(--font);font-size:12.5px;text-align:left;padding:9px 10px;border-radius:6px;cursor:pointer;min-height:38px}
+.char-rand-menu .crm-item:hover{background:var(--card2)}
+.char-rand-menu .crm-item.disabled{opacity:.4;cursor:not-allowed}
+.char-rand-menu .crm-item.crm-group{font-size:12px}
+.char-rand-menu .crm-n{font-family:var(--mono);font-size:10.5px;color:var(--t3);background:var(--card);border-radius:10px;padding:1px 7px;flex-shrink:0}
+.char-rand-menu .crm-sep{font-size:10.5px;color:var(--t3);padding:7px 10px 3px;border-top:1px solid var(--b1);margin-top:4px}
 </style>
 </head>
 <body>
@@ -6534,7 +6542,7 @@ function renderCharacters(){
     return `
     <div class="char-card ${c.enabled?'active':''}" data-idx="${i}">
       <div class="char-hdr">
-        <div class="char-thumb ${c.thumb?'has':''}" data-act="thumb" data-idx="${i}" ${c.thumb?`style="background-image:url('${esc(c.thumb)}')"`:''} title="🎲 탭하면 랜덤 캐릭터 프리셋 적용 — 그림으로 고르려면 우측 '🎴 둘러보기'">${c.thumb?'':'#'+(i+1)}</div>
+        <div class="char-thumb ${c.thumb?'has':''}" data-act="thumb" data-idx="${i}" ${c.thumb?`style="background-image:url('${esc(c.thumb)}')"`:''} title="🎲 탭하면 랜덤 선택 메뉴 — 전체 · ⭐즐겨찾기 · 📂그룹별. 그림으로 고르려면 우측 '🎴 둘러보기'">${c.thumb?'':'#'+(i+1)}</div>
         <input class="char-name" data-act="name" data-idx="${i}" placeholder="이름 입력 — 프리셋 자동 로드" value="${esc(c.name||'')}" list="charPresetNames" autocomplete="off" title="캐릭터 프리셋 이름을 입력/선택하면 프롬프트와 썸네일이 자동 적용됩니다">
         <button class="char-pos ${c.pos&&(c.pos.x!==0.5||c.pos.y!==0.5)?'set':''}" data-act="pos" data-idx="${i}" title="위치 (Position)">${posLabel(c.pos)}</button>
         <div class="char-actions">
@@ -10446,8 +10454,16 @@ function _isMaleChar(c){
 
 // 🎲 캐릭터 슬롯에 랜덤 프리셋 즉시 적용
 function applyRandomCharacter(slotIdx, opts){
-  const chars = (state.presets.character || []);
-  if(!chars.length){ toast('캐릭터 프리셋이 없습니다 — 프리셋 탭에서 먼저 추가하세요', 'warning'); return; }
+  let chars = (state.presets.character || []);
+  // 🎲 범위 제한 — 즐겨찾기만 / 특정 그룹만
+  if(opts?.fav) chars = chars.filter(p => p.fav);
+  else if(opts?.group) chars = chars.filter(p => getCharGroup(p.name) === opts.group);
+  if(!chars.length){
+    toast(opts?.fav ? '⭐ 즐겨찾기한 캐릭터 프리셋이 없습니다 (프리셋 탭에서 ⭐ 표시)'
+        : opts?.group ? `'${opts.group}' 그룹에 캐릭터 프리셋이 없습니다`
+        : '캐릭터 프리셋이 없습니다 — 프리셋 탭에서 먼저 추가하세요', 'warning');
+    return;
+  }
   const c = state.characters[slotIdx];
   if(!c) return;
   // 같은 캐릭터 다시 뽑지 않도록 직전 이름 제외 (가능하면)
@@ -10460,8 +10476,60 @@ function applyRandomCharacter(slotIdx, opts){
   renderCharacters();
   saveSettingsDebounced();
   refreshCost();
-  if(!opts?.silent) toast(`🎲 랜덤 적용: ${pick.name}`, 'success');
+  if(!opts?.silent){
+    const tag = opts?.fav ? '⭐ 즐겨찾기' : opts?.group ? `📂 ${opts.group}` : '🎲 랜덤';
+    toast(`${tag} 적용: ${pick.name}`, 'success');
+  }
   return pick;
+}
+
+// 🎲 캐릭터 랜덤 선택 메뉴 — 전체 / 즐겨찾기 / 그룹별. 썸네일 탭으로 열림.
+let _charRandMenu = null;
+function _closeCharRandMenu(){
+  if(_charRandMenu){ _charRandMenu.remove(); _charRandMenu = null; }
+  document.removeEventListener('click', _charRandMenuOutside, true);
+  document.removeEventListener('keydown', _charRandMenuKey, true);
+}
+function _charRandMenuOutside(e){ if(_charRandMenu && !_charRandMenu.contains(e.target)) _closeCharRandMenu(); }
+function _charRandMenuKey(e){ if(e.key === 'Escape') _closeCharRandMenu(); }
+function openCharRandomMenu(slotIdx, anchorEl){
+  _closeCharRandMenu();
+  const chars = state.presets.character || [];
+  if(!chars.length){ toast('캐릭터 프리셋이 없습니다 — 프리셋 탭에서 먼저 추가하세요', 'warning'); return; }
+  const favCount = chars.filter(p => p.fav).length;
+  const groups = groupCharsByWork(chars, 2);
+  const m = document.createElement('div');
+  m.className = 'char-rand-menu';
+  let html = `<button type="button" class="crm-item" data-scope="all">🎲 전체에서 랜덤 <span class="crm-n">${chars.length}</span></button>`;
+  html += `<button type="button" class="crm-item${favCount ? '' : ' disabled'}" data-scope="fav" ${favCount ? '' : 'disabled'}>⭐ 즐겨찾기에서 랜덤 <span class="crm-n">${favCount}</span></button>`;
+  if(groups.length){
+    html += `<div class="crm-sep">📂 그룹에서 랜덤</div>`;
+    html += groups.map(g => `<button type="button" class="crm-item crm-group" data-scope="group" data-group="${esc(g.group)}">${esc(g.group)} <span class="crm-n">${g.items.length}</span></button>`).join('');
+  }
+  m.innerHTML = html;
+  document.body.appendChild(m);
+  const r = anchorEl.getBoundingClientRect();
+  let left = Math.max(8, Math.min(window.innerWidth - m.offsetWidth - 8, r.left));
+  let top = r.bottom + window.scrollY + 4;
+  if(top + m.offsetHeight > window.scrollY + window.innerHeight - 8){
+    top = Math.max(window.scrollY + 8, r.top + window.scrollY - m.offsetHeight - 4);
+  }
+  m.style.left = left + 'px';
+  m.style.top = top + 'px';
+  m.addEventListener('click', e => {
+    const btn = e.target.closest('.crm-item');
+    if(!btn || btn.disabled) return;
+    const scope = btn.dataset.scope;
+    _closeCharRandMenu();
+    if(scope === 'fav') applyRandomCharacter(slotIdx, {fav: true});
+    else if(scope === 'group') applyRandomCharacter(slotIdx, {group: btn.dataset.group});
+    else applyRandomCharacter(slotIdx);
+  });
+  _charRandMenu = m;
+  setTimeout(() => {
+    document.addEventListener('click', _charRandMenuOutside, true);
+    document.addEventListener('keydown', _charRandMenuKey, true);
+  }, 0);
 }
 
 function openCharBrowser(slotIdx){
@@ -15418,9 +15486,9 @@ function wireCharacterEvents(){
       });
     }
     else if(act === 'thumb'){
-      // 썸네일/번호 탭 = 랜덤 캐릭터 프리셋 즉시 로드
-      // (브라우저는 "🎴 둘러보기" 버튼으로 열기 — 명확히 분리)
-      applyRandomCharacter(idx);
+      // 썸네일/번호 탭 = 랜덤 선택 메뉴 (전체 / ⭐즐겨찾기 / 📂그룹별)
+      // (그림으로 직접 고르기는 "🎴 둘러보기" 버튼)
+      openCharRandomMenu(idx, e.target.closest('.char-thumb') || e.target);
       return;
       // 옛 직접 설정 UI는 아래에 보존 — 필요 시 호출
       $('confirmTitle').innerHTML = '캐릭터 썸네일 <span class="en">Thumbnail</span>';
