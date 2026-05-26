@@ -13163,6 +13163,8 @@ function saveMaskFromCanvas(){
 // UI LOGIC: MODE / TABS / VISIBILITY
 // ═══════════════════════════════════════════════════════════
 function setMode(mode){
+  // 🐛 data-mode 없는 버튼(🎲 RC 탭 등)이 setMode(undefined)로 모든 mode-show 섹션을 숨기던 버그 방어.
+  if(mode == null) return;
   state.mode = mode;
   $$('.mode-btn').forEach(b => b.classList.toggle('act', b.dataset.mode === mode));
   $$('.mode-show').forEach(el => {
@@ -15103,7 +15105,7 @@ function wireTopbarAndFormEvents(){
   document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
 
   // Mode bar
-  $$('.mode-btn').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+  $$('.mode-btn[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
   // Main tabs (데스크탑 상단 + 모바일 하단 네비 양쪽 모두)
   $$('.main-tab-btn').forEach(b => b.onclick = () => setMainPane(b.dataset.pane));
   $$('.mn-btn').forEach(b => b.onclick = () => setMainPane(b.dataset.mview));
