@@ -14,6 +14,7 @@ import { MEGAPIXEL, isSmallTier, aspectRatio, snapTo8 } from '../js/pure/image.m
 import { toChosung, isAllChosung, koMatch, highlightMatch } from '../js/pure/korean.mjs';
 import { pickFirst, sanitizeCharacter, sanitizeCharacters, extractNaiFields } from '../js/pure/naiMeta.mjs';
 import { expandRandomChoices, listRandomChoices, countRandomCombinations, hasCameraAngle, pickWeightedOption, guessCategoryLabel, compileCategoriesToText } from '../js/pure/randomChoice.mjs';
+import { WILDCARD_NAME_RE, extractWildcardNames, parseWildcardFile, pickWildcardLine, expandWildcards } from '../js/pure/wildcards.mjs';
 
 // ────────────── utils ──────────────
 test('esc: HTML 특수문자 5종 이스케이프', () => {
@@ -503,5 +504,85 @@ test('compileCategoriesToText: 옵션 없는 카테고리 생략', () => {
     {enabled: true, options: [{text:'A', weight:1}]},
   ];
   assert.equal(compileCategoriesToText(cats), '||A||');
+});
+
+// ────────────── wildcards ──────────────
+test('WILDCARD_NAME_RE: 영문/숫자/_/- 만 허용', () => {
+  assert.equal(WILDCARD_NAME_RE.test('people_count'), true);
+  assert.equal(WILDCARD_NAME_RE.test('time-weather'), true);
+  assert.equal(WILDCARD_NAME_RE.test('나쁜이름'), false);
+  assert.equal(WILDCARD_NAME_RE.test('has space'), false);
+  assert.equal(WILDCARD_NAME_RE.test(''), false);
+});
+
+test('extractWildcardNames: __name__ 추출 (중복 제거, 순서 유지)', () => {
+  assert.deepEqual(extractWildcardNames('1girl, __outfit__, __bg__, __outfit__'), ['outfit', 'bg']);
+  assert.deepEqual(extractWildcardNames('__people_count__ and __time_weather__'), ['people_count', 'time_weather']);
+  assert.deepEqual(extractWildcardNames('no wildcards here'), []);
+  assert.deepEqual(extractWildcardNames(''), []);
+});
+
+test('parseWildcardFile: 줄 단위 후보, 빈 줄·주석 제외', () => {
+  const txt = 'business suit\n\n  casual hoodie  \n# comment\n1.5::nurse uniform::';
+  assert.deepEqual(parseWildcardFile(txt), [
+    {text: 'business suit', weight: 1},
+    {text: 'casual hoodie', weight: 1},
+    {text: '1.5::nurse uniform::', weight: 1},
+  ]);
+  assert.deepEqual(parseWildcardFile(''), []);
+});
+
+test('pickWildcardLine: 잠금 시 해당 줄 고정', () => {
+  const wc = {options: [{text:'A',weight:1},{text:'B',weight:1},{text:'C',weight:1}], locked: true, lockedIdx: 1};
+  assert.equal(pickWildcardLine(wc, () => 0.9), 'B');
+  assert.equal(pickWildcardLine(wc, () => 0), 'B');
+});
+
+test('pickWildcardLine: 균등·가중치 무작위', () => {
+  const uni = {options: [{text:'A',weight:1},{text:'B',weight:1}], locked: false};
+  assert.equal(pickWildcardLine(uni, () => 0), 'A');
+  assert.equal(pickWildcardLine(uni, () => 0.99), 'B');
+  // A=1, B=3 → rng 0.2 → A, 0.5 → B
+  const w = {options: [{text:'A',weight:1},{text:'B',weight:3}], locked: false};
+  assert.equal(pickWildcardLine(w, () => 0.2), 'A');
+  assert.equal(pickWildcardLine(w, () => 0.5), 'B');
+});
+
+test('pickWildcardLine: 빈/결손 안전', () => {
+  assert.equal(pickWildcardLine(null), '');
+  assert.equal(pickWildcardLine({options: []}), '');
+  // 잠금 인덱스 범위 밖이면 가중치 선택으로 폴백
+  assert.equal(pickWildcardLine({options:[{text:'A',weight:1}], locked:true, lockedIdx:9}, () => 0), 'A');
+});
+
+test('expandWildcards: __name__ 를 resolve 결과로 치환 (결정적)', () => {
+  const map = {
+    outfit: {options: [{text:'suit',weight:1},{text:'dress',weight:1}], locked:false},
+    bg: {options: [{text:'beach',weight:1}], locked:false},
+  };
+  const resolve = n => map[n] || null;
+  assert.equal(expandWildcards('1girl, __outfit__, __bg__', resolve, () => 0), '1girl, suit, beach');
+  assert.equal(expandWildcards('1girl, __outfit__', resolve, () => 0.99), '1girl, dress');
+});
+
+test('expandWildcards: 알 수 없는 이름은 토큰 보존', () => {
+  const resolve = () => null;
+  assert.equal(expandWildcards('a, __unknown__, b', resolve, () => 0), 'a, __unknown__, b');
+});
+
+test('expandWildcards: 빈 옵션 와일드카드도 토큰 보존', () => {
+  const resolve = () => ({options: []});
+  assert.equal(expandWildcards('__empty__', resolve, () => 0), '__empty__');
+});
+
+test('expandWildcards: 후보 안 콤마·가중치 캡슐 보존', () => {
+  const resolve = () => ({options: [{text:'1.5::nurse uniform::, garter belt', weight:1}], locked:false});
+  assert.equal(expandWildcards('__o__', resolve, () => 0), '1.5::nurse uniform::, garter belt');
+});
+
+test('expandWildcards: resolve 미함수·빈 입력 안전', () => {
+  assert.equal(expandWildcards('__a__', null, () => 0), '__a__');
+  assert.equal(expandWildcards('', () => null, () => 0), '');
+  assert.equal(expandWildcards(null, () => null), null);
 });
 

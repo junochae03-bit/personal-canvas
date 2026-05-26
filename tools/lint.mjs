@@ -163,6 +163,10 @@ const MIRRORED = [
   {mod: 'js/pure/randomChoice.mjs', fn: 'pickWeightedOption'},
   {mod: 'js/pure/randomChoice.mjs', fn: 'guessCategoryLabel'},
   {mod: 'js/pure/randomChoice.mjs', fn: 'compileCategoriesToText'},
+  {mod: 'js/pure/wildcards.mjs', fn: 'extractWildcardNames'},
+  {mod: 'js/pure/wildcards.mjs', fn: 'parseWildcardFile'},
+  {mod: 'js/pure/wildcards.mjs', fn: 'pickWildcardLine'},
+  {mod: 'js/pure/wildcards.mjs', fn: 'expandWildcards'},
 ];
 const inlineSrc = readFileSync(join(ROOT, 'index.html'), 'utf8');
 for(const {mod, fn} of MIRRORED){
