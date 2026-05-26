@@ -2026,11 +2026,12 @@ mark{
 .wc-chips{display:flex;flex-wrap:wrap;gap:6px}
 .wc-chip{display:inline-flex;align-items:stretch;border:1px solid var(--b2);border-radius:8px;overflow:hidden;background:var(--card)}
 .wc-chip.locked{border-color:var(--acc)}
-.wc-chip-ins{border:0;background:transparent;color:var(--t1);font-size:12px;padding:5px 8px;cursor:pointer;font-family:var(--font)}
+.wc-chip-ins{border:0;background:transparent;color:var(--t1);font-size:12px;padding:6px 9px;cursor:pointer;font-family:var(--font);min-height:32px}
 .wc-chip-ins:hover{background:var(--card2)}
 .wc-chip .wc-cnt{opacity:.6;font-size:10.5px;font-family:var(--mono)}
-.wc-chip-edit{border:0;border-left:1px solid var(--b1);background:transparent;color:var(--t3);cursor:pointer;padding:0 7px;font-size:11px}
+.wc-chip-edit{border:0;border-left:1px solid var(--b1);background:transparent;color:var(--t3);cursor:pointer;padding:0 10px;font-size:12px;min-width:34px}
 .wc-chip-edit:hover{background:var(--card2);color:var(--t1)}
+@media(max-width:760px){ .wc-chip-ins,.wc-chip-edit{min-height:36px} }
 .wc-empty{text-align:center;color:var(--t3);padding:26px 16px;font-size:12.5px;line-height:1.7}
 .wc-sec.wc-drag{outline:2px dashed var(--acc);outline-offset:-4px}
 #wildcardBtn.act{background:var(--acc);color:#fff;border-color:var(--acc)}
@@ -2255,6 +2256,7 @@ mark{
           <span class="sec-utils" onclick="event.stopPropagation()">
             <button class="iconbtn sec-util-btn" id="wildcardImportBtn" title="📥 가져오기 — .zip(여러 .txt) 또는 .txt. 파일명이 와일드카드 이름이 됩니다.">📥</button>
             <button class="iconbtn sec-util-btn" id="wildcardNewBtn" title="＋ 새 와일드카드">＋</button>
+            <button class="iconbtn sec-util-btn" id="wildcardDemoBtn" title="🎲 미리보기 — 현재 프롬프트의 __와일드카드__ 를 한 번 확장해서 예시를 보여줍니다 (알 수 없는 이름도 경고)">🎲</button>
             <button class="iconbtn sec-util-btn" id="wildcardCloseBtn" title="닫기">✕</button>
           </span>
           <span class="caret">▾</span>
@@ -7479,6 +7481,7 @@ function openBackupModal(){
       <legend style="font-weight:700;color:var(--acc);padding:0 6px;font-size:13px">💾 워크플로 슬롯</legend>
       <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="bk_workflows" ${(state.workflows||[]).length>0?'checked':'disabled'}>저장된 워크플로 ${(state.workflows||[]).length>0?`(${state.workflows.length}개)`:'(없음)'} + 즐겨찾기·잠금 상태</label>
       <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="bk_random" ${(state.randomCategories||[]).length>0?'checked':'disabled'}>🎲 랜덤 카테고리 빌더 ${(state.randomCategories||[]).length>0?`(${state.randomCategories.length}개)`:'(없음)'} + 옵션·가중치·노트</label>
+      <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="bk_wildcards" ${(state.wildcards||[]).length>0?'checked':'disabled'}>🃏 와일드카드 ${(state.wildcards||[]).length>0?`(${state.wildcards.length}개)`:'(없음)'} + 후보·가중치·잠금</label>
     </fieldset>
 
     <div style="font-size:11.5px;color:var(--t3);padding:4px 4px 0;line-height:1.55">
@@ -7536,6 +7539,10 @@ async function doSelectiveBackup(){
     }
     parts.push('randomCategories');
   }
+  if($('bk_wildcards')?.checked && (state.wildcards||[]).length){
+    out.wildcards = state.wildcards;
+    parts.push('wildcards');
+  }
   if(parts.length === 0){
     toast('선택한 항목이 없습니다', 'warning');
     return;
@@ -7573,6 +7580,7 @@ function renderRestoreOptions(filename, data){
     albums: !!(data.userAlbums && data.userAlbums.length),
     workflows: !!(Array.isArray(data.workflows) && data.workflows.length),
     randomCategories: !!(Array.isArray(data.randomCategories) && data.randomCategories.length),
+    wildcards: !!(Array.isArray(data.wildcards) && data.wildcards.length),
     presets: {},
   };
   let totalPresets = 0;
@@ -7635,6 +7643,7 @@ function renderRestoreOptions(filename, data){
       <legend style="font-weight:700;color:var(--acc);padding:0 6px;font-size:13px">💾 워크플로 슬롯</legend>
       <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_workflows" ${has.workflows?'checked':'disabled'}>저장된 워크플로 ${has.workflows?`(${data.workflows.length}개)`:'(파일에 없음)'}</label>
       <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_random" ${has.randomCategories?'checked':'disabled'}>🎲 랜덤 카테고리 빌더 ${has.randomCategories?`(${data.randomCategories.length}개)`:'(파일에 없음)'}</label>
+      <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_wildcards" ${has.wildcards?'checked':'disabled'}>🃏 와일드카드 ${has.wildcards?`(${data.wildcards.length}개)`:'(파일에 없음)'}</label>
     </fieldset>
 
     <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_autoclassify" checked>복원 후 이름 접두사로 자동 분류 (🪄)</label>
@@ -7682,6 +7691,7 @@ async function computeRestoreDiff(data){
   if($('rs_albums')?.checked && data.userAlbums) diff.albums = `사용자 앨범 ${data.userAlbums.length}개 전체 교체`;
   if($('rs_workflows')?.checked && Array.isArray(data.workflows)) diff.workflows = `워크플로 ${data.workflows.length}개 전체 교체`;
   if($('rs_random')?.checked && Array.isArray(data.randomCategories)) diff.randomCategories = `🎲 랜덤 카테고리 ${data.randomCategories.length}개 전체 교체`;
+  if($('rs_wildcards')?.checked && Array.isArray(data.wildcards)) diff.wildcards = `🃏 와일드카드 ${data.wildcards.length}개 전체 교체`;
   return diff;
 }
 
@@ -7701,6 +7711,7 @@ function renderRestoreDiff(diff){
   if(diff.albums) rows.push(`<div style="padding:6px 10px;background:rgba(58,99,152,.05);border-left:3px solid var(--blue);margin-bottom:4px;border-radius:0 4px 4px 0"><b>📁 앨범</b> — ${diff.albums}</div>`);
   if(diff.workflows) rows.push(`<div style="padding:6px 10px;background:rgba(58,99,152,.05);border-left:3px solid var(--blue);margin-bottom:4px;border-radius:0 4px 4px 0"><b>💾 워크플로</b> — ${diff.workflows}</div>`);
   if(diff.randomCategories) rows.push(`<div style="padding:6px 10px;background:rgba(58,99,152,.05);border-left:3px solid var(--blue);margin-bottom:4px;border-radius:0 4px 4px 0"><b>🎲 랜덤 카테고리</b> — ${diff.randomCategories}</div>`);
+  if(diff.wildcards) rows.push(`<div style="padding:6px 10px;background:rgba(58,99,152,.05);border-left:3px solid var(--blue);margin-bottom:4px;border-radius:0 4px 4px 0"><b>🃏 와일드카드</b> — ${diff.wildcards}</div>`);
   if(!rows.length) return '<div style="text-align:center;color:var(--t3);padding:20px">변경될 항목 없음 (선택된 항목 없음)</div>';
   return `<div style="font-size:12.5px">${rows.join('')}</div>`;
 }
@@ -7833,6 +7844,12 @@ async function doSelectiveRestore(){
       if(typeof _renderRcGroupsBar === 'function') _renderRcGroupsBar();
       if(typeof rcRender === 'function' && state.randomBuilderOpen) rcRender();
       restored.push(`🎲 랜덤 카테고리 ${state.randomCategories.length}개`);
+    }
+    if($('rs_wildcards')?.checked && Array.isArray(data.wildcards)){
+      state.wildcards = data.wildcards.map(_normalizeWildcard).filter(Boolean);
+      if(typeof saveWildcards === 'function') await saveWildcards();
+      if(typeof renderWildcards === 'function') renderWildcards();
+      restored.push(`🃏 와일드카드 ${state.wildcards.length}개`);
     }
     // 자동 분류
     if($('rs_autoclassify')?.checked){
@@ -14200,6 +14217,7 @@ let _acAnchorPos = 0;    // 마지막 콤마 이후 시작 위치
 let _acItems = [];
 let _acSelIdx = 0;
 let _acBox = null;
+let _acMode = 'tag';     // 'tag' | 'wildcard' — __name__ 입력 중이면 와일드카드 모드
 
 function buildAutocompleteIndex(){
   if(_acIndex) return _acIndex;
@@ -14294,7 +14312,36 @@ function renderAcBox(){
   if(sel) sel.scrollIntoView({block:'nearest'});
 }
 
+// 🃏 __partial 입력 감지 — 공백/콤마/줄머리 다음의 미완성 __토큰. 와일드카드가 있을 때만.
+function _getWildcardAcPartial(ta){
+  if(!Array.isArray(state.wildcards) || !state.wildcards.length) return null;
+  const before = ta.value.slice(0, ta.selectionStart);
+  const m = before.match(/(?:^|[\s,])__([A-Za-z0-9_\-]*)$/);
+  return m ? {partial: m[1]} : null;
+}
+
 function updateAutocomplete(ta){
+  // 🃏 와일드카드 __name__ 자동완성 우선 (태그 자동완성보다 먼저)
+  const wcPart = _getWildcardAcPartial(ta);
+  if(wcPart){
+    const q = wcPart.partial.toLowerCase();
+    const pre = [], sub = [];
+    for(const w of state.wildcards){
+      const n = (w.name || '').toLowerCase();
+      if(n.startsWith(q)) pre.push(w);
+      else if(q && n.includes(q)) sub.push(w);
+    }
+    _acItems = [...pre, ...sub].slice(0, 20).map(w => ({en: w.name, ko: `🃏 ${w.options?.length || 0}개`}));
+    _acMode = 'wildcard';
+    _acTarget = ta;
+    _acAnchorPos = ta.selectionStart - (2 + wcPart.partial.length);
+    _acSelIdx = 0;
+    if(!_acItems.length){ hideAcBox(); return; }
+    showAcBox(ta);
+    renderAcBox();
+    return;
+  }
+  _acMode = 'tag';
   const part = getAcPartial(ta);
   if(!part){ hideAcBox(); return; }
   const idx = buildAutocompleteIndex();
@@ -14332,7 +14379,8 @@ function applyAcItem(idx){
   const ta = _acTarget;
   const v = ta.value;
   const caret = ta.selectionStart;
-  const inserted = _acItems[idx].en + ', ';
+  // 🃏 와일드카드 모드면 __name__ 으로 닫아서 삽입, 아니면 태그 + ', '
+  const inserted = (_acMode === 'wildcard') ? `__${_acItems[idx].en}__` : (_acItems[idx].en + ', ');
   ta.value = v.slice(0, _acAnchorPos) + inserted + v.slice(caret);
   const newPos = _acAnchorPos + inserted.length;
   ta.setSelectionRange(newPos, newPos);
@@ -18850,21 +18898,28 @@ function insertWildcardToken(name){
 }
 
 function newWildcard(){
-  const name = (window.prompt('새 와일드카드 이름 (영문/숫자/_/-)') || '').trim();
-  if(!name) return;
-  if(!WILDCARD_NAME_RE.test(name)){ toast('이름은 영문/숫자/_/- 만 가능합니다', 'error'); return; }
-  if((state.wildcards || []).some(w => w.name === name)){ toast('이미 있는 이름입니다', 'error'); return; }
-  if(!Array.isArray(state.wildcards)) state.wildcards = [];
-  state.wildcards.push({name, options: [], locked: false, lockedIdx: 0});
-  saveWildcards();
-  renderWildcards();
-  openWildcardEditor(state.wildcards.length - 1);
+  openWildcardEditor(-1);   // -1 = 새 와일드카드 (모달에서 이름·후보 입력)
+}
+
+// 🎲 미리보기 — 현재 프롬프트의 __와일드카드__ 를 한 번 확장. 알 수 없는 이름은 경고.
+function wildcardDemo(){
+  const txt = $('prompt')?.value || '';
+  const names = extractWildcardNames(txt);
+  if(!names.length){ toast('프롬프트에 __와일드카드__ 가 없습니다 — 칩을 눌러 삽입하세요', 'info'); return; }
+  const unknown = names.filter(n => !_resolveWildcard(n));
+  const sample = expandRandomChoices(expandWildcards(txt, _resolveWildcard));
+  let msg = `🎲 예시 확장:\n${sample.slice(0, 160)}${sample.length > 160 ? '…' : ''}`;
+  if(unknown.length) msg += `\n⚠ 알 수 없는 와일드카드: ${unknown.join(', ')}`;
+  toast(msg, unknown.length ? 'warning' : 'success');
 }
 
 function openWildcardEditor(idx){
-  const w = state.wildcards?.[idx];
+  const isNew = (idx === -1);
+  const w = isNew ? {name: '', options: [], locked: false, lockedIdx: 0} : state.wildcards?.[idx];
   if(!w) return;
   _wcEditIdx = idx;
+  const t = $('wcEditTitle');
+  if(t && t.firstChild) t.firstChild.textContent = isNew ? '🃏 새 와일드카드 ' : '🃏 와일드카드 편집 ';
   $('wcEditName').value = w.name;
   // 가중치 != 1 이면 줄 앞에 "N| " 로 표기 (편집 시 가중치 지정용)
   $('wcEditText').value = (w.options || [])
@@ -18874,6 +18929,8 @@ function openWildcardEditor(idx){
   sel.innerHTML = `<option value="-1">🎲 무작위 (잠금 해제)</option>`
     + (w.options || []).map((o, i) => `<option value="${i}">${esc(o.text.slice(0, 50))}</option>`).join('');
   sel.value = w.locked ? String(w.lockedIdx) : '-1';
+  const delBtn = $('wcEditDelete');
+  if(delBtn) delBtn.style.display = isNew ? 'none' : '';
   $('wildcardEditModal').classList.add('open');
   setTimeout(() => $('wcEditName')?.focus(), 50);
 }
@@ -18884,12 +18941,11 @@ function _closeWildcardEditor(){
 }
 
 function saveWildcardEditor(){
-  if(_wcEditIdx < 0) return;
-  const w = state.wildcards?.[_wcEditIdx];
-  if(!w) return;
+  if(_wcEditIdx == null) return;
+  const isNew = (_wcEditIdx === -1);
   const newName = ($('wcEditName').value || '').trim();
   if(!WILDCARD_NAME_RE.test(newName)){ toast('이름은 영문/숫자/_/- 만 가능합니다', 'error'); return; }
-  if((state.wildcards || []).some((x, i) => i !== _wcEditIdx && x.name === newName)){
+  if((state.wildcards || []).some((x, i) => x.name === newName && (isNew || i !== _wcEditIdx))){
     toast('같은 이름의 와일드카드가 이미 있습니다', 'error'); return;
   }
   const options = ($('wcEditText').value || '').split(/\r?\n/)
@@ -18900,11 +18956,12 @@ function saveWildcardEditor(){
       return m ? {text: m[2].trim(), weight: parseFloat(m[1])} : {text: line, weight: 1};
     })
     .filter(o => o.text);
-  w.name = newName;
-  w.options = options;
   const lockVal = parseInt($('wcEditLock').value, 10);
-  if(Number.isInteger(lockVal) && lockVal >= 0 && lockVal < options.length){ w.locked = true; w.lockedIdx = lockVal; }
-  else { w.locked = false; w.lockedIdx = 0; }
+  const locked = Number.isInteger(lockVal) && lockVal >= 0 && lockVal < options.length;
+  const w = {name: newName, options, locked, lockedIdx: locked ? lockVal : 0};
+  if(!Array.isArray(state.wildcards)) state.wildcards = [];
+  if(isNew) state.wildcards.push(w);
+  else state.wildcards[_wcEditIdx] = w;
   saveWildcards();
   renderWildcards();
   _closeWildcardEditor();
@@ -18989,6 +19046,7 @@ function wireWildcardEvents(){
   $('wildcardBtn')?.addEventListener('click', () => wildcardToggle());
   $('wildcardCloseBtn')?.addEventListener('click', () => wildcardToggle(false));
   $('wildcardNewBtn')?.addEventListener('click', newWildcard);
+  $('wildcardDemoBtn')?.addEventListener('click', wildcardDemo);
   $('wildcardImportBtn')?.addEventListener('click', () => $('wildcardFileInput')?.click());
   $('wildcardEmptyImportBtn')?.addEventListener('click', () => $('wildcardFileInput')?.click());
   $('wildcardFileInput')?.addEventListener('change', async e => {
