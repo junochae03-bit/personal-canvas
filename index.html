@@ -2035,14 +2035,11 @@ mark{
 .wc-empty{text-align:center;color:var(--t3);padding:26px 16px;font-size:12.5px;line-height:1.7}
 .wc-sec.wc-drag{outline:2px dashed var(--acc);outline-offset:-4px}
 #wildcardBtn.act{background:var(--acc);color:#fff;border-color:var(--acc)}
-/* 🎲 캐릭터 랜덤 선택 메뉴 */
-.char-rand-menu{position:absolute;z-index:9000;background:var(--panel);border:1.5px solid var(--b2);border-radius:8px;box-shadow:var(--shadow);padding:5px;min-width:190px;max-height:60vh;overflow-y:auto}
-.char-rand-menu .crm-item{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;border:0;background:transparent;color:var(--t1);font-family:var(--font);font-size:12.5px;text-align:left;padding:9px 10px;border-radius:6px;cursor:pointer;min-height:38px}
-.char-rand-menu .crm-item:hover{background:var(--card2)}
-.char-rand-menu .crm-item.disabled{opacity:.4;cursor:not-allowed}
-.char-rand-menu .crm-item.crm-group{font-size:12px}
-.char-rand-menu .crm-n{font-family:var(--mono);font-size:10.5px;color:var(--t3);background:var(--card);border-radius:10px;padding:1px 7px;flex-shrink:0}
-.char-rand-menu .crm-sep{font-size:10.5px;color:var(--t3);padding:7px 10px 3px;border-top:1px solid var(--b1);margin-top:4px}
+#wildcardSelectBtn.act{background:var(--blue);color:#fff;border-color:var(--blue)}
+.wc-sel-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px;padding:6px 8px;background:rgba(58,99,152,.08);border:1.5px solid rgba(58,99,152,.25);border-radius:6px}
+.wc-sel-bar .wc-sel-count{font-size:11.5px;font-weight:700;color:var(--blue);font-family:var(--mono);margin-right:auto}
+.wc-chip.wc-selectable.selected{border-color:var(--blue);background:rgba(58,99,152,.12)}
+.wc-chip.wc-selectable.selected .wc-chip-ins{color:var(--blue);font-weight:600}
 </style>
 </head>
 <body>
@@ -2265,13 +2262,16 @@ mark{
             <button class="iconbtn sec-util-btn" id="wildcardImportBtn" title="📥 가져오기 — .zip(여러 .txt) 또는 .txt. 파일명이 와일드카드 이름이 됩니다.">📥</button>
             <button class="iconbtn sec-util-btn" id="wildcardNewBtn" title="＋ 새 와일드카드">＋</button>
             <button class="iconbtn sec-util-btn" id="wildcardDemoBtn" title="🎲 미리보기 — 현재 프롬프트의 __와일드카드__ 를 한 번 확장해서 예시를 보여줍니다 (알 수 없는 이름도 경고)">🎲</button>
+            <button class="iconbtn sec-util-btn" id="wildcardSelectBtn" title="☑ 선택 모드 — 여러 와일드카드를 골라 한 번에 삭제">☑</button>
+            <button class="iconbtn sec-util-btn" id="wildcardClearAllBtn" title="🗑 전체 삭제 — 모든 와일드카드 삭제">🗑</button>
             <button class="iconbtn sec-util-btn" id="wildcardCloseBtn" title="닫기">✕</button>
           </span>
           <span class="caret">▾</span>
         </div>
         <div class="sec-body">
-          <div class="wc-hint">프롬프트에 <code>__이름__</code> 을 넣으면 생성마다 해당 목록에서 한 줄을 무작위로 치환합니다. 아래 칩을 클릭하면 커서 위치에 삽입돼요.</div>
+          <div class="wc-hint">프롬프트(또는 캐릭터 외형·액션)에 <code>__이름__</code> 을 넣으면 생성마다 해당 목록에서 한 줄을 무작위로 치환합니다. 칩을 클릭하면 커서 위치에 삽입돼요.</div>
           <input type="file" id="wildcardFileInput" accept=".zip,.txt,text/plain" multiple style="display:none">
+          <div id="wildcardSelBar" class="wc-sel-bar" style="display:none"></div>
           <div id="wildcardChips" class="wc-chips"></div>
           <div id="wildcardEmpty" class="wc-empty">
             🃏 아직 와일드카드가 없습니다<br>
@@ -2308,8 +2308,9 @@ mark{
       <div class="sec mode-show t2i i2i vibe" id="charSection">
         <div class="sec-title">캐릭터 <span class="en">Characters</span> <span style="font-size:11px;color:var(--t3);font-family:var(--mono);font-weight:600" id="charCount">0</span><span class="caret">▾</span></div>
         <div class="sec-body">
-          <div class="row" style="margin-bottom:8px">
+          <div class="row" style="margin-bottom:8px;gap:14px;flex-wrap:wrap">
             <label class="chk"><input type="checkbox" id="useCoords" checked>좌표 사용 <span class="en">Use Coordinates</span></label>
+            <label class="chk" title="ON 이면 썸네일 탭 랜덤(🎲)이 ⭐ 즐겨찾기한 캐릭터 프리셋 중에서만 뽑습니다. 그룹별 랜덤은 '🎴 둘러보기'에서."><input type="checkbox" id="charRandFav">⭐ 즐겨찾기 랜덤 <span class="en">Fav only</span></label>
           </div>
           <div id="charList"></div>
           <button class="add-char" id="addCharBtn">＋ 캐릭터 추가 <span class="en">Add Character</span></button>
@@ -6542,7 +6543,7 @@ function renderCharacters(){
     return `
     <div class="char-card ${c.enabled?'active':''}" data-idx="${i}">
       <div class="char-hdr">
-        <div class="char-thumb ${c.thumb?'has':''}" data-act="thumb" data-idx="${i}" ${c.thumb?`style="background-image:url('${esc(c.thumb)}')"`:''} title="🎲 탭하면 랜덤 선택 메뉴 — 전체 · ⭐즐겨찾기 · 📂그룹별. 그림으로 고르려면 우측 '🎴 둘러보기'">${c.thumb?'':'#'+(i+1)}</div>
+        <div class="char-thumb ${c.thumb?'has':''}" data-act="thumb" data-idx="${i}" ${c.thumb?`style="background-image:url('${esc(c.thumb)}')"`:''} title="🎲 탭하면 랜덤 캐릭터 프리셋 적용 (⭐ 즐겨찾기 랜덤 체크 시 즐겨찾기만). 그룹별·그림 선택은 우측 '🎴 둘러보기'">${c.thumb?'':'#'+(i+1)}</div>
         <input class="char-name" data-act="name" data-idx="${i}" placeholder="이름 입력 — 프리셋 자동 로드" value="${esc(c.name||'')}" list="charPresetNames" autocomplete="off" title="캐릭터 프리셋 이름을 입력/선택하면 프롬프트와 썸네일이 자동 적용됩니다">
         <button class="char-pos ${c.pos&&(c.pos.x!==0.5||c.pos.y!==0.5)?'set':''}" data-act="pos" data-idx="${i}" title="위치 (Position)">${posLabel(c.pos)}</button>
         <div class="char-actions">
@@ -6581,6 +6582,12 @@ function renderCharacters(){
   }).join('');
   // 드롭다운 옵션 채우기 (도감·프리셋 동적 통합)
   refreshCharTagSelects();
+  // 🃏 캐릭터 외형·액션·네거티브 textarea 에도 와일드카드(__) + 태그 자동완성 부착
+  //   (재렌더마다 새 요소 → attachAcToTextarea 의 _acInit 가드로 중복 부착 방지)
+  if(typeof attachAcToTextarea === 'function'){
+    list.querySelectorAll('textarea[data-act="appearance"],textarea[data-act="action"],textarea[data-act="neg"]')
+      .forEach(ta => attachAcToTextarea(ta));
+  }
 }
 
 function posLabel(p){
@@ -10481,55 +10488,6 @@ function applyRandomCharacter(slotIdx, opts){
     toast(`${tag} 적용: ${pick.name}`, 'success');
   }
   return pick;
-}
-
-// 🎲 캐릭터 랜덤 선택 메뉴 — 전체 / 즐겨찾기 / 그룹별. 썸네일 탭으로 열림.
-let _charRandMenu = null;
-function _closeCharRandMenu(){
-  if(_charRandMenu){ _charRandMenu.remove(); _charRandMenu = null; }
-  document.removeEventListener('click', _charRandMenuOutside, true);
-  document.removeEventListener('keydown', _charRandMenuKey, true);
-}
-function _charRandMenuOutside(e){ if(_charRandMenu && !_charRandMenu.contains(e.target)) _closeCharRandMenu(); }
-function _charRandMenuKey(e){ if(e.key === 'Escape') _closeCharRandMenu(); }
-function openCharRandomMenu(slotIdx, anchorEl){
-  _closeCharRandMenu();
-  const chars = state.presets.character || [];
-  if(!chars.length){ toast('캐릭터 프리셋이 없습니다 — 프리셋 탭에서 먼저 추가하세요', 'warning'); return; }
-  const favCount = chars.filter(p => p.fav).length;
-  const groups = groupCharsByWork(chars, 2);
-  const m = document.createElement('div');
-  m.className = 'char-rand-menu';
-  let html = `<button type="button" class="crm-item" data-scope="all">🎲 전체에서 랜덤 <span class="crm-n">${chars.length}</span></button>`;
-  html += `<button type="button" class="crm-item${favCount ? '' : ' disabled'}" data-scope="fav" ${favCount ? '' : 'disabled'}>⭐ 즐겨찾기에서 랜덤 <span class="crm-n">${favCount}</span></button>`;
-  if(groups.length){
-    html += `<div class="crm-sep">📂 그룹에서 랜덤</div>`;
-    html += groups.map(g => `<button type="button" class="crm-item crm-group" data-scope="group" data-group="${esc(g.group)}">${esc(g.group)} <span class="crm-n">${g.items.length}</span></button>`).join('');
-  }
-  m.innerHTML = html;
-  document.body.appendChild(m);
-  const r = anchorEl.getBoundingClientRect();
-  let left = Math.max(8, Math.min(window.innerWidth - m.offsetWidth - 8, r.left));
-  let top = r.bottom + window.scrollY + 4;
-  if(top + m.offsetHeight > window.scrollY + window.innerHeight - 8){
-    top = Math.max(window.scrollY + 8, r.top + window.scrollY - m.offsetHeight - 4);
-  }
-  m.style.left = left + 'px';
-  m.style.top = top + 'px';
-  m.addEventListener('click', e => {
-    const btn = e.target.closest('.crm-item');
-    if(!btn || btn.disabled) return;
-    const scope = btn.dataset.scope;
-    _closeCharRandMenu();
-    if(scope === 'fav') applyRandomCharacter(slotIdx, {fav: true});
-    else if(scope === 'group') applyRandomCharacter(slotIdx, {group: btn.dataset.group});
-    else applyRandomCharacter(slotIdx);
-  });
-  _charRandMenu = m;
-  setTimeout(() => {
-    document.addEventListener('click', _charRandMenuOutside, true);
-    document.addEventListener('keydown', _charRandMenuKey, true);
-  }, 0);
 }
 
 function openCharBrowser(slotIdx){
@@ -14530,6 +14488,7 @@ async function saveSettings(){
     smeaCheck: $('smeaCheck').checked,
     smeaDynCheck: $('smeaDynCheck').checked,
     useCoords: $('useCoords').checked,
+    charRandFav: $('charRandFav')?.checked,
     genCount: $('genCount').value,
     genDelay: $('genDelay').value,
     continueOnError: $('continueOnError').checked,
@@ -14593,6 +14552,7 @@ async function loadSettings(){
   apply('smeaCheck', s.smeaCheck);
   apply('smeaDynCheck', s.smeaDynCheck);
   apply('useCoords', s.useCoords ?? true);
+  apply('charRandFav', s.charRandFav);
   apply('genCount', s.genCount);
   apply('genDelay', s.genDelay);
   apply('continueOnError', s.continueOnError ?? true);
@@ -15200,7 +15160,7 @@ function wireTopbarAndFormEvents(){
 
   // Form changes — autosave & refresh
   ['model','resPreset','resAspect','customW','customH','steps','cfgScale','cfgRescale','sampler','noiseSchedule','ucPreset',
-   'varietyCheck','decrisperCheck','smeaCheck','smeaDynCheck','useCoords','genCount','genDelay','continueOnError',
+   'varietyCheck','decrisperCheck','smeaCheck','smeaDynCheck','useCoords','charRandFav','genCount','genDelay','continueOnError',
    'prompt','negPrompt','fnamePattern','imgLabel','seqInput','seqLabelFname','inpAddOrig','i2iStrength','i2iNoise','seed'].forEach(id => {
     const el = $(id);
     if(!el) return;
@@ -15486,9 +15446,9 @@ function wireCharacterEvents(){
       });
     }
     else if(act === 'thumb'){
-      // 썸네일/번호 탭 = 랜덤 선택 메뉴 (전체 / ⭐즐겨찾기 / 📂그룹별)
-      // (그림으로 직접 고르기는 "🎴 둘러보기" 버튼)
-      openCharRandomMenu(idx, e.target.closest('.char-thumb') || e.target);
+      // 썸네일/번호 탭 = 랜덤 캐릭터 프리셋 즉시 적용 (기본 전체, ⭐ 즐겨찾기 랜덤 체크 시 즐겨찾기만)
+      // 그룹별 랜덤·그림으로 직접 고르기는 "🎴 둘러보기" 버튼에서.
+      applyRandomCharacter(idx, {fav: !!$('charRandFav')?.checked});
       return;
       // 옛 직접 설정 UI는 아래에 보존 — 필요 시 호출
       $('confirmTitle').innerHTML = '캐릭터 썸네일 <span class="en">Thumbnail</span>';
@@ -18924,6 +18884,9 @@ function wildcardToggle(force){
   if(open) renderWildcards();
 }
 
+let _wcSelectMode = false;
+const _wcSelected = new Set();   // 선택된 와일드카드 이름
+
 function renderWildcards(){
   const wrap = $('wildcardChips');
   if(!wrap) return;
@@ -18933,18 +18896,74 @@ function renderWildcards(){
   const badge = $('wildcardStats');
   if(badge) badge.textContent = list.length
     ? `${list.length}개 · ${list.reduce((s, w) => s + (w.options?.length || 0), 0)} 후보` : '';
+  if(_wcSelectMode && !list.length) _wcSelectMode = false;
+  const selBtn = $('wildcardSelectBtn');
+  if(selBtn) selBtn.classList.toggle('act', _wcSelectMode);
+  // 선택 도구막대
+  const bar = $('wildcardSelBar');
+  if(bar){
+    bar.style.display = _wcSelectMode ? '' : 'none';
+    if(_wcSelectMode){
+      const n = _wcSelected.size;
+      bar.innerHTML = `<span class="wc-sel-count">${n}개 선택</span>`
+        + `<button type="button" class="btn small" data-act="wc-sel-all">전체 선택</button>`
+        + `<button type="button" class="btn small" data-act="wc-sel-none">해제</button>`
+        + `<button type="button" class="btn small danger" data-act="wc-sel-del"${n ? '' : ' disabled'}>🗑 선택 삭제${n ? ` (${n})` : ''}</button>`
+        + `<button type="button" class="btn small ghost" data-act="wc-sel-done">완료</button>`;
+    }
+  }
   wrap.innerHTML = list.map((w, i) => {
     const cnt = w.options?.length || 0;
     const lock = w.locked ? ' 🔒' : '';
+    if(_wcSelectMode){
+      const sel = _wcSelected.has(w.name);
+      return `<span class="wc-chip wc-selectable${sel ? ' selected' : ''}">`
+        + `<button type="button" class="wc-chip-ins" data-act="select" data-name="${esc(w.name)}" title="선택 토글">${sel ? '☑' : '☐'} ${esc(w.name)} <span class="wc-cnt">${cnt}</span>${lock}</button>`
+        + `</span>`;
+    }
     return `<span class="wc-chip${w.locked ? ' locked' : ''}">`
-      + `<button type="button" class="wc-chip-ins" data-act="insert" data-name="${esc(w.name)}" title="프롬프트에 __${esc(w.name)}__ 삽입">🃏 ${esc(w.name)} <span class="wc-cnt">${cnt}</span>${lock}</button>`
+      + `<button type="button" class="wc-chip-ins" data-act="insert" data-name="${esc(w.name)}" title="삽입: __${esc(w.name)}__ (프롬프트·캐릭터 외형/액션 중 마지막 포커스 위치)">🃏 ${esc(w.name)} <span class="wc-cnt">${cnt}</span>${lock}</button>`
       + `<button type="button" class="wc-chip-edit" data-act="edit" data-idx="${i}" title="${esc(w.name)} 편집">⚙</button>`
       + `</span>`;
   }).join('');
 }
 
+function wildcardToggleSelect(){
+  if(!(state.wildcards || []).length){ toast('와일드카드가 없습니다 — 먼저 가져오세요', 'info'); return; }
+  _wcSelectMode = !_wcSelectMode;
+  _wcSelected.clear();
+  renderWildcards();
+}
+function _wcDeleteSelected(){
+  const names = [..._wcSelected];
+  if(!names.length) return;
+  confirmDialog(`선택한 와일드카드 ${names.length}개를 삭제할까요?`, () => {
+    state.wildcards = (state.wildcards || []).filter(w => !_wcSelected.has(w.name));
+    _wcSelected.clear();
+    if(!state.wildcards.length) _wcSelectMode = false;
+    saveWildcards();
+    renderWildcards();
+    toast(`🗑 와일드카드 ${names.length}개 삭제`, 'info');
+  }, '🗑 선택 삭제');
+}
+function wildcardClearAll(){
+  const n = (state.wildcards || []).length;
+  if(!n){ toast('삭제할 와일드카드가 없습니다', 'info'); return; }
+  confirmDialog(`와일드카드 ${n}개를 전부 삭제할까요? 되돌릴 수 없습니다.`, () => {
+    state.wildcards = [];
+    _wcSelected.clear();
+    _wcSelectMode = false;
+    saveWildcards();
+    renderWildcards();
+    toast(`🗑 와일드카드 ${n}개 전체 삭제`, 'info');
+  }, '🗑 전체 삭제');
+}
+
+// 🃏 마지막으로 포커스된 와일드카드 대상 textarea (프롬프트/네거티브/캐릭터 필드). 칩 삽입 대상.
+let _wcInsertTarget = null;
 function _insertAtPromptCaret(text){
-  const ta = $('prompt');
+  // 직전 포커스 필드(캐릭터 외형/액션/네거 포함)에 삽입, 없으면 메인 프롬프트
+  const ta = (_wcInsertTarget && document.body.contains(_wcInsertTarget)) ? _wcInsertTarget : $('prompt');
   if(!ta) return;
   const v = ta.value;
   let pos = ta.selectionStart;
@@ -18957,6 +18976,8 @@ function _insertAtPromptCaret(text){
   const np = (before + ins).length;
   ta.focus();
   ta.setSelectionRange(np, np);
+  // input 이벤트로 해당 필드 핸들러 트리거 (프롬프트 stats / 캐릭터 state 저장)
+  ta.dispatchEvent(new Event('input', {bubbles: true}));
   refreshPromptStats();
   saveSettingsDebounced();
 }
@@ -19113,6 +19134,14 @@ async function _importWildcardFiles(files){
 }
 
 function wireWildcardEvents(){
+  // 🃏 칩 삽입 대상 추적 — 프롬프트/네거티브/캐릭터 외형·액션·네거 textarea 포커스 기억
+  document.addEventListener('focusin', e => {
+    const t = e.target;
+    if(t && t.tagName === 'TEXTAREA' && (t.id === 'prompt' || t.id === 'negPrompt'
+        || (t.dataset && ['appearance','action','neg'].includes(t.dataset.act)))){
+      _wcInsertTarget = t;
+    }
+  });
   $('wildcardBtn')?.addEventListener('click', () => wildcardToggle());
   $('wildcardCloseBtn')?.addEventListener('click', () => wildcardToggle(false));
   $('wildcardNewBtn')?.addEventListener('click', newWildcard);
@@ -19127,8 +19156,24 @@ function wireWildcardEvents(){
   $('wildcardChips')?.addEventListener('click', e => {
     const btn = e.target.closest('[data-act]');
     if(!btn) return;
-    if(btn.dataset.act === 'insert') insertWildcardToken(btn.dataset.name);
-    else if(btn.dataset.act === 'edit') openWildcardEditor(parseInt(btn.dataset.idx, 10));
+    const act = btn.dataset.act;
+    if(act === 'select'){
+      const nm = btn.dataset.name;
+      if(_wcSelected.has(nm)) _wcSelected.delete(nm); else _wcSelected.add(nm);
+      renderWildcards();
+    } else if(act === 'insert') insertWildcardToken(btn.dataset.name);
+    else if(act === 'edit') openWildcardEditor(parseInt(btn.dataset.idx, 10));
+  });
+  $('wildcardSelectBtn')?.addEventListener('click', wildcardToggleSelect);
+  $('wildcardClearAllBtn')?.addEventListener('click', wildcardClearAll);
+  $('wildcardSelBar')?.addEventListener('click', e => {
+    const btn = e.target.closest('[data-act]');
+    if(!btn) return;
+    const a = btn.dataset.act;
+    if(a === 'wc-sel-all'){ _wcSelected.clear(); (state.wildcards || []).forEach(w => _wcSelected.add(w.name)); renderWildcards(); }
+    else if(a === 'wc-sel-none'){ _wcSelected.clear(); renderWildcards(); }
+    else if(a === 'wc-sel-del') _wcDeleteSelected();
+    else if(a === 'wc-sel-done'){ _wcSelectMode = false; _wcSelected.clear(); renderWildcards(); }
   });
   const sec = $('wildcardSec');
   if(sec){
