@@ -9435,6 +9435,52 @@ function validateForGeneration(){
   return {ok: hardErrors.length === 0, errors, firstFocus};
 }
 
+// 🔋 백그라운드 유지 — 배치 생성 중 화면 Wake Lock + 무음 오디오 keepalive.
+//   ⚠ 완전한 OS 백그라운드(다른 앱 전환·화면 끄기)는 브라우저(특히 iOS)가 페이지를 동결시켜 불가.
+//      앱을 열어 둔 동안 화면 꺼짐 방지(Wake Lock) + 탭 전환 시 스로틀 완화(무음 오디오)까지가 한계.
+let _wakeLock = null;
+let _wakeLockWant = false;
+async function _acquireWakeLock(){
+  _wakeLockWant = true;
+  if(!('wakeLock' in navigator) || _wakeLock) return;
+  try {
+    _wakeLock = await navigator.wakeLock.request('screen');
+    _wakeLock.addEventListener('release', () => { _wakeLock = null; });
+  } catch(e){ _swallow(e, 'wakeLock:acquire'); }
+}
+async function _releaseWakeLock(){
+  _wakeLockWant = false;
+  if(_wakeLock){ try { await _wakeLock.release(); } catch(_){} _wakeLock = null; }
+}
+// Wake Lock 은 탭이 숨겨지면 자동 해제됨 → 다시 보일 때 생성 중이면 재획득
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && _wakeLockWant && state.running) _acquireWakeLock();
+});
+// 무음 오디오 — 일부 브라우저(데스크탑)에서 백그라운드 탭 타이머 스로틀을 완화
+let _kaCtx = null, _kaNode = null;
+function _startKeepAliveAudio(){
+  if(_kaCtx) return;
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if(!Ctx) return;
+    _kaCtx = new Ctx();
+    if(_kaCtx.state === 'suspended') _kaCtx.resume().catch(()=>{});
+    const gain = _kaCtx.createGain();
+    gain.gain.value = 0.0001;   // 사실상 무음
+    const osc = _kaCtx.createOscillator();
+    osc.frequency.value = 30;
+    osc.connect(gain); gain.connect(_kaCtx.destination);
+    osc.start();
+    _kaNode = osc;
+  } catch(e){ _swallow(e, 'keepalive:audio'); }
+}
+function _stopKeepAliveAudio(){
+  try { if(_kaNode){ _kaNode.stop(); _kaNode.disconnect(); _kaNode = null; } } catch(_){}
+  try { if(_kaCtx){ _kaCtx.close(); _kaCtx = null; } } catch(_){}
+}
+function _genKeepAliveStart(){ _acquireWakeLock(); _startKeepAliveAudio(); }
+function _genKeepAliveStop(){ _releaseWakeLock(); _stopKeepAliveAudio(); }
+
 async function startGeneration(){
   if(state.running){ stopGeneration(); return; }
   // 🔒 PIN 잠긴 상태면 먼저 잠금 해제 (auto-lock 후 재생성 시 PIN 재입력)
@@ -9474,6 +9520,7 @@ async function startGeneration(){
   state.running = true;
   state.paused = false;
   state.abortCtrl = new AbortController();
+  _genKeepAliveStart();   // 🔋 화면 꺼짐 방지 + 백그라운드 스로틀 완화
   $('genBtn').innerHTML = '⏹ 중단 <span class="en">Stop</span>';
   $('genBtn').classList.add('stop');
   if($('genQueueAddBtn')) $('genQueueAddBtn').style.display = '';   // 대기열 추가 버튼 노출
@@ -9525,6 +9572,7 @@ async function startGeneration(){
 
   state.running = false;
   state.paused = false;
+  _genKeepAliveStop();   // 🔋 Wake Lock·keepalive 해제
   // 🐛 fix: 일시정지 중 종료 시 pauseBtn 라벨이 '재개'로 남아 다음 실행 때 반전 → 라벨 리셋
   if($('pauseBtn')) $('pauseBtn').innerHTML = '⏸ 일시정지 <span class="en">Pause</span>';
   $('genBtn').innerHTML = '생성 시작 <span class="en">Generate</span>';
@@ -9540,6 +9588,7 @@ async function startGeneration(){
 function stopGeneration(){
   state.running = false;
   if(state.abortCtrl) state.abortCtrl.abort();
+  _genKeepAliveStop();   // 🔋 즉시 해제
   toast('중단됨', 'info');
 }
 
