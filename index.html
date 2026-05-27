@@ -2031,6 +2031,8 @@ mark{
 .wc-chip.locked{border-color:var(--acc)}
 .wc-chip-ins{border:0;background:transparent;color:var(--t1);font-size:12px;padding:6px 9px;cursor:pointer;font-family:var(--font);min-height:32px}
 .wc-chip-ins:hover{background:var(--card2)}
+.wc-chip .wc-title{font-weight:600}
+.wc-chip .wc-token{margin-left:5px;font-family:var(--mono);font-size:10px;color:var(--t3);opacity:.85}
 .wc-chip .wc-cnt{opacity:.6;font-size:10.5px;font-family:var(--mono)}
 .wc-chip-edit{border:0;border-left:1px solid var(--b1);background:transparent;color:var(--t3);cursor:pointer;padding:0 10px;font-size:12px;min-width:34px}
 .wc-chip-edit:hover{background:var(--card2);color:var(--t1)}
@@ -2860,8 +2862,12 @@ mark{
     <h3 id="wcEditTitle">🃏 와일드카드 편집 <span class="en">Wildcard</span></h3>
     <div class="modal-body">
       <div class="field" style="margin-bottom:10px">
-        <span class="lbl">이름 <span class="en">Name (a–z, 0–9, _ , -)</span></span>
-        <input type="text" class="inp" id="wcEditName" spellcheck="false" autocomplete="off" placeholder="outfit">
+        <span class="lbl">제목 — 화면 표시용 (한글 가능) <span class="en">Title (display)</span></span>
+        <input type="text" class="inp" id="wcEditLabel" autocomplete="off" placeholder="예: 여성×여성 (GL)">
+      </div>
+      <div class="field" style="margin-bottom:10px">
+        <span class="lbl">이름 — 프롬프트 토큰 <code>__이름__</code> <span class="en">Name (a–z, 0–9, _ , -)</span></span>
+        <input type="text" class="inp" id="wcEditName" spellcheck="false" autocomplete="off" placeholder="gl">
       </div>
       <div class="field" style="margin-bottom:6px">
         <span class="lbl">후보 — 한 줄에 하나 <span class="en">Candidates (one per line)</span></span>
@@ -10036,7 +10042,8 @@ function _normalizeWildcard(w){
   })).filter(o => o.text) : [];
   const lockedIdx = Math.max(0, parseInt(w.lockedIdx, 10) || 0);
   const validLock = !!w.locked && lockedIdx < options.length;
-  return { name, options, locked: validLock, lockedIdx: validLock ? lockedIdx : 0 };
+  const label = String(w.label || '').trim().slice(0, 60);
+  return { name, label, options, locked: validLock, lockedIdx: validLock ? lockedIdx : 0 };
 }
 async function loadWildcards(){
   const w = await DB.getFlag('wildcards');
@@ -18936,15 +18943,17 @@ function renderWildcards(){
   wrap.innerHTML = list.map((w, i) => {
     const cnt = w.options?.length || 0;
     const lock = w.locked ? ' 🔒' : '';
+    const title = (w.label && w.label.trim()) ? w.label.trim() : w.name;   // 제목 우선, 없으면 토큰명
+    const titleHtml = `<span class="wc-title">${esc(title)}</span><span class="wc-token">__${esc(w.name)}__</span>`;
     if(_wcSelectMode){
       const sel = _wcSelected.has(w.name);
       return `<span class="wc-chip wc-selectable${sel ? ' selected' : ''}">`
-        + `<button type="button" class="wc-chip-ins" data-act="select" data-name="${esc(w.name)}" title="선택 토글">${sel ? '☑' : '☐'} ${esc(w.name)} <span class="wc-cnt">${cnt}</span>${lock}</button>`
+        + `<button type="button" class="wc-chip-ins" data-act="select" data-name="${esc(w.name)}" title="선택 토글">${sel ? '☑' : '☐'} ${titleHtml} <span class="wc-cnt">${cnt}</span>${lock}</button>`
         + `</span>`;
     }
     return `<span class="wc-chip${w.locked ? ' locked' : ''}">`
-      + `<button type="button" class="wc-chip-ins" data-act="insert" data-name="${esc(w.name)}" title="삽입: __${esc(w.name)}__ (프롬프트·캐릭터 외형/액션 중 마지막 포커스 위치)">🃏 ${esc(w.name)} <span class="wc-cnt">${cnt}</span>${lock}</button>`
-      + `<button type="button" class="wc-chip-edit" data-act="edit" data-idx="${i}" title="${esc(w.name)} 편집">⚙</button>`
+      + `<button type="button" class="wc-chip-ins" data-act="insert" data-name="${esc(w.name)}" title="삽입: __${esc(w.name)}__ (프롬프트·캐릭터 외형/액션 중 마지막 포커스 위치)">🃏 ${titleHtml} <span class="wc-cnt">${cnt}</span>${lock}</button>`
+      + `<button type="button" class="wc-chip-edit" data-act="edit" data-idx="${i}" title="${esc(title)} 편집">⚙</button>`
       + `</span>`;
   }).join('');
 }
@@ -19027,11 +19036,12 @@ function wildcardDemo(){
 
 function openWildcardEditor(idx){
   const isNew = (idx === -1);
-  const w = isNew ? {name: '', options: [], locked: false, lockedIdx: 0} : state.wildcards?.[idx];
+  const w = isNew ? {name: '', label: '', options: [], locked: false, lockedIdx: 0} : state.wildcards?.[idx];
   if(!w) return;
   _wcEditIdx = idx;
   const t = $('wcEditTitle');
   if(t && t.firstChild) t.firstChild.textContent = isNew ? '🃏 새 와일드카드 ' : '🃏 와일드카드 편집 ';
+  $('wcEditLabel').value = w.label || '';
   $('wcEditName').value = w.name;
   // 가중치 != 1 이면 줄 앞에 "N| " 로 표기 (편집 시 가중치 지정용)
   $('wcEditText').value = (w.options || [])
@@ -19044,7 +19054,7 @@ function openWildcardEditor(idx){
   const delBtn = $('wcEditDelete');
   if(delBtn) delBtn.style.display = isNew ? 'none' : '';
   $('wildcardEditModal').classList.add('open');
-  setTimeout(() => $('wcEditName')?.focus(), 50);
+  setTimeout(() => (isNew ? $('wcEditLabel') : $('wcEditName'))?.focus(), 50);
 }
 
 function _closeWildcardEditor(){
@@ -19070,7 +19080,8 @@ function saveWildcardEditor(){
     .filter(o => o.text);
   const lockVal = parseInt($('wcEditLock').value, 10);
   const locked = Number.isInteger(lockVal) && lockVal >= 0 && lockVal < options.length;
-  const w = {name: newName, options, locked, lockedIdx: locked ? lockVal : 0};
+  const label = ($('wcEditLabel').value || '').trim().slice(0, 60);
+  const w = {name: newName, label, options, locked, lockedIdx: locked ? lockVal : 0};
   if(!Array.isArray(state.wildcards)) state.wildcards = [];
   if(isNew) state.wildcards.push(w);
   else state.wildcards[_wcEditIdx] = w;
@@ -19101,6 +19112,13 @@ function _sanitizeWildcardName(base){
     .slice(0, 40);
 }
 
+// 파일 첫 줄의 '# 주석' 을 표시용 제목으로 추출 ('—'/'__토큰__' 뒤는 잘라냄). 없으면 ''.
+function _extractWildcardLabel(text){
+  const m = String(text || '').match(/^\s*#\s*(.+)$/m);
+  if(!m) return '';
+  return m[1].split(/[—\-]{1,2}|__|\.\s/)[0].replace(/[.\s]+$/, '').trim().slice(0, 60);
+}
+
 // 이름+텍스트 → 와일드카드 생성/병합. 반환 {created:bool, opts:추가된 후보 수} | null
 function _addOrMergeWildcard(base, text){
   const name = _sanitizeWildcardName(base);
@@ -19108,9 +19126,11 @@ function _addOrMergeWildcard(base, text){
   const parsed = parseWildcardFile(text);
   if(!parsed.length) return null;
   if(!Array.isArray(state.wildcards)) state.wildcards = [];
+  const label = _extractWildcardLabel(text);
   let wc = state.wildcards.find(w => w.name === name);
   const created = !wc;
-  if(!wc){ wc = {name, options: [], locked: false, lockedIdx: 0}; state.wildcards.push(wc); }
+  if(!wc){ wc = {name, label, options: [], locked: false, lockedIdx: 0}; state.wildcards.push(wc); }
+  else if(label && !wc.label) wc.label = label;   // 기존 항목에 제목 없으면 보강
   const seen = new Set(wc.options.map(o => o.text));
   let opts = 0;
   for(const o of parsed){
