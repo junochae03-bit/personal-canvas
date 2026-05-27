@@ -1161,6 +1161,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .char-pool-btn:hover{background:rgba(58,99,152,.15);border-color:var(--blue)}
 .char-pool-btn.pool-clear{color:var(--red);margin-left:auto}
 .char-pool-btn.pool-clear:hover{background:rgba(181,67,56,.12);border-color:var(--red)}
+.char-grouplock-bar{background:rgba(162,90,31,.10);border-color:rgba(162,90,31,.30)}
+.char-grouplock-bar .char-pool-count{color:var(--acc);text-align:left;flex:1}
+.char-grouplock-bar .char-pool-btn{color:var(--acc);border-color:rgba(162,90,31,.35)}
 .char-act-btn.browse{color:var(--blue);border-color:rgba(58,99,152,.35)}
 .char-act-btn.browse:hover{background:rgba(58,99,152,.08);border-color:var(--blue);color:var(--blue)}
 
@@ -6540,6 +6543,13 @@ function renderCharacters(){
           <button class="char-pool-btn pool-clear" data-act="pool-clear" data-idx="${i}" title="후보 풀 해제">×</button>
         </div>`
       : '';
+    const grpBadge = c.groupLock
+      ? `<div class="char-pool-bar char-grouplock-bar">
+          <span class="char-pool-count" title="🎲 랜덤이 이 그룹에서만 뽑힙니다 — × 로 해제">📂 ${esc(c.groupLock)} 고정</span>
+          <button class="char-pool-btn" data-act="grouplock-reroll" data-idx="${i}" title="이 그룹에서 다시 랜덤">🎲</button>
+          <button class="char-pool-btn pool-clear" data-act="grouplock-clear" data-idx="${i}" title="그룹 고정 해제">×</button>
+        </div>`
+      : '';
     return `
     <div class="char-card ${c.enabled?'active':''}" data-idx="${i}">
       <div class="char-hdr">
@@ -6554,6 +6564,7 @@ function renderCharacters(){
           <button class="char-act-btn del" data-act="del" data-idx="${i}" title="🗑 슬롯 카드 자체 삭제 — 카드가 사라짐 (텍스트만 지우려면 옆 🧹 텍스트 비우기 사용)"><span class="cab-ico del-ico">🗑</span><span class="cab-lbl del-lbl"> 슬롯 삭제</span></button>
         </div>
         ${poolBadge}
+        ${grpBadge}
       </div>
       <div class="char-body open" data-body="${i}">
         <div class="char-section-label">👤 외형·신체 <span class="en">Appearance</span></div>
@@ -10461,18 +10472,20 @@ function _isMaleChar(c){
 
 // 🎲 캐릭터 슬롯에 랜덤 프리셋 즉시 적용
 function applyRandomCharacter(slotIdx, opts){
+  const c = state.characters[slotIdx];
+  if(!c) return;
   let chars = (state.presets.character || []);
-  // 🎲 범위 제한 — 즐겨찾기만 / 특정 그룹만
-  if(opts?.fav) chars = chars.filter(p => p.fav);
-  else if(opts?.group) chars = chars.filter(p => getCharGroup(p.name) === opts.group);
+  // 🎲 범위 — 명시 그룹 > 슬롯 고정 그룹(c.groupLock), 그리고 ⭐ 즐겨찾기 필터(체크 시) 조합
+  const grp = opts?.group || c.groupLock || null;
+  const favOnly = !!opts?.fav;
+  if(favOnly) chars = chars.filter(p => p.fav);
+  if(grp) chars = chars.filter(p => getCharGroup(p.name) === grp);
   if(!chars.length){
-    toast(opts?.fav ? '⭐ 즐겨찾기한 캐릭터 프리셋이 없습니다 (프리셋 탭에서 ⭐ 표시)'
-        : opts?.group ? `'${opts.group}' 그룹에 캐릭터 프리셋이 없습니다`
+    const scope = [grp ? `'${grp}' 그룹` : '', favOnly ? '⭐ 즐겨찾기' : ''].filter(Boolean).join(' + ');
+    toast(scope ? `${scope} 에 해당하는 캐릭터 프리셋이 없습니다`
         : '캐릭터 프리셋이 없습니다 — 프리셋 탭에서 먼저 추가하세요', 'warning');
     return;
   }
-  const c = state.characters[slotIdx];
-  if(!c) return;
   // 같은 캐릭터 다시 뽑지 않도록 직전 이름 제외 (가능하면)
   const pool = chars.filter(p => p.name && p.name !== c.name);
   const list = pool.length ? pool : chars;
@@ -10484,7 +10497,7 @@ function applyRandomCharacter(slotIdx, opts){
   saveSettingsDebounced();
   refreshCost();
   if(!opts?.silent){
-    const tag = opts?.fav ? '⭐ 즐겨찾기' : opts?.group ? `📂 ${opts.group}` : '🎲 랜덤';
+    const tag = grp ? `📂 ${grp}` : favOnly ? '⭐ 즐겨찾기' : '🎲 랜덤';
     toast(`${tag} 적용: ${pick.name}`, 'success');
   }
   return pick;
@@ -10569,23 +10582,26 @@ function renderCbGrid(){
 }
 
 // 🎲 캐릭터 브라우저 — 그 그룹에서 랜덤 픽
-// 단일 모드: 1명 즉시 슬롯 적용 + 모달 닫기
+// 단일 모드: 그룹 고정(🔒) + 그 그룹에서 랜덤 1명 적용 → 해제 전까지 🎲 랜덤은 이 그룹에서만
 // 풀 모드: 그룹 전체를 풀에 적용 + 모달 닫기 (이후 매 생성마다 순환)
 function cbGroupRandomPick(group){
   const members = (state.presets.character || []).filter(p => getCharGroup(p.name) === group);
   if(!members.length){ toast('그룹에 캐릭터 없음', 'warning'); return; }
+  const c = state.characters[_cbSlotIdx];
   if(_cbMode === 'pool'){
     // 풀 모드: 그룹 전체를 풀로 (다중 선택)
     _cbPicks = new Set(members.map(p => p.name));
+    if(c) c.groupLock = null;   // 풀 모드는 풀이 우선
     applyCbSelection();
     toast(`🎲 "${group}" 그룹 ${members.length}명을 풀로 적용 — 매 생성마다 순환`, 'success');
     return;
   }
-  // 단일 모드: 랜덤 1명
+  // 단일 모드: 그룹 고정 + 그 그룹에서 랜덤 1명 (해제 전까지 유지)
+  if(c) c.groupLock = group;
   const pick = members[Math.floor(Math.random() * members.length)];
   _cbPicks = new Set([pick.name]);
   applyCbSelection();
-  toast(`🎲 "${group}" 그룹에서 ${pick.name} 선택`, 'success');
+  toast(`📂 "${group}" 그룹 고정 — 해제 전까지 🎲 랜덤은 이 그룹에서만`, 'success');
 }
 
 function setCbMode(mode){
@@ -10603,6 +10619,9 @@ function setCbMode(mode){
 function toggleCbPick(name){
   if(_cbMode === 'single'){
     _cbPicks = new Set([name]);
+    // 명시적 단일 선택 → 그룹 고정 해제 (특정 캐릭터를 콕 집은 것이므로)
+    const c = state.characters[_cbSlotIdx];
+    if(c) c.groupLock = null;
     // 단일 모드에선 즉시 적용 + 닫기
     applyCbSelection();
     return;
@@ -15400,6 +15419,8 @@ function wireCharacterEvents(){
     else if(act === 'pool-prev'){ rotateCharPool(idx, -1); }
     else if(act === 'pool-next'){ rotateCharPool(idx, +1); }
     else if(act === 'pool-clear'){ clearCharPool(idx); }
+    else if(act === 'grouplock-reroll'){ applyRandomCharacter(idx, {fav: !!$('charRandFav')?.checked}); return; }
+    else if(act === 'grouplock-clear'){ const ch = state.characters[idx]; if(ch){ ch.groupLock = null; renderCharacters(); saveSettingsDebounced(); toast('📂 그룹 고정 해제', 'info'); } return; }
     else if(act === 'open-char-tagcodex'){ openTagCodexForCharNeg(idx); }
     else if(act === 'clear-char-field'){
       // ✕ 캐릭터 카드 textarea 비우기 (외형·액션·네거티브) — 실행 취소 토스트 제공
