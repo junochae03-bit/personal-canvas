@@ -2264,7 +2264,7 @@ mark{
           <span class="rc-sec-title-label">🃏 와일드카드 <span class="en">Wildcards</span></span>
           <span class="rc-sec-stats" id="wildcardStats"></span>
           <span class="sec-utils" onclick="event.stopPropagation()">
-            <button class="iconbtn sec-util-btn" id="wildcardImportBtn" title="📥 가져오기 — .zip(여러 .txt) 또는 .txt. 파일명이 와일드카드 이름이 됩니다.">📥</button>
+            <button class="iconbtn sec-util-btn" id="wildcardImportBtn" title="📥 가져오기 — .zip(여러 .txt) / .txt / .json(NAI Studio 백업). .txt 는 파일명이 이름이 됩니다.">📥</button>
             <button class="iconbtn sec-util-btn" id="wildcardNewBtn" title="＋ 새 와일드카드">＋</button>
             <button class="iconbtn sec-util-btn" id="wildcardDemoBtn" title="🎲 미리보기 — 현재 프롬프트의 __와일드카드__ 를 한 번 확장해서 예시를 보여줍니다 (알 수 없는 이름도 경고)">🎲</button>
             <button class="iconbtn sec-util-btn" id="wildcardSelectBtn" title="☑ 선택 모드 — 여러 와일드카드를 골라 한 번에 삭제">☑</button>
@@ -2275,7 +2275,7 @@ mark{
         </div>
         <div class="sec-body">
           <div class="wc-hint">프롬프트(또는 캐릭터 외형·액션)에 <code>__이름__</code> 을 넣으면 생성마다 해당 목록에서 한 줄을 무작위로 치환합니다. 칩을 클릭하면 커서 위치에 삽입돼요.</div>
-          <input type="file" id="wildcardFileInput" accept=".zip,.txt,text/plain" multiple style="display:none">
+          <input type="file" id="wildcardFileInput" accept=".zip,.txt,.json,text/plain,application/json" multiple style="display:none">
           <div id="wildcardSelBar" class="wc-sel-bar" style="display:none"></div>
           <div id="wildcardChips" class="wc-chips"></div>
           <div id="wildcardEmpty" class="wc-empty">
@@ -19161,6 +19161,65 @@ function _sanitizeWildcardName(base){
     .slice(0, 40);
 }
 
+// JSON 임포트용 — 비ASCII(한글 등) 이름을 ASCII 토큰으로 코어스. 영문/숫자만 추리고, 비면 wc{idx}.
+function _coerceWildcardName(rawName, idx){
+  if(typeof rawName === 'string' && WILDCARD_NAME_RE.test(rawName)) return rawName.slice(0, 40);
+  const stripped = String(rawName || '').replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 40);
+  if(stripped && WILDCARD_NAME_RE.test(stripped)) return stripped;
+  return `wc${idx}`;
+}
+
+// JSON 1건 → 와일드카드 병합/생성. {created, opts, name, originalName} | null
+function _importOneFromJson(raw, idx, usedNames){
+  if(!raw || typeof raw !== 'object') return null;
+  const optList = Array.isArray(raw.options) ? raw.options.map(o => ({
+    text: String((o && typeof o === 'object') ? (o.text ?? '') : (o ?? '')).slice(0, 2000),
+    weight: Number.isFinite(Number(o?.weight)) ? Number(o.weight) : 1,
+  })).filter(o => o.text) : [];
+  if(!optList.length) return null;
+  const originalName = String(raw.name || '');
+  let name = _coerceWildcardName(originalName, idx);
+  // 충돌 방지 — 사용 중이거나 같은 batch 내 중복이면 _2, _3 부여
+  const taken = new Set([...(state.wildcards || []).map(w => w.name), ...(usedNames || [])]);
+  if(taken.has(name) && name !== originalName){
+    let n = 2;
+    while(taken.has(`${name}_${n}`)) n++;
+    name = `${name}_${n}`;
+  }
+  if(Array.isArray(usedNames)) usedNames.push(name);
+  // label 우선순위: raw.label > 원래 이름(코어스 전, 한글 등 가능) > 코어스된 토큰
+  const label = String(raw.label || (originalName && originalName !== name ? originalName : '') || '').slice(0, 60);
+  if(!Array.isArray(state.wildcards)) state.wildcards = [];
+  let wc = state.wildcards.find(w => w.name === name);
+  const created = !wc;
+  if(!wc){
+    const lockedIdx = Math.max(0, parseInt(raw.lockedIdx, 10) || 0);
+    const validLock = !!raw.locked && lockedIdx < optList.length;
+    wc = {name, label, options: [], locked: validLock, lockedIdx: validLock ? lockedIdx : 0};
+    state.wildcards.push(wc);
+  } else if(label && !wc.label){ wc.label = label; }
+  const seen = new Set(wc.options.map(o => o.text));
+  let added = 0;
+  for(const o of optList){ if(!seen.has(o.text)){ wc.options.push(o); seen.add(o.text); added++; } }
+  return {created, opts: added, name, originalName};
+}
+
+// JSON 텍스트 → 와일드카드 배열 추출 ({_meta, wildcards:[...]} 또는 [...] 직접) → 일괄 임포트
+function _importWildcardsFromJsonText(text){
+  let data;
+  try { data = JSON.parse(text); } catch(_) { return null; }
+  const arr = Array.isArray(data?.wildcards) ? data.wildcards
+            : Array.isArray(data) ? data : null;
+  if(!arr) return null;
+  const usedNames = [];
+  let created = 0, opts = 0, processed = 0;
+  arr.forEach((raw, i) => {
+    const r = _importOneFromJson(raw, i + 1, usedNames);
+    if(r){ processed++; if(r.created) created++; opts += r.opts; }
+  });
+  return {processed, created, opts};
+}
+
 // 파일 첫 줄의 '# 주석' 을 표시용 제목으로 추출 ('—'/'__토큰__' 뒤는 잘라냄). 없으면 ''.
 function _extractWildcardLabel(text){
   const m = String(text || '').match(/^\s*#\s*(.+)$/m);
@@ -19199,17 +19258,28 @@ async function _importWildcardFiles(files){
         const zip = await JSZip.loadAsync(await f.arrayBuffer());
         for(const path of Object.keys(zip.files)){
           const entry = zip.files[path];
-          if(entry.dir || !path.toLowerCase().endsWith('.txt')) continue;
-          const base = path.split('/').pop().replace(/\.txt$/i, '');
-          const r = _addOrMergeWildcard(base, await entry.async('string'));
-          if(r){ fileN++; if(r.created) createdN++; optsN += r.opts; }
+          if(entry.dir) continue;
+          const pl = path.toLowerCase();
+          if(pl.endsWith('.txt')){
+            const base = path.split('/').pop().replace(/\.txt$/i, '');
+            const r = _addOrMergeWildcard(base, await entry.async('string'));
+            if(r){ fileN++; if(r.created) createdN++; optsN += r.opts; }
+          } else if(pl.endsWith('.json')){
+            const r = _importWildcardsFromJsonText(await entry.async('string'));
+            if(r && r.processed){ fileN++; createdN += r.created; optsN += r.opts; }
+          }
         }
       } else if(nm.endsWith('.txt')){
         const base = f.name.replace(/\.txt$/i, '');
         const r = _addOrMergeWildcard(base, await f.text());
         if(r){ fileN++; if(r.created) createdN++; optsN += r.opts; }
+      } else if(nm.endsWith('.json')){
+        const r = _importWildcardsFromJsonText(await f.text());
+        if(r === null){ toast(`${f.name} JSON 형식이 아니거나 wildcards 배열이 없습니다`, 'error'); continue; }
+        if(r.processed){ fileN++; createdN += r.created; optsN += r.opts; }
+        else { toast(`${f.name} 에 유효한 와일드카드가 없습니다`, 'warning'); }
       } else {
-        toast(`지원 안 함: ${f.name} (.txt / .zip 만)`, 'warning');
+        toast(`지원 안 함: ${f.name} (.txt / .zip / .json)`, 'warning');
       }
     } catch(e){ console.warn('[wildcard import]', e); toast(`${f.name} 가져오기 실패`, 'error'); }
   }
@@ -19217,9 +19287,9 @@ async function _importWildcardFiles(files){
     saveWildcards();
     renderWildcards();
     if(!state.wildcardPanelOpen) wildcardToggle(true);
-    toast(`🃏 와일드카드 ${fileN}개 처리 (신규 ${createdN}개) · 후보 ${optsN}개 추가`, 'success');
+    toast(`🃏 와일드카드 ${fileN}건 처리 (신규 ${createdN}개) · 후보 ${optsN}개 추가`, 'success');
   } else {
-    toast('가져올 와일드카드를 찾지 못했습니다 (.txt/.zip)', 'warning');
+    toast('가져올 와일드카드를 찾지 못했습니다 (.txt/.zip/.json)', 'warning');
   }
 }
 
@@ -19275,7 +19345,7 @@ function wireWildcardEvents(){
       if(!e.dataTransfer?.files?.length) return;
       e.preventDefault();
       sec.classList.remove('wc-drag');
-      const files = [...e.dataTransfer.files].filter(f => /\.(zip|txt)$/i.test(f.name));
+      const files = [...e.dataTransfer.files].filter(f => /\.(zip|txt|json)$/i.test(f.name));
       if(files.length) await _importWildcardFiles(files);
     });
   }
