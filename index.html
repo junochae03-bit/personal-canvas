@@ -6362,8 +6362,9 @@ function removeCharActionTagAt(tagIdx){
 function renderCharPickCats(){
   // 캐릭터 슬롯에 추가할 수 있는 모든 카테고리 (target=char-action)
   const QUICK_CATS = PRESET_TYPES.filter(t => t.target === 'char-action').map(t => t.id);
+  const wcCnt = (state.wildcards || []).length;
   const items = [
-    {id:'',          label:'전체',   ico:'✨', cnt: CHAR_ACTION_TAGS.length + QUICK_CATS.reduce((s,p) => s + (state.presets[p]||[]).length, 0)},
+    {id:'',          label:'전체',   ico:'✨', cnt: CHAR_ACTION_TAGS.length + QUICK_CATS.reduce((s,p) => s + (state.presets[p]||[]).length, 0) + wcCnt},
     {id:'action',    label:'액션',   ico:'🤝', cnt: CHAR_ACTION_TAGS.length},
   ];
   for(const pcat of QUICK_CATS){
@@ -6371,6 +6372,9 @@ function renderCharPickCats(){
     if(cnt === 0) continue;
     const def = PRESET_TYPES.find(t => t.id === pcat);
     items.push({id:pcat, label:def.label, ico:def.ico, cnt});
+  }
+  if(wcCnt > 0){
+    items.push({id:'wildcard', label:'와일드카드', ico:'🃏', cnt: wcCnt});
   }
   $('charPickCats').innerHTML = items.map(c => {
     const isAct = _cpCat === c.id;
@@ -6419,6 +6423,24 @@ function renderCharPickList(){
         parts.push(`<div class="cp-item" data-val="${esc(v)}"><div class="cp-name">${highlightMatch(v, q)}</div><div class="cp-sub">${highlightMatch(ko, q)}</div></div>`);
       }
       totalShown += acts.length;
+    }
+  }
+
+  // 🃏 와일드카드 — __name__ 토큰 삽입. 라벨·이름·옵션 첫 줄 검색.
+  if((cat === '' || cat === 'wildcard') && Array.isArray(state.wildcards) && state.wildcards.length){
+    const wcs = state.wildcards.filter(w => {
+      if(!q) return true;
+      const hay = (w.label||'') + ' ' + (w.name||'') + ' ' + (w.options?.[0]?.text||'');
+      return koMatch(hay, q).match;
+    });
+    if(wcs.length){
+      parts.push(`<div class="cp-list-grp">🃏 와일드카드 <span style="font-weight:400;color:var(--t3);font-size:11px;margin-left:auto;font-family:var(--mono)">${wcs.length} / ${state.wildcards.length}</span></div>`);
+      for(const w of wcs){
+        const display = (w.label && w.label.trim()) ? w.label : w.name;
+        const sub = `__${w.name}__ · ${w.options?.length||0}개 후보`;
+        parts.push(`<div class="cp-item" data-val="__${esc(w.name)}__" data-wc="1"><div class="cp-name">${highlightMatch(display, q)}</div><div class="cp-sub">${highlightMatch(sub, q)}</div></div>`);
+      }
+      totalShown += wcs.length;
     }
   }
 
@@ -9553,8 +9575,20 @@ async function startGeneration(){
   if(!state.queue.length){ toast('생성할 항목이 없습니다', 'warning'); return; }
   // 📁 갤러리 저장 위치 — 세션 선택 적용 (생성 직전 1회)
   await applyTargetSession();
-  // 🔢 자동 라벨 카운터 리셋 — 이번 배치만의 캐릭터별 #1, #2 …
+  // 🔢 자동 라벨 카운터 — 갤러리에 이미 있는 max(name#N) 으로 seed → 파일명 중복 방지.
+  //    예) 갤러리에 "[원신] 푸리나#153" 까지 있으면 다음 생성은 #154 로.
   state._autoLabelCounters = {};
+  try {
+    const imgs = await DB.getAllImagesForStats();
+    for(const img of imgs){
+      const m = (img.label||'').match(/^(.+?)#(\d+)$/);
+      if(!m) continue;
+      const base = m[1], num = parseInt(m[2], 10);
+      if(Number.isFinite(num) && num > (state._autoLabelCounters[base] || 0)){
+        state._autoLabelCounters[base] = num;
+      }
+    }
+  } catch(e){ _swallow(e, 'autoLabelSeed'); }
   state.queueIdx = 0;
   state.running = true;
   state.paused = false;
