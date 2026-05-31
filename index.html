@@ -2316,7 +2316,6 @@ mark{
           <div class="row" style="margin-bottom:8px;gap:14px;flex-wrap:wrap">
             <label class="chk"><input type="checkbox" id="useCoords" checked>좌표 사용 <span class="en">Use Coordinates</span></label>
             <label class="chk" title="ON 이면 썸네일 탭 랜덤(🎲)이 ⭐ 즐겨찾기한 캐릭터 프리셋 중에서만 뽑습니다. 그룹별 랜덤은 '🎴 둘러보기'에서."><input type="checkbox" id="charRandFav">⭐ 즐겨찾기 랜덤 <span class="en">Fav only</span></label>
-            <label class="chk" title="ON 이면 매 생성마다(첫 장 포함) 활성 캐릭터 슬롯을 자동으로 랜덤 교체합니다. 후보 풀(c.pool)·그룹 고정(📂)·⭐즐겨찾기 설정 모두 존중."><input type="checkbox" id="charRandPerGen">🎲 매 생성마다 랜덤 <span class="en">Random/gen</span></label>
           </div>
           <div id="charList"></div>
           <button class="add-char" id="addCharBtn">＋ 캐릭터 추가 <span class="en">Add Character</span></button>
@@ -6567,6 +6566,7 @@ function renderCharacters(){
         <div class="char-actions">
           <button class="char-act-btn browse" data-act="browse" data-idx="${i}" title="🎴 캐릭터 둘러보기 — 썸네일 그리드로 보고 단일/후보 풀 선택"><span class="cab-ico">🎴</span><span class="cab-lbl"> 둘러보기</span> <span class="en" style="opacity:.55;font-weight:400">Browse</span></button>
           <button class="char-act-btn ${c.enabled?'act':''}" data-act="toggle" data-idx="${i}" title="이 캐릭터 슬롯 활성/비활성 토글"><span class="cab-ico">${c.enabled?'✓':'⭕'}</span><span class="cab-lbl"> ${c.enabled?'활성':'비활성'}</span> <span class="en" style="opacity:.55;font-weight:400">${c.enabled?'On':'Off'}</span></button>
+          <button class="char-act-btn ${c.randPerGen?'act':''}" data-act="rand-pergen" data-idx="${i}" title="🎲 매 대기열 추가·생성마다 이 슬롯을 무작위 교체 (⭐즐겨찾기·📂그룹고정·후보풀 설정 모두 존중)"><span class="cab-ico">🎲</span><span class="cab-lbl"> 매번 랜덤</span> <span class="en" style="opacity:.55;font-weight:400">${c.randPerGen?'On':'Off'}</span></button>
           <button class="char-act-btn edit" data-act="expand" data-idx="${i}" title="외형·액션·네거티브 textarea 펼치기/접기"><span class="cab-ico">✏</span><span class="cab-lbl"> 프롬프트</span> <span class="en" style="opacity:.55;font-weight:400">Edit</span></button>
           <button class="char-act-btn" data-act="clear-char-all" data-idx="${i}" title="🧹 텍스트만 비움 — 슬롯 카드는 그대로 (실행 취소 6초)"><span class="cab-ico">🧹</span><span class="cab-lbl"> 텍스트 비우기</span> <span class="en" style="opacity:.55;font-weight:400">Clear text</span></button>
           <button class="char-act-btn del" data-act="del" data-idx="${i}" title="🗑 슬롯 카드 자체 삭제 — 카드가 사라짐 (텍스트만 지우려면 옆 🧹 텍스트 비우기 사용)"><span class="cab-ico del-ico">🗑</span><span class="cab-lbl del-lbl"> 슬롯 삭제</span></button>
@@ -9587,8 +9587,8 @@ async function startGeneration(){
     if(!q.snapshot){
       // 후보 풀 어드밴스 — 첫 이터는 사용자가 셋업한 풀 인덱스 유지
       if(processedCount > 0) advanceCharPoolsBeforeGenerate();
-      // 🎲 매 생성마다 랜덤 — 첫 이터부터 매번 적용 (의도: every generation)
-      if($('charRandPerGen')?.checked) randomizeCharsBeforeGenerate();
+      // 🎲 슬롯별 c.randPerGen 켜진 슬롯만 매 이터마다 무작위 교체 (첫 이터 포함)
+      randomizeCharsBeforeGenerate();
     }
     renderQueue();
     $('previewStatus').textContent = `생성 중 (${processedCount+1}/${state.queue.length})`;
@@ -10816,18 +10816,18 @@ function advanceCharPoolsBeforeGenerate(){
   }
 }
 
-// 🎲 매 생성마다 랜덤 — 활성 슬롯들을 ⭐즐겨찾기·📂그룹고정 설정을 존중해서 무작위 교체.
-//   ↳ 후보 풀(c.pool)이 있는 슬롯은 advanceCharPoolsBeforeGenerate 가 처리하므로 건너뜀.
-//   ↳ 한 번 렌더로 모아서 처리해 비용 절감.
+// 🎲 슬롯별 c.randPerGen 토글이 켜진 슬롯만 무작위 교체.
+//   호출 시점: ① 생성 루프 매 이터 직전, ② 대기열 추가 버튼(스냅샷 직전).
+//   존중: c.pool(후보 풀 있으면 풀이 우선) · c.groupLock(그룹 고정) · #charRandFav(⭐즐겨찾기 필터)
 function randomizeCharsBeforeGenerate(){
-  const allChars = (state.presets.character || []);
-  if(!allChars.length) return;
+  const all = (state.presets.character || []);
+  if(!all.length) return;
   const favOnly = !!$('charRandFav')?.checked;
   let any = false;
   for(const c of (state.characters || [])){
-    if(!c?.enabled) continue;
+    if(!c?.enabled || !c.randPerGen) continue;   // ★ 슬롯 체크박스 ON 만
     if(Array.isArray(c.pool) && c.pool.length >= 2) continue;
-    let chars = allChars;
+    let chars = all;
     if(favOnly) chars = chars.filter(p => p.fav);
     if(c.groupLock) chars = chars.filter(p => getCharGroup(p.name) === c.groupLock);
     if(!chars.length) continue;
@@ -14636,7 +14636,6 @@ async function saveSettings(){
     smeaDynCheck: $('smeaDynCheck').checked,
     useCoords: $('useCoords').checked,
     charRandFav: $('charRandFav')?.checked,
-    charRandPerGen: $('charRandPerGen')?.checked,
     genCount: $('genCount').value,
     genDelay: $('genDelay').value,
     continueOnError: $('continueOnError').checked,
@@ -14701,7 +14700,6 @@ async function loadSettings(){
   apply('smeaDynCheck', s.smeaDynCheck);
   apply('useCoords', s.useCoords ?? true);
   apply('charRandFav', s.charRandFav);
-  apply('charRandPerGen', s.charRandPerGen);
   apply('genCount', s.genCount);
   apply('genDelay', s.genDelay);
   apply('continueOnError', s.continueOnError ?? true);
@@ -15309,7 +15307,7 @@ function wireTopbarAndFormEvents(){
 
   // Form changes — autosave & refresh
   ['model','resPreset','resAspect','customW','customH','steps','cfgScale','cfgRescale','sampler','noiseSchedule','ucPreset',
-   'varietyCheck','decrisperCheck','smeaCheck','smeaDynCheck','useCoords','charRandFav','charRandPerGen','genCount','genDelay','continueOnError',
+   'varietyCheck','decrisperCheck','smeaCheck','smeaDynCheck','useCoords','charRandFav','genCount','genDelay','continueOnError',
    'prompt','negPrompt','fnamePattern','imgLabel','seqInput','seqLabelFname','inpAddOrig','i2iStrength','i2iNoise','seed'].forEach(id => {
     const el = $(id);
     if(!el) return;
@@ -15542,6 +15540,7 @@ function wireCharacterEvents(){
     if(isNaN(idx)) return;
     const act = t.dataset.act;
     if(act === 'toggle'){ state.characters[idx].enabled = !state.characters[idx].enabled; renderCharacters(); saveSettingsDebounced(); }
+    else if(act === 'rand-pergen'){ const ch = state.characters[idx]; if(ch){ ch.randPerGen = !ch.randPerGen; renderCharacters(); saveSettingsDebounced(); toast(`🎲 ${ch.name||'#'+(idx+1)} 매번 랜덤 ${ch.randPerGen?'ON':'OFF'}`, 'info'); } return; }
     else if(act === 'del'){ removeCharacter(idx); saveSettingsDebounced(); }
     else if(act === 'expand'){ const b = $('charList').querySelector(`[data-body="${idx}"]`); b?.classList.toggle('open'); }
     else if(act === 'pos'){ openPosGrid(idx, t); }
@@ -15847,6 +15846,8 @@ function wireGenerationAndPresetEvents(){
   // ＋ 대기열 추가 — 진행 중인 큐에 현재 설정으로 한 장 더 추가 (생성 흐름 유지)
   $('genQueueAddBtn')?.addEventListener('click', () => {
     if(!state.running){ toast('생성 중일 때만 대기열에 추가할 수 있습니다', 'info'); return; }
+    // 🎲 추가 직전: c.randPerGen 켜진 슬롯들을 무작위 교체 → 그 새 상태가 스냅샷에 들어감
+    randomizeCharsBeforeGenerate();
     // 📸 추가 시점의 폼·캐릭터·미디어 상태 스냅샷 — 나중에 다른 프리셋으로 바꿔도 영향 X
     const snapshot = snapshotGenState();
     const seqText = ($('seqInput')?.value || '').trim();
