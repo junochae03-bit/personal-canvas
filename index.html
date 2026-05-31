@@ -2316,6 +2316,7 @@ mark{
           <div class="row" style="margin-bottom:8px;gap:14px;flex-wrap:wrap">
             <label class="chk"><input type="checkbox" id="useCoords" checked>좌표 사용 <span class="en">Use Coordinates</span></label>
             <label class="chk" title="ON 이면 썸네일 탭 랜덤(🎲)이 ⭐ 즐겨찾기한 캐릭터 프리셋 중에서만 뽑습니다. 그룹별 랜덤은 '🎴 둘러보기'에서."><input type="checkbox" id="charRandFav">⭐ 즐겨찾기 랜덤 <span class="en">Fav only</span></label>
+            <label class="chk" title="ON 이면 매 생성마다 활성 캐릭터 슬롯을 자동으로 랜덤 교체합니다. 첫 생성은 현재 설정 유지, 두 번째부터 적용. 후보 풀·그룹 고정·⭐즐겨찾기 설정 모두 존중."><input type="checkbox" id="charRandPerGen">🎲 매 생성마다 랜덤 <span class="en">Random/gen</span></label>
           </div>
           <div id="charList"></div>
           <button class="add-char" id="addCharBtn">＋ 캐릭터 추가 <span class="en">Add Character</span></button>
@@ -2580,6 +2581,7 @@ mark{
           <button class="btn ghost" id="presetExpandAll" title="모든 프리셋의 미리보기를 펼치거나 접습니다">⤢ 전체 펼침 <span class="en">Expand All</span></button>
           <button class="btn ghost" id="presetGroupsToggle" title="📚 그룹 모두 접기·펼치기 (캐릭터·의상·상황·인원 카테고리)" style="border-color:rgba(162,90,31,.4);color:var(--acc)">📚 그룹 일괄 <span class="en">Groups</span></button>
           <button class="btn ghost" id="autoClassifyBtn" title="이름 접두사로 자동 재분류 (의상·헤어·페티쉬 → 의상 / 콤보·노출·자위·백합 → 상황 / 포커스·구도 → 구도 / 하렘·남녀 → 인원 등)" style="border-color:rgba(162,90,31,.4)">🪄 자동 분류 <span class="en">Auto-classify</span></button>
+          <button class="btn ghost" id="bulkClearThumbsBtn" title="현재 카테고리에 표시된 프리셋들의 미리보기 이미지를 일괄 삭제합니다 (프리셋 자체·텍스트는 유지). 검색·즐겨찾기 필터가 적용된 목록에만 영향." style="border-color:rgba(181,67,56,.35);color:var(--red)">🖼 미리보기 일괄삭제 <span class="en">Clear Thumbs</span></button>
           <div class="tb-grow"></div>
           <span id="presetInfo" style="font-size:12px;color:var(--t3);font-family:var(--mono)"></span>
           <button class="btn ghost" id="previewGenBtn" title="🎯 일괄 생성 — 현재 프롬프트에 시나리오를 결합하고 캐릭터별로 한 장씩 자동 생성" style="border-color:rgba(58,99,152,.4);color:var(--blue)">🎯 일괄 생성 <span class="en" style="opacity:.6">Batch</span></button>
@@ -7072,6 +7074,43 @@ function toggleCbGroupsCollapseAll(){
   renderCbGrid();
 }
 
+// 🖼 미리보기 일괄삭제 — 현재 카테고리에 표시(검색·필터 적용)된 프리셋들의 thumb 만 일괄 제거.
+// 프리셋 자체·텍스트·즐겨찾기는 유지. 실행 취소 6초.
+async function bulkClearPresetThumbs(){
+  const type = state.presetType;
+  const search = ($('presetSearch').value||'').trim();
+  let list = state.presets[type] || [];
+  if(state._presetFavOnly) list = list.filter(p => p.fav);
+  if(search) list = list.filter(p => koMatch(p.name||'', search).match || koMatch(p.text||'', search).match);
+  const withThumbs = list.filter(p => p.thumb);
+  if(!withThumbs.length){ toast('삭제할 미리보기 이미지가 없습니다 (현재 표시된 프리셋 중)', 'info'); return; }
+  const def = PRESET_TYPES.find(t => t.id === type) || {label: type};
+  const filterMsg = (search || state._presetFavOnly) ? ' (현재 필터에 표시된 것만)' : '';
+  confirmDialog(
+    `${def.label||type} 프리셋 ${withThumbs.length}개의 미리보기 이미지를 삭제할까요?${filterMsg}\n프리셋 이름·텍스트는 유지됩니다.`,
+    async () => {
+      // backup for undo
+      const backup = withThumbs.map(p => ({name:p.name, thumb:p.thumb}));
+      for(const p of withThumbs){
+        p.thumb = null;
+        try { await DB.presetPut(type, p); } catch(e){ console.warn('[bulkClearThumb]', p.name, e); }
+      }
+      renderPresets();
+      toastUndo(`🖼 미리보기 ${withThumbs.length}개 삭제됨`, async () => {
+        const idx = new Map((state.presets[type]||[]).map((p,i) => [p.name, p]));
+        let restored = 0;
+        for(const b of backup){
+          const p = idx.get(b.name);
+          if(p){ p.thumb = b.thumb; try { await DB.presetPut(type, p); restored++; } catch(e){} }
+        }
+        renderPresets();
+        toast(`↶ 미리보기 ${restored}개 복원됨`, 'success');
+      });
+    },
+    '🖼 미리보기 일괄 삭제'
+  );
+}
+
 function renderPresets(){
   const type = state.presetType;
   const search = ($('presetSearch').value||'').trim();
@@ -9545,7 +9584,10 @@ async function startGeneration(){
     q.status = 'run';
     // 🔄 후보 풀이 있는 캐릭터들은 다음 캐릭터로 자동 교체 (첫 번째는 그대로 사용)
     //   ↳ 스냅 항목(추가 버튼으로 들어온 것)은 자체 캐릭터를 가지므로 풀 어드밴스 스킵
-    if(processedCount > 0 && !q.snapshot) advanceCharPoolsBeforeGenerate();
+    if(processedCount > 0 && !q.snapshot){
+      advanceCharPoolsBeforeGenerate();
+      if($('charRandPerGen')?.checked) randomizeCharsBeforeGenerate();
+    }
     renderQueue();
     $('previewStatus').textContent = `생성 중 (${processedCount+1}/${state.queue.length})`;
     try {
@@ -10767,6 +10809,34 @@ function advanceCharPoolsBeforeGenerate(){
     advanced++;
   }
   if(advanced){
+    renderCharacters();
+    saveSettingsDebounced();
+  }
+}
+
+// 🎲 매 생성마다 랜덤 — 활성 슬롯들을 ⭐즐겨찾기·📂그룹고정 설정을 존중해서 무작위 교체.
+//   ↳ 후보 풀(c.pool)이 있는 슬롯은 advanceCharPoolsBeforeGenerate 가 처리하므로 건너뜀.
+//   ↳ 한 번 렌더로 모아서 처리해 비용 절감.
+function randomizeCharsBeforeGenerate(){
+  const allChars = (state.presets.character || []);
+  if(!allChars.length) return;
+  const favOnly = !!$('charRandFav')?.checked;
+  let any = false;
+  for(const c of (state.characters || [])){
+    if(!c?.enabled) continue;
+    if(Array.isArray(c.pool) && c.pool.length >= 2) continue;
+    let chars = allChars;
+    if(favOnly) chars = chars.filter(p => p.fav);
+    if(c.groupLock) chars = chars.filter(p => getCharGroup(p.name) === c.groupLock);
+    if(!chars.length) continue;
+    const pool = chars.filter(p => p.name && p.name !== c.name);
+    const list = pool.length ? pool : chars;
+    const pick = list[Math.floor(Math.random() * list.length)];
+    if(!pick) continue;
+    applyCharPresetToSlot(c, pick);
+    any = true;
+  }
+  if(any){
     renderCharacters();
     saveSettingsDebounced();
   }
@@ -14564,6 +14634,7 @@ async function saveSettings(){
     smeaDynCheck: $('smeaDynCheck').checked,
     useCoords: $('useCoords').checked,
     charRandFav: $('charRandFav')?.checked,
+    charRandPerGen: $('charRandPerGen')?.checked,
     genCount: $('genCount').value,
     genDelay: $('genDelay').value,
     continueOnError: $('continueOnError').checked,
@@ -14628,6 +14699,7 @@ async function loadSettings(){
   apply('smeaDynCheck', s.smeaDynCheck);
   apply('useCoords', s.useCoords ?? true);
   apply('charRandFav', s.charRandFav);
+  apply('charRandPerGen', s.charRandPerGen);
   apply('genCount', s.genCount);
   apply('genDelay', s.genDelay);
   apply('continueOnError', s.continueOnError ?? true);
@@ -15235,7 +15307,7 @@ function wireTopbarAndFormEvents(){
 
   // Form changes — autosave & refresh
   ['model','resPreset','resAspect','customW','customH','steps','cfgScale','cfgRescale','sampler','noiseSchedule','ucPreset',
-   'varietyCheck','decrisperCheck','smeaCheck','smeaDynCheck','useCoords','charRandFav','genCount','genDelay','continueOnError',
+   'varietyCheck','decrisperCheck','smeaCheck','smeaDynCheck','useCoords','charRandFav','charRandPerGen','genCount','genDelay','continueOnError',
    'prompt','negPrompt','fnamePattern','imgLabel','seqInput','seqLabelFname','inpAddOrig','i2iStrength','i2iNoise','seed'].forEach(id => {
     const el = $(id);
     if(!el) return;
@@ -16131,6 +16203,7 @@ function wireGenerationAndPresetEvents(){
     togglePresetGroupsCollapseAll();
   });
   $('autoClassifyBtn').addEventListener('click', autoClassifyByPrefix);
+  $('bulkClearThumbsBtn').addEventListener('click', bulkClearPresetThumbs);
 
   // Preset modal
   $('presetCancel').addEventListener('click', () => $('presetModal').classList.remove('open'));
