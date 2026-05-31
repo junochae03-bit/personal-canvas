@@ -2316,7 +2316,7 @@ mark{
           <div class="row" style="margin-bottom:8px;gap:14px;flex-wrap:wrap">
             <label class="chk"><input type="checkbox" id="useCoords" checked>좌표 사용 <span class="en">Use Coordinates</span></label>
             <label class="chk" title="ON 이면 썸네일 탭 랜덤(🎲)이 ⭐ 즐겨찾기한 캐릭터 프리셋 중에서만 뽑습니다. 그룹별 랜덤은 '🎴 둘러보기'에서."><input type="checkbox" id="charRandFav">⭐ 즐겨찾기 랜덤 <span class="en">Fav only</span></label>
-            <label class="chk" title="ON 이면 매 생성마다 활성 캐릭터 슬롯을 자동으로 랜덤 교체합니다. 첫 생성은 현재 설정 유지, 두 번째부터 적용. 후보 풀·그룹 고정·⭐즐겨찾기 설정 모두 존중."><input type="checkbox" id="charRandPerGen">🎲 매 생성마다 랜덤 <span class="en">Random/gen</span></label>
+            <label class="chk" title="ON 이면 매 생성마다(첫 장 포함) 활성 캐릭터 슬롯을 자동으로 랜덤 교체합니다. 후보 풀(c.pool)·그룹 고정(📂)·⭐즐겨찾기 설정 모두 존중."><input type="checkbox" id="charRandPerGen">🎲 매 생성마다 랜덤 <span class="en">Random/gen</span></label>
           </div>
           <div id="charList"></div>
           <button class="add-char" id="addCharBtn">＋ 캐릭터 추가 <span class="en">Add Character</span></button>
@@ -9584,8 +9584,10 @@ async function startGeneration(){
     q.status = 'run';
     // 🔄 후보 풀이 있는 캐릭터들은 다음 캐릭터로 자동 교체 (첫 번째는 그대로 사용)
     //   ↳ 스냅 항목(추가 버튼으로 들어온 것)은 자체 캐릭터를 가지므로 풀 어드밴스 스킵
-    if(processedCount > 0 && !q.snapshot){
-      advanceCharPoolsBeforeGenerate();
+    if(!q.snapshot){
+      // 후보 풀 어드밴스 — 첫 이터는 사용자가 셋업한 풀 인덱스 유지
+      if(processedCount > 0) advanceCharPoolsBeforeGenerate();
+      // 🎲 매 생성마다 랜덤 — 첫 이터부터 매번 적용 (의도: every generation)
       if($('charRandPerGen')?.checked) randomizeCharsBeforeGenerate();
     }
     renderQueue();
