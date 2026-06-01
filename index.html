@@ -2532,6 +2532,7 @@ mark{
             <button data-gv="detail" class="act">상세 <span class="en">Detail</span></button>
             <button data-gv="compact">간단 <span class="en">Compact</span></button>
             <button data-gv="album">앨범 <span class="en">Albums</span></button>
+            <button data-gv="vault" title="❤️ 좋아요한 이미지만 평평하게 (세션·세션헤더 무시, 최신순)">📌 보관함 <span class="en">Vault</span></button>
           </div>
           <button class="btn ghost" id="galSelectModeBtn" title="선택 모드 — 여러 이미지를 한 번에 삭제하거나 앨범에 추가 (모바일: 길게 누르기로도 진입)" style="border-color:rgba(58,99,152,.4)">☑ 선택 <span class="en">Select</span></button>
           <div class="gal-zoom" title="갤러리 크기 조절 (모바일: 두 손가락 핀치)">
@@ -12247,8 +12248,10 @@ async function loadGallery(){
   };
   const trashMode = !!state._galTrashMode;
   // ❤️ 좋아요만 필터 — 옛 fav 필터 데이터도 호환 (마이그레이션 이전 사용자의 ⭐ 데이터)
-  const likeOnly = !!state._galLikeOnly;
-  const dislikeOnly = !!state._galDislikeOnly;
+  //   📌 보관함(vault) 모드는 자동으로 likeOnly 강제 — 좋아요한 이미지만 평평 그리드.
+  const isVault = (viewMode === 'vault');
+  const likeOnly = isVault || !!state._galLikeOnly;
+  const dislikeOnly = !isVault && !!state._galDislikeOnly;
   grid.classList.toggle('gallery-trash-mode', trashMode);
   // 🚀 perf: 세션별 IDB 조회를 병렬화 (이전엔 N개 세션 = N회 순차 RTT).
   //   필터로 빠른 세션은 즉시 건너뛰고, 나머지만 Promise.all 로 동시 조회.
@@ -12276,9 +12279,9 @@ async function loadGallery(){
       allImages.push({img, sesId:ses.id, sesLabel:ses.label, ts:img.ts||ses.ts});
     }
   }
-  // 🔀 정렬 — 앨범 보기는 자체 그룹화라서 적용 안 함, 그 외 detail/compact 만 적용.
-  //   기본 'session' 은 세션별 묶음(현재 push 순서) 유지.
-  const sortKey = ($('gallerySort')?.value || state._gallerySort || 'session');
+  // 🔀 정렬 — 앨범 보기는 자체 그룹화라서 적용 안 함, 그 외 detail/compact/vault 만 적용.
+  //   📌 vault 는 자동 'new' (최신순). 그 외에는 select 값 또는 'session'.
+  const sortKey = isVault ? 'new' : ($('gallerySort')?.value || state._gallerySort || 'session');
   if(sortKey !== 'session' && viewMode !== 'album'){
     const cmp = {
       new:     (a,b) => (b.ts||0) - (a.ts||0),
@@ -12398,10 +12401,11 @@ async function loadGallery(){
       }
     }
   } else {
-    // 세션별 — 기본
+    // 세션 헤더는 sortKey === 'session' 일 때만 — 그 외(new/old/seed/model/label/vault)는 이미지만 평평하게.
+    const showSessionHeader = (sortKey === 'session');
     let curSes = null;
     for(const item of allImages){
-      if(curSes !== item.sesId){
+      if(showSessionHeader && curSes !== item.sesId){
         curSes = item.sesId;
         const ses = sessions.find(s => s.id === item.sesId);
         const countInSession = allImages.filter(a => a.sesId === item.sesId).length;
