@@ -1516,6 +1516,11 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   .topbar.key-expanded #apiKey{flex:1;min-width:0;font-size:14px}
   #apiKey{flex:1;min-width:0;font-size:14px;padding:7px 10px}
   #anlasPill{font-size:10px;padding:3px 8px;white-space:nowrap}
+  .anlas-mirror{font-size:11px;padding:3px 9px;border-radius:14px;font-weight:600;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-variant-numeric:tabular-nums;border:1.5px solid currentColor;background:rgba(0,0,0,.04)}
+  .anlas-mirror.pill-on{color:var(--green);border-color:rgba(85,138,52,.45)}
+  .anlas-mirror.pill-warn{color:#a36f1c;border-color:rgba(163,111,28,.45)}
+  .anlas-mirror.pill-off{color:var(--t3);border-color:var(--b1)}
+  .anlas-mirror:empty{display:none}
   .topbar .tb-grow{display:none}                /* 모바일에서는 빈 공간 필요 없음 */
 
   /* 프롬프트 모노 폰트 다이어트 — 거대했던 입력창 정리 */
@@ -2175,7 +2180,7 @@ mark{
       <!-- 🎲 RANDOM CATEGORY BUILDER — 모드 바의 🎲 탭으로 열림. 다른 모드와 독립. -->
       <div class="sec rc-builder-sec" id="randomBuilderSec" style="display:none">
         <div class="sec-title">
-          <span class="rc-sec-title-label">🎲 랜덤 카테고리 빌더 <span class="en">Random</span></span>
+          <span class="rc-sec-title-label">🎲 랜덤 카테고리 빌더 <span style="font-size:.8em;color:var(--acc);font-weight:500;margin-left:4px">→ 🃏 와일드카드 만들기</span> <span class="en">Random→Wildcard</span></span>
           <span class="rc-sec-stats" id="rcStatsBadge"></span>
           <span class="sec-utils" onclick="event.stopPropagation()">
             <button class="iconbtn sec-util-btn" id="rcAddBtn" title="＋ 새 카테고리 추가">＋</button>
@@ -2184,6 +2189,7 @@ mark{
             <button class="iconbtn sec-util-btn" id="rcCollapseAllBtn" title="📦 모든 카테고리 일괄 접기/펼치기">📦</button>
             <button class="iconbtn sec-util-btn" id="rcDemoBtn" title="🎲 한 번 시연 — 현재 설정으로 어떤 옵션이 뽑힐지 한 번 expand">🎲</button>
             <button class="iconbtn sec-util-btn" id="rcApplyToCharBtn" title="🎴 캐릭터 프리셋에 적용 — 활성 카테고리를 ||A|B|C|| 텍스트로 컴파일 → 캐릭터 슬롯 추가 또는 새 프리셋 저장">🎴</button>
+            <button class="iconbtn sec-util-btn" id="rcExportWildcardsBtn" title="🃏 활성 카테고리를 와일드카드로 저장 — 각 카테고리 = 1 와일드카드 (이름·옵션 그대로). __category__ 토큰으로 프롬프트에서 사용" style="color:var(--acc)">🃏</button>
             <button class="iconbtn sec-util-btn" id="rcClearLocksBtn" title="🔓 모든 옵션 고정 해제">🔓</button>
             <button class="iconbtn sec-util-btn" id="rcCloseBtn" title="빌더 닫기">✕</button>
           </span>
@@ -2688,7 +2694,7 @@ mark{
             </div>
           </div>
           <div class="set-card">
-            <h3>🎨 템플릿 — 프리셋 랜덤 조합 <span class="en">Templates</span></h3>
+            <h3>🎨 템플릿 — 프리셋 랜덤 조합 <span style="font-size:.8em;color:var(--acc);font-weight:500;margin-left:4px">→ 📤 RC 빌더로 보내기</span> <span class="en">Templates → RC</span></h3>
             <div style="font-size:12px;color:var(--t3);margin-bottom:10px;line-height:1.55">
               체크한 카테고리에서 랜덤 1개씩 골라서 조합을 만듭니다. 마음에 들면 적용해서 즉시 생성하거나, 이름 붙여 저장하세요.
             </div>
@@ -2705,9 +2711,10 @@ mark{
               <label class="chk" style="font-size:12px;color:var(--t2);margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:6px" title="체크 시 ⭐ 즐겨찾기 표시한 프리셋만 랜덤 풀에 포함">
                 <input type="checkbox" id="tplFavOnlyToggle"> ⭐ 즐겨찾기 프리셋만 사용
               </label>
-              <div style="display:flex;gap:6px">
-                <button class="btn primary" id="tplRollBtn" type="button" style="flex:1;padding:11px;font-size:14px">🎲 랜덤 조합 생성 <span class="en">Roll</span></button>
-                <button class="btn ghost" id="tplApplyBtn" type="button" title="현재 조합을 메인 폼에 적용 (위 적용 방식대로)" style="flex:1;padding:11px;font-size:13px;border-color:rgba(58,99,152,.4);color:var(--blue)">✅ 폼에 적용</button>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn primary" id="tplRollBtn" type="button" style="flex:1;min-width:140px;padding:11px;font-size:14px">🎲 랜덤 조합 생성 <span class="en">Roll</span></button>
+                <button class="btn ghost" id="tplToRcBtn" type="button" title="🎲 활성 카테고리의 전체 프리셋 목록을 RC 빌더 카테고리로 복사 — 각 프리셋 = 옵션 (가중치 1.0)" style="flex:1;min-width:140px;padding:11px;font-size:13px;border-color:rgba(214,160,80,.45);color:var(--acc)">📤 RC 빌더로 보내기 <span class="en">→ RC</span></button>
+                <button class="btn ghost" id="tplApplyBtn" type="button" title="(선택) 현재 조합을 메인 폼에 적용" style="flex:1;min-width:100px;padding:11px;font-size:13px;border-color:rgba(58,99,152,.4);color:var(--blue)">✅ 폼에 적용</button>
               </div>
             </div>
           </div>
@@ -3432,7 +3439,10 @@ coffee shop, latte art"></textarea>
 <!-- 🎞 COMIC PANEL MAKER MODAL — 만화 칸 만들기 + 갤러리 이미지 채우기 -->
 <div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="comicMakerTitle" id="comicMakerModal">
   <div class="modal cm-modal">
-    <h3 id="comicMakerTitle">🎞 만화 컷 만들기 <span class="en">Comic Panels</span></h3>
+    <h3 id="comicMakerTitle" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span>🎞 만화 컷 만들기 <span class="en">Comic Panels</span></span>
+      <span data-anlas-mirror class="anlas-mirror" title="현재 NAI 잔량 — 새 컷용 이미지 생성 계획에 참고"></span>
+    </h3>
     <div class="modal-body cm-body">
       <div class="cm-stage" id="cmStage">
         <div class="cm-canvas-wrap" id="cmCanvasWrap"></div>
@@ -5542,17 +5552,28 @@ function setAnlasPill(){
     pill.className = 'pill pill-off';
     pill.textContent = '오프라인 (Offline)';
     pill.title = '';
+    _broadcastAnlas();
     return;
   }
   if(!state.anlas){
     pill.className = 'pill pill-warn';
     pill.textContent = '확인 중…';
+    _broadcastAnlas();
     return;
   }
   if(state.anlas.error){
-    pill.className = 'pill pill-warn';
-    pill.textContent = state.anlas.errorText || '잔량 조회 차단';
-    pill.title = `잔량 조회 실패: ${state.anlas.error}\n💡 한 번 생성하면 응답 헤더에서 잔량을 받아옵니다.`;
+    // 🪙 에러 시에도 캐시된 마지막 값이 있으면 그걸 보여줌 (회색조)
+    if(state.anlas.cachedTotal != null){
+      pill.className = 'pill pill-warn';
+      const cached = state.anlas.cachedTotal.toLocaleString();
+      pill.textContent = `~${cached} Anlas (캐시)`;
+      pill.title = `📦 마지막 알려진 값: ${cached} Anlas\n⚠ 현재 실시간 조회 차단 (CORS) — 한 번 생성하면 정확한 값으로 갱신됩니다.\n${state.anlas.errorText||''}`;
+    } else {
+      pill.className = 'pill pill-warn';
+      pill.textContent = '🔄 첫 생성 후 표시';
+      pill.title = `NAI 구독 API는 브라우저 CORS 로 차단됩니다.\n💡 이미지를 한 번 생성하면 응답 헤더에서 잔량을 추출해 표시합니다.\n오류: ${state.anlas.errorText || state.anlas.error}`;
+    }
+    _broadcastAnlas();
     return;
   }
   pill.className = 'pill pill-on';
@@ -5563,6 +5584,24 @@ function setAnlasPill(){
   pill.title = state.anlas.fromHeader
     ? `응답 헤더에서 추출${state.anlas.estimated?' (잔량 추정)':''}${costStr}`
     : `Tier ${state.anlas.tier} · Fixed ${(state.anlas.fixed||0).toLocaleString()} + Purchased ${(state.anlas.purchased||0).toLocaleString()}${costStr}`;
+  // 💾 잔량 영속화 — 새로고침 후에도 마지막 값 유지 (캐시)
+  if(typeof state.anlas.total === 'number'){
+    DB.setFlag?.('anlas_last', {total: state.anlas.total, tier: state.anlas.tier, at: Date.now()}).catch(e => _swallow(e, 'anlas:persist'));
+  }
+  _broadcastAnlas();
+}
+
+// 🪙 모달·다른 영역의 미니 Anlas 표시기에 같은 값을 푸시 (만화 메이커 등).
+function _broadcastAnlas(){
+  const targets = document.querySelectorAll('[data-anlas-mirror]');
+  if(!targets.length) return;
+  const pill = $('anlasPill');
+  if(!pill) return;
+  targets.forEach(el => {
+    el.textContent = pill.textContent;
+    el.className = pill.className.replace('pill', 'pill-mini') + ' anlas-mirror';
+    el.title = pill.title;
+  });
 }
 
 async function naiFetchAnlas(apiKey){
@@ -6409,8 +6448,25 @@ function refreshCost(){
   const isSmall = o.w * o.h <= NAI_SMALL_MP && o.steps <= NAI_MAX_STEPS_SMALL;
   const tier = state.anlas?.tier || 0;
   const free = isSmall && tier >= 3;
-  $('costEstimate').textContent = free ? '비용: 무료 (Opus 무제한)' : `비용: 약 ${cost} Anlas`;
-  $('costEstimate').style.color = free ? 'var(--green)' : 'var(--t2)';
+  // 🪙 잔량(state.anlas.total 또는 cachedTotal) 같이 표시 → "비용 30 / 잔량 12,450"
+  //    잔량 < 비용 이면 빨강 경고. 잔량 모르면 비용만.
+  const known = state.anlas && !state.anlas.error ? state.anlas.total
+              : (state.anlas?.cachedTotal != null ? state.anlas.cachedTotal : null);
+  const el = $('costEstimate');
+  if(free){
+    el.textContent = '비용: 무료 (Opus 무제한)';
+    el.style.color = 'var(--green)';
+  } else if(known != null){
+    const insufficient = known < cost;
+    const mark = state.anlas?.error || state.anlas?.fromHeader ? '~' : '';
+    el.textContent = `비용 ${cost} / 잔량 ${mark}${known.toLocaleString()} Anlas`;
+    el.style.color = insufficient ? 'var(--red)' : 'var(--t2)';
+    el.title = insufficient ? '⚠ 잔량 부족 — 생성 실패 가능' : `생성 후 잔량: ~${(known - cost).toLocaleString()}`;
+  } else {
+    el.textContent = `비용: 약 ${cost} Anlas`;
+    el.style.color = 'var(--t2)';
+    el.title = '잔량 미확인 — 키를 등록하고 한 번 생성하면 표시됩니다.';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -10439,6 +10495,73 @@ async function saveWildcards(){
   await DB.setFlag('wildcards', (state.wildcards || []).map(_normalizeWildcard).filter(Boolean));
 }
 const _saveWildcardsDebounced = debounce(saveWildcards, 400);
+
+// 🃏 한국어/공백/특수문자 → ASCII 슬러그 (와일드카드 이름은 [A-Za-z0-9_-] 만 허용).
+//    한글은 강제로 day → "day", 비면 카운터로 wc{N}. 충돌 시 _2,_3 부여.
+function _wcSlugifyName(raw, fallbackIdx){
+  if(typeof raw === 'string' && WILDCARD_NAME_RE.test(raw)) return raw.slice(0, 40);
+  let s = String(raw || '').toLowerCase().trim();
+  // 공백·구두점 → 언더스코어, 한글 등 비ASCII는 제거
+  s = s.replace(/[^a-z0-9_\-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
+  if(s && WILDCARD_NAME_RE.test(s)) return s;
+  return `wc${fallbackIdx || 1}`;
+}
+
+function _wcUniqueName(base){
+  const taken = new Set((state.wildcards || []).map(w => w.name));
+  if(!taken.has(base)) return base;
+  let n = 2;
+  while(taken.has(`${base}_${n}`) && n < 999) n++;
+  return `${base}_${n}`;
+}
+
+// 🃏 RC 카테고리 1개 → 와일드카드 1개 변환·저장.
+//    category.label → wildcard.label (한글 그대로) + wildcard.name 은 ASCII 슬러그.
+//    옵션 {text,weight} 그대로 옮김. 빈 옵션은 생략.
+async function rcCategoryToWildcard(catIdx){
+  const cat = state.randomCategories?.[catIdx];
+  if(!cat){ toast('카테고리 없음', 'error'); return; }
+  const opts = (cat.options || []).filter(o => (o.text || '').trim());
+  if(!opts.length){ toast('옵션이 비어있는 카테고리 — 채우고 다시', 'warning'); return; }
+  const baseName = _wcSlugifyName(cat.label || cat.name || '', catIdx + 1);
+  const name = _wcUniqueName(baseName);
+  const wc = {
+    name,
+    label: (cat.label || '').trim() || name,
+    options: opts.map(o => ({text: String(o.text || ''), weight: Number.isFinite(Number(o.weight)) ? Number(o.weight) : 1})),
+    locked: false, lockedIdx: 0,
+  };
+  if(!Array.isArray(state.wildcards)) state.wildcards = [];
+  state.wildcards.push(wc);
+  await saveWildcards();
+  if(typeof renderWildcards === 'function') renderWildcards();
+  toast(`🃏 와일드카드 저장됨 — __${name}__ (옵션 ${opts.length}개)`, 'success', {timeoutMs: 6000});
+}
+
+// 🃏 활성 RC 카테고리 전체 → 와일드카드 일괄 저장.
+async function rcExportAllToWildcards(){
+  const cats = (state.randomCategories || []).filter(c => c.enabled && (c.options || []).length);
+  if(!cats.length){ toast('활성+옵션 있는 카테고리가 없어요', 'warning'); return; }
+  if(!Array.isArray(state.wildcards)) state.wildcards = [];
+  const created = [];
+  cats.forEach((cat, i) => {
+    const opts = (cat.options || []).filter(o => (o.text || '').trim());
+    if(!opts.length) return;
+    const baseName = _wcSlugifyName(cat.label || cat.name || '', i + 1);
+    const name = _wcUniqueName(baseName);
+    state.wildcards.push({
+      name,
+      label: (cat.label || '').trim() || name,
+      options: opts.map(o => ({text: String(o.text || ''), weight: Number.isFinite(Number(o.weight)) ? Number(o.weight) : 1})),
+      locked: false, lockedIdx: 0,
+    });
+    created.push(`__${name}__`);
+  });
+  if(!created.length){ toast('변환할 카테고리 없음', 'warning'); return; }
+  await saveWildcards();
+  if(typeof renderWildcards === 'function') renderWildcards();
+  toast(`🃏 ${created.length}개 와일드카드 저장: ${created.slice(0,4).join(' ')}${created.length>4?'…':''}`, 'success', {timeoutMs: 8000});
+}
 
 // 📊 통계 모달 — IDB 의 모든 이미지(휴지통 제외) 순회하여 좋아요·캐릭터 집계.
 //   좋아요(❤️) 기반: 시드 / 프롬프트(첫 60자) / 모델 top 10
@@ -14660,6 +14783,8 @@ function openComicMakerModal(){
     cvs, ctx, scale: 1,
   };
   _cmSetLayout(CM_LAYOUTS[0].id);
+  // 🪙 잔량 미러 즉시 채움 (모달 헤더의 anlas-mirror)
+  if(typeof _broadcastAnlas === 'function') _broadcastAnlas();
   toast('🎞 칸을 클릭해서 갤러리 이미지로 채우세요', 'info');
 }
 
@@ -15062,6 +15187,38 @@ function tplRenderRoll(){
     </div>`;
   }).join('');
   if($('tplRollStatus')) $('tplRollStatus').textContent = `${_tplCurrentRoll.length}개 항목`;
+}
+
+// 📤 활성 템플릿 카테고리 → RC 빌더 카테고리 일괄 복사
+//   각 활성 템플릿 카테고리(state.presets[cat]) 의 프리셋 목록을 그대로 RC 카테고리 옵션으로 옮김.
+//   ⭐ 즐겨찾기 필터 ON 이면 fav 만 옵션화. 빈 카테고리는 스킵.
+//   기존 RC 카테고리는 그대로 두고 끝에 append.
+async function tplExportActiveToRc(){
+  if(!_tplActiveCats || !_tplActiveCats.size){ toast('활성 카테고리가 없어요 — 칩을 골라주세요', 'warning'); return; }
+  const favOnly = !!state._tplFavOnly;
+  if(!Array.isArray(state.randomCategories)) _rcSetCategories([]);
+  let added = 0, totalOpts = 0;
+  const skipped = [];
+  for(const cid of TPL_AVAILABLE_CATS){
+    if(!_tplActiveCats.has(cid)) continue;
+    let list = state.presets[cid] || [];
+    if(favOnly) list = list.filter(p => p.fav);
+    if(!list.length){ skipped.push(cid); continue; }
+    const def = PRESET_TYPES.find(t => t.id === cid) || {label: cid, ico: '•'};
+    const cat = rcNewCategory(`${def.ico} ${def.label}${favOnly?' ⭐':''}`);
+    // 프리셋 1개 → 옵션 1개. 프리셋 이름은 옵션 인라인 prefix 가 아니라 text 만 옮김 (RC 빌더는 옵션 식별을 text 로 함).
+    cat.options = list.map(p => ({text: String(p.text || '').trim(), weight: 1.0})).filter(o => o.text);
+    if(!cat.options.length){ skipped.push(cid); continue; }
+    state.randomCategories.push(cat);
+    added++;
+    totalOpts += cat.options.length;
+  }
+  if(!added){ toast(`복사할 항목 없음 — 활성 카테고리에 ${favOnly?'⭐ 즐겨찾기 ':''}프리셋이 모두 비어있음`, 'warning'); return; }
+  _saveRandomCategoriesDebounced();
+  // RC 빌더가 열려있으면 즉시 렌더, 아니면 다음 열림 때.
+  if(typeof rcRender === 'function' && state.randomBuilderOpen) rcRender();
+  const skipMsg = skipped.length ? ` · 건너뜀 ${skipped.length}` : '';
+  toast(`📤 RC 빌더에 ${added}개 카테고리 추가 (옵션 총 ${totalOpts}개)${skipMsg}\n🎲 탭에서 확인 → 🃏 버튼으로 와일드카드 변환 가능`, 'success', {timeoutMs: 8000});
 }
 
 // 현재 조합을 메인 폼에 적용
@@ -18739,6 +18896,7 @@ function wireMiscEvents(){
     });
   }
   $('tplApplyBtn')?.addEventListener('click', tplApplyRoll);
+  $('tplToRcBtn')?.addEventListener('click', tplExportActiveToRc);
   // ➕ 현재 조합에 캐릭터 항목 추가 — 캐릭터 선택 모달 (검색 + 랜덤)
   $('tplAddCharSlotBtn')?.addEventListener('click', () => {
     openTplCharPicker();
@@ -19406,6 +19564,7 @@ function _rcRenderCard(cat, catIdx){
         <span class="rc-hdr-actions">
           <button data-act="add-opt" data-cat-idx="${catIdx}" title="＋ 옵션 추가">＋</button>
           <button data-act="add-from-preset" data-cat-idx="${catIdx}" title="📚 프리셋에서 옵션 채우기 (그룹별·썸네일·다중선택)" style="color:var(--acc)">📚</button>
+          <button data-act="cat-to-wildcard" data-cat-idx="${catIdx}" title="🃏 이 카테고리를 와일드카드로 저장 → 프롬프트에서 __이름__ 으로 사용" style="color:var(--acc)">🃏</button>
           <button data-act="more-menu" data-cat-idx="${catIdx}" title="⋯ 더보기 — 색상·노트·일괄 추가·도감·이동·복제" class="${note?'has-note':''}" aria-haspopup="menu">⋯</button>
           <button data-act="del-cat" data-cat-idx="${catIdx}" title="✕ 카테고리 삭제" style="color:var(--red)">✕</button>
         </span>
@@ -20993,6 +21152,7 @@ function rcWireEvents(){
   $('rcImportBtn')?.addEventListener('click', () => rcImportFromText());
   $('rcCollapseAllBtn')?.addEventListener('click', () => rcCollapseAll());
   $('rcApplyToCharBtn')?.addEventListener('click', () => rcApplyToCharacter());
+  $('rcExportWildcardsBtn')?.addEventListener('click', () => rcExportAllToWildcards());
   $('rcClearLocksBtn')?.addEventListener('click', () => rcClearAllLocks());
 
   // 🔍 검색 + 필터 (debounce 80ms)
@@ -21056,6 +21216,7 @@ function rcWireEvents(){
     else if(act === 'add-empty') rcAddOption(catIdx, '');
     else if(act === 'add-from-preset') rcAddFromPreset(catIdx);
     else if(act === 'add-from-tagdex') rcAddFromTagdex(catIdx);
+    else if(act === 'cat-to-wildcard') rcCategoryToWildcard(catIdx);
     else if(act === 'del-opt') rcDelOption(catIdx, optIdx);
     else if(act === 'weight-up') rcAdjustOptWeight(catIdx, optIdx, +0.2);
     else if(act === 'weight-down') rcAdjustOptWeight(catIdx, optIdx, -0.2);
@@ -21343,7 +21504,10 @@ async function refreshAnlas(opts){
       setAnlasPill();
       if(!silent) toast('💡 잔량 조회 API는 차단됐지만 생성 응답 헤더에서 잔량을 받아옵니다', 'info');
     } else {
-      state.anlas = {error: a?.error || statusText, errorText: statusText};
+      // 💾 캐시된 마지막 값(부팅 시 IDB 로딩분) 있으면 에러 객체에 attach → setAnlasPill 이 회색조로 보여줌
+      const cachedTotal = state.anlas?.cachedTotal != null ? state.anlas.cachedTotal :
+                          (state.anlas?.total != null && !state.anlas.error ? state.anlas.total : null);
+      state.anlas = {error: a?.error || statusText, errorText: statusText, cachedTotal};
       setAnlasPill();
       // 자세한 토스트 — silent 모드면 표시 안 함.
       // CORS 차단 (status=0) 안내는 한 세션당 1회만 (반복 noise 억제).
@@ -21473,6 +21637,16 @@ async function init(){
   // Try Anlas if key exists
   // 페이지 로드 자동 호출은 silent — CORS 차단되더라도 토스트로 시끄럽게 알리지 않음.
   // (사용자가 ⟳ 버튼 누르면 그때 자세히 안내, pill에는 상태 표시 유지.)
+  //
+  // 💾 우선 IDB 캐시 (마지막 알려진 잔량) 를 불러와서 pill 에 즉시 표시 → 새로고침 후 빈칸 방지.
+  //    그다음 background refresh — 성공하면 덮어쓰고, 실패하면 캐시값을 회색조로 유지.
+  try {
+    const cached = await DB.getFlag?.('anlas_last');
+    if(cached && typeof cached.total === 'number'){
+      state.anlas = {error:'cached', errorText:'캐시값 (실시간 확인 중)', cachedTotal: cached.total, tier: cached.tier};
+      setAnlasPill();
+    }
+  } catch(e){ _swallow(e, 'anlas:loadCache'); }
   if(state.apiKey) refreshAnlas({silent: true});
 
   // Storage info
