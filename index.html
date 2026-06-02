@@ -13999,9 +13999,15 @@ function _teAttachCanvasEvents(){
     _teState.drag = null;
     cvs.classList.remove('te-grabbing');
   };
+  // 현재 편집 세션의 move/end 핸들러를 _teState에 보관 — window 리스너는 단 한 번만 바인딩(누수 방지).
+  _teState._move = move;
+  _teState._end = end;
   cvs.addEventListener('mousedown', e => start(e.clientX, e.clientY, e));
-  window.addEventListener('mousemove', e => _teState && move(e.clientX, e.clientY, e));
-  window.addEventListener('mouseup', () => _teState && end());
+  if(!_teAttachCanvasEvents._winBound){
+    _teAttachCanvasEvents._winBound = true;
+    window.addEventListener('mousemove', e => { if(_teState && _teState._move) _teState._move(e.clientX, e.clientY, e); });
+    window.addEventListener('mouseup', () => { if(_teState && _teState._end) _teState._end(); });
+  }
   cvs.addEventListener('touchstart', e => {
     if(e.touches.length !== 1) return;
     start(e.touches[0].clientX, e.touches[0].clientY, e);
