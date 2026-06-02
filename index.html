@@ -3367,8 +3367,7 @@ coffee shop, latte art"></textarea>
     </div>
     <div class="modal-foot">
       <button class="btn ghost" id="teCancel">취소 <span class="en">Cancel</span></button>
-      <button class="btn ghost" id="teOverwrite" title="원본 이미지를 편집본으로 교체 (되돌릴 수 없음)" style="color:var(--red);border-color:rgba(181,67,56,.45)">♻ 원본 덮어쓰기 <span class="en">Overwrite</span></button>
-      <button class="btn primary" id="teSaveNew" title="편집본을 갤러리에 새 이미지로 저장">💾 새로 저장 <span class="en">Save as new</span></button>
+      <button class="btn primary" id="teSaveNew" title="편집본을 갤러리에 새 이미지로 저장 (원본 보존)">💾 새 이미지로 저장 <span class="en">Save as new</span></button>
     </div>
   </div>
 </div>
@@ -14145,47 +14144,6 @@ async function _teSaveNew(){
   }
 }
 
-async function _teOverwrite(){
-  // 원본 IDB 항목의 blob/thumb 만 교체. id는 유지.
-  const item = _teState.item;
-  confirmDialog(
-    `원본 이미지를 편집본으로 교체합니다. 되돌릴 수 없어요. 계속하시겠어요?`,
-    async () => {
-      const blob = await _teComposite();
-      if(!blob){ toast('합성 실패', 'error'); return; }
-      try {
-        await new Promise((res, rej) => {
-          const tx = DB.tx([DB.IMG], 'readwrite');
-          const store = tx.objectStore(DB.IMG);
-          const req = store.get(item.id);
-          let sid = null;
-          req.onsuccess = () => {
-            const row = req.result;
-            if(!row){ rej(new Error('항목 없음')); return; }
-            row.blob = blob;
-            row.meta = { ...(row.meta || {}), edited: true, editAt: Date.now() };
-            sid = row.sessionId;
-            store.put(row);
-          };
-          tx.oncomplete = () => { if(sid != null) DB._invalidateImgCache(sid); res(); };
-          tx.onerror = e => rej(e);
-        });
-        toast('♻ 원본 교체 완료', 'success');
-        _teCloseModal();
-        // 라이트박스가 열려있다면 다시 로드
-        if(_lbCurrent && _lbCurrent.id === item.id){
-          await showLightboxAt(_lbIdx);
-        }
-        if(state.mainPane === 'gallery') await loadGallery();
-      } catch(e){
-        _swallow(e, 'te:overwrite');
-        toast('덮어쓰기 실패 — ' + (e?.message || e), 'error');
-      }
-    },
-    '♻ 원본 덮어쓰기'
-  );
-}
-
 function _teWireOnce(){
   if(_teWireOnce._done) return;
   _teWireOnce._done = true;
@@ -14203,7 +14161,6 @@ function _teWireOnce(){
     }
   });
   $('teSaveNew')?.addEventListener('click', () => _teState && _teSaveNew());
-  $('teOverwrite')?.addEventListener('click', () => _teState && _teOverwrite());
   // 속성 패널
   const sync = (inp, fn) => inp?.addEventListener('input', () => {
     const o = _teGetSel(); if(!o) return; fn(o); _teRender(); _teRenderLayers();
