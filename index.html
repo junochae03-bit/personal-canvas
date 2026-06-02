@@ -411,7 +411,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 /* 썸네일 오버레이 버튼 — 펼쳤을 때만 표시 */
 .g-thumb .g-album-btn,
 .g-thumb .open-lb,
-.g-thumb .g-exif-btn{
+.g-thumb .g-exif-btn,
+.g-thumb .g-textedit{
   position:absolute;
   background:rgba(42,32,16,.62);
   color:#fff;border:none;cursor:pointer;
@@ -425,15 +426,19 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .g-thumb .g-album-btn{top:8px;right:8px}
 .g-thumb .open-lb{bottom:8px;right:8px}
 .g-thumb .g-exif-btn{bottom:8px;left:8px;font-weight:700;font-family:var(--mono);color:#fff8ec;background:rgba(58,99,152,.85)}
+.g-thumb .g-textedit{bottom:8px;left:46px;font-weight:700;color:#fff8ec;background:rgba(214,160,80,.85)}
 .g-thumb .g-album-btn:hover,
 .g-thumb .open-lb:hover{background:rgba(20,14,4,.88)}
 .g-thumb .g-exif-btn:hover{background:rgba(58,99,152,1)}
+.g-thumb .g-textedit:hover{background:rgba(214,160,80,1)}
 .g-thumb .g-album-btn:active,
 .g-thumb .open-lb:active,
-.g-thumb .g-exif-btn:active{transform:scale(.92)}
+.g-thumb .g-exif-btn:active,
+.g-thumb .g-textedit:active{transform:scale(.92)}
 .g-item.expanded:hover .g-thumb .g-album-btn,
 .g-item.expanded:hover .g-thumb .open-lb,
-.g-item.expanded:hover .g-thumb .g-exif-btn{opacity:1}
+.g-item.expanded:hover .g-thumb .g-exif-btn,
+.g-item.expanded:hover .g-thumb .g-textedit{opacity:1}
 /* 데스크탑에서도 hover 진입 가능성 힌트 — 우상단·우하단에 옅은 그라데이션 */
 @media (hover:hover){
   .g-item.expanded .g-thumb::after{
@@ -448,13 +453,15 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 @media (hover:none){
   .g-item.expanded .g-thumb .g-album-btn,
   .g-item.expanded .g-thumb .open-lb,
-  .g-item.expanded .g-thumb .g-exif-btn{opacity:.85}
+  .g-item.expanded .g-thumb .g-exif-btn,
+  .g-item.expanded .g-thumb .g-textedit{opacity:.85}
 }
 /* 🧹 컴팩트 모드 — 모든 오버레이 아이콘 숨김 (사용자 요청, 깔끔하게)
    필요한 동작은 탭(라이트박스 자동) / 롱프레스(선택 모드)로 접근 */
 .gallery-grid.compact .g-thumb .g-album-btn,
 .gallery-grid.compact .g-thumb .open-lb,
-.gallery-grid.compact .g-thumb .g-exif-btn{display:none !important}
+.gallery-grid.compact .g-thumb .g-exif-btn,
+.gallery-grid.compact .g-thumb .g-textedit{display:none !important}
 
 /* 📛 헤더 = 파일명만 (라벨/시드/시간). 정보 영역(.g-info)은 완전 제거됨 */
 .g-head{
@@ -807,6 +814,48 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 #inpaintCanvasWrap canvas{position:absolute;cursor:crosshair;touch-action:none}
 .inp-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:4px 0}
 .inp-tools .lbl{color:var(--t2);font-size:12.5px}
+
+/* TEXT EDIT MODAL — 🅣 텍스트·말풍선 편집기 */
+#textEditModal .modal{max-width:96vw;max-height:94vh;width:1180px;display:flex;flex-direction:column}
+#textEditModal .te-body{display:flex;flex-direction:row;gap:12px;flex:1;min-height:0;align-items:stretch;overflow:hidden}
+#textEditModal .te-stage{flex:1;min-width:0;min-height:340px;background:#1a1308;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1.5px solid var(--b2);border-radius:6px;position:relative}
+#textEditModal .te-canvas-wrap{position:relative;max-width:100%;max-height:100%;display:inline-block}
+#textEditModal .te-canvas-wrap canvas{display:block;max-width:100%;max-height:100%;touch-action:none;cursor:default;border-radius:4px}
+#textEditModal .te-canvas-wrap canvas.te-grab{cursor:grab}
+#textEditModal .te-canvas-wrap canvas.te-grabbing{cursor:grabbing}
+#textEditModal .te-canvas-wrap .te-textarea{position:absolute;background:rgba(255,255,255,.96);color:#111;border:2px solid var(--acc);border-radius:4px;padding:4px 6px;font:inherit;outline:none;resize:none;z-index:5;box-shadow:0 4px 14px rgba(0,0,0,.45);min-width:80px;min-height:30px}
+#textEditModal .te-panel{width:300px;flex-shrink:0;overflow-y:auto;padding:4px 6px 4px 0;display:flex;flex-direction:column;gap:14px}
+#textEditModal .te-section{background:var(--card);border:1px solid var(--b1);border-radius:6px;padding:10px}
+#textEditModal .te-section-title{font-size:12px;font-weight:700;color:var(--acc);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+#textEditModal .te-section-title .en{color:var(--t3);font-weight:400;text-transform:none;font-size:.85em;letter-spacing:0}
+#textEditModal .te-add-row{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:6px}
+#textEditModal .te-add-btn{padding:8px 6px;font-size:12px;white-space:nowrap}
+#textEditModal .te-bubble-pick{padding:6px;font-size:12px}
+#textEditModal .te-field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+#textEditModal .te-field label{font-size:11px;color:var(--t3);font-weight:600}
+#textEditModal .te-field label .en{font-weight:400;opacity:.7;font-size:.92em}
+#textEditModal .te-field-row{display:flex;gap:8px;margin-top:8px;align-items:flex-end}
+#textEditModal .te-inp{font-size:12.5px;padding:5px 7px}
+#textEditModal textarea.te-inp{resize:vertical;min-height:38px;font-family:var(--font)}
+#textEditModal input[type=range].te-inp{padding:0;accent-color:var(--acc);width:100%}
+#textEditModal .te-color{padding:0;width:44px;height:30px;border:1.5px solid var(--b1);border-radius:5px;cursor:pointer;background:transparent}
+#textEditModal .te-val{font-size:11px;color:var(--t2);min-width:36px;text-align:right;font-variant-numeric:tabular-nums}
+#textEditModal .te-layers{display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto}
+#textEditModal .te-layer{display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--bg);border:1px solid var(--b1);border-radius:4px;font-size:12px;cursor:pointer;transition:background .12s}
+#textEditModal .te-layer:hover{background:var(--b1)}
+#textEditModal .te-layer.sel{background:rgba(214,160,80,.18);border-color:var(--acc)}
+#textEditModal .te-layer .te-l-ico{font-size:13px;flex-shrink:0}
+#textEditModal .te-layer .te-l-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t1)}
+#textEditModal .te-layer .te-l-btn{background:transparent;border:none;cursor:pointer;color:var(--t3);padding:2px 4px;font-size:13px;border-radius:3px;line-height:1}
+#textEditModal .te-layer .te-l-btn:hover{background:var(--b1);color:var(--t1)}
+#textEditModal .te-layer .te-l-btn.te-l-del:hover{color:var(--red)}
+#textEditModal .te-empty{font-size:11.5px;color:var(--t3);text-align:center;padding:14px 4px;font-style:italic}
+@media (max-width:820px){
+  #textEditModal .modal{width:100%;max-height:96vh}
+  #textEditModal .te-body{flex-direction:column}
+  #textEditModal .te-panel{width:100%;max-height:38vh}
+  #textEditModal .te-stage{min-height:240px}
+}
 
 /* GUIDE MODAL — NAI 가이드 */
 #guideBody{line-height:1.75;font-size:13.5px;color:var(--t1)}
@@ -2797,6 +2846,7 @@ mark{
     <div style="height:1px;background:var(--b1);margin:2px 0"></div>
     <button class="iconbtn lb-act-btn" id="lbEnhance" title="✨ Enhance — 디테일업 (img2img, 약한 강도)"><span class="lb-act-ico">✨</span><span class="lb-act-lbl">향상</span></button>
     <button class="iconbtn lb-act-btn" id="lbUpscale" title="⬆ 4배 업스케일 (해상도 ×4, 비용 ↑)"><span class="lb-act-ico">⬆</span><span class="lb-act-lbl">4배</span></button>
+    <button class="iconbtn lb-act-btn" id="lbTextEdit" title="🅣 텍스트·말풍선 편집 — 이미지 위에 글자/말풍선 추가" style="border-color:rgba(214,160,80,.4);color:var(--acc)"><span class="lb-act-ico">🅣</span><span class="lb-act-lbl">텍스트</span></button>
     <div style="height:1px;background:var(--b1);margin:2px 0"></div>
     <button class="iconbtn lb-act-btn" id="lbI2I" title="→ I2I로 보내기 (Send to I2I)"><span class="lb-act-ico">→I</span><span class="lb-act-lbl">I2I</span></button>
     <button class="iconbtn lb-act-btn" id="lbVibe" title="→ Vibe 참조로 사용 (Send to Vibe)"><span class="lb-act-ico">→V</span><span class="lb-act-lbl">Vibe</span></button>
@@ -3250,6 +3300,75 @@ coffee shop, latte art"></textarea>
     <div class="modal-foot">
       <button class="btn ghost" id="inpaintCancel">취소 <span class="en">Cancel</span></button>
       <button class="btn primary" id="inpaintSave">저장 <span class="en">Save</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- 🅣 TEXT EDIT MODAL — 이미지 위에 텍스트·말풍선 합성 -->
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="textEditTitle" id="textEditModal">
+  <div class="modal te-modal">
+    <h3 id="textEditTitle">🅣 텍스트·말풍선 편집 <span class="en">Text &amp; Bubble Editor</span></h3>
+    <div class="modal-body te-body">
+      <div class="te-stage" id="teStage">
+        <div class="te-canvas-wrap" id="teCanvasWrap"></div>
+      </div>
+      <div class="te-panel" id="tePanel">
+        <div class="te-section">
+          <div class="te-section-title">＋ 객체 추가 <span class="en">Add</span></div>
+          <div class="te-add-row">
+            <button class="btn ghost te-add-btn" id="teAddText" title="텍스트 박스 추가">＋ 텍스트</button>
+            <select class="inp te-bubble-pick" id="teBubblePick" title="말풍선 모양">
+              <option value="speech">🗨 일반</option>
+              <option value="thought">💭 생각</option>
+              <option value="burst">💥 외침</option>
+              <option value="rect">▭ 사각</option>
+              <option value="rounded">⬭ 둥근사각</option>
+            </select>
+            <button class="btn ghost te-add-btn" id="teAddBubble" title="선택된 모양 말풍선 추가">＋ 말풍선</button>
+          </div>
+        </div>
+        <div class="te-section" id="teSelSection" style="display:none">
+          <div class="te-section-title">선택 객체 속성 <span class="en">Selected</span></div>
+          <div class="te-field"><label>본문 <span class="en">Text</span></label><textarea class="ta te-inp" id="teText" rows="2" placeholder="텍스트 입력…"></textarea></div>
+          <div class="te-field"><label>폰트 <span class="en">Font</span></label><select class="inp te-inp" id="teFont">
+            <option value="ui">Pretendard / 시스템</option>
+            <option value="noto">Noto Sans KR</option>
+            <option value="malgun">Malgun Gothic</option>
+            <option value="mono">JetBrains Mono</option>
+            <option value="serif">serif</option>
+            <option value="sans">sans-serif</option>
+          </select></div>
+          <div class="te-field-row">
+            <div class="te-field"><label>크기 <span class="en">Size</span></label><input type="range" class="te-inp" id="teSize" min="12" max="144" step="1" value="32"><span class="te-val" id="teSizeVal">32</span></div>
+            <div class="te-field"><label>굵기 <span class="en">Weight</span></label><select class="inp te-inp" id="teWeight">
+              <option value="400">일반</option><option value="700">굵게</option>
+            </select></div>
+          </div>
+          <div class="te-field-row">
+            <div class="te-field"><label>글자색 <span class="en">Color</span></label><input type="color" class="te-inp te-color" id="teColor" value="#000000"></div>
+            <div class="te-field"><label>외곽선 <span class="en">Stroke</span></label><input type="color" class="te-inp te-color" id="teStrokeColor" value="#ffffff"><label class="chk" style="margin-left:6px"><input type="checkbox" id="teStrokeOn"> ON</label></div>
+          </div>
+          <div class="te-field-row" id="teBubbleFields">
+            <div class="te-field"><label>풍선 채움 <span class="en">Fill</span></label><input type="color" class="te-inp te-color" id="teBubbleFill" value="#ffffff"></div>
+            <div class="te-field"><label>테두리 <span class="en">Border</span></label><input type="color" class="te-inp te-color" id="teBubbleBorder" value="#000000"></div>
+          </div>
+          <div class="te-field-row">
+            <div class="te-field"><label>정렬 <span class="en">Align</span></label><select class="inp te-inp" id="teAlign">
+              <option value="left">좌</option><option value="center">중앙</option><option value="right">우</option>
+            </select></div>
+            <div class="te-field"><label>회전 <span class="en">Rotate</span></label><input type="range" class="te-inp" id="teRot" min="-180" max="180" step="1" value="0"><span class="te-val" id="teRotVal">0°</span></div>
+          </div>
+        </div>
+        <div class="te-section">
+          <div class="te-section-title">레이어 <span class="en">Layers</span></div>
+          <div class="te-layers" id="teLayers"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="teCancel">취소 <span class="en">Cancel</span></button>
+      <button class="btn ghost" id="teOverwrite" title="원본 이미지를 편집본으로 교체 (되돌릴 수 없음)" style="color:var(--red);border-color:rgba(181,67,56,.45)">♻ 원본 덮어쓰기 <span class="en">Overwrite</span></button>
+      <button class="btn primary" id="teSaveNew" title="편집본을 갤러리에 새 이미지로 저장">💾 새로 저장 <span class="en">Save as new</span></button>
     </div>
   </div>
 </div>
@@ -12146,6 +12265,7 @@ function renderGalleryItemHtml(img, sesId){
       <img src="${url}" loading="lazy" decoding="async" alt="${esc(label)}">
       <button class="g-album-btn" data-act="album" title="앨범에 추가/제거">📁</button>
       <button class="g-exif-btn" data-act="exif" title="↻ EXIF로 폼 복원 (프롬프트·시드·모델 등)">↻</button>
+      <button class="g-textedit" data-act="textedit" title="🅣 텍스트·말풍선 편집">🅣</button>
       <button class="open-lb" data-act="lb" title="크게 보기 (Lightbox)">🔍</button>
       <button class="g-like" data-act="like" title="❤️ 좋아요 (통계 집계)" aria-pressed="${liked}">${liked?'❤':'♡'}</button>
       <button class="g-dislike" data-act="dislike" title="👎 별로 (자주 실패 분석)" aria-pressed="${disliked}">👎</button>
@@ -13369,6 +13489,763 @@ function saveMaskFromCanvas(){
   $('inpaintModal').classList.remove('open');
   toast('마스크 저장됨', 'success');
 }
+
+// ═══════════════════════════════════════════════════════════
+// 🅣 TEXT/BUBBLE EDITOR — 이미지 위에 글자·말풍선 합성
+// ═══════════════════════════════════════════════════════════
+//   - 배경 캔버스(원본 이미지) + 객체 배열을 매 프레임 Canvas 2D로 재렌더
+//   - 객체: { type:'text'|'bubble', x, y, w, h, rotation, text, font, fontSize,
+//             fontWeight, color, align, stroke:{on,color,width},
+//             bubble:{shape, fill, border, tailX, tailY} }
+//   - 좌표는 원본 이미지 픽셀 기준. 화면엔 CSS scale 로 맞춤. 저장 시엔 원본 해상도 그대로.
+let _teState = null;  // { item, img, scale, cvs, ctx, objs, selId, drag, editing }
+
+const TE_FONTS = {
+  ui:     `"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif`,
+  noto:   `"Noto Sans KR","Pretendard","Malgun Gothic",sans-serif`,
+  malgun: `"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`,
+  mono:   `"JetBrains Mono","D2Coding","Consolas",monospace`,
+  serif:  `"Noto Serif KR",Georgia,serif`,
+  sans:   `system-ui,sans-serif`,
+};
+
+function _teFontFamily(key){ return TE_FONTS[key] || TE_FONTS.ui; }
+
+async function openTextEditModal(item){
+  if(!item || !item.blob){ toast('이미지를 불러올 수 없음', 'error'); return; }
+  const modal = $('textEditModal');
+  modal.classList.add('open');
+  const wrap = $('teCanvasWrap');
+  wrap.innerHTML = '';
+  const img = new Image();
+  const url = URL.createObjectURL(item.blob);
+  try {
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+  } catch(e){
+    URL.revokeObjectURL(url);
+    toast('이미지 디코딩 실패', 'error');
+    modal.classList.remove('open');
+    return;
+  }
+  const W = img.naturalWidth, H = img.naturalHeight;
+  const stage = $('teStage');
+  const padding = 16;
+  const maxW = Math.max(120, (stage.clientWidth || 600) - padding);
+  const maxH = Math.max(120, (stage.clientHeight || 400) - padding);
+  const scale = Math.min(maxW / W, maxH / H, 1);
+  const cvs = document.createElement('canvas');
+  cvs.width = W; cvs.height = H;
+  cvs.style.width = (W * scale) + 'px';
+  cvs.style.height = (H * scale) + 'px';
+  const ctx = cvs.getContext('2d');
+  wrap.appendChild(cvs);
+  wrap.style.width = (W * scale) + 'px';
+  wrap.style.height = (H * scale) + 'px';
+
+  _teState = {
+    item, img, url, scale, W, H,
+    cvs, ctx,
+    objs: [],
+    selId: null,
+    nextId: 1,
+    drag: null,   // {kind:'move'|'resize'|'rotate'|'tail', objId, ...}
+    editing: null,
+    bgImage: img,
+  };
+  _teRender();
+  _teAttachCanvasEvents();
+  _teRenderLayers();
+  _teSyncSelPanel();
+  toast('🅣 편집기 — 텍스트/말풍선을 추가하세요', 'info');
+}
+
+function _teCloseModal(){
+  if(_teState){
+    try { URL.revokeObjectURL(_teState.url); } catch(_){}
+    _teState = null;
+  }
+  const wrap = $('teCanvasWrap');
+  if(wrap) wrap.innerHTML = '';
+  $('textEditModal').classList.remove('open');
+}
+
+function _teMakeText(){
+  const W = _teState.W, H = _teState.H;
+  const id = _teState.nextId++;
+  const w = Math.min(W * 0.5, 320);
+  const fontSize = Math.max(20, Math.round(W * 0.04));
+  return {
+    id, type:'text',
+    x: (W - w) / 2, y: H * 0.1, w, h: fontSize * 1.6, rotation: 0,
+    text: '여기에 텍스트',
+    font: 'ui', fontSize, fontWeight: 700,
+    color: '#000000', align: 'center',
+    stroke: { on: true, color: '#ffffff', width: Math.max(2, fontSize * 0.12) },
+    bubble: null,
+  };
+}
+
+function _teMakeBubble(shape){
+  const W = _teState.W, H = _teState.H;
+  const id = _teState.nextId++;
+  const w = Math.min(W * 0.45, 360);
+  const h = Math.min(H * 0.22, 180);
+  const fontSize = Math.max(18, Math.round(W * 0.032));
+  const x = (W - w) / 2, y = H * 0.5 - h / 2;
+  return {
+    id, type:'bubble',
+    x, y, w, h, rotation: 0,
+    text: '말풍선 안에 글', font: 'ui', fontSize, fontWeight: 500,
+    color: '#111111', align: 'center',
+    stroke: { on: false, color: '#000000', width: 1 },
+    bubble: {
+      shape: shape || 'speech',
+      fill: '#ffffff', border: '#1a1a1a', borderWidth: Math.max(2, W * 0.003),
+      tailX: x + w * 0.25, tailY: y + h + h * 0.4,
+    },
+  };
+}
+
+function _teAddObj(obj){
+  _teState.objs.push(obj);
+  _teState.selId = obj.id;
+  _teRender();
+  _teRenderLayers();
+  _teSyncSelPanel();
+}
+
+function _teSelObj(id){
+  _teState.selId = id;
+  _teRender();
+  _teRenderLayers();
+  _teSyncSelPanel();
+}
+
+function _teGetSel(){ return _teState.objs.find(o => o.id === _teState.selId) || null; }
+
+function _teDelObj(id){
+  _teState.objs = _teState.objs.filter(o => o.id !== id);
+  if(_teState.selId === id) _teState.selId = null;
+  _teRender();
+  _teRenderLayers();
+  _teSyncSelPanel();
+}
+
+function _teMoveObj(id, dir){
+  const idx = _teState.objs.findIndex(o => o.id === id);
+  if(idx < 0) return;
+  const ni = dir < 0 ? idx - 1 : idx + 1;
+  if(ni < 0 || ni >= _teState.objs.length) return;
+  [_teState.objs[idx], _teState.objs[ni]] = [_teState.objs[ni], _teState.objs[idx]];
+  _teRender();
+  _teRenderLayers();
+}
+
+// ─── 텍스트 wrap (단어 단위 → 폴백 글자 단위) ───
+function _teWrapText(ctx, text, maxW){
+  const lines = [];
+  for(const raw of String(text || '').split(/\r?\n/)){
+    if(!raw){ lines.push(''); continue; }
+    // 공백 기준 단어 분리
+    const words = raw.split(/(\s+)/);
+    let cur = '';
+    for(const w of words){
+      const test = cur + w;
+      if(ctx.measureText(test).width <= maxW || !cur){
+        cur = test;
+      } else {
+        lines.push(cur.replace(/\s+$/,''));
+        cur = w.replace(/^\s+/,'');
+      }
+    }
+    // 너무 긴 단어(한글 연속) 글자 단위 분할
+    const split = [];
+    for(const ln of [cur]){
+      let buf = '';
+      for(const ch of ln){
+        const test = buf + ch;
+        if(ctx.measureText(test).width <= maxW || !buf){ buf = test; }
+        else { split.push(buf); buf = ch; }
+      }
+      if(buf) split.push(buf);
+    }
+    for(const s of split) lines.push(s);
+  }
+  return lines;
+}
+
+// ─── 말풍선 path ───
+function _teShapeSpeech(ctx, x, y, w, h, tailX, tailY){
+  // 둥근 직사각형 + 꼬리
+  const r = Math.min(w, h) * 0.18;
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  // 꼬리 — 아래쪽 적당한 위치에서 tailX,tailY 로 삼각형
+  const tailAttachX = Math.max(x + r * 2, Math.min(x + w - r * 2, tailX));
+  ctx.lineTo(tailAttachX + r * 0.6, y + h);
+  ctx.lineTo(tailX, tailY);
+  ctx.lineTo(tailAttachX - r * 0.6, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function _teShapeThought(ctx, x, y, w, h, tailX, tailY){
+  // 구름 모양 — 외곽을 원 8개로
+  const cx = x + w / 2, cy = y + h / 2;
+  const lobes = 12;
+  ctx.beginPath();
+  for(let i = 0; i < lobes; i++){
+    const a = (i / lobes) * Math.PI * 2;
+    const rx = (w / 2) * 1.05, ry = (h / 2) * 1.05;
+    const px = cx + Math.cos(a) * rx;
+    const py = cy + Math.sin(a) * ry;
+    const lobeR = Math.min(w, h) * 0.13;
+    if(i === 0) ctx.moveTo(px + lobeR, py);
+    ctx.arc(px, py, lobeR, 0, Math.PI * 2);
+  }
+  ctx.closePath();
+  // 꼬리 — 작은 원 2개로 점차 작아짐 (별도 path)
+  const dx = tailX - cx, dy = tailY - cy;
+  const dist = Math.hypot(dx, dy);
+  if(dist > 4){
+    const ux = dx / dist, uy = dy / dist;
+    const startX = cx + ux * (w / 2), startY = cy + uy * (h / 2);
+    const mid1X = startX + (tailX - startX) * 0.35, mid1Y = startY + (tailY - startY) * 0.35;
+    const mid2X = startX + (tailX - startX) * 0.7, mid2Y = startY + (tailY - startY) * 0.7;
+    ctx.moveTo(mid1X + 9, mid1Y); ctx.arc(mid1X, mid1Y, 9, 0, Math.PI * 2);
+    ctx.moveTo(mid2X + 6, mid2Y); ctx.arc(mid2X, mid2Y, 6, 0, Math.PI * 2);
+    ctx.moveTo(tailX + 4, tailY); ctx.arc(tailX, tailY, 4, 0, Math.PI * 2);
+  }
+}
+
+function _teShapeBurst(ctx, x, y, w, h, tailX, tailY){
+  // 외침 — 스파이크 (지그재그 별 모양)
+  const cx = x + w / 2, cy = y + h / 2;
+  const points = 16;
+  const outerRx = w / 2, outerRy = h / 2;
+  const innerRx = outerRx * 0.74, innerRy = outerRy * 0.74;
+  ctx.beginPath();
+  for(let i = 0; i < points * 2; i++){
+    const a = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
+    const rx = (i % 2 === 0) ? outerRx : innerRx;
+    const ry = (i % 2 === 0) ? outerRy : innerRy;
+    const px = cx + Math.cos(a) * rx;
+    const py = cy + Math.sin(a) * ry;
+    if(i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+function _teShapeRect(ctx, x, y, w, h){
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+}
+
+function _teShapeRoundedRect(ctx, x, y, w, h){
+  const r = Math.min(w, h) * 0.14;
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function _teDrawObj(ctx, obj, withHandles){
+  ctx.save();
+  // 회전 — 객체 중심을 기준으로
+  if(obj.rotation){
+    const cx = obj.x + obj.w / 2, cy = obj.y + obj.h / 2;
+    ctx.translate(cx, cy);
+    ctx.rotate(obj.rotation * Math.PI / 180);
+    ctx.translate(-cx, -cy);
+  }
+
+  if(obj.type === 'bubble'){
+    const b = obj.bubble;
+    ctx.fillStyle = b.fill;
+    ctx.strokeStyle = b.border;
+    ctx.lineWidth = b.borderWidth || 2;
+    ctx.lineJoin = 'round';
+    if(b.shape === 'speech') _teShapeSpeech(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY);
+    else if(b.shape === 'thought') _teShapeThought(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY);
+    else if(b.shape === 'burst') _teShapeBurst(ctx, obj.x, obj.y, obj.w, obj.h);
+    else if(b.shape === 'rect') _teShapeRect(ctx, obj.x, obj.y, obj.w, obj.h);
+    else _teShapeRoundedRect(ctx, obj.x, obj.y, obj.w, obj.h);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // 텍스트 렌더 (text 객체 또는 bubble 안 텍스트)
+  if(obj.text){
+    ctx.fillStyle = obj.color;
+    ctx.font = `${obj.fontWeight} ${obj.fontSize}px ${_teFontFamily(obj.font)}`;
+    ctx.textBaseline = 'top';
+    const pad = obj.type === 'bubble' ? Math.max(8, obj.w * 0.06) : 0;
+    const maxW = Math.max(8, obj.w - pad * 2);
+    const lines = _teWrapText(ctx, obj.text, maxW);
+    const lineH = obj.fontSize * 1.25;
+    const totalH = lines.length * lineH;
+    const startY = obj.type === 'bubble'
+      ? obj.y + (obj.h - totalH) / 2
+      : obj.y + pad;
+    for(let i = 0; i < lines.length; i++){
+      const ln = lines[i];
+      let tx;
+      if(obj.align === 'center') { ctx.textAlign = 'center'; tx = obj.x + obj.w / 2; }
+      else if(obj.align === 'right') { ctx.textAlign = 'right'; tx = obj.x + obj.w - pad; }
+      else { ctx.textAlign = 'left'; tx = obj.x + pad; }
+      const ty = startY + i * lineH;
+      if(obj.stroke?.on){
+        ctx.lineWidth = obj.stroke.width;
+        ctx.strokeStyle = obj.stroke.color;
+        ctx.lineJoin = 'round';
+        ctx.miterLimit = 2;
+        ctx.strokeText(ln, tx, ty);
+      }
+      ctx.fillText(ln, tx, ty);
+    }
+  }
+
+  // 핸들 (선택 표시 + 리사이즈/회전/꼬리 핸들)
+  if(withHandles){
+    const hs = Math.max(8, _teState.W * 0.012); // handle size in original px
+    ctx.strokeStyle = 'rgba(214,160,80,0.95)';
+    ctx.lineWidth = Math.max(1.5, _teState.W * 0.0025);
+    ctx.setLineDash([hs * 0.6, hs * 0.4]);
+    ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
+    ctx.setLineDash([]);
+    // 모서리 4핸들
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = Math.max(1, _teState.W * 0.0018);
+    const corners = [
+      [obj.x, obj.y], [obj.x + obj.w, obj.y],
+      [obj.x, obj.y + obj.h], [obj.x + obj.w, obj.y + obj.h],
+    ];
+    for(const [cx, cy] of corners){
+      ctx.fillRect(cx - hs/2, cy - hs/2, hs, hs);
+      ctx.strokeRect(cx - hs/2, cy - hs/2, hs, hs);
+    }
+    // 회전 핸들 — 상단 중앙 위
+    const rotX = obj.x + obj.w / 2;
+    const rotY = obj.y - hs * 2.5;
+    ctx.beginPath();
+    ctx.moveTo(rotX, obj.y);
+    ctx.lineTo(rotX, rotY);
+    ctx.stroke();
+    ctx.fillStyle = '#5d8a30';
+    ctx.beginPath();
+    ctx.arc(rotX, rotY, hs * 0.7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // 꼬리 핸들 (말풍선 중 꼬리 있는 것)
+    if(obj.type === 'bubble' && (obj.bubble.shape === 'speech' || obj.bubble.shape === 'thought')){
+      ctx.fillStyle = '#3a6398';
+      ctx.beginPath();
+      ctx.arc(obj.bubble.tailX, obj.bubble.tailY, hs * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function _teRender(){
+  if(!_teState) return;
+  const { ctx, W, H, bgImage, objs, selId } = _teState;
+  ctx.clearRect(0, 0, W, H);
+  ctx.drawImage(bgImage, 0, 0, W, H);
+  for(const o of objs){
+    _teDrawObj(ctx, o, o.id === selId);
+  }
+}
+
+// ─── 좌표 변환 (canvas screen → 원본 px) ───
+function _teClientToCanvas(clientX, clientY){
+  const r = _teState.cvs.getBoundingClientRect();
+  return {
+    x: (clientX - r.left) * (_teState.W / r.width),
+    y: (clientY - r.top) * (_teState.H / r.height),
+  };
+}
+
+// 회전한 객체 좌표계로 변환
+function _teToLocal(obj, px, py){
+  if(!obj.rotation) return { x: px, y: py };
+  const cx = obj.x + obj.w / 2, cy = obj.y + obj.h / 2;
+  const rad = -obj.rotation * Math.PI / 180;
+  const dx = px - cx, dy = py - cy;
+  return {
+    x: cx + dx * Math.cos(rad) - dy * Math.sin(rad),
+    y: cy + dx * Math.sin(rad) + dy * Math.cos(rad),
+  };
+}
+
+function _teHitTest(px, py){
+  // 위쪽 객체 우선 (역순)
+  const sel = _teGetSel();
+  const hs = Math.max(8, _teState.W * 0.012);
+  // 선택된 객체의 핸들 우선 검사
+  if(sel){
+    const local = _teToLocal(sel, px, py);
+    const corners = [
+      ['nw', sel.x, sel.y],
+      ['ne', sel.x + sel.w, sel.y],
+      ['sw', sel.x, sel.y + sel.h],
+      ['se', sel.x + sel.w, sel.y + sel.h],
+    ];
+    for(const [name, cx, cy] of corners){
+      if(Math.abs(local.x - cx) < hs && Math.abs(local.y - cy) < hs)
+        return { kind: 'resize', objId: sel.id, corner: name };
+    }
+    const rotX = sel.x + sel.w / 2, rotY = sel.y - hs * 2.5;
+    if(Math.hypot(local.x - rotX, local.y - rotY) < hs)
+      return { kind: 'rotate', objId: sel.id };
+    if(sel.type === 'bubble' && (sel.bubble.shape === 'speech' || sel.bubble.shape === 'thought')){
+      // 꼬리 핸들은 회전 무관 좌표 (꼬리 끝점은 원본 좌표계)
+      if(Math.hypot(px - sel.bubble.tailX, py - sel.bubble.tailY) < hs * 1.2)
+        return { kind: 'tail', objId: sel.id };
+    }
+  }
+  // 본체 hit
+  for(let i = _teState.objs.length - 1; i >= 0; i--){
+    const o = _teState.objs[i];
+    const local = _teToLocal(o, px, py);
+    if(local.x >= o.x && local.x <= o.x + o.w && local.y >= o.y && local.y <= o.y + o.h)
+      return { kind: 'move', objId: o.id };
+  }
+  return null;
+}
+
+function _teAttachCanvasEvents(){
+  const cvs = _teState.cvs;
+  const start = (clientX, clientY, e) => {
+    if(_teState.editing) return;
+    const { x, y } = _teClientToCanvas(clientX, clientY);
+    const hit = _teHitTest(x, y);
+    if(hit){
+      _teSelObj(hit.objId);
+      const obj = _teGetSel();
+      if(!obj) return;
+      _teState.drag = {
+        kind: hit.kind,
+        objId: hit.objId,
+        startX: x, startY: y,
+        origX: obj.x, origY: obj.y, origW: obj.w, origH: obj.h,
+        origRot: obj.rotation,
+        origTailX: obj.bubble?.tailX, origTailY: obj.bubble?.tailY,
+        corner: hit.corner,
+      };
+      cvs.classList.add('te-grabbing');
+      if(e) e.preventDefault();
+    } else {
+      _teSelObj(null);
+    }
+  };
+  const move = (clientX, clientY, e) => {
+    if(!_teState.drag) return;
+    if(e) e.preventDefault();
+    const { x, y } = _teClientToCanvas(clientX, clientY);
+    const d = _teState.drag;
+    const obj = _teState.objs.find(o => o.id === d.objId);
+    if(!obj) return;
+    const dx = x - d.startX, dy = y - d.startY;
+    if(d.kind === 'move'){
+      obj.x = d.origX + dx;
+      obj.y = d.origY + dy;
+      if(obj.type === 'bubble'){
+        obj.bubble.tailX = d.origTailX + dx;
+        obj.bubble.tailY = d.origTailY + dy;
+      }
+    } else if(d.kind === 'resize'){
+      // 회전 고려한 리사이즈는 복잡 → 회전 없을 때만 직관적, 있으면 동일 방식 (간략화)
+      const minDim = 30;
+      let nx = d.origX, ny = d.origY, nw = d.origW, nh = d.origH;
+      if(d.corner === 'se'){ nw = Math.max(minDim, d.origW + dx); nh = Math.max(minDim, d.origH + dy); }
+      else if(d.corner === 'sw'){ nx = d.origX + dx; nw = Math.max(minDim, d.origW - dx); nh = Math.max(minDim, d.origH + dy); if(nw === minDim) nx = d.origX + d.origW - minDim; }
+      else if(d.corner === 'ne'){ ny = d.origY + dy; nw = Math.max(minDim, d.origW + dx); nh = Math.max(minDim, d.origH - dy); if(nh === minDim) ny = d.origY + d.origH - minDim; }
+      else if(d.corner === 'nw'){ nx = d.origX + dx; ny = d.origY + dy; nw = Math.max(minDim, d.origW - dx); nh = Math.max(minDim, d.origH - dy); if(nw === minDim) nx = d.origX + d.origW - minDim; if(nh === minDim) ny = d.origY + d.origH - minDim; }
+      obj.x = nx; obj.y = ny; obj.w = nw; obj.h = nh;
+      if(obj.type === 'text'){
+        // 텍스트는 폰트 크기에 따른 자연 높이 — 사용자가 늘리면 그대로 유지
+      }
+    } else if(d.kind === 'rotate'){
+      const cx = obj.x + obj.w / 2, cy = obj.y + obj.h / 2;
+      const a = Math.atan2(y - cy, x - cx) * 180 / Math.PI + 90;
+      obj.rotation = Math.round(a);
+      if(obj.rotation > 180) obj.rotation -= 360;
+      if(obj.rotation < -180) obj.rotation += 360;
+    } else if(d.kind === 'tail' && obj.bubble){
+      obj.bubble.tailX = x;
+      obj.bubble.tailY = y;
+    }
+    _teRender();
+    _teSyncSelPanel();
+  };
+  const end = () => {
+    _teState.drag = null;
+    cvs.classList.remove('te-grabbing');
+  };
+  cvs.addEventListener('mousedown', e => start(e.clientX, e.clientY, e));
+  window.addEventListener('mousemove', e => _teState && move(e.clientX, e.clientY, e));
+  window.addEventListener('mouseup', () => _teState && end());
+  cvs.addEventListener('touchstart', e => {
+    if(e.touches.length !== 1) return;
+    start(e.touches[0].clientX, e.touches[0].clientY, e);
+  }, { passive: false });
+  cvs.addEventListener('touchmove', e => {
+    if(e.touches.length !== 1) return;
+    move(e.touches[0].clientX, e.touches[0].clientY, e);
+  }, { passive: false });
+  cvs.addEventListener('touchend', () => _teState && end());
+  // 더블클릭 → 인플레이스 텍스트 편집
+  cvs.addEventListener('dblclick', e => {
+    const { x, y } = _teClientToCanvas(e.clientX, e.clientY);
+    const hit = _teHitTest(x, y);
+    if(hit && (hit.kind === 'move')){
+      _teSelObj(hit.objId);
+      _teStartInlineEdit(_teGetSel());
+    }
+  });
+}
+
+function _teStartInlineEdit(obj){
+  if(!obj) return;
+  const wrap = $('teCanvasWrap');
+  const ta = document.createElement('textarea');
+  ta.className = 'te-textarea';
+  ta.value = obj.text || '';
+  const s = _teState.scale;
+  ta.style.left = (obj.x * s) + 'px';
+  ta.style.top  = (obj.y * s) + 'px';
+  ta.style.width  = (obj.w * s) + 'px';
+  ta.style.height = (obj.h * s) + 'px';
+  ta.style.fontSize = (obj.fontSize * s) + 'px';
+  ta.style.fontFamily = _teFontFamily(obj.font);
+  ta.style.fontWeight = String(obj.fontWeight || 400);
+  ta.style.textAlign = obj.align;
+  wrap.appendChild(ta);
+  ta.focus();
+  ta.select();
+  _teState.editing = { obj, el: ta };
+  const finish = () => {
+    obj.text = ta.value;
+    ta.remove();
+    _teState.editing = null;
+    _teRender();
+    _teRenderLayers();
+    _teSyncSelPanel();
+  };
+  ta.addEventListener('blur', finish, { once: true });
+  ta.addEventListener('keydown', e => {
+    if(e.key === 'Escape'){ ta.blur(); }
+    else if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ ta.blur(); }
+  });
+}
+
+function _teRenderLayers(){
+  const root = $('teLayers');
+  if(!root) return;
+  if(!_teState.objs.length){
+    root.innerHTML = '<div class="te-empty">아직 객체가 없어요. ＋ 버튼으로 추가</div>';
+    return;
+  }
+  // 위쪽 = 가장 앞 (역순으로 표시)
+  const html = _teState.objs.slice().reverse().map(o => {
+    const ico = o.type === 'text' ? '🅣' : (
+      o.bubble?.shape === 'thought' ? '💭' :
+      o.bubble?.shape === 'burst' ? '💥' :
+      o.bubble?.shape === 'rect' ? '▭' :
+      o.bubble?.shape === 'rounded' ? '⬭' : '🗨'
+    );
+    const name = (o.text || '(빈 텍스트)').replace(/\s+/g, ' ').slice(0, 24);
+    const sel = o.id === _teState.selId ? ' sel' : '';
+    return `<div class="te-layer${sel}" data-te-id="${o.id}">
+      <span class="te-l-ico">${ico}</span>
+      <span class="te-l-name">${esc(name)}</span>
+      <button class="te-l-btn" data-te-act="up" title="앞으로">▲</button>
+      <button class="te-l-btn" data-te-act="down" title="뒤로">▼</button>
+      <button class="te-l-btn te-l-del" data-te-act="del" title="삭제">🗑</button>
+    </div>`;
+  }).join('');
+  root.innerHTML = html;
+}
+
+function _teSyncSelPanel(){
+  const sec = $('teSelSection');
+  const obj = _teGetSel();
+  if(!obj){ sec.style.display = 'none'; return; }
+  sec.style.display = '';
+  $('teText').value = obj.text || '';
+  $('teFont').value = obj.font || 'ui';
+  $('teSize').value = obj.fontSize;
+  $('teSizeVal').textContent = obj.fontSize;
+  $('teWeight').value = String(obj.fontWeight || 400);
+  $('teColor').value = obj.color || '#000000';
+  $('teStrokeColor').value = obj.stroke?.color || '#ffffff';
+  $('teStrokeOn').checked = !!obj.stroke?.on;
+  $('teAlign').value = obj.align || 'center';
+  $('teRot').value = obj.rotation || 0;
+  $('teRotVal').textContent = (obj.rotation || 0) + '°';
+  const bubbleFields = $('teBubbleFields');
+  if(obj.type === 'bubble'){
+    bubbleFields.style.display = '';
+    $('teBubbleFill').value = obj.bubble.fill || '#ffffff';
+    $('teBubbleBorder').value = obj.bubble.border || '#000000';
+  } else {
+    bubbleFields.style.display = 'none';
+  }
+}
+
+// ─── 합성 (저장용 Blob) ───
+async function _teComposite(){
+  // 핸들 없이 그대로 렌더
+  const tmp = document.createElement('canvas');
+  tmp.width = _teState.W; tmp.height = _teState.H;
+  const ctx = tmp.getContext('2d');
+  ctx.drawImage(_teState.bgImage, 0, 0, _teState.W, _teState.H);
+  for(const o of _teState.objs){
+    _teDrawObj(ctx, o, false);
+  }
+  return await new Promise(r => tmp.toBlob(r, 'image/png'));
+}
+
+async function _teSaveNew(){
+  const blob = await _teComposite();
+  if(!blob){ toast('합성 실패', 'error'); return; }
+  const item = _teState.item;
+  const meta = item.meta || {};
+  const baseFname = (item.fname || `nai_${item.id}.png`).replace(/\.(png|jpe?g)$/i, '');
+  const fname = `edit_${baseFname}_${Date.now()}.png`;
+  const label = ((item.label || '') + '_edit').replace(/^_/, '');
+  const newMeta = { ...meta, mode: 'textedit', source: item.id, editAt: Date.now() };
+  try {
+    await _saveImageWithSideEffects(blob, fname, label, meta.prompt || item.prompt || '', newMeta);
+    toast('🅣 텍스트 편집본 저장됨', 'success');
+    _teCloseModal();
+    if(state.mainPane === 'gallery') await loadGallery();
+    await refreshGallerySize();
+  } catch(e){
+    _swallow(e, 'te:saveNew');
+    toast('저장 실패 — ' + (e?.message || e), 'error');
+  }
+}
+
+async function _teOverwrite(){
+  // 원본 IDB 항목의 blob/thumb 만 교체. id는 유지.
+  const item = _teState.item;
+  confirmDialog(
+    `원본 이미지를 편집본으로 교체합니다. 되돌릴 수 없어요. 계속하시겠어요?`,
+    async () => {
+      const blob = await _teComposite();
+      if(!blob){ toast('합성 실패', 'error'); return; }
+      try {
+        await new Promise((res, rej) => {
+          const tx = DB.tx([DB.IMG], 'readwrite');
+          const store = tx.objectStore(DB.IMG);
+          const req = store.get(item.id);
+          let sid = null;
+          req.onsuccess = () => {
+            const row = req.result;
+            if(!row){ rej(new Error('항목 없음')); return; }
+            row.blob = blob;
+            row.meta = { ...(row.meta || {}), edited: true, editAt: Date.now() };
+            sid = row.sessionId;
+            store.put(row);
+          };
+          tx.oncomplete = () => { if(sid != null) DB._invalidateImgCache(sid); res(); };
+          tx.onerror = e => rej(e);
+        });
+        toast('♻ 원본 교체 완료', 'success');
+        _teCloseModal();
+        // 라이트박스가 열려있다면 다시 로드
+        if(_lbCurrent && _lbCurrent.id === item.id){
+          await showLightboxAt(_lbIdx);
+        }
+        if(state.mainPane === 'gallery') await loadGallery();
+      } catch(e){
+        _swallow(e, 'te:overwrite');
+        toast('덮어쓰기 실패 — ' + (e?.message || e), 'error');
+      }
+    },
+    '♻ 원본 덮어쓰기'
+  );
+}
+
+function _teWireOnce(){
+  if(_teWireOnce._done) return;
+  _teWireOnce._done = true;
+  $('teAddText')?.addEventListener('click', () => _teState && _teAddObj(_teMakeText()));
+  $('teAddBubble')?.addEventListener('click', () => {
+    if(!_teState) return;
+    const shape = $('teBubblePick')?.value || 'speech';
+    _teAddObj(_teMakeBubble(shape));
+  });
+  $('teCancel')?.addEventListener('click', () => {
+    if(_teState && _teState.objs.length){
+      confirmDialog('편집 내용을 폐기할까요?', () => _teCloseModal(), '편집 닫기');
+    } else {
+      _teCloseModal();
+    }
+  });
+  $('teSaveNew')?.addEventListener('click', () => _teState && _teSaveNew());
+  $('teOverwrite')?.addEventListener('click', () => _teState && _teOverwrite());
+  // 속성 패널
+  const sync = (inp, fn) => inp?.addEventListener('input', () => {
+    const o = _teGetSel(); if(!o) return; fn(o); _teRender(); _teRenderLayers();
+  });
+  sync($('teText'), o => o.text = $('teText').value);
+  sync($('teFont'), o => o.font = $('teFont').value);
+  sync($('teSize'), o => { o.fontSize = parseInt($('teSize').value) || 24; $('teSizeVal').textContent = o.fontSize; });
+  sync($('teWeight'), o => o.fontWeight = parseInt($('teWeight').value) || 400);
+  sync($('teColor'), o => o.color = $('teColor').value);
+  sync($('teStrokeColor'), o => o.stroke.color = $('teStrokeColor').value);
+  sync($('teStrokeOn'), o => o.stroke.on = $('teStrokeOn').checked);
+  sync($('teBubbleFill'), o => { if(o.bubble) o.bubble.fill = $('teBubbleFill').value; });
+  sync($('teBubbleBorder'), o => { if(o.bubble) o.bubble.border = $('teBubbleBorder').value; });
+  sync($('teAlign'), o => o.align = $('teAlign').value);
+  sync($('teRot'), o => { o.rotation = parseInt($('teRot').value) || 0; $('teRotVal').textContent = o.rotation + '°'; });
+  // 레이어 목록 클릭 위임
+  $('teLayers')?.addEventListener('click', e => {
+    const layer = e.target.closest('.te-layer');
+    if(!layer) return;
+    const id = parseInt(layer.dataset.teId);
+    const act = e.target.closest('[data-te-act]')?.dataset.teAct;
+    if(act === 'del'){ _teDelObj(id); return; }
+    if(act === 'up'){ _teMoveObj(id, +1); return; }
+    if(act === 'down'){ _teMoveObj(id, -1); return; }
+    _teSelObj(id);
+  });
+  // 배경 클릭으로 닫기 방지 — 모달 안쪽 클릭은 전파만 막음 (헤더의 X 등 다른 닫기 트리거 사용)
+  // ESC → 취소 동작
+  document.addEventListener('keydown', e => {
+    if(!_teState) return;
+    if(!$('textEditModal').classList.contains('open')) return;
+    if(e.target.matches('input, textarea, select')) return;
+    if(e.key === 'Delete' && _teGetSel()){ e.preventDefault(); _teDelObj(_teGetSel().id); }
+    else if(e.key === 'Escape'){ e.preventDefault(); $('teCancel')?.click(); }
+  });
+}
+// 모듈 로드 시 한 번만 와이어링
+setTimeout(() => { try { _teWireOnce(); } catch(e){ _swallow(e, 'te:wire'); } }, 0);
+
+// 외부 노출 (가능하면 자동완성 테스트용)
+window.openTextEditModal = openTextEditModal;
+Object.defineProperty(window, '_teState', { get(){ return _teState; }, configurable: true });
 
 // ═══════════════════════════════════════════════════════════
 // UI LOGIC: MODE / TABS / VISIBILITY
@@ -16829,6 +17706,18 @@ function wireGalleryEvents(){
       confirmDialog(warn, () => applyExifFromGalleryImage(id), '↻ EXIF 복원');
       return;
     }
+    // 🅣 텍스트·말풍선 편집 — 갤러리 카드에서 직접 진입
+    const teBtn = e.target.closest('[data-act="textedit"]');
+    if(teBtn){
+      e.stopPropagation();
+      try {
+        const imgs = await DB.getSessionImages(sid, {includeTrashed: true});
+        const target = imgs.find(x => x.id === id);
+        if(target) await openTextEditModal(target);
+        else toast('이미지를 찾을 수 없음', 'error');
+      } catch(err){ _swallow(err, 'gallery:textedit'); toast('편집기 열기 실패', 'error'); }
+      return;
+    }
     // 컴팩트 모드에서는 즉시 라이트박스
     if($('galleryGrid').classList.contains('compact')){
       openLightbox(id, sid);
@@ -17107,6 +17996,11 @@ function wireLightboxEvents(){
       toast(`업스케일 실패 — ${e.message || e}\nAnlas 잔량 확인. 1MP 이상 큰 이미지는 4배 업스케일이 지원되지 않을 수 있어요`, 'error');
       console.error('Upscale', e);
     }
+  });
+  // 🅣 텍스트·말풍선 편집기 진입
+  $('lbTextEdit')?.addEventListener('click', () => {
+    if(!_lbCurrent) return;
+    openTextEditModal(_lbCurrent).catch(e => { _swallow(e, 'lb:textedit'); toast('편집기 열기 실패', 'error'); });
   });
   // ❤️ 좋아요 토글 — 통계 집계용 (옛 ⭐ 기능 통합됨)
   $('lbLike')?.addEventListener('click', async () => {
