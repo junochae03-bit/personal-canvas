@@ -34,6 +34,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- 🅣 텍스트 편집기용 한글 디스플레이 폰트 (Google Fonts) — 만화/동인지 풍 -->
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Jua&family=Nanum+Gothic:wght@400;700;800&family=Nanum+Myeongjo:wght@400;700;800&family=Nanum+Pen+Script&family=Gowun+Dodum&family=Gowun+Batang:wght@400;700&family=Gaegu:wght@300;400;700&family=Single+Day&family=Stylish&display=swap" rel="stylesheet">
 <style>
 /* 기본 — 베이지 (Beige) — 눈에 편한 종이 톤 */
 :root{
@@ -3334,12 +3336,35 @@ coffee shop, latte art"></textarea>
           <div class="te-section-title">선택 객체 속성 <span class="en">Selected</span></div>
           <div class="te-field"><label>본문 <span class="en">Text</span></label><textarea class="ta te-inp" id="teText" rows="2" placeholder="텍스트 입력…"></textarea></div>
           <div class="te-field"><label>폰트 <span class="en">Font</span></label><select class="inp te-inp" id="teFont">
-            <option value="ui">Pretendard / 시스템</option>
-            <option value="noto">Noto Sans KR</option>
-            <option value="malgun">Malgun Gothic</option>
-            <option value="mono">JetBrains Mono</option>
-            <option value="serif">serif</option>
-            <option value="sans">sans-serif</option>
+            <optgroup label="📝 일반·시스템">
+              <option value="ui">Pretendard (기본)</option>
+              <option value="noto">Noto Sans KR</option>
+              <option value="malgun">맑은 고딕 (Malgun)</option>
+              <option value="nanumg">나눔고딕</option>
+              <option value="mono">JetBrains Mono</option>
+            </optgroup>
+            <optgroup label="💥 굵은 임팩트 (외침·표지)">
+              <option value="blackhan">Black Han Sans (블랙한산스)</option>
+              <option value="dohyeon">Do Hyeon (도현)</option>
+            </optgroup>
+            <optgroup label="🎀 귀여운·둥근 (대사)">
+              <option value="jua">Jua (주아)</option>
+              <option value="gaegu">Gaegu (개구)</option>
+            </optgroup>
+            <optgroup label="📜 명조·내레이션 (회상)">
+              <option value="nanummj">나눔명조</option>
+              <option value="gowunb">고운바탕</option>
+              <option value="serif">Noto Serif KR</option>
+            </optgroup>
+            <optgroup label="✍ 손글씨·일기 (속삭임)">
+              <option value="nanumpen">나눔펜글씨</option>
+              <option value="single">Single Day</option>
+              <option value="gowund">고운돋움</option>
+            </optgroup>
+            <optgroup label="✨ 디스플레이">
+              <option value="stylish">Stylish</option>
+              <option value="sans">sans-serif (시스템)</option>
+            </optgroup>
           </select></div>
           <div class="te-field-row">
             <div class="te-field"><label>크기 <span class="en">Size</span></label><input type="range" class="te-inp" id="teSize" min="12" max="144" step="1" value="32"><span class="te-val" id="teSizeVal">32</span></div>
@@ -13565,13 +13590,27 @@ function saveMaskFromCanvas(){
 //   - 좌표는 원본 이미지 픽셀 기준. 화면엔 CSS scale 로 맞춤. 저장 시엔 원본 해상도 그대로.
 let _teState = null;  // { item, img, scale, cvs, ctx, objs, selId, drag, editing }
 
+// 🅣 편집기용 폰트 — 동인지/만화 작업에 자주 쓰는 한글 디스플레이체 묶음.
+//    Google Fonts 로드되지 않은 경우 시스템 fallback 으로 대체됨 (영구 깨짐 없음).
 const TE_FONTS = {
-  ui:     `"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif`,
-  noto:   `"Noto Sans KR","Pretendard","Malgun Gothic",sans-serif`,
-  malgun: `"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`,
-  mono:   `"JetBrains Mono","D2Coding","Consolas",monospace`,
-  serif:  `"Noto Serif KR",Georgia,serif`,
-  sans:   `system-ui,sans-serif`,
+  ui:        `"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif`,
+  noto:      `"Noto Sans KR","Pretendard","Malgun Gothic",sans-serif`,
+  malgun:    `"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`,
+  mono:      `"JetBrains Mono","D2Coding","Consolas",monospace`,
+  serif:     `"Noto Serif KR",Georgia,serif`,
+  sans:      `system-ui,sans-serif`,
+  // ─── 만화·동인지 디스플레이 (Google Fonts) ───
+  blackhan:  `"Black Han Sans","Pretendard","Noto Sans KR",sans-serif`,   // 굵은 임팩트 — 외침/표지
+  dohyeon:   `"Do Hyeon","Pretendard","Noto Sans KR",sans-serif`,         // 굵은 둥근 — 대사·강조
+  jua:       `"Jua","Pretendard","Noto Sans KR",sans-serif`,              // 귀여운 둥근 — 일상 대사
+  nanumg:    `"Nanum Gothic","Pretendard","Noto Sans KR",sans-serif`,     // 클래식 고딕
+  nanummj:   `"Nanum Myeongjo","Noto Serif KR",serif`,                    // 명조 — 내레이션/회상
+  nanumpen:  `"Nanum Pen Script","Gaegu","Pretendard",cursive`,           // 손글씨 펜
+  gowund:    `"Gowun Dodum","Pretendard","Noto Sans KR",sans-serif`,      // 가는 우아한 — 속삭임
+  gowunb:    `"Gowun Batang","Noto Serif KR",serif`,                      // 우아한 명조
+  gaegu:     `"Gaegu","Pretendard","Noto Sans KR",cursive`,               // 동글 손글씨 — 캐주얼
+  single:    `"Single Day","Pretendard","Noto Sans KR",cursive`,          // 얇은 손글씨 — 일기풍
+  stylish:   `"Stylish","Pretendard","Noto Sans KR",sans-serif`,          // 세련된 디스플레이
 };
 
 function _teFontFamily(key){ return TE_FONTS[key] || TE_FONTS.ui; }
@@ -13621,6 +13660,10 @@ async function openTextEditModal(item){
   _teAttachCanvasEvents();
   _teRenderLayers();
   _teSyncSelPanel();
+  // 🔤 Google Fonts 로딩 완료되면 재렌더 — 첫 paint에서 시스템 fallback으로 보이는 문제 방지.
+  if(document.fonts?.ready){
+    document.fonts.ready.then(() => { if(_teState) _teRender(); }).catch(e => _swallow(e, 'te:fontsReady'));
+  }
   toast('🅣 편집기 — 텍스트/말풍선을 추가하세요', 'info');
 }
 
@@ -13740,67 +13783,92 @@ function _teWrapText(ctx, text, maxW){
 }
 
 // ─── 말풍선 path ───
+//   디자인 원칙(상업 동인지/만화 기준):
+//   - 외곽선과 꼬리는 매끄럽게 이어져 보이도록 quadratic curve 로 결합 (꺾임 노출 X)
+//   - 꼬리 폭은 말풍선 폭의 14~18% 정도로 좁게 → 깔끔한 인상
+//   - 생각 구름은 큰/작은 lobe 를 교차 배치 → 진짜 구름 느낌
+//   - 외침은 점·반지름·각도에 결정적 흔들림(sin 기반) 추가 → 인위적이지 않은 폭발 모양
+//   - 둥근 사각은 r = min(w,h)*0.22 로 살짝 더 둥글게 → 현대 만화체 느낌
+
+// 일반 말풍선 — 매끄럽게 이어지는 둥근 꼬리.
 function _teShapeSpeech(ctx, x, y, w, h, tailX, tailY){
-  // 둥근 직사각형 + 꼬리
-  const r = Math.min(w, h) * 0.18;
+  const r = Math.min(w, h) * 0.2;
+  // 꼬리 폭 — 좁고 깔끔하게. 말풍선 안에 잘 맞춰지도록 좌우 한계 clamp.
+  const tailHalf = Math.min(w * 0.09, r * 0.9);
+  const tailCx = Math.max(x + r + tailHalf, Math.min(x + w - r - tailHalf, tailX));
+  // 꼬리 시작/끝점에서 본체로 부드럽게 합쳐지도록 control point 사용
+  const bottomY = y + h;
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.lineTo(x + w - r, y);
   ctx.quadraticCurveTo(x + w, y, x + w, y + r);
   ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  // 꼬리 — 아래쪽 적당한 위치에서 tailX,tailY 로 삼각형
-  const tailAttachX = Math.max(x + r * 2, Math.min(x + w - r * 2, tailX));
-  ctx.lineTo(tailAttachX + r * 0.6, y + h);
-  ctx.lineTo(tailX, tailY);
-  ctx.lineTo(tailAttachX - r * 0.6, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.quadraticCurveTo(x + w, bottomY, x + w - r, bottomY);
+  // 꼬리 오른쪽 합류점
+  ctx.lineTo(tailCx + tailHalf, bottomY);
+  // 꼬리 — 양쪽을 quadratic 으로 그려 매끈한 곡선 꼬리.
+  // control point 를 꼬리 시작과 끝 사이 중간보다 약간 안쪽에 두면 자연스러운 휨.
+  ctx.quadraticCurveTo(tailCx + tailHalf * 0.4, bottomY + (tailY - bottomY) * 0.4, tailX, tailY);
+  ctx.quadraticCurveTo(tailCx - tailHalf * 0.4, bottomY + (tailY - bottomY) * 0.4, tailCx - tailHalf, bottomY);
+  ctx.lineTo(x + r, bottomY);
+  ctx.quadraticCurveTo(x, bottomY, x, y + h - r);
   ctx.lineTo(x, y + r);
   ctx.quadraticCurveTo(x, y, x + r, y);
   ctx.closePath();
 }
 
+// 생각 말풍선 — 자연스러운 구름 + 추적 점.
 function _teShapeThought(ctx, x, y, w, h, tailX, tailY){
-  // 구름 모양 — 외곽을 원 8개로
   const cx = x + w / 2, cy = y + h / 2;
-  const lobes = 12;
+  // 큰/작은 lobe 교차 — 진짜 구름처럼 들쭉날쭉.
+  const lobes = 10;
+  const baseR = Math.min(w, h) * 0.16;
   ctx.beginPath();
   for(let i = 0; i < lobes; i++){
-    const a = (i / lobes) * Math.PI * 2;
-    const rx = (w / 2) * 1.05, ry = (h / 2) * 1.05;
+    const a = (i / lobes) * Math.PI * 2 - Math.PI / 2;
+    // 외곽 위치는 약간 안쪽 (1.0 으로 두면 lobe 가 바깥으로 튀어나옴)
+    const rx = w / 2 * 0.78, ry = h / 2 * 0.78;
     const px = cx + Math.cos(a) * rx;
     const py = cy + Math.sin(a) * ry;
-    const lobeR = Math.min(w, h) * 0.13;
+    // 짝수 인덱스는 큰 lobe, 홀수는 작은 lobe — 자연스러운 들쭉날쭉
+    const lobeR = baseR * (i % 2 === 0 ? 1.0 : 0.7);
     if(i === 0) ctx.moveTo(px + lobeR, py);
     ctx.arc(px, py, lobeR, 0, Math.PI * 2);
   }
   ctx.closePath();
-  // 꼬리 — 작은 원 2개로 점차 작아짐 (별도 path)
+  // 꼬리 — 본체에서 tailX,tailY 방향으로 점점 작아지는 원 3개.
   const dx = tailX - cx, dy = tailY - cy;
   const dist = Math.hypot(dx, dy);
-  if(dist > 4){
+  if(dist > 8){
     const ux = dx / dist, uy = dy / dist;
-    const startX = cx + ux * (w / 2), startY = cy + uy * (h / 2);
-    const mid1X = startX + (tailX - startX) * 0.35, mid1Y = startY + (tailY - startY) * 0.35;
-    const mid2X = startX + (tailX - startX) * 0.7, mid2Y = startY + (tailY - startY) * 0.7;
-    ctx.moveTo(mid1X + 9, mid1Y); ctx.arc(mid1X, mid1Y, 9, 0, Math.PI * 2);
-    ctx.moveTo(mid2X + 6, mid2Y); ctx.arc(mid2X, mid2Y, 6, 0, Math.PI * 2);
-    ctx.moveTo(tailX + 4, tailY); ctx.arc(tailX, tailY, 4, 0, Math.PI * 2);
+    // 시작은 본체 가장자리에서 살짝 떨어진 위치
+    const startX = cx + ux * (w / 2 * 0.95), startY = cy + uy * (h / 2 * 0.95);
+    for(let i = 1; i <= 3; i++){
+      const t = 0.18 + (i - 1) * 0.34;   // 0.18, 0.52, 0.86 → 시작점에서 끝점까지 균등하게
+      const px = startX + (tailX - startX) * t;
+      const py = startY + (tailY - startY) * t;
+      // 마지막이 가장 작게 (꼬리 끝부분 강조)
+      const tR = baseR * (0.5 - i * 0.12);
+      ctx.moveTo(px + tR, py);
+      ctx.arc(px, py, tR, 0, Math.PI * 2);
+    }
   }
 }
 
-function _teShapeBurst(ctx, x, y, w, h, tailX, tailY){
-  // 외침 — 스파이크 (지그재그 별 모양)
+// 외침 말풍선 — 폭발/임팩트. 비대칭 스파이크로 진짜 폭발 같은 느낌.
+function _teShapeBurst(ctx, x, y, w, h){
   const cx = x + w / 2, cy = y + h / 2;
-  const points = 16;
+  const points = 14;
   const outerRx = w / 2, outerRy = h / 2;
-  const innerRx = outerRx * 0.74, innerRy = outerRy * 0.74;
+  const innerRx = outerRx * 0.56, innerRy = outerRy * 0.56;
   ctx.beginPath();
   for(let i = 0; i < points * 2; i++){
     const a = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
-    const rx = (i % 2 === 0) ? outerRx : innerRx;
-    const ry = (i % 2 === 0) ? outerRy : innerRy;
+    // 결정적 흔들림 — index 기반 sin 으로 외곽 반지름 약간씩 변동 (0.86~1.0)
+    const wobble = 0.86 + 0.14 * Math.abs(Math.sin(i * 2.71828));
+    const isOuter = (i % 2 === 0);
+    const rx = (isOuter ? outerRx : innerRx) * wobble;
+    const ry = (isOuter ? outerRy : innerRy) * wobble;
     const px = cx + Math.cos(a) * rx;
     const py = cy + Math.sin(a) * ry;
     if(i === 0) ctx.moveTo(px, py);
@@ -13809,13 +13877,15 @@ function _teShapeBurst(ctx, x, y, w, h, tailX, tailY){
   ctx.closePath();
 }
 
+// 내레이션 사각 — 평범한 사각형 (renderer 에서 이중 테두리 처리).
 function _teShapeRect(ctx, x, y, w, h){
   ctx.beginPath();
   ctx.rect(x, y, w, h);
 }
 
+// 둥근 사각 — 현대 만화체 느낌으로 살짝 더 둥글게 (r 비율 0.14 → 0.22).
 function _teShapeRoundedRect(ctx, x, y, w, h){
-  const r = Math.min(w, h) * 0.14;
+  const r = Math.min(w, h) * 0.22;
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.lineTo(x + w - r, y);
@@ -13844,7 +13914,18 @@ function _teDrawObj(ctx, obj, withHandles){
     ctx.fillStyle = b.fill;
     ctx.strokeStyle = b.border;
     ctx.lineWidth = b.borderWidth || 2;
-    ctx.lineJoin = 'round';
+    // 🅣 모양별 join 스타일 — burst 는 sharp miter, 나머지는 round (둥근 만화 느낌).
+    ctx.lineJoin = (b.shape === 'burst' || b.shape === 'rect') ? 'miter' : 'round';
+    ctx.lineCap = 'round';
+    ctx.miterLimit = 4;
+    // 🌑 부드러운 그림자 — 만화체 부동 말풍선 느낌 (저장 출력에도 포함).
+    //    핸들 표시 모드(편집 중 선택된 객체)에서는 그림자 생략 — 핸들 가시성 우선.
+    if(!withHandles){
+      ctx.shadowColor = 'rgba(0,0,0,0.18)';
+      ctx.shadowBlur = Math.max(3, _teState.W * 0.004);
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = Math.max(1, _teState.W * 0.0015);
+    }
     if(b.shape === 'speech') _teShapeSpeech(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY);
     else if(b.shape === 'thought') _teShapeThought(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY);
     else if(b.shape === 'burst') _teShapeBurst(ctx, obj.x, obj.y, obj.w, obj.h);
@@ -13852,6 +13933,17 @@ function _teDrawObj(ctx, obj, withHandles){
     else _teShapeRoundedRect(ctx, obj.x, obj.y, obj.w, obj.h);
     ctx.fill();
     ctx.stroke();
+    // 그림자는 본체 외곽선까지만 — 이후 텍스트/핸들 그릴 때는 끔.
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+    // 📖 내레이션 사각 — 만화 박스 스타일 이중 테두리 (안쪽에 가는 선 한 줄 더).
+    if(b.shape === 'rect'){
+      const inset = Math.max(3, (b.borderWidth || 2) * 1.6);
+      ctx.lineWidth = Math.max(1, (b.borderWidth || 2) * 0.5);
+      ctx.beginPath();
+      ctx.rect(obj.x + inset, obj.y + inset, obj.w - inset * 2, obj.h - inset * 2);
+      ctx.stroke();
+    }
   }
 
   // 텍스트 렌더 (text 객체 또는 bubble 안 텍스트)
