@@ -2187,7 +2187,6 @@ mark{
             <button class="iconbtn sec-util-btn rcp-btn" id="rcPresetsBtn" title="📚 빌더 프리셋 라이브러리 — 카테고리 전체 세트를 여러 개 저장·전환">📚</button>
             <button class="iconbtn sec-util-btn" id="rcImportBtn" title="📥 텍스트에서 가져오기 — ||A|B|C|| 패턴 자동 인식 + 라벨 자동 추측">📥</button>
             <button class="iconbtn sec-util-btn" id="rcCollapseAllBtn" title="📦 모든 카테고리 일괄 접기/펼치기">📦</button>
-            <button class="iconbtn sec-util-btn" id="rcDemoBtn" title="🎲 한 번 시연 — 현재 설정으로 어떤 옵션이 뽑힐지 한 번 expand">🎲</button>
             <button class="iconbtn sec-util-btn" id="rcApplyToCharBtn" title="🎴 캐릭터 프리셋에 적용 — 활성 카테고리를 ||A|B|C|| 텍스트로 컴파일 → 캐릭터 슬롯 추가 또는 새 프리셋 저장">🎴</button>
             <button class="iconbtn sec-util-btn" id="rcExportWildcardsBtn" title="🃏 활성 카테고리를 와일드카드로 저장 — 각 카테고리 = 1 와일드카드 (이름·옵션 그대로). __category__ 토큰으로 프롬프트에서 사용" style="color:var(--acc)">🃏</button>
             <button class="iconbtn sec-util-btn" id="rcClearLocksBtn" title="🔓 모든 옵션 고정 해제">🔓</button>
@@ -2196,12 +2195,10 @@ mark{
           <span class="caret">▾</span>
         </div>
         <div class="sec-body">
-          <!-- 🔘 마스터 적용 토글 — OFF 면 생성 시 카테고리 주입 안 함 (사용자 보고: 적용 안 해도 자동 적용됨) -->
-          <label class="rc-enable-row" id="rcEnableRow" title="켜면 생성할 때마다 활성 카테고리에서 옵션을 무작위로 뽑아 프롬프트 끝에 추가합니다. 꺼두면 빌더는 편집만 하고 생성엔 영향 없음">
-            <input type="checkbox" id="rcEnableToggle">
-            <span class="rc-enable-label">🎲 생성 시 적용 <span class="en" style="opacity:.6;font-weight:400">Apply on generate</span></span>
-            <span class="rc-enable-state" id="rcEnableState">OFF</span>
-          </label>
+          <!-- 💡 사용 흐름 안내 — RC 빌더는 이제 와일드카드 생성 도구 -->
+          <div style="font-size:11.5px;color:var(--t3);padding:6px 10px;background:var(--bg);border-left:3px solid var(--acc);border-radius:0 4px 4px 0;margin-bottom:6px;line-height:1.55">
+            카테고리·옵션 편집 후 <b style="color:var(--acc)">🃏 버튼</b>으로 와일드카드 저장 → 프롬프트에서 <code>__name__</code> 토큰으로 사용.
+          </div>
           <!-- 📂 그룹 탭 바 — 여러 그룹을 탭처럼 동시 운용, 클릭으로 전환 -->
           <div class="rc-groups-bar" id="rcGroupsBar" role="tablist" aria-label="RC 빌더 그룹 탭"></div>
           <!-- 🔍 카테고리·옵션 검색 + 필터 -->
@@ -2679,75 +2676,32 @@ mark{
         <div class="preset-grid" id="presetGrid"></div>
       </div>
 
-      <!-- TEMPLATES PANE — 🎨 프리셋 조합 템플릿 -->
+      <!-- TEMPLATES PANE — 🎨 프리셋 조합 → RC 빌더 내보내기 도구 -->
       <div class="main-pane" data-pane="templates">
         <div class="tpl-body">
           <div class="set-card">
-            <h3>🪄 자연어 → 템플릿 <span class="en">Natural Language</span></h3>
-            <div style="font-size:11.5px;color:var(--t3);margin-bottom:6px;line-height:1.5">
-              자연어로 문장을 입력하면 그 문장에 해당하는 프리셋을 자동으로 매칭해서 조합을 만듭니다.<br>
-              예: "유니가 카페에서 책을 읽음", "푸리나 의상 OL정장 포즈 달리기"
-            </div>
-            <div style="display:flex;gap:6px;align-items:stretch">
-              <textarea id="tplNlInput" class="ta tiny" placeholder="문장 입력…" style="flex:1;min-height:54px;font-size:13px"></textarea>
-              <button class="btn ghost" id="tplNlBtn" type="button" title="문장 분석 → 매칭되는 프리셋을 현재 조합에 채움" style="padding:8px 12px;font-size:13px;border-color:rgba(58,99,152,.4);color:var(--blue);flex-shrink:0">🪄 분석</button>
-            </div>
-          </div>
-          <div class="set-card">
-            <h3>🎨 템플릿 — 프리셋 랜덤 조합 <span style="font-size:.8em;color:var(--acc);font-weight:500;margin-left:4px">→ 📤 RC 빌더로 보내기</span> <span class="en">Templates → RC</span></h3>
+            <h3>🎨 템플릿 → 📤 RC 빌더로 내보내기 <span class="en">Templates → RC</span></h3>
             <div style="font-size:12px;color:var(--t3);margin-bottom:10px;line-height:1.55">
-              체크한 카테고리에서 랜덤 1개씩 골라서 조합을 만듭니다. 마음에 들면 적용해서 즉시 생성하거나, 이름 붙여 저장하세요.
+              체크한 카테고리들의 프리셋 목록을 RC 빌더의 카테고리·옵션으로 일괄 복사합니다.<br>
+              RC 빌더에서 추가 편집 → 🃏 와일드카드로 변환해 프롬프트에서 <code>__name__</code> 토큰으로 사용.
             </div>
             <div class="set-row" style="flex-direction:column;align-items:stretch;gap:8px">
               <div class="label">사용할 카테고리 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Sources</span></div>
               <div id="tplCatChips" style="display:flex;flex-wrap:wrap;gap:6px"></div>
             </div>
             <div class="set-row" style="margin-top:10px;flex-direction:column;align-items:stretch;gap:8px">
-              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:4px 8px;background:var(--card);border:1.5px solid var(--b1);border-radius:5px">
-                <span style="font-size:11.5px;color:var(--t3);font-weight:600">적용 방식:</span>
-                <label class="chk" style="font-size:12px" title="첫 캐릭터 슬롯의 액션·의상에 콤마로 이어 붙임 (기존 내용 유지)"><input type="radio" name="tplApplyMode" value="merge" checked>＋ 병합</label>
-                <label class="chk" style="font-size:12px" title="첫 캐릭터 슬롯의 액션·의상을 통째로 교체 (기존 내용 덮어씀)"><input type="radio" name="tplApplyMode" value="replace">↻ 변경</label>
-              </div>
-              <label class="chk" style="font-size:12px;color:var(--t2);margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:6px" title="체크 시 ⭐ 즐겨찾기 표시한 프리셋만 랜덤 풀에 포함">
+              <label class="chk" style="font-size:12px;color:var(--t2);margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:6px" title="체크 시 ⭐ 즐겨찾기 표시한 프리셋만 옵션으로 포함">
                 <input type="checkbox" id="tplFavOnlyToggle"> ⭐ 즐겨찾기 프리셋만 사용
               </label>
               <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <button class="btn primary" id="tplRollBtn" type="button" style="flex:1;min-width:140px;padding:11px;font-size:14px">🎲 랜덤 조합 생성 <span class="en">Roll</span></button>
-                <button class="btn ghost" id="tplToRcBtn" type="button" title="🎲 활성 카테고리의 전체 프리셋 목록을 RC 빌더 카테고리로 복사 — 각 프리셋 = 옵션 (가중치 1.0)" style="flex:1;min-width:140px;padding:11px;font-size:13px;border-color:rgba(214,160,80,.45);color:var(--acc)">📤 RC 빌더로 보내기 <span class="en">→ RC</span></button>
-                <button class="btn ghost" id="tplApplyBtn" type="button" title="(선택) 현재 조합을 메인 폼에 적용" style="flex:1;min-width:100px;padding:11px;font-size:13px;border-color:rgba(58,99,152,.4);color:var(--blue)">✅ 폼에 적용</button>
+                <button class="btn primary" id="tplToRcBtn" type="button" title="🎲 활성 카테고리의 전체 프리셋 목록을 RC 빌더 카테고리로 복사 — 각 프리셋 = 옵션 (가중치 1.0)" style="flex:1;min-width:200px;padding:11px;font-size:14px">📤 RC 빌더로 보내기 <span class="en">Send to RC</span></button>
+                <button class="btn ghost" id="tplRollBtn" type="button" title="🎲 한 조합 미리보기 — 각 카테고리에서 랜덤 1개씩 뽑아 결과 확인" style="flex:1;min-width:140px;padding:11px;font-size:13px">🔍 미리보기 <span class="en">Preview</span></button>
               </div>
             </div>
           </div>
           <div class="set-card">
-            <h3>현재 조합 <span class="en">Current Roll</span> <span id="tplRollStatus" style="font-size:11px;color:var(--t3);font-weight:500;margin-left:6px"></span>
-              <button class="btn ghost" id="tplAddCharSlotBtn" type="button" title="현재 조합에 캐릭터 항목 추가 (선택 또는 랜덤)" style="float:right;padding:4px 9px;font-size:11.5px;border-color:rgba(58,99,152,.4);color:var(--blue)">➕ 캐릭터 추가</button>
-              <button class="btn ghost" id="tplAddMobMaleBtn" type="button" title="ㄱ.모브 캐릭터를 현재 조합에 바로 추가" style="float:right;padding:4px 9px;font-size:11.5px;margin-right:6px;border-color:rgba(58,99,152,.4);color:var(--blue)">👨 남자 추가</button>
-            </h3>
+            <h3>🔍 미리보기 <span class="en">Preview</span> <span style="font-size:11px;color:var(--t3);font-weight:400">— 위의 카테고리에서 1개씩 랜덤 뽑은 예시 (실제 RC 내보내기는 전체 프리셋을 옵션으로 복사함)</span> <span id="tplRollStatus" style="font-size:11px;color:var(--t3);font-weight:500;margin-left:6px"></span></h3>
             <div id="tplRollList" style="display:flex;flex-direction:column;gap:6px"></div>
-            <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
-              <input id="tplSaveName" class="inp" placeholder="이름 (비우면 캐릭터·의상에서 자동 추출 예: 아이마스_미키 의상_서큐버스)" style="flex:1;min-width:120px;font-size:13px">
-              <button class="btn ghost" id="tplSaveBtn" type="button" style="padding:8px 14px;font-size:13px;flex-shrink:0">💾 저장 <span class="en">Save</span></button>
-            </div>
-          </div>
-          <div class="set-card">
-            <h3>저장된 템플릿 <span class="en">Saved</span> <span id="tplListCount" style="font-size:11px;color:var(--t3);font-weight:500;margin-left:6px"></span></h3>
-            <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
-              <span style="font-size:11.5px;color:var(--t3)">📁 앨범:</span>
-              <select id="tplAlbumFilter" class="inp" style="font-size:12px;padding:4px 8px;flex:1;min-width:140px">
-                <option value="__all__">— 모든 앨범 표시 —</option>
-              </select>
-              <button class="btn ghost" id="tplNewAlbumBtn" type="button" title="새 앨범 만들기 (이름 입력)" style="padding:5px 10px;font-size:11.5px;flex-shrink:0">➕ 앨범</button>
-              <button class="btn ghost" id="tplSelectModeBtn" type="button" title="여러 템플릿 선택 모드 (일괄 삭제·앨범 이동)" style="padding:5px 10px;font-size:11.5px;flex-shrink:0">☑ 선택</button>
-            </div>
-            <div id="tplBulkBar" style="display:none;background:rgba(58,99,152,.06);border:1.5px solid rgba(58,99,152,.2);border-radius:5px;padding:6px 10px;margin-bottom:8px;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px">
-              <span style="font-weight:600;color:var(--t1)">📌 선택:</span>
-              <span id="tplBulkCount" style="font-family:var(--mono);color:var(--blue);font-weight:700">0개</span>
-              <button class="btn ghost" id="tplBulkAll" type="button" style="padding:4px 9px;font-size:11.5px">☰ 전체</button>
-              <button class="btn ghost" id="tplBulkMoveAlbum" type="button" title="선택 항목을 앨범으로 이동" style="padding:4px 9px;font-size:11.5px;border-color:rgba(58,99,152,.4);color:var(--blue)">📁 앨범 이동</button>
-              <button class="btn danger" id="tplBulkDel" type="button" style="padding:4px 9px;font-size:11.5px">🗑 일괄 삭제</button>
-              <button class="btn ghost" id="tplBulkCancel" type="button" style="padding:4px 9px;font-size:11.5px;margin-left:auto">✕ 닫기</button>
-            </div>
-            <div id="tplList" style="display:flex;flex-direction:column;gap:6px"></div>
           </div>
         </div>
       </div>
@@ -2863,6 +2817,9 @@ mark{
   </button>
   <button class="mn-btn" data-mview="templates" type="button" aria-label="템플릿">
     <span class="mn-ico">🎨</span><span class="mn-lbl">템플릿</span>
+  </button>
+  <button class="mn-btn" id="mnComicBtn" type="button" aria-label="만화 만들기" title="🎞 만화 칸 만들기 — 갤러리 이미지로 페이지 합성">
+    <span class="mn-ico">🎞</span><span class="mn-lbl">만화</span>
   </button>
 </nav>
 
@@ -5658,31 +5615,8 @@ function buildGenBody(opts){
     undefined, mainCb.rc
   );
 
-  // 🎲 RANDOM CATEGORY BUILDER — 활성 카테고리에서 옵션 선택해서 prompt 끝에 자동 추가.
-  //    각 카테고리: locked 면 lockedOptionIdx 고정, 아니면 pickWeightedOption.
-  //    빈 텍스트 옵션은 "사용 안 함" 의미 → 추가 안 함.
-  //    🔘 마스터 스위치 state.rcEnabled 가 OFF 면 전혀 적용 안 함 (사용자 명시 ON 필요).
-  const cats = (state?.rcEnabled && Array.isArray(state?.randomCategories)) ? state.randomCategories : [];
-  const extras = [];
-  for(const cat of cats){
-    if(!cat.enabled) continue;
-    const optsArr = cat.options || [];
-    if(!optsArr.length) continue;
-    let chosen;
-    if(cat.locked && Number.isInteger(cat.lockedOptionIdx) && optsArr[cat.lockedOptionIdx]){
-      chosen = optsArr[cat.lockedOptionIdx];
-    } else {
-      chosen = pickWeightedOption(optsArr);
-    }
-    const text = (chosen?.text || '').trim();
-    if(text){
-      extras.push(text);
-      if(log) log.rc.push({category: cat.label || cat.name || '', value: text});
-    }
-  }
-  if(extras.length){
-    expandedPrompt = expandedPrompt + (expandedPrompt.trim() ? ', ' : '') + extras.join(', ');
-  }
+  // 🎲 RANDOM CATEGORY BUILDER 자동 주입은 제거됨 — RC 빌더는 이제 와일드카드 생성 도구로 재활용됨.
+  //    필요하면 RC 카테고리를 🃏 와일드카드로 변환 후 프롬프트에 __name__ 으로 사용.
 
   const negCb = mkLog('neg');
   opts = {
@@ -8154,7 +8088,6 @@ async function doSelectiveRestore(){
         const f = data.flags;
         if(Array.isArray(f.seed_blocklist)){ state.seedBlocklist = f.seed_blocklist; await DB.setFlag('seed_blocklist', f.seed_blocklist); }
         if(typeof f.seed_blocklist_auto === 'boolean'){ state.seedBlocklistAuto = f.seed_blocklist_auto; await DB.setFlag('seed_blocklist_auto', f.seed_blocklist_auto); }
-        if(typeof f.rc_enabled === 'boolean'){ state.rcEnabled = f.rc_enabled; await DB.setFlag('rc_enabled', f.rc_enabled); if(typeof _refreshRcEnableUI==='function') _refreshRcEnableUI(); }
         if(typeof f.tpl_fav_only === 'boolean'){ state._tplFavOnly = f.tpl_fav_only; await DB.setFlag('tpl_fav_only', f.tpl_fav_only); }
       }
       restored.push('설정');
@@ -14976,90 +14909,6 @@ function tplRenderCatChips(){
   }).filter(Boolean).join('');
 }
 
-// 🪄 자연어 문장 → 프리셋 자동 매칭 (현재 조합에 채움)
-// 알고리즘: 한글 조사 제거 → 토큰 분리 → 각 카테고리에서 이름·내용 매치 점수 최고 1개 픽
-const _TPL_KO_PARTICLE_RE = /(?:이가|는것|이라고|라고|이라|이|가|은|는|을|를|에서|에게|에|의|로|으로|와|과|도|만|뿐|라|함|한다|했다|해|하는|중|중인|중이|중에|에는|에도|에서는|로는|으로는|입니다|이다|예요|이에요)$/;
-
-function tplExtractTokens(text){
-  if(!text) return [];
-  // 구두점·공백으로 분리 → 한글 조사 제거 → 2자 이상만
-  return text.split(/[\s,.!?…\(\)\[\]\-—~"'、。··]+/)
-    .map(t => t.trim())
-    .filter(Boolean)
-    .map(t => {
-      // 반복적으로 조사 제거 (예: "유니가는" → "유니가" → "유니")
-      let s = t;
-      for(let i = 0; i < 3; i++){
-        const next = s.replace(_TPL_KO_PARTICLE_RE, '');
-        if(next === s) break;
-        s = next;
-      }
-      return s.trim();
-    })
-    .filter(t => t.length >= 2);
-}
-
-function tplMatchFromText(text){
-  const tokens = tplExtractTokens(text);
-  if(!tokens.length) return {found:[], tokens:[]};
-  const tokensLow = tokens.map(t => t.toLowerCase());
-  const categories = TPL_AVAILABLE_CATS;
-  const found = [];
-  for(const cat of categories){
-    const list = state.presets[cat] || [];
-    if(!list.length) continue;
-    let best = null;
-    let bestScore = 0;
-    let bestTok = '';
-    for(const p of list){
-      const nameLow = (p.name||'').toLowerCase();
-      if(!nameLow) continue;
-      // prefix 제거 — "캐릭터_유니" → "유니", "[원신] 푸리나" → "푸리나"
-      const nameStrip = nameLow.replace(/^[가-힣A-Za-z]+_/, '').replace(/^\[[^\]]+\]\s*/, '');
-      const ptextLow = (p.text||'').toLowerCase();
-      let score = 0;
-      let hitTok = '';
-      for(let i = 0; i < tokensLow.length; i++){
-        const tl = tokensLow[i];
-        if(tl.length < 2) continue;
-        // 이름 매치 — 가장 강함
-        if(nameStrip === tl){ score += 30; hitTok = tokens[i]; }       // 완전 일치
-        else if(nameStrip.includes(tl) || tl.includes(nameStrip)){ score += 15; hitTok = tokens[i]; }  // 부분 일치 (이름)
-        else if(nameLow.includes(tl)){ score += 10; hitTok = tokens[i]; }  // prefix 포함 매치
-        else if(ptextLow && ptextLow.includes(tl) && tl.length >= 3){ score += 2; }  // 내용 매치 — 약함
-      }
-      if(score > bestScore){
-        bestScore = score;
-        best = p;
-        bestTok = hitTok;
-      }
-    }
-    if(best && bestScore >= 10){  // 최소 이름 매치 1번
-      found.push({cat, preset: best, score: bestScore, token: bestTok});
-    }
-  }
-  return {found, tokens};
-}
-
-function tplApplyNaturalLanguage(){
-  const input = ($('tplNlInput')?.value || '').trim();
-  if(!input){ toast('문장을 입력하세요', 'warning'); $('tplNlInput')?.focus(); return; }
-  const {found, tokens} = tplMatchFromText(input);
-  if(!tokens.length){
-    toast('의미 있는 단어를 찾지 못했어요 (조사 제거 후 비었음)', 'warning');
-    return;
-  }
-  if(!found.length){
-    toast(`🤷 매칭되는 프리셋 없음 — 토큰: ${tokens.slice(0,5).join(', ')}${tokens.length>5?'…':''}`, 'warning');
-    return;
-  }
-  // 현재 조합을 매칭 결과로 교체
-  _tplCurrentRoll = found.map(f => ({cat: f.cat, preset: f.preset}));
-  tplRenderRoll();
-  const names = found.map(f => `${f.preset.name||'?'}`).slice(0, 4).join(', ');
-  toast(`🪄 ${found.length}개 매칭: ${names}${found.length>4?'…':''}`, 'success');
-}
-
 function tplRoll(){
   // 🔒 잠금된 카테고리는 현재 조합에서 보존 (cat → 기존 roll entry)
   const lockedEntries = new Map();
@@ -15114,49 +14963,6 @@ function tplRemoveOne(cid){
   tplRenderRoll();
 }
 
-// ✏ 조합 항목의 텍스트를 임시 수정 — 원본 프리셋엔 영향 없음 (깊은 복사로 분리)
-function tplEditRollItem(cid){
-  const i = _tplCurrentRoll.findIndex(r => r.cat === cid);
-  if(i < 0) return;
-  const r = _tplCurrentRoll[i];
-  const def = PRESET_TYPES.find(t => t.id === cid) || {label:cid, ico:'•'};
-  // confirmModal에 큰 textarea
-  $('confirmTitle').innerHTML = `✏ 임시 수정 — ${def.ico} ${esc(def.label)} <span class="en" style="opacity:.6;font-weight:500;font-size:11.5px">원본 프리셋은 안 바뀝니다</span>`;
-  $('confirmBody').innerHTML = `
-    <div style="font-size:12px;color:var(--t2);margin-bottom:8px"><b style="color:var(--t1)">${esc(r.preset.name||'(이름 없음)')}</b> 의 텍스트만 이 조합에서 임시로 변경합니다.</div>
-    <textarea id="tplEditTa" class="ta" style="min-height:140px;font-family:var(--mono);font-size:12.5px;width:100%">${esc(r.preset.text||'')}</textarea>
-    <div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end">
-      <button class="btn ghost" id="tplEditReset" type="button" style="padding:6px 11px;font-size:12px">↺ 원본으로 되돌리기</button>
-      <button class="btn primary" id="tplEditSave" type="button" style="padding:6px 14px;font-size:13px">✅ 적용</button>
-    </div>`;
-  $('confirmOk').style.display = 'none';
-  $('confirmCancel').textContent = '취소';
-  $('confirmModal').classList.add('open');
-  setTimeout(() => $('tplEditTa')?.focus(), 50);
-  $('tplEditSave').onclick = () => {
-    const newText = ($('tplEditTa')?.value || '').trim();
-    // 원본 보호 — 깊은 복사로 preset 객체 분리
-    _tplCurrentRoll[i] = {cat: cid, preset: {...r.preset, text: newText, _edited: true}};
-    tplRenderRoll();
-    $('confirmModal').classList.remove('open');
-    $('confirmOk').style.display = '';
-    toast(`✏ ${def.label} 임시 수정됨 (원본 프리셋은 그대로)`, 'success');
-  };
-  $('tplEditReset').onclick = () => {
-    // 원본 프리셋에서 다시 가져옴
-    const orig = (state.presets[cid] || []).find(p => p.name === r.preset.name);
-    if(orig){
-      _tplCurrentRoll[i] = {cat: cid, preset: orig};
-      tplRenderRoll();
-      $('confirmModal').classList.remove('open');
-      $('confirmOk').style.display = '';
-      toast('↺ 원본 텍스트로 되돌림', 'info');
-    } else {
-      toast('원본 프리셋을 찾을 수 없음 (삭제됐을 수 있음)', 'warning');
-    }
-  };
-}
-
 function tplRenderRoll(){
   const wrap = $('tplRollList');
   if(!wrap) return;
@@ -15180,7 +14986,6 @@ function tplRenderRoll(){
       </div>
       <div class="tri-act">
         <button type="button" data-tpl-roll-act="lock" data-cat="${esc(r.cat)}" title="${locked?'🔓 잠금 해제 — 다음 랜덤에 다시 변경됨':'🔒 잠금 — 다음 랜덤 조합 생성 시 이 항목은 그대로 유지'}" ${locked?'style="color:var(--blue);border-color:rgba(58,99,152,.4);background:rgba(58,99,152,.08)"':''}>${locked?'🔒':'🔓'}</button>
-        <button type="button" data-tpl-roll-act="edit" data-cat="${esc(r.cat)}" title="이 항목 텍스트만 임시 수정 (원본 프리셋은 그대로)">✏</button>
         <button type="button" data-tpl-roll-act="reroll" data-cat="${esc(r.cat)}" title="이 항목만 다시 랜덤">🎲</button>
         <button type="button" data-tpl-roll-act="remove" data-cat="${esc(r.cat)}" title="이 항목 빼기">✕</button>
       </div>
@@ -15221,506 +15026,6 @@ async function tplExportActiveToRc(){
   toast(`📤 RC 빌더에 ${added}개 카테고리 추가 (옵션 총 ${totalOpts}개)${skipMsg}\n🎲 탭에서 확인 → 🃏 버튼으로 와일드카드 변환 가능`, 'success', {timeoutMs: 8000});
 }
 
-// 현재 조합을 메인 폼에 적용
-function tplApplyRoll(){
-  if(!_tplCurrentRoll.length){ toast('조합이 비어있습니다 — 먼저 🎲 랜덤 생성', 'warning'); return; }
-  const applyMode = document.querySelector('input[name="tplApplyMode"]:checked')?.value || 'merge';
-  const charRolls = _tplCurrentRoll.filter(r => r.cat === 'character');
-  const otherRolls = _tplCurrentRoll.filter(r => r.cat !== 'character');
-
-  if(applyMode === 'replace'){
-    // ↻ 변경 모드 — 첫 활성 캐릭터 슬롯을 통째로 교체 (이름·외형·액션·의상 모두)
-    // 캐릭터 슬롯이 없으면 새로 추가, 있으면 첫 활성 슬롯 덮어씀
-    const enabledIdx = (state.characters || []).findIndex(c => c.enabled !== false);
-    const newAction = otherRolls.map(r => (r.preset.text||'').trim()).filter(Boolean).join(', ');
-    const charPick = charRolls[0];  // 첫 character 항목만 사용 (여러 개면 첫 번째)
-    if(charPick){
-      const p = charPick.preset;
-      const derivedAppearance = [p.appearance, p.action].map(s=>(s||'').trim()).filter(Boolean).join(', ') || (p.text || p.prompt || '');
-      if(enabledIdx >= 0){
-        // 기존 첫 활성 슬롯 덮어쓰기
-        const c = state.characters[enabledIdx];
-        c.name = p.name || '';
-        c.appearance = derivedAppearance;
-        c.action = newAction;
-        c.neg = '';
-        // 풀(pool) 정보 초기화
-        c.pool = null;
-        c.poolIdx = 0;
-      } else {
-        addCharacter({name: p.name || '', prompt: derivedAppearance, thumb: p.thumb || null});
-        const last = state.characters.length - 1;
-        if(last >= 0) state.characters[last].action = newAction;
-      }
-      // 나머지 캐릭터 항목들은 새 슬롯으로 추가 (각자)
-      for(let i = 1; i < charRolls.length; i++){
-        const r = charRolls[i];
-        const p2 = r.preset;
-        const der = [p2.appearance, p2.action].map(s=>(s||'').trim()).filter(Boolean).join(', ');
-        addCharacter({name: p2.name || '', prompt: der || (p2.text || p2.prompt || ''), thumb: p2.thumb || null});
-      }
-    } else {
-      // character 항목 없음 — 첫 활성 슬롯의 action만 통째 교체
-      if(enabledIdx >= 0){
-        state.characters[enabledIdx].action = newAction;
-      } else if(newAction && !$('prompt')?.readOnly){
-        appendToTextarea('prompt', newAction);
-      }
-    }
-    if(typeof renderCharacters === 'function') renderCharacters();
-    saveSettingsDebounced();
-    toast(`✅ 템플릿 ${_tplCurrentRoll.length}개 변경 적용 (캐릭터 슬롯·액션 모두 교체)`, 'success');
-    setMainPane('edit');
-    return;
-  }
-
-  // ＋ 병합 모드 (기본): character 항목 새 슬롯 추가 + 나머지(액션·의상·포즈 등)는
-  //   템플릿이 새 캐릭터를 만들었으면 새 슬롯에, 아니면 기존 첫 슬롯에 콤마로 append
-  const newSlotStartIdx = (state.characters || []).length;
-  for(const r of charRolls){
-    const p = r.preset;
-    const derived = [p.appearance, p.action].map(s=>(s||'').trim()).filter(Boolean).join(', ');
-    addCharacter({
-      name: p.name || '',
-      prompt: derived || (p.text || p.prompt || ''),
-      thumb: p.thumb || null,
-    });
-  }
-  if(charRolls.length && typeof renderCharacters === 'function') renderCharacters();
-
-  const appendParts = otherRolls.map(r => (r.preset.text || '').trim()).filter(Boolean);
-  if(appendParts.length){
-    // 🆕 새로 추가된 캐릭터 슬롯이 있으면 그 첫 번째(=이번 템플릿이 만든 캐릭터)에 적용
-    //    없으면 기존 첫 활성 슬롯에 fallback
-    let targetIdx = -1;
-    if(charRolls.length > 0 && newSlotStartIdx < state.characters.length){
-      targetIdx = newSlotStartIdx;
-    } else {
-      targetIdx = (state.characters || []).findIndex(c => c.enabled !== false);
-    }
-    if(targetIdx >= 0){
-      const c = state.characters[targetIdx];
-      const cur = (c.action || '').trim();
-      const add = appendParts.join(', ');
-      c.action = cur ? `${cur}, ${add}` : add;
-      const ta = $('charList')?.querySelector(`textarea[data-act="action"][data-idx="${targetIdx}"]`);
-      if(ta) ta.value = c.action;
-    } else {
-      if($('prompt')?.readOnly){
-        toast('캐릭터 슬롯 없음 + 프롬프트 잠김 — 일부 항목 적용 실패', 'warning');
-      } else {
-        appendToTextarea('prompt', appendParts.join(', '));
-        toast('캐릭터 슬롯 없어서 메인 프롬프트로 적용 (캐릭터 슬롯 만들면 거기로 가요)', 'info');
-      }
-    }
-  }
-  saveSettingsDebounced();
-  toast(`✅ 템플릿 ${_tplCurrentRoll.length}개 병합 적용`, 'success');
-  setMainPane('edit');
-}
-
-// 💾 현재 조합 저장
-// 이름 비우고 저장 시 조합에서 자동 이름 생성 ("아이마스_미키 의상_서큐버스" 식)
-function tplGenerateAutoName(){
-  if(!_tplCurrentRoll.length) return '';
-  // 캐릭터·의상 등 카테고리 우선순위 — 가장 식별성 높은 것부터
-  const priority = TPL_AVAILABLE_CATS;
-  const parts = priority
-    .map(cat => _tplCurrentRoll.find(r => r.cat === cat))
-    .filter(Boolean)
-    .slice(0, 3)   // 너무 길지 않게 상위 3개만
-    .map(r => (r.preset.name || '').trim())
-    .filter(Boolean);
-  return parts.join(' ');
-}
-
-async function tplSaveCurrent(){
-  if(!_tplCurrentRoll.length){ toast('저장할 조합이 없습니다', 'warning'); return; }
-  let name = ($('tplSaveName')?.value || '').trim();
-  if(!name){
-    // 비어 있으면 조합 항목 이름으로 자동 생성
-    name = tplGenerateAutoName();
-    if(!name) name = `템플릿 ${new Date().toLocaleString().slice(5,16)}`;
-  }
-  const item = {
-    name,
-    ts: Date.now(),
-    roll: _tplCurrentRoll.map(r => ({cat: r.cat, presetName: r.preset.name || ''})),
-    album: (_tplAlbumFilter && _tplAlbumFilter !== '__all__') ? _tplAlbumFilter : '',
-  };
-  state.templates = Array.isArray(state.templates) ? state.templates : [];
-  // 같은 이름 덮어쓰기 (같은 앨범 안에서만 덮어쓰기)
-  const idx = state.templates.findIndex(t => t.name === name && (t.album||'') === (item.album||''));
-  if(idx >= 0) state.templates[idx] = item;
-  else state.templates.unshift(item);
-  // 최대 100개
-  if(state.templates.length > 100){
-    const removed = state.templates.splice(100);
-    if(removed.length) console.log('[tpl] 100개 초과, 가장 오래된', removed.length, '개 자동 정리');
-  }
-  await DB.setFlag('templates', state.templates);
-  $('tplSaveName').value = '';
-  tplRenderSavedList();
-  toast(`💾 "${name}" 저장됨`, 'success');
-}
-
-async function tplLoadTemplates(){
-  try {
-    const saved = await DB.getFlag('templates');
-    state.templates = Array.isArray(saved) ? saved : [];
-  } catch(e){ _swallow(e, 'templates:load'); state.templates = []; }
-}
-
-let _tplAlbumFilter = '__all__';  // '__all__' | '__none__' | 앨범명
-let _tplSelectMode = false;
-let _tplSelected = new Set();      // 선택된 템플릿 id (= name+album 결합)
-
-const tplItemId = t => `${t.album || ''}::${t.name}`;
-
-function tplCollectAlbums(){
-  const list = state.templates || [];
-  const albums = new Map();   // name → count
-  for(const t of list){
-    const a = (t.album || '').trim();
-    if(a) albums.set(a, (albums.get(a)||0) + 1);
-  }
-  return [...albums.entries()].sort((x,y)=> y[1] - x[1] || x[0].localeCompare(y[0]));
-}
-
-function tplRenderAlbumFilter(){
-  const sel = $('tplAlbumFilter');
-  if(!sel) return;
-  const cur = sel.value || _tplAlbumFilter;
-  const albums = tplCollectAlbums();
-  const total = (state.templates||[]).length;
-  const noneCount = (state.templates||[]).filter(t => !(t.album||'').trim()).length;
-  const opts = [`<option value="__all__">— 모든 앨범 (${total}) —</option>`];
-  if(noneCount) opts.push(`<option value="__none__">📂 미분류 (${noneCount})</option>`);
-  for(const [name, cnt] of albums){
-    opts.push(`<option value="${esc(name)}">📁 ${esc(name)} (${cnt})</option>`);
-  }
-  sel.innerHTML = opts.join('');
-  // 이전 선택 유지 (옵션에 있으면)
-  if(cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
-  else sel.value = '__all__';
-  _tplAlbumFilter = sel.value;
-}
-
-function tplRenderSavedList(){
-  const wrap = $('tplList');
-  if(!wrap) return;
-  const all = state.templates || [];
-  if($('tplListCount')) $('tplListCount').textContent = all.length ? `(${all.length}개)` : '';
-  // 앨범 필터 적용
-  const list = all.map((t, i) => ({t, i})).filter(({t}) => {
-    if(_tplAlbumFilter === '__all__') return true;
-    if(_tplAlbumFilter === '__none__') return !(t.album||'').trim();
-    return (t.album||'') === _tplAlbumFilter;
-  });
-  tplRenderAlbumFilter();
-  // 선택 모드 바
-  const bar = $('tplBulkBar');
-  if(bar){
-    bar.style.display = _tplSelectMode ? 'flex' : 'none';
-    if($('tplBulkCount')) $('tplBulkCount').textContent = `${_tplSelected.size}개`;
-  }
-  if(!list.length){
-    wrap.innerHTML = '<div class="tpl-empty">' + (all.length ? '이 앨범에 템플릿 없음' : '저장된 템플릿이 없습니다 — 위에서 조합 만든 후 이름 붙여 저장하세요') + '</div>';
-    return;
-  }
-  wrap.innerHTML = list.map(({t, i}) => {
-    const cats = t.roll.map(r => {
-      const def = PRESET_TYPES.find(x => x.id === r.cat);
-      return def?.ico || '•';
-    }).join('');
-    const tid = tplItemId(t);
-    const checked = _tplSelected.has(tid) ? 'checked' : '';
-    const checkbox = _tplSelectMode ? `<input type="checkbox" data-tpl-bulk="${esc(tid)}" data-idx="${i}" ${checked} style="margin-right:6px;flex-shrink:0">` : '';
-    const albumBadge = (t.album||'').trim() ? `<span style="font-size:10.5px;color:var(--t3);background:var(--card2);border:1px solid var(--b1);border-radius:8px;padding:1px 7px;margin-right:5px">📁 ${esc(t.album)}</span>` : '';
-    const thumbHtml = t.thumb
-      ? `<span class="tsi-thumb" data-tpl-saved-act="setthumb" data-idx="${i}" title="미리보기 변경" style="width:36px;height:36px;border-radius:5px;background:url('${esc(t.thumb)}') center/cover var(--card2);flex-shrink:0;border:1.5px solid var(--b1);cursor:pointer"></span>`
-      : `<span class="tsi-thumb" data-tpl-saved-act="setthumb" data-idx="${i}" title="미리보기 설정" style="width:36px;height:36px;border-radius:5px;background:var(--card2);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:16px;cursor:pointer;border:1.5px dashed var(--b1)">🖼</span>`;
-    return `<div class="tpl-saved-item">
-      ${checkbox}
-      ${thumbHtml}
-      <span class="tsi-name" data-tpl-saved-act="load" data-idx="${i}" title="조합 영역에 불러와서 수정·재롤">${albumBadge}${esc(t.name)}</span>
-      <span class="tsi-cats">${cats} · ${t.roll.length}개</span>
-      <button type="button" data-tpl-saved-act="apply" data-idx="${i}" title="✅ 캐릭터 슬롯에 즉시 적용 + 편집 탭 이동" style="color:var(--blue);border-color:rgba(58,99,152,.4)">✅</button>
-      <button type="button" data-tpl-saved-act="load" data-idx="${i}" title="📥 현재 조합 영역에 불러오기 (미리보기·수정용)">📥</button>
-      <button type="button" data-tpl-saved-act="album" data-idx="${i}" title="앨범 이동">📁</button>
-      <button type="button" class="danger" data-tpl-saved-act="del" data-idx="${i}" title="삭제">✕</button>
-    </div>`;
-  }).join('');
-}
-
-// 단일 템플릿 앨범 이동 (prompt)
-async function tplMoveToAlbum(i){
-  const t = state.templates?.[i];
-  if(!t) return;
-  const albums = tplCollectAlbums().map(([n])=>n);
-  const cur = t.album || '';
-  const hint = albums.length ? `\n기존 앨범: ${albums.slice(0,8).join(', ')}${albums.length>8?'…':''}` : '';
-  const v = prompt(`"${t.name}" 을(를) 어느 앨범으로 이동?\n(빈칸 = 미분류)${hint}`, cur);
-  if(v === null) return;
-  t.album = v.trim();
-  await DB.setFlag('templates', state.templates);
-  tplRenderSavedList();
-  toast(`📁 "${t.name}" → ${t.album ? esc(t.album) : '미분류'}`, 'success');
-}
-
-// 새 앨범 만들기 (현재 필터를 그 앨범으로 전환)
-async function tplCreateAlbum(){
-  const v = prompt('새 앨범 이름:');
-  if(v === null) return;
-  const name = v.trim();
-  if(!name){ toast('이름이 비어있어요', 'warning'); return; }
-  // 같은 이름의 앨범이 이미 있으면 그냥 그 앨범으로 필터 전환
-  _tplAlbumFilter = name;
-  tplRenderSavedList();
-  toast(`📁 "${name}" 앨범 활성 — 새로 저장하는 템플릿이 이 앨범에 들어갑니다`, 'success');
-}
-
-// 선택 모드 토글
-function tplToggleSelectMode(){
-  _tplSelectMode = !_tplSelectMode;
-  if(!_tplSelectMode) _tplSelected.clear();
-  const btn = $('tplSelectModeBtn');
-  if(btn) btn.innerHTML = _tplSelectMode ? '✕ 선택 해제' : '☑ 선택';
-  tplRenderSavedList();
-}
-
-// 일괄 삭제 (선택된 것)
-async function tplBulkDelete(){
-  if(!_tplSelected.size){ toast('선택된 항목 없음', 'warning'); return; }
-  const targets = [..._tplSelected];
-  confirmDialog(`선택한 ${targets.length}개 템플릿을 모두 삭제할까요?\n실행 취소 6초 가능.`, async () => {
-    const backup = [];
-    state.templates = (state.templates || []).filter(t => {
-      const tid = tplItemId(t);
-      if(targets.includes(tid)){ backup.push({...t}); return false; }
-      return true;
-    });
-    await DB.setFlag('templates', state.templates);
-    _tplSelected.clear();
-    tplRenderSavedList();
-    toastUndo(`🗑 ${backup.length}개 템플릿 삭제됨`, async () => {
-      state.templates.push(...backup);
-      await DB.setFlag('templates', state.templates);
-      tplRenderSavedList();
-      toast(`↶ ${backup.length}개 복원됨`, 'success');
-    });
-  }, `🗑 일괄 삭제 (${targets.length}개)`);
-}
-
-// 일괄 앨범 이동
-async function tplBulkMoveAlbum(){
-  if(!_tplSelected.size){ toast('선택된 항목 없음', 'warning'); return; }
-  const v = prompt(`선택한 ${_tplSelected.size}개를 어느 앨범으로 이동?\n(빈칸 = 미분류)`);
-  if(v === null) return;
-  const album = v.trim();
-  let n = 0;
-  for(const t of (state.templates||[])){
-    if(_tplSelected.has(tplItemId(t))){
-      t.album = album;
-      n++;
-    }
-  }
-  await DB.setFlag('templates', state.templates);
-  _tplSelected.clear();
-  tplRenderSavedList();
-  toast(`📁 ${n}개 → ${album ? esc(album) : '미분류'}`, 'success');
-}
-
-// 저장된 템플릿을 현재 조합 영역에 불러옴 (해당 시점의 프리셋 데이터 기준)
-function tplLoadSaved(i){
-  const t = (state.templates || [])[i];
-  if(!t) return;
-  _tplCurrentRoll = [];
-  let missing = 0;
-  for(const r of t.roll){
-    const list = state.presets[r.cat] || [];
-    const p = list.find(x => x.name === r.presetName);
-    if(p) _tplCurrentRoll.push({cat: r.cat, preset: p});
-    else missing++;
-  }
-  tplRenderRoll();
-  if(missing > 0) toast(`📥 "${t.name}" 불러옴 (${missing}개 프리셋 누락 — 삭제됐을 수 있음)`, 'warning');
-  else toast(`📥 "${t.name}" 불러옴`, 'success');
-}
-
-// ✅ 저장된 템플릿을 캐릭터 슬롯에 즉시 적용 (조합 영역 거치지 않고)
-// 🎨 현재 조합에 캐릭터 항목 추가 — confirmModal로 검색·선택·랜덤 제공
-function openTplCharPicker(){
-  const chars = state.presets.character || [];
-  if(!chars.length){ toast('등록된 캐릭터 프리셋이 없어요', 'warning'); return; }
-  let q = '';
-  const renderList = () => {
-    const ql = q.toLowerCase().trim();
-    const indexed = chars.map((c, i) => ({c, i}));
-    const matched = ql ? indexed.filter(({c}) => {
-      const name = (c.name||'').toLowerCase();
-      const grp = (typeof getCharGroup === 'function' ? getCharGroup(c.name) : '').toLowerCase();
-      return name.includes(ql) || grp.includes(ql);
-    }) : indexed;
-    const shown = matched.slice(0, 200);
-    return `
-      <div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <input id="tplCharPickSearch" class="inp" type="text" placeholder="🔎 캐릭터·작품 이름…" value="${esc(q)}" autocomplete="off" style="flex:1;min-width:120px">
-        <button class="btn ghost" id="tplCharPickRandom" type="button" style="padding:6px 10px;font-size:12px;flex-shrink:0">🎲 랜덤 추가</button>
-      </div>
-      <div style="font-size:11px;color:var(--t3);margin-bottom:6px">${matched.length.toLocaleString()}명 매치 (최대 200 표시)</div>
-      <div style="max-height:42vh;overflow-y:auto;border:1.5px solid var(--b1);border-radius:5px;background:var(--card)">
-        ${shown.length ? shown.map(({c, i}) => `
-          <button type="button" data-tcp-pick="${i}" style="display:flex;align-items:center;gap:9px;width:100%;padding:7px 10px;background:transparent;border:0;border-bottom:1px solid var(--b1);cursor:pointer;text-align:left;font-family:inherit">
-            ${c.thumb
-              ? `<span style="width:32px;height:32px;border-radius:4px;background:url('${esc(c.thumb)}') center/cover var(--card2);flex-shrink:0;border:1.5px solid var(--b1)"></span>`
-              : `<span style="width:32px;height:32px;border-radius:4px;background:var(--card2);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:14px">👤</span>`}
-            <span style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name||'(이름 없음)')}</span>
-          </button>
-        `).join('') : '<div style="padding:18px;text-align:center;color:var(--t3);font-style:italic">매치 없음</div>'}
-      </div>`;
-  };
-  $('confirmTitle').innerHTML = `➕ 캐릭터 항목 추가 <span class="en">to current roll</span>`;
-  $('confirmBody').innerHTML = renderList();
-  $('confirmOk').style.display = 'none';
-  $('confirmCancel').textContent = '닫기';
-  $('confirmModal').classList.add('open');
-  const rerender = () => {
-    $('confirmBody').innerHTML = renderList();
-    wire();
-    $('tplCharPickSearch')?.focus();
-  };
-  const addChar = (idx) => {
-    const p = chars[idx];
-    if(!p) return;
-    _tplCurrentRoll.push({cat:'character', preset: p});
-    tplRenderRoll();
-    toast(`➕ ${p.name || '(이름 없음)'} 추가됨`, 'success');
-  };
-  const wire = () => {
-    $('tplCharPickSearch')?.addEventListener('input', e => {
-      q = e.target.value;
-      // debounce 없이 가벼움 — chars 1500이라도 filter 빠름
-      const wrap = $('confirmBody').querySelector('div[style*="max-height:42vh"]');
-      if(wrap){
-        // 결과만 다시 그리기 (입력 포커스 유지)
-        const newHtml = renderList();
-        const tmp = document.createElement('div');
-        tmp.innerHTML = newHtml;
-        const newList = tmp.querySelector('div[style*="max-height:42vh"]');
-        const newCount = tmp.querySelector('div[style*="font-size:11px"]');
-        if(newList) wrap.replaceWith(newList);
-        const oldCount = $('confirmBody').querySelector('div[style*="font-size:11px"]');
-        if(newCount && oldCount) oldCount.replaceWith(newCount);
-        wireListClicks();
-      }
-    });
-    $('tplCharPickRandom')?.addEventListener('click', () => {
-      const ql = q.toLowerCase().trim();
-      const pool = ql
-        ? chars.filter(c => (c.name||'').toLowerCase().includes(ql) || (typeof getCharGroup==='function' ? getCharGroup(c.name).toLowerCase() : '').includes(ql))
-        : chars;
-      if(!pool.length){ toast('매치되는 캐릭터 없음', 'warning'); return; }
-      const pick = pool[Math.floor(Math.random() * pool.length)];
-      _tplCurrentRoll.push({cat:'character', preset: pick});
-      tplRenderRoll();
-      $('confirmModal').classList.remove('open');
-      $('confirmOk').style.display = '';
-      toast(`🎲 ${pick.name || '(이름 없음)'} 랜덤 추가`, 'success');
-    });
-    wireListClicks();
-  };
-  const wireListClicks = () => {
-    $('confirmBody').querySelectorAll('[data-tcp-pick]').forEach(btn => {
-      btn.onclick = () => {
-        const i = parseInt(btn.dataset.tcpPick, 10);
-        addChar(i);
-        $('confirmModal').classList.remove('open');
-        $('confirmOk').style.display = '';
-      };
-    });
-  };
-  wire();
-}
-
-function tplApplyDirect(i){
-  const t = (state.templates || [])[i];
-  if(!t) return;
-  // 조합 영역에 동기 로드 (재롤 가능하게 상태도 채움)
-  _tplCurrentRoll = [];
-  let missing = 0;
-  for(const r of t.roll){
-    const list = state.presets[r.cat] || [];
-    const p = list.find(x => x.name === r.presetName);
-    if(p) _tplCurrentRoll.push({cat: r.cat, preset: p});
-    else missing++;
-  }
-  if(!_tplCurrentRoll.length){
-    toast(`"${t.name}" — 프리셋이 모두 삭제됐어요. 적용 불가`, 'error');
-    return;
-  }
-  tplRenderRoll();
-  tplApplyRoll();   // 캐릭터 슬롯에 적용 + 편집 탭 이동
-  if(missing) setTimeout(() => toast(`(${missing}개 프리셋 누락 — 삭제됐거나 이름 변경됨)`, 'warning'), 80);
-}
-
-// 🖼 저장된 템플릿 미리보기 설정 — 갤러리에서 이미지 선택 (또는 제거)
-function tplSetThumbnail(i){
-  const t = state.templates?.[i];
-  if(!t) return;
-  // 기존 썸이 있으면 '제거' 옵션도 제공
-  if(t.thumb){
-    $('confirmTitle').innerHTML = `🖼 "${esc(t.name)}" 미리보기`;
-    $('confirmBody').innerHTML = `
-      <div style="text-align:center;margin-bottom:12px">
-        <img src="${esc(t.thumb)}" alt="템플릿 미리보기" loading="lazy" decoding="async" style="max-width:100%;max-height:200px;border-radius:6px;border:1.5px solid var(--b1)">
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn ghost" data-tpl-thumb-act="pick" style="flex:1;padding:8px 12px;font-size:12.5px;border-color:rgba(58,99,152,.4);color:var(--blue)">🖼 갤러리에서 변경</button>
-        <button class="btn ghost" data-tpl-thumb-act="remove" style="padding:8px 12px;font-size:12.5px;color:var(--red);border-color:rgba(181,67,56,.3)">🗑 제거</button>
-      </div>`;
-    $('confirmOk').style.display = 'none';
-    $('confirmCancel').textContent = '닫기';
-    $('confirmModal').classList.add('open');
-    $('confirmBody').querySelector('[data-tpl-thumb-act="pick"]').onclick = () => {
-      $('confirmModal').classList.remove('open');
-      $('confirmOk').style.display = '';
-      _tplPickThumb(i);
-    };
-    $('confirmBody').querySelector('[data-tpl-thumb-act="remove"]').onclick = async () => {
-      t.thumb = null;
-      await DB.setFlag('templates', state.templates);
-      $('confirmModal').classList.remove('open');
-      $('confirmOk').style.display = '';
-      tplRenderSavedList();
-      toast('🗑 미리보기 제거됨', 'info');
-    };
-  } else {
-    _tplPickThumb(i);
-  }
-}
-
-function _tplPickThumb(i){
-  openGalleryThumbPicker(async (dataURL) => {
-    if(!dataURL) return;
-    const t = state.templates?.[i];
-    if(!t) return;
-    t.thumb = dataURL;
-    await DB.setFlag('templates', state.templates);
-    tplRenderSavedList();
-    toast(`🖼 "${t.name}" 미리보기 설정됨`, 'success');
-  });
-}
-
-async function tplDelSaved(i){
-  const t = (state.templates || [])[i];
-  if(!t) return;
-  state.templates.splice(i, 1);
-  await DB.setFlag('templates', state.templates);
-  tplRenderSavedList();
-  toast(`🗑 "${t.name}" 삭제됨`, 'info');
-}
-
 function setMainPane(pane){
   // 🛡 'edit'은 모바일 전용 mview (사이드바 표시 모드)
   //  · 모바일: data-mview='edit'으로 사이드바 보이게
@@ -15737,7 +15042,7 @@ function setMainPane(pane){
   $$('.main-pane').forEach(p => p.classList.toggle('act', p.dataset.pane === mainPaneTarget));
   if(pane === 'gallery') loadGallery();
   else if(pane === 'presets'){ renderPresetTabs(); renderPresets(); }
-  else if(pane === 'templates'){ tplRenderCatChips(); tplRenderRoll(); tplRenderSavedList(); }
+  else if(pane === 'templates'){ tplRenderCatChips(); tplRenderRoll(); }
   else if(pane === 'tags'){ loadDanbooruTags(); renderTagCats(); renderTagBody(); }
   // 페인 변경 이벤트 발행 — 캐릭터 네거티브 모드 등이 자동 해제 가능
   if(prev !== pane){
@@ -16911,7 +16216,15 @@ function wireTopbarAndFormEvents(){
   $$('.mode-btn[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
   // Main tabs (데스크탑 상단 + 모바일 하단 네비 양쪽 모두)
   $$('.main-tab-btn').forEach(b => b.onclick = () => setMainPane(b.dataset.pane));
-  $$('.mn-btn').forEach(b => b.onclick = () => setMainPane(b.dataset.mview));
+  $$('.mn-btn').forEach(b => {
+    // data-mview 없는 모바일 버튼(만화 등) 은 별도 핸들러로 처리
+    if(!b.dataset.mview) return;
+    b.onclick = () => setMainPane(b.dataset.mview);
+  });
+  // 🎞 모바일 만화 버튼 — pane 전환 X, 모달만 오픈
+  $('mnComicBtn')?.addEventListener('click', () => {
+    if(typeof openComicMakerModal === 'function') openComicMakerModal();
+  });
   // Section collapse
   document.addEventListener('click', e => {
     const t = e.target.closest('.sec-title');
@@ -18874,11 +18187,6 @@ function wireMiscEvents(){
     else _tplActiveCats.add(cat);
     tplRenderCatChips();
   });
-  $('tplNlBtn')?.addEventListener('click', tplApplyNaturalLanguage);
-  $('tplNlInput')?.addEventListener('keydown', e => {
-    // Ctrl+Enter or Cmd+Enter → 분석 (Enter 단독은 줄바꿈)
-    if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){ e.preventDefault(); tplApplyNaturalLanguage(); }
-  });
   $('tplRollBtn')?.addEventListener('click', tplRoll);
   // ⭐ 템플릿 랜덤 — 즐겨찾기 프리셋만 사용 토글 (영속화)
   const tfoToggle = $('tplFavOnlyToggle');
@@ -18895,25 +18203,8 @@ function wireMiscEvents(){
         : '⭐ 필터 해제 — 모든 프리셋에서 랜덤', 'info');
     });
   }
-  $('tplApplyBtn')?.addEventListener('click', tplApplyRoll);
   $('tplToRcBtn')?.addEventListener('click', tplExportActiveToRc);
-  // ➕ 현재 조합에 캐릭터 항목 추가 — 캐릭터 선택 모달 (검색 + 랜덤)
-  $('tplAddCharSlotBtn')?.addEventListener('click', () => {
-    openTplCharPicker();
-  });
-  $('tplAddMobMaleBtn')?.addEventListener('click', () => {
-    const chars = state.presets.character || [];
-    // 정확 매치 우선 → 없으면 "모브" 포함 첫 항목 폴백
-    let target = chars.find(c => (c.name||'').trim() === 'ㄱ.모브');
-    if(!target) target = chars.find(c => (c.name||'').includes('모브'));
-    if(!target){
-      toast('"ㄱ.모브" 캐릭터 프리셋이 없어요 — 먼저 캐릭터 프리셋으로 저장해 주세요', 'warning');
-      return;
-    }
-    _tplCurrentRoll.push({cat:'character', preset: target});
-    tplRenderRoll();
-    toast(`👨 ${target.name} 추가됨`, 'success');
-  });
+  // 미리보기 리스트 인터랙션 — reroll/remove/lock (edit 텍스트는 정리에서 제거)
   $('tplRollList')?.addEventListener('click', e => {
     const b = e.target.closest('[data-tpl-roll-act]');
     if(!b) return;
@@ -18921,66 +18212,11 @@ function wireMiscEvents(){
     const cat = b.dataset.cat;
     if(act === 'reroll') tplRerollOne(cat);
     else if(act === 'remove') tplRemoveOne(cat);
-    else if(act === 'edit') tplEditRollItem(cat);
     else if(act === 'lock'){
       if(_tplLockedCats.has(cat)){ _tplLockedCats.delete(cat); toast('🔓 잠금 해제', 'info'); }
       else { _tplLockedCats.add(cat); toast('🔒 잠금 — 다음 랜덤에 유지됨', 'success'); }
       tplRenderRoll();
     }
-  });
-  $('tplSaveBtn')?.addEventListener('click', tplSaveCurrent);
-  $('tplSaveName')?.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); tplSaveCurrent(); } });
-  $('tplList')?.addEventListener('click', async e => {
-    // 선택 모드 체크박스
-    const cb = e.target.closest('input[type="checkbox"][data-tpl-bulk]');
-    if(cb){
-      const tid = cb.dataset.tplBulk;
-      if(cb.checked) _tplSelected.add(tid);
-      else _tplSelected.delete(tid);
-      if($('tplBulkCount')) $('tplBulkCount').textContent = `${_tplSelected.size}개`;
-      return;
-    }
-    const b = e.target.closest('[data-tpl-saved-act]');
-    if(!b) return;
-    const i = parseInt(b.dataset.idx, 10);
-    if(isNaN(i)) return;
-    const act = b.dataset.tplSavedAct;
-    if(act === 'load') tplLoadSaved(i);
-    else if(act === 'apply') tplApplyDirect(i);
-    else if(act === 'album') tplMoveToAlbum(i);
-    else if(act === 'setthumb') tplSetThumbnail(i);
-    else if(act === 'del'){
-      const t = state.templates?.[i];
-      if(!t) return;
-      confirmDialog(`"${t.name}" 템플릿을 삭제할까요?`, () => tplDelSaved(i), '🗑 템플릿 삭제');
-    }
-  });
-  // 📁 앨범 필터 / 새 앨범 / 선택 모드 / 일괄
-  $('tplAlbumFilter')?.addEventListener('change', () => {
-    _tplAlbumFilter = $('tplAlbumFilter').value;
-    _tplSelected.clear();
-    tplRenderSavedList();
-  });
-  $('tplNewAlbumBtn')?.addEventListener('click', tplCreateAlbum);
-  $('tplSelectModeBtn')?.addEventListener('click', tplToggleSelectMode);
-  $('tplBulkAll')?.addEventListener('click', () => {
-    // 현재 필터의 모든 항목 선택
-    const all = (state.templates || []).filter(t => {
-      if(_tplAlbumFilter === '__all__') return true;
-      if(_tplAlbumFilter === '__none__') return !(t.album||'').trim();
-      return (t.album||'') === _tplAlbumFilter;
-    });
-    for(const t of all) _tplSelected.add(tplItemId(t));
-    tplRenderSavedList();
-  });
-  $('tplBulkDel')?.addEventListener('click', tplBulkDelete);
-  $('tplBulkMoveAlbum')?.addEventListener('click', tplBulkMoveAlbum);
-  $('tplBulkCancel')?.addEventListener('click', () => {
-    _tplSelectMode = false;
-    _tplSelected.clear();
-    const btn = $('tplSelectModeBtn');
-    if(btn) btn.innerHTML = '☑ 선택';
-    tplRenderSavedList();
   });
   // Inpaint
   $('inpaintCancel').addEventListener('click', () => $('inpaintModal').classList.remove('open'));
@@ -19280,7 +18516,6 @@ function rcToggleBuilder(force){
   if(open){
     _renderRcGroupsBar();
     rcRender();
-    if(typeof _refreshRcEnableUI === 'function') _refreshRcEnableUI();
     // 🎴 빌더 프리셋 안내 — 첫 진입 시 1회 (localStorage 영구화)
     try {
       if(!localStorage.getItem('nai_rcp_hint_shown')){
@@ -20396,11 +19631,7 @@ function rcApplyToCharacter(){
 }
 
 async function _rcDoApply(target, compiled){
-  // 🎴 적용은 일회성 복사 — 빌더 '생성 시 적용'(rcEnabled) 이 켜져있으면 빌더가 별도로 또 주입함.
-  //   프리셋/캐릭터로만 쓰고 싶으면 빌더 토글을 꺼야 중복 안 됨. 적용 후 안내.
-  if(state.rcEnabled && target !== 'clipboard'){
-    setTimeout(() => toast('⚠ 빌더 「생성 시 적용」이 켜져 있어요 — 프리셋으로만 쓰려면 빌더 토글을 끄세요 (안 끄면 빌더도 따로 주입)', 'warning', {timeoutMs: 9000}), 600);
-  }
+  // 🎴 적용은 일회성 복사 — 빌더는 더 이상 자동 주입하지 않으므로 중복 경고 불필요.
   if(target === 'clipboard'){
     try {
       await navigator.clipboard.writeText(compiled);
@@ -20474,61 +19705,6 @@ function rcClearAllLocks(){
   }
 }
 
-// 🎲 한 번 시연 — 모든 활성 카테고리에서 옵션 선택해서 어떤 결과가 나오는지 보여줌
-function rcDemo(){
-  const cats = state.randomCategories || [];
-  const activeCats = cats.filter(c => c.enabled && (c.options?.length || 0) > 0);
-  if(activeCats.length === 0){
-    toast('활성 카테고리가 없습니다', 'warning');
-    return;
-  }
-  const rows = activeCats.map(c => {
-    let chosen;
-    if(c.locked && Number.isInteger(c.lockedOptionIdx) && c.options[c.lockedOptionIdx]){
-      chosen = c.options[c.lockedOptionIdx];
-    } else {
-      chosen = pickWeightedOption(c.options);
-    }
-    const text = chosen?.text || '';
-    const wt = chosen?.weight ?? 1.0;
-    const empty = !text.trim();
-    return {label: c.label, text, weight: wt, empty, locked: c.locked};
-  });
-  const finalTokens = rows.filter(r => !r.empty).map(r => r.text);
-  const html = `
-    <div style="font-size:12.5px;color:var(--t2);margin-bottom:10px;line-height:1.65">
-      현재 활성 카테고리 <b style="color:var(--t1)">${activeCats.length}개</b>에서 한 번 무작위 선택한 결과입니다. 매 생성마다 새 옵션이 뽑힙니다.
-    </div>
-    <fieldset style="border:1.5px solid var(--b1);border-radius:6px;padding:8px 12px 10px;margin-bottom:10px">
-      <legend style="font-weight:700;color:var(--acc);padding:0 6px;font-size:12.5px">카테고리별 선택 결과</legend>
-      <div style="display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;font-size:11.5px;align-items:baseline">
-        ${rows.map(r => `
-          <div style="font-weight:700;color:var(--t1)">${esc(r.label)}${r.locked?' 🔒':''}</div>
-          <div style="font-family:var(--mono);color:${r.empty?'var(--t3)':'var(--t1)'};font-style:${r.empty?'italic':'normal'}">${r.empty?'(빈 옵션 — 사용 안 함)':esc(r.text)}</div>
-          <div style="font-family:var(--mono);color:var(--t3);font-size:10.5px">w=${(Number(r.weight)||1).toFixed(1)}</div>
-        `).join('')}
-      </div>
-    </fieldset>
-    <fieldset style="border:1.5px solid var(--acc);border-radius:6px;padding:8px 12px 10px">
-      <legend style="font-weight:700;color:var(--acc);padding:0 6px;font-size:12.5px">🎯 최종 prompt 에 추가될 텍스트</legend>
-      <div style="font-family:var(--mono);font-size:11.5px;line-height:1.55;color:var(--t1);background:var(--card);padding:6px 8px;border-radius:4px;max-height:140px;overflow-y:auto;white-space:pre-wrap;word-break:break-word">${finalTokens.length ? esc(finalTokens.join(', ')) : '<span style="color:var(--t3)">(모든 카테고리가 빈 옵션을 골랐음 — 아무것도 추가 안 됨)</span>'}</div>
-      <div style="margin-top:6px;text-align:right">
-        <button type="button" id="_rcDemoRerollBtn" class="btn ghost" style="font-size:11.5px;padding:4px 10px">🎲 다시 시연</button>
-      </div>
-    </fieldset>
-    <div style="font-size:11px;color:var(--t3);margin-top:10px;line-height:1.5">
-      ℹ 실제 생성 시 매번 새로 선택됩니다. 결과는 EXIF 메타에 자동 기록됩니다.
-    </div>
-  `;
-  $('confirmTitle').innerHTML = '🎲 카테고리 시연 <span class="en">Demo</span>';
-  $('confirmBody').innerHTML = html;
-  $('confirmOk').style.display = 'none';
-  $('confirmCancel').innerHTML = '닫기 <span class="en">Close</span>';
-  $('confirmModal').classList.add('open');
-  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
-  const reroll = document.getElementById('_rcDemoRerollBtn');
-  if(reroll) reroll.onclick = () => rcDemo();
-}
 
 // 📥 텍스트에서 가져오기 — # 라벨 + ||A|B|C|| 패턴 자동 파싱
 function rcImportFromText(){
@@ -20657,18 +19833,6 @@ function rcDoImport(text, opts){
   return;
 }
 
-function _refreshRcEnableUI(){
-  const row = $('rcEnableRow');
-  const cb = $('rcEnableToggle');
-  const st = $('rcEnableState');
-  const on = !!state.rcEnabled;
-  if(cb) cb.checked = on;
-  if(row) row.classList.toggle('on', on);
-  if(st) st.textContent = on ? 'ON' : 'OFF';
-  // 🎲 탭에도 활성 표시 — 닫혀있어도 적용 중인지 한눈에
-  const tab = $('randomBuilderTab');
-  if(tab) tab.classList.toggle('rc-applying', on);
-}
 
 // ═══════════════════════════════════════════════════════════
 // 🃏 WILDCARDS — UI (프롬프트 헤더 🃏 버튼으로 토글, __name__ 삽입·관리·가져오기)
@@ -21083,16 +20247,6 @@ function wireWildcardEvents(){
 function rcWireEvents(){
   $('randomBuilderTab')?.addEventListener('click', () => rcToggleBuilder());
   $('rcCloseBtn')?.addEventListener('click', () => rcToggleBuilder(false));
-  // 🔘 마스터 적용 토글
-  $('rcEnableToggle')?.addEventListener('change', async () => {
-    state.rcEnabled = $('rcEnableToggle').checked;
-    await DB.setFlag('rc_enabled', state.rcEnabled);
-    _refreshRcEnableUI();
-    if(typeof refreshCost === 'function') refreshCost();
-    toast(state.rcEnabled
-      ? '🎲 적용 ON — 생성마다 활성 카테고리에서 옵션 무작위 추가'
-      : '🎲 적용 OFF — 빌더는 편집만, 생성엔 영향 없음', 'info');
-  });
   $('rcAddBtn')?.addEventListener('click', () => rcAddCategory());
   $('rcEmptyAddBtn')?.addEventListener('click', () => rcAddCategory());
   $('rcEmptyLoadBtn')?.addEventListener('click', openRcpModal);
@@ -21148,7 +20302,6 @@ function rcWireEvents(){
       if(rcpDelete(pid)) _renderRcpList();
     }
   });
-  $('rcDemoBtn')?.addEventListener('click', () => rcDemo());
   $('rcImportBtn')?.addEventListener('click', () => rcImportFromText());
   $('rcCollapseAllBtn')?.addEventListener('click', () => rcCollapseAll());
   $('rcApplyToCharBtn')?.addEventListener('click', () => rcApplyToCharacter());
@@ -21574,7 +20727,6 @@ async function init(){
   await _bootStep('workflows', loadWorkflows);
   await _bootStep('randomCategories', loadRandomCategories);
   await _bootStep('randomBuilderPresets', loadRandomBuilderPresets);
-  await _bootStep('templates', tplLoadTemplates);
   await _bootStep('wildcards', loadWildcards);
   // 👎 시드 blocklist + auto 토글 복원
   try {
@@ -21582,9 +20734,6 @@ async function init(){
     if(Array.isArray(bl)) state.seedBlocklist = bl;
     const auto = await DB.getFlag('seed_blocklist_auto');
     state.seedBlocklistAuto = !!auto;
-    // 🎲 RC 마스터 스위치 복원
-    state.rcEnabled = !!(await DB.getFlag('rc_enabled'));
-    if(typeof _refreshRcEnableUI === 'function') _refreshRcEnableUI();
   } catch(_){}
   // 🔄 마이그레이션: 갤러리 ⭐ → ❤️ (한 번만, 옛 사용자의 fav 데이터를 liked 로 승격)
   try {
