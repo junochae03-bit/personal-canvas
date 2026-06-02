@@ -438,7 +438,10 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .g-item.expanded:hover .g-thumb .g-album-btn,
 .g-item.expanded:hover .g-thumb .open-lb,
 .g-item.expanded:hover .g-thumb .g-exif-btn,
-.g-item.expanded:hover .g-thumb .g-textedit{opacity:1}
+.g-item.expanded:hover .g-thumb .g-textedit,
+/* 🔍 발견성 — 펼치지 않은 카드에서도 hover 시 🅣·🔍 노출 (사용자가 기능 자체를 찾기 어려워하던 문제) */
+.g-item:hover .g-thumb .open-lb,
+.g-item:hover .g-thumb .g-textedit{opacity:1}
 /* 데스크탑에서도 hover 진입 가능성 힌트 — 우상단·우하단에 옅은 그라데이션 */
 @media (hover:hover){
   .g-item.expanded .g-thumb::after{
@@ -3611,7 +3614,7 @@ function highlightMatch(text, query){
 // 🎲 NovelAI 동적 선택 ||A|B|C|| — 매 호출마다 옵션 중 하나 무작위 선택.
 // js/pure/randomChoice.mjs 와 동일 (lint MIRRORED 검증). 브라우저는 인라인 사용.
 const RC_PATTERN = /\|\|([^|]*(?:\|[^|]*)*?)\|\|/g;
-function expandRandomChoices(text, rng){
+function expandRandomChoices(text, rng, onPick){
   if(!text || typeof text !== 'string') return text;
   const random = (typeof rng === 'function') ? rng : Math.random;
   return text.replace(RC_PATTERN, (full, inner) => {
@@ -3619,7 +3622,9 @@ function expandRandomChoices(text, rng){
     const options = inner.split('|');
     if(options.length === 0) return '';
     const choice = options[Math.floor(random() * options.length)];
-    return (choice || '').trim();
+    const picked = (choice || '').trim();
+    if(typeof onPick === 'function') onPick(options.map(o => (o||'').trim()), picked);
+    return picked;
   });
 }
 // 🃏 와일드카드 __name__ — js/pure/wildcards.mjs 와 동일 (lint MIRRORED). 브라우저는 인라인 사용.
@@ -3664,13 +3669,15 @@ function pickWildcardLine(wc, rng){
   }
   return String(opts[opts.length - 1]?.text || '');
 }
-function expandWildcards(text, resolve, rng){
+function expandWildcards(text, resolve, rng, onPick){
   if(!text || typeof text !== 'string') return text;
   if(typeof resolve !== 'function') return text;
   return text.replace(WILDCARD_TOKEN_RE, (full, name) => {
     const wc = resolve(name);
     if(!wc || !Array.isArray(wc.options) || !wc.options.length) return full;
-    return pickWildcardLine(wc, rng);
+    const picked = pickWildcardLine(wc, rng);
+    if(typeof onPick === 'function') onPick(name, picked);
+    return picked;
   });
 }
 // 🃏 와일드카드 이름 → state 의 와일드카드 객체 (생성 시 __name__ 치환용). 인라인 전용(state 의존).
@@ -5500,11 +5507,24 @@ function buildGenBody(opts){
   // opts: {prompt, neg, model, w, h, steps, cfg, cfgRescale, sampler, schedule, seed,
   //        ucPreset, variety, decrisper, smea, smeaDyn,
   //        characters, useCoords, baseImageB64, strength, noise, maskB64, addOrig,
-  //        vibeRefs (array of {b64, info, strength}), action='generate'|'img2img'|'infill'}
+  //        vibeRefs (array of {b64, info, strength}), action='generate'|'img2img'|'infill',
+  //        _log (선택): {wildcards:[], choices:[], rc:[]} — buildGenBody 가 채워서 호출자에게 전달.}
   // 🎲 NAI 동적 선택 ||A|B|C|| — 매 호출마다 옵션 무작위 expand.
   //    원본 opts 는 보존, 얕은 복사 후 prompt/neg/characters[*].prompt/neg 만 갱신.
   // 🃏 와일드카드 __name__ 먼저 치환 → 이어서 ||A|B|C|| 동적 선택 expand.
-  let expandedPrompt = expandRandomChoices(expandWildcards(opts.prompt || '', _resolveWildcard));
+  // 📝 _log 가 주어지면 어떤 토큰이 어떤 값으로 풀렸는지 source 별로 기록 → meta.expansionLog 로 저장.
+  const log = opts._log;
+  const mkLog = (source) => log
+    ? {
+        wc: (name, picked) => log.wildcards.push({source, token: `__${name}__`, value: picked}),
+        rc: (options, picked) => log.choices.push({source, options, value: picked}),
+      }
+    : {wc: undefined, rc: undefined};
+  const mainCb = mkLog('prompt');
+  let expandedPrompt = expandRandomChoices(
+    expandWildcards(opts.prompt || '', _resolveWildcard, undefined, mainCb.wc),
+    undefined, mainCb.rc
+  );
 
   // 🎲 RANDOM CATEGORY BUILDER — 활성 카테고리에서 옵션 선택해서 prompt 끝에 자동 추가.
   //    각 카테고리: locked 면 lockedOptionIdx 고정, 아니면 pickWeightedOption.
@@ -5523,21 +5543,37 @@ function buildGenBody(opts){
       chosen = pickWeightedOption(optsArr);
     }
     const text = (chosen?.text || '').trim();
-    if(text) extras.push(text);
+    if(text){
+      extras.push(text);
+      if(log) log.rc.push({category: cat.label || cat.name || '', value: text});
+    }
   }
   if(extras.length){
     expandedPrompt = expandedPrompt + (expandedPrompt.trim() ? ', ' : '') + extras.join(', ');
   }
 
+  const negCb = mkLog('neg');
   opts = {
     ...opts,
     prompt: expandedPrompt,
-    neg: expandRandomChoices(expandWildcards(opts.neg || '', _resolveWildcard)),
-    characters: Array.isArray(opts.characters) ? opts.characters.map(c => ({
-      ...c,
-      prompt: expandRandomChoices(expandWildcards(c?.prompt || '', _resolveWildcard)),
-      neg: expandRandomChoices(expandWildcards(c?.neg || '', _resolveWildcard)),
-    })) : opts.characters,
+    neg: expandRandomChoices(
+      expandWildcards(opts.neg || '', _resolveWildcard, undefined, negCb.wc),
+      undefined, negCb.rc
+    ),
+    characters: Array.isArray(opts.characters) ? opts.characters.map((c, i) => {
+      const cb = mkLog(`char#${i+1}${c?.name?` (${c.name})`:''}`);
+      return {
+        ...c,
+        prompt: expandRandomChoices(
+          expandWildcards(c?.prompt || '', _resolveWildcard, undefined, cb.wc),
+          undefined, cb.rc
+        ),
+        neg: expandRandomChoices(
+          expandWildcards(c?.neg || '', _resolveWildcard, undefined, cb.wc),
+          undefined, cb.rc
+        ),
+      };
+    }) : opts.characters,
   };
   const mi = modelInfo(opts.model);
   const isV4 = mi.isV4;
@@ -9845,9 +9881,11 @@ async function runOne(q, apiKey){
   const i2iNoise = snap ? snap.i2iNoise : (parseFloat($('i2iNoise').value) || 0);
   const inpAddOrig = snap ? snap.inpAddOrig : !!$('inpAddOrig').checked;
   // Build body based on mode
+  // 📝 와일드카드·||A|B|C||·RC 카테고리 선택 로그 — 어떤 토큰이 어떤 값으로 풀렸는지 기록 (meta.expansionLog).
+  const expansionLog = {wildcards: [], choices: [], rc: []};
   let body;
   if(mode === 't2i'){
-    body = buildGenBody({...opts, action: 'generate'});
+    body = buildGenBody({...opts, action: 'generate', _log: expansionLog});
   } else if(mode === 'i2i'){
     if(!baseImage){ throw new Error('베이스 이미지가 필요합니다'); }
     body = buildGenBody({
@@ -9855,7 +9893,8 @@ async function runOne(q, apiKey){
       action: 'img2img',
       baseImageB64: baseImage.b64,
       strength: i2iStrength,
-      noise: i2iNoise
+      noise: i2iNoise,
+      _log: expansionLog,
     });
     body.parameters.width = baseImage.w;
     body.parameters.height = baseImage.h;
@@ -9868,6 +9907,7 @@ async function runOne(q, apiKey){
       baseImageB64: baseImage.b64,
       maskB64: inpaintMask,
       addOrig: inpAddOrig,
+      _log: expansionLog,
     });
     body.parameters.width = baseImage.w;
     body.parameters.height = baseImage.h;
@@ -9876,12 +9916,13 @@ async function runOne(q, apiKey){
     body = buildGenBody({
       ...opts,
       action: 'generate',
-      vibeRefs: vibeRefs
+      vibeRefs: vibeRefs,
+      _log: expansionLog,
     });
   } else if(mode === 'director'){
     return await runDirector(apiKey, snap);
   } else {
-    body = buildGenBody({...opts, action: 'generate'});
+    body = buildGenBody({...opts, action: 'generate', _log: expansionLog});
   }
   q.prompt = opts.prompt;
   q.seed = body.parameters.seed;
@@ -9927,6 +9968,12 @@ async function runOne(q, apiKey){
     charPrompts: (opts.characters || [])
       .filter(c => c.enabled && (c.name || (c.prompt||'').trim()))
       .map(c => ({name: (c.name||'').trim(), prompt: (c.prompt||'').trim(), neg: (c.neg||'').trim()})),
+    // 🃏 와일드카드 + ||A|B|C|| + RC 카테고리 선택 로그 — "어떤 토큰이 어떤 값으로 풀렸는지" 영구 기록.
+    //    원본 토큰 형태(meta.prompt: __color__)와 NAI에 전송된 확장본 사이의 매핑.
+    //    비어있으면(토큰 미사용) 필드 생략해서 메타 군더더기 최소화.
+    ...((expansionLog.wildcards.length || expansionLog.choices.length || expansionLog.rc.length)
+      ? {expansionLog}
+      : {}),
   };
   state.lastSeed = q.seed;
   recordSeedHistory(q.seed);
@@ -13022,6 +13069,25 @@ async function showLightboxAt(idx){
   if(img.fname) lines.push(`<b>파일명</b> · ${esc(img.fname)}`);
   if(img.prompt || m.prompt){
     lines.push(`<div class="lb-prompt"><b>프롬프트 (Prompt)</b><br>${esc(img.prompt || m.prompt || '')}</div>`);
+  }
+  // 🃏 와일드카드·||A|B|C||·RC 카테고리 해결 로그 — "이 토큰이 이 값으로 풀렸다" 매핑.
+  //    옛 이미지(필드 없음)는 표시 안 함. 빈 그룹은 행 자체 생략.
+  const xl = m.expansionLog;
+  if(xl && (xl.wildcards?.length || xl.choices?.length || xl.rc?.length)){
+    const rows = [];
+    if(xl.wildcards?.length){
+      const items = xl.wildcards.map(w => `<div style="margin-left:6px"><code style="color:var(--acc)">${esc(w.token)}</code> → ${esc(w.value)}${w.source && w.source !== 'prompt' ? ` <span class="muted">(${esc(w.source)})</span>` : ''}</div>`).join('');
+      rows.push(`<div><b>🃏 와일드카드</b>${items}</div>`);
+    }
+    if(xl.choices?.length){
+      const items = xl.choices.map(c => `<div style="margin-left:6px"><code style="color:var(--acc)">||${esc((c.options||[]).join('|'))}||</code> → ${esc(c.value)}${c.source && c.source !== 'prompt' ? ` <span class="muted">(${esc(c.source)})</span>` : ''}</div>`).join('');
+      rows.push(`<div style="margin-top:4px"><b>🎲 동적 선택</b>${items}</div>`);
+    }
+    if(xl.rc?.length){
+      const items = xl.rc.map(r => `<div style="margin-left:6px"><span class="muted">${esc(r.category || '카테고리')}</span> → ${esc(r.value)}</div>`).join('');
+      rows.push(`<div style="margin-top:4px"><b>🎰 RC 빌더</b>${items}</div>`);
+    }
+    lines.push(`<div class="lb-prompt">${rows.join('')}</div>`);
   }
   // 🎴 캐릭터별 프롬프트 — V4 는 base prompt 와 분리 저장. 프리셋 외형·액션 내용을 여기서 노출.
   if(Array.isArray(m.charPrompts) && m.charPrompts.length){
