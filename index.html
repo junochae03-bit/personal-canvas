@@ -862,6 +862,34 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   #textEditModal .te-stage{min-height:240px}
 }
 
+/* COMIC PANEL MAKER MODAL — 🎞 만화 컷 만들기 (te-* 스타일 일부 재사용) */
+#comicMakerModal .modal{max-width:96vw;max-height:94vh;width:1180px;display:flex;flex-direction:column}
+#comicMakerModal .cm-body{display:flex;flex-direction:row;gap:12px;flex:1;min-height:0;align-items:stretch;overflow:hidden}
+#comicMakerModal .cm-stage{flex:1;min-width:0;min-height:340px;background:#15110a;display:flex;align-items:center;justify-content:center;overflow:auto;border:1.5px solid var(--b2);border-radius:6px;position:relative;padding:12px}
+#comicMakerModal .cm-canvas-wrap{position:relative;display:inline-block;box-shadow:0 4px 18px rgba(0,0,0,.5)}
+#comicMakerModal .cm-canvas-wrap canvas{display:block;cursor:pointer}
+#comicMakerModal .cm-panel{width:340px;flex-shrink:0;overflow-y:auto;padding-right:4px;display:flex;flex-direction:column;gap:10px}
+#comicMakerModal .cm-layout-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#comicMakerModal .cm-layout-card{background:var(--bg);border:2px solid var(--b1);border-radius:6px;padding:6px;cursor:pointer;transition:all .12s;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--t2)}
+#comicMakerModal .cm-layout-card:hover{border-color:var(--acc);color:var(--t1)}
+#comicMakerModal .cm-layout-card.sel{border-color:var(--acc);background:rgba(214,160,80,.15);color:var(--acc)}
+#comicMakerModal .cm-layout-card svg{display:block;width:48px;height:60px}
+#comicMakerModal .cm-layout-card .cm-lc-name{font-weight:600;text-align:center;line-height:1.2}
+#comicMakerModal .cm-help{font-size:11.5px;line-height:1.5;padding:6px 8px;background:var(--bg);border-radius:4px;border-left:3px solid var(--acc)}
+#comicMakerModal .cm-slot-list{display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto}
+#comicMakerModal .cm-slot{display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--bg);border:1px solid var(--b1);border-radius:4px;font-size:11.5px}
+#comicMakerModal .cm-slot .cm-s-idx{font-weight:700;color:var(--acc);min-width:18px}
+#comicMakerModal .cm-slot .cm-s-status{flex:1;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#comicMakerModal .cm-slot .cm-s-status.filled{color:var(--t1)}
+#comicMakerModal .cm-slot .cm-s-btn{background:transparent;border:none;cursor:pointer;color:var(--t3);padding:2px 6px;font-size:13px;border-radius:3px;line-height:1}
+#comicMakerModal .cm-slot .cm-s-btn:hover{background:var(--b1);color:var(--t1)}
+@media (max-width:820px){
+  #comicMakerModal .modal{width:100%;max-height:96vh}
+  #comicMakerModal .cm-body{flex-direction:column}
+  #comicMakerModal .cm-panel{width:100%;max-height:38vh}
+  #comicMakerModal .cm-stage{min-height:240px}
+}
+
 /* GUIDE MODAL — NAI 가이드 */
 #guideBody{line-height:1.75;font-size:13.5px;color:var(--t1)}
 #guideBody h4{font-size:15px;font-weight:700;color:var(--acc);margin:18px 0 8px;padding-bottom:5px;border-bottom:1.5px solid var(--b1);display:flex;align-items:center;gap:7px}
@@ -2589,6 +2617,7 @@ mark{
             <button data-gv="vault" title="❤️ 좋아요한 이미지만 평평하게 (세션·세션헤더 무시, 최신순)">📌 보관함 <span class="en">Vault</span></button>
           </div>
           <button class="btn ghost" id="galSelectModeBtn" title="선택 모드 — 여러 이미지를 한 번에 삭제하거나 앨범에 추가 (모바일: 길게 누르기로도 진입)" style="border-color:rgba(58,99,152,.4)">☑ 선택 <span class="en">Select</span></button>
+          <button class="btn ghost" id="comicMakerBtn" title="🎞 만화 칸 만들기 — 페이지 레이아웃 + 갤러리 이미지 채우기" style="border-color:rgba(214,160,80,.45);color:var(--acc)">🎞 만화 <span class="en">Comic</span></button>
           <div class="gal-zoom" title="갤러리 크기 조절 (모바일: 두 손가락 핀치)">
             <button class="iconbtn" id="galZoomOut" title="작게 보기 (−)">−</button>
             <span class="gz-ind" id="galZoomInd" title="현재 크기">M</span>
@@ -3396,6 +3425,45 @@ coffee shop, latte art"></textarea>
     <div class="modal-foot">
       <button class="btn ghost" id="teCancel">취소 <span class="en">Cancel</span></button>
       <button class="btn primary" id="teSaveNew" title="편집본을 갤러리에 새 이미지로 저장 (원본 보존)">💾 새 이미지로 저장 <span class="en">Save as new</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- 🎞 COMIC PANEL MAKER MODAL — 만화 칸 만들기 + 갤러리 이미지 채우기 -->
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="comicMakerTitle" id="comicMakerModal">
+  <div class="modal cm-modal">
+    <h3 id="comicMakerTitle">🎞 만화 컷 만들기 <span class="en">Comic Panels</span></h3>
+    <div class="modal-body cm-body">
+      <div class="cm-stage" id="cmStage">
+        <div class="cm-canvas-wrap" id="cmCanvasWrap"></div>
+      </div>
+      <div class="cm-panel">
+        <div class="te-section">
+          <div class="te-section-title">📐 페이지 레이아웃 <span class="en">Layout</span></div>
+          <div class="cm-layout-grid" id="cmLayoutGrid"></div>
+        </div>
+        <div class="te-section">
+          <div class="te-section-title">🎨 스타일 <span class="en">Style</span></div>
+          <div class="te-field-row">
+            <div class="te-field"><label>여백색 <span class="en">Gutter</span></label><input type="color" class="te-inp" id="cmGutterColor" value="#000000"></div>
+            <div class="te-field"><label>페이지 배경</label><input type="color" class="te-inp" id="cmBgColor" value="#ffffff"></div>
+          </div>
+          <div class="te-field-row">
+            <div class="te-field"><label>여백 두께 <span class="en">Gap</span></label><input type="range" class="te-inp" id="cmGutterPx" min="0" max="40" step="1" value="12"><span class="te-val" id="cmGutterPxVal">12</span></div>
+            <div class="te-field"><label>패널 테두리 <span class="en">Border</span></label><input type="range" class="te-inp" id="cmBorderPx" min="0" max="12" step="1" value="3"><span class="te-val" id="cmBorderPxVal">3</span></div>
+          </div>
+        </div>
+        <div class="te-section">
+          <div class="te-section-title">🖼 칸 채우기 <span class="en">Slots</span></div>
+          <div class="cm-help muted">칸을 클릭하면 갤러리에서 이미지를 골라 자동으로 꽉 채워(cover-fit) 넣어요. 같은 칸을 다시 클릭하면 교체. 우클릭/길게 누르기로 비움.</div>
+          <div id="cmSlotList" class="cm-slot-list"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="cmCancel">취소 <span class="en">Cancel</span></button>
+      <button class="btn ghost" id="cmClearAll" title="모든 칸 비우기">🗑 전체 비우기</button>
+      <button class="btn primary" id="cmSaveNew" title="완성된 페이지를 갤러리에 새 이미지로 저장">💾 갤러리에 저장 <span class="en">Save</span></button>
     </div>
   </div>
 </div>
@@ -14369,6 +14437,373 @@ window.openTextEditModal = openTextEditModal;
 Object.defineProperty(window, '_teState', { get(){ return _teState; }, configurable: true });
 
 // ═══════════════════════════════════════════════════════════
+// 🎞 COMIC PANEL MAKER — 만화 칸 분할 + 갤러리 이미지 채우기
+// ═══════════════════════════════════════════════════════════
+//   - 페이지 레이아웃 선택 → 각 칸을 클릭하면 갤러리 picker 로 이미지 골라 cover-fit 합성.
+//   - NAI infill 같은 AI 호출 없음. 순수 캔버스 합성 → PNG 저장 (mode:'comic').
+//   - LAYOUTS: 패널 좌표는 페이지 픽셀 기준. cover-fit 으로 패널 비율에 꽉 채워 넣음.
+const CM_LAYOUTS = [
+  {id:'2v',     name:'세로 2칸',         w:832, h:1216, panels:[{x:0,y:0,w:832,h:600},{x:0,y:616,w:832,h:600}]},
+  {id:'3v',     name:'세로 3칸',         w:832, h:1216, panels:[{x:0,y:0,w:832,h:397},{x:0,y:409,w:832,h:398},{x:0,y:819,w:832,h:397}]},
+  {id:'4grid',  name:'4컷 그리드',       w:1024, h:1024, panels:[{x:0,y:0,w:506,h:506},{x:518,y:0,w:506,h:506},{x:0,y:518,w:506,h:506},{x:518,y:518,w:506,h:506}]},
+  {id:'1wide',  name:'와이드 1컷',       w:1216, h:832,  panels:[{x:0,y:0,w:1216,h:832}]},
+  {id:'3split', name:'큰 위 + 아래 2',   w:832, h:1216, panels:[{x:0,y:0,w:832,h:700},{x:0,y:712,w:410,h:504},{x:422,y:712,w:410,h:504}]},
+  {id:'2h',     name:'가로 2칸',         w:1216, h:832,  panels:[{x:0,y:0,w:600,h:832},{x:616,y:0,w:600,h:832}]},
+  {id:'6grid',  name:'6컷 (3×2)',        w:1024, h:1024, panels:[
+    {x:0,y:0,w:336,h:506},{x:344,y:0,w:336,h:506},{x:688,y:0,w:336,h:506},
+    {x:0,y:518,w:336,h:506},{x:344,y:518,w:336,h:506},{x:688,y:518,w:336,h:506}
+  ]},
+  {id:'tall1',  name:'좌 큰 + 우 작은 3', w:1216, h:1216, panels:[
+    {x:0,y:0,w:700,h:1216},
+    {x:712,y:0,w:504,h:400},
+    {x:712,y:408,w:504,h:400},
+    {x:712,y:816,w:504,h:400},
+  ]},
+];
+
+let _cmState = null;  // {layoutId, layout, slots:[{blob,img}|null,...], gutter, gutterColor, bg, border, cvs, ctx, scale}
+
+function _cmGetLayout(id){ return CM_LAYOUTS.find(l => l.id === id) || CM_LAYOUTS[0]; }
+
+// 한 패널에 이미지 cover-fit — 패널 영역에 꽉 채우고 비율 유지하며 잘림.
+function _cmDrawCover(ctx, img, panel){
+  if(!img || !panel) return;
+  const pAspect = panel.w / panel.h;
+  const iAspect = img.naturalWidth / img.naturalHeight;
+  let sx, sy, sw, sh;
+  if(iAspect > pAspect){
+    // 이미지가 더 넓음 → 좌우 잘림
+    sh = img.naturalHeight;
+    sw = sh * pAspect;
+    sx = (img.naturalWidth - sw) / 2;
+    sy = 0;
+  } else {
+    // 이미지가 더 좁음 → 위아래 잘림
+    sw = img.naturalWidth;
+    sh = sw / pAspect;
+    sx = 0;
+    sy = (img.naturalHeight - sh) / 2;
+  }
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(panel.x, panel.y, panel.w, panel.h);
+  ctx.clip();
+  ctx.drawImage(img, sx, sy, sw, sh, panel.x, panel.y, panel.w, panel.h);
+  ctx.restore();
+}
+
+function _cmRender(){
+  if(!_cmState) return;
+  const { ctx, layout, gutter, gutterColor, bg, border, slots } = _cmState;
+  // 1) 페이지 배경 (gutter 색으로 깔고, 패널 영역 안만 bg색)
+  ctx.fillStyle = gutterColor;
+  ctx.fillRect(0, 0, layout.w, layout.h);
+  // 2) 각 패널 — bg 깔고 이미지 cover-fit, 비어있으면 placeholder
+  for(let i = 0; i < layout.panels.length; i++){
+    const p = layout.panels[i];
+    // 패널 안쪽 bg
+    ctx.fillStyle = bg;
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+    const slot = slots[i];
+    if(slot?.img){
+      _cmDrawCover(ctx, slot.img, p);
+    } else {
+      // 빈 패널 — 가운데에 번호 + 안내
+      ctx.fillStyle = 'rgba(0,0,0,0.08)';
+      ctx.fillRect(p.x, p.y, p.w, p.h);
+      ctx.fillStyle = 'rgba(40,30,18,0.55)';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const num = String(i + 1);
+      ctx.font = `bold ${Math.floor(Math.min(p.w,p.h)*0.3)}px ${TE_FONTS.ui}`;
+      ctx.fillText(num, p.x + p.w/2, p.y + p.h/2);
+      ctx.font = `${Math.floor(Math.min(p.w,p.h)*0.06)}px ${TE_FONTS.ui}`;
+      ctx.fillText('클릭해서 채우기', p.x + p.w/2, p.y + p.h/2 + Math.min(p.w,p.h)*0.2);
+    }
+  }
+  // 3) 패널 테두리 (border 두께가 있으면 검정 outline)
+  if(border > 0){
+    ctx.strokeStyle = gutterColor;
+    ctx.lineWidth = border;
+    ctx.lineJoin = 'miter';
+    for(const p of layout.panels){
+      // 패널 안쪽으로 그려서 잘려나가지 않게
+      ctx.strokeRect(p.x + border/2, p.y + border/2, p.w - border, p.h - border);
+    }
+  }
+}
+
+function _cmRenderLayoutGrid(){
+  const root = $('cmLayoutGrid');
+  if(!root) return;
+  root.innerHTML = CM_LAYOUTS.map(L => {
+    const sel = (_cmState && L.id === _cmState.layoutId) ? ' sel' : '';
+    // SVG 미리보기 — 페이지 비율 유지하면서 패널 사각형 표시
+    const pageAspect = L.w / L.h;
+    const svgW = 48, svgH = Math.round(svgW / pageAspect);
+    const svgPanels = L.panels.map(p =>
+      `<rect x="${(p.x/L.w)*svgW}" y="${(p.y/L.h)*svgH}" width="${(p.w/L.w)*svgW}" height="${(p.h/L.h)*svgH}" fill="currentColor" opacity="0.35" stroke="currentColor" stroke-width="0.7"/>`
+    ).join('');
+    return `<button type="button" class="cm-layout-card${sel}" data-cm-layout="${esc(L.id)}" title="${esc(L.name)} (${L.panels.length}칸, ${L.w}×${L.h})">
+      <svg viewBox="0 0 ${svgW} ${svgH}" width="48" height="${svgH}">${svgPanels}</svg>
+      <div class="cm-lc-name">${esc(L.name)}<br><span style="opacity:.6">${L.panels.length}칸</span></div>
+    </button>`;
+  }).join('');
+}
+
+function _cmRenderSlotList(){
+  const root = $('cmSlotList');
+  if(!root || !_cmState) return;
+  root.innerHTML = _cmState.slots.map((s, i) => {
+    const filled = !!s?.img;
+    const status = filled ? `이미지 OK` : '(비어있음)';
+    return `<div class="cm-slot">
+      <span class="cm-s-idx">${i+1}.</span>
+      <span class="cm-s-status${filled?' filled':''}">${status}</span>
+      <button class="cm-s-btn" data-cm-slot-act="pick" data-cm-i="${i}" title="갤러리에서 이미지 선택">🖼</button>
+      <button class="cm-s-btn" data-cm-slot-act="clear" data-cm-i="${i}" title="비우기">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function _cmSetLayout(id){
+  if(!_cmState) return;
+  const L = _cmGetLayout(id);
+  _cmState.layoutId = L.id;
+  _cmState.layout = L;
+  // 슬롯 배열 크기 조절 — 기존 이미지는 같은 인덱스에 보존
+  const oldSlots = _cmState.slots || [];
+  _cmState.slots = L.panels.map((_, i) => oldSlots[i] || null);
+  // 캔버스 크기 갱신
+  _cmState.cvs.width = L.w;
+  _cmState.cvs.height = L.h;
+  _cmFitStage();
+  _cmRender();
+  _cmRenderLayoutGrid();
+  _cmRenderSlotList();
+}
+
+// 캔버스 CSS 크기 — 스테이지에 fit
+function _cmFitStage(){
+  if(!_cmState) return;
+  const stage = $('cmStage');
+  const padding = 24;
+  const maxW = Math.max(120, (stage.clientWidth || 600) - padding);
+  const maxH = Math.max(120, (stage.clientHeight || 400) - padding);
+  const scale = Math.min(maxW / _cmState.layout.w, maxH / _cmState.layout.h, 1);
+  _cmState.scale = scale;
+  _cmState.cvs.style.width = (_cmState.layout.w * scale) + 'px';
+  _cmState.cvs.style.height = (_cmState.layout.h * scale) + 'px';
+}
+
+function _cmHitPanel(clientX, clientY){
+  if(!_cmState) return -1;
+  const r = _cmState.cvs.getBoundingClientRect();
+  const x = (clientX - r.left) * (_cmState.layout.w / r.width);
+  const y = (clientY - r.top) * (_cmState.layout.h / r.height);
+  for(let i = 0; i < _cmState.layout.panels.length; i++){
+    const p = _cmState.layout.panels[i];
+    if(x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h) return i;
+  }
+  return -1;
+}
+
+async function _cmPickForSlot(idx){
+  if(!_cmState || idx < 0 || idx >= _cmState.layout.panels.length) return;
+  openGalleryPicker({
+    title: `📁 ${idx+1}번 칸에 넣을 이미지`,
+    hint: '클릭 = 칸에 자동 cover-fit 합성',
+    onPick: async (blob) => {
+      if(!_cmState) return;
+      try {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+        // 기존 슬롯 url 정리
+        if(_cmState.slots[idx]?.url){ try { URL.revokeObjectURL(_cmState.slots[idx].url); } catch(_){} }
+        _cmState.slots[idx] = {blob, img, url};
+        _cmRender();
+        _cmRenderSlotList();
+      } catch(e){
+        _swallow(e, 'cm:pick');
+        toast('이미지 로딩 실패', 'error');
+      }
+    }
+  });
+}
+
+function _cmClearSlot(idx){
+  if(!_cmState) return;
+  const s = _cmState.slots[idx];
+  if(s?.url){ try { URL.revokeObjectURL(s.url); } catch(_){} }
+  _cmState.slots[idx] = null;
+  _cmRender();
+  _cmRenderSlotList();
+}
+
+function openComicMakerModal(){
+  const modal = $('comicMakerModal');
+  if(!modal) return;
+  modal.classList.add('open');
+  const wrap = $('cmCanvasWrap');
+  wrap.innerHTML = '';
+  const cvs = document.createElement('canvas');
+  const ctx = cvs.getContext('2d');
+  wrap.appendChild(cvs);
+  _cmState = {
+    layoutId: CM_LAYOUTS[0].id,
+    layout: CM_LAYOUTS[0],
+    slots: CM_LAYOUTS[0].panels.map(() => null),
+    gutter: parseInt($('cmGutterPx')?.value) || 12,
+    gutterColor: $('cmGutterColor')?.value || '#000000',
+    bg: $('cmBgColor')?.value || '#ffffff',
+    border: parseInt($('cmBorderPx')?.value) || 3,
+    cvs, ctx, scale: 1,
+  };
+  _cmSetLayout(CM_LAYOUTS[0].id);
+  toast('🎞 칸을 클릭해서 갤러리 이미지로 채우세요', 'info');
+}
+
+function _cmCloseModal(){
+  if(_cmState){
+    for(const s of _cmState.slots){ if(s?.url){ try { URL.revokeObjectURL(s.url); } catch(_){} } }
+    _cmState = null;
+  }
+  const wrap = $('cmCanvasWrap');
+  if(wrap) wrap.innerHTML = '';
+  $('comicMakerModal').classList.remove('open');
+}
+
+async function _cmComposite(){
+  if(!_cmState) return null;
+  const tmp = document.createElement('canvas');
+  tmp.width = _cmState.layout.w; tmp.height = _cmState.layout.h;
+  const ctx = tmp.getContext('2d');
+  // 저장용 합성 — 빈 패널 placeholder 텍스트는 그리지 않음
+  ctx.fillStyle = _cmState.gutterColor;
+  ctx.fillRect(0, 0, _cmState.layout.w, _cmState.layout.h);
+  for(let i = 0; i < _cmState.layout.panels.length; i++){
+    const p = _cmState.layout.panels[i];
+    ctx.fillStyle = _cmState.bg;
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+    const slot = _cmState.slots[i];
+    if(slot?.img) _cmDrawCover(ctx, slot.img, p);
+  }
+  if(_cmState.border > 0){
+    ctx.strokeStyle = _cmState.gutterColor;
+    ctx.lineWidth = _cmState.border;
+    ctx.lineJoin = 'miter';
+    for(const p of _cmState.layout.panels){
+      ctx.strokeRect(p.x + _cmState.border/2, p.y + _cmState.border/2, p.w - _cmState.border, p.h - _cmState.border);
+    }
+  }
+  return await new Promise(r => tmp.toBlob(r, 'image/png'));
+}
+
+async function _cmSaveNew(){
+  if(!_cmState) return;
+  const filledCount = _cmState.slots.filter(s => s?.img).length;
+  if(filledCount === 0){
+    toast('빈 칸만 있어요 — 이미지를 먼저 채워주세요', 'warning'); return;
+  }
+  const blob = await _cmComposite();
+  if(!blob){ toast('합성 실패', 'error'); return; }
+  const fname = `comic_${_cmState.layoutId}_${Date.now()}.png`;
+  const label = `comic_${_cmState.layoutId}`;
+  const meta = {
+    mode: 'comic',
+    comic: {
+      layoutId: _cmState.layoutId, w: _cmState.layout.w, h: _cmState.layout.h,
+      panels: _cmState.layout.panels.length, filled: filledCount,
+    },
+    w: _cmState.layout.w, h: _cmState.layout.h,
+  };
+  try {
+    await _saveImageWithSideEffects(blob, fname, label, '', meta);
+    toast(`🎞 만화 페이지 저장됨 (${filledCount}/${_cmState.layout.panels.length}칸)`, 'success');
+    _cmCloseModal();
+    if(state.mainPane === 'gallery') await loadGallery();
+    await refreshGallerySize();
+  } catch(e){
+    _swallow(e, 'cm:saveNew');
+    toast('저장 실패 — ' + (e?.message || e), 'error');
+  }
+}
+
+function _cmWireOnce(){
+  if(_cmWireOnce._done) return;
+  _cmWireOnce._done = true;
+  $('cmCancel')?.addEventListener('click', () => {
+    if(_cmState && _cmState.slots.some(s => s?.img)){
+      confirmDialog('편집 내용을 폐기할까요?', () => _cmCloseModal(), '편집 닫기');
+    } else {
+      _cmCloseModal();
+    }
+  });
+  $('cmSaveNew')?.addEventListener('click', () => _cmState && _cmSaveNew());
+  $('cmClearAll')?.addEventListener('click', () => {
+    if(!_cmState) return;
+    confirmDialog('모든 칸을 비울까요?', () => {
+      for(let i = 0; i < _cmState.slots.length; i++) _cmClearSlot(i);
+    }, '전체 비우기');
+  });
+  // 레이아웃 카드 선택
+  $('cmLayoutGrid')?.addEventListener('click', e => {
+    const card = e.target.closest('[data-cm-layout]');
+    if(!card || !_cmState) return;
+    _cmSetLayout(card.dataset.cmLayout);
+  });
+  // 슬롯 리스트 버튼
+  $('cmSlotList')?.addEventListener('click', e => {
+    const btn = e.target.closest('[data-cm-slot-act]');
+    if(!btn) return;
+    const i = parseInt(btn.dataset.cmI, 10);
+    const act = btn.dataset.cmSlotAct;
+    if(act === 'pick') _cmPickForSlot(i);
+    else if(act === 'clear') _cmClearSlot(i);
+  });
+  // 캔버스 클릭 → 해당 패널 picker
+  $('cmCanvasWrap')?.addEventListener('click', e => {
+    if(!_cmState) return;
+    const i = _cmHitPanel(e.clientX, e.clientY);
+    if(i >= 0) _cmPickForSlot(i);
+  });
+  // 우클릭 / contextmenu → 비우기
+  $('cmCanvasWrap')?.addEventListener('contextmenu', e => {
+    if(!_cmState) return;
+    e.preventDefault();
+    const i = _cmHitPanel(e.clientX, e.clientY);
+    if(i >= 0) _cmClearSlot(i);
+  });
+  // 스타일 컨트롤
+  const onStyleChange = () => {
+    if(!_cmState) return;
+    _cmState.gutter = parseInt($('cmGutterPx').value) || 0;
+    _cmState.gutterColor = $('cmGutterColor').value;
+    _cmState.bg = $('cmBgColor').value;
+    _cmState.border = parseInt($('cmBorderPx').value) || 0;
+    $('cmGutterPxVal').textContent = _cmState.gutter;
+    $('cmBorderPxVal').textContent = _cmState.border;
+    _cmRender();
+  };
+  ['cmGutterPx','cmGutterColor','cmBgColor','cmBorderPx'].forEach(id => {
+    $(id)?.addEventListener('input', onStyleChange);
+  });
+  // ESC 닫기
+  document.addEventListener('keydown', e => {
+    if(!_cmState) return;
+    if(!$('comicMakerModal').classList.contains('open')) return;
+    if(e.target.matches('input, textarea, select')) return;
+    if(e.key === 'Escape'){ e.preventDefault(); $('cmCancel')?.click(); }
+  });
+  // 스테이지 리사이즈에 캔버스 자동 fit
+  window.addEventListener('resize', () => { if(_cmState) { _cmFitStage(); _cmRender(); } });
+}
+setTimeout(() => { try { _cmWireOnce(); } catch(e){ _swallow(e, 'cm:wire'); } }, 0);
+
+window.openComicMakerModal = openComicMakerModal;
+Object.defineProperty(window, '_cmState', { get(){ return _cmState; }, configurable: true });
+
+// ═══════════════════════════════════════════════════════════
 // UI LOGIC: MODE / TABS / VISIBILITY
 // ═══════════════════════════════════════════════════════════
 function setMode(mode){
@@ -17521,6 +17956,8 @@ function wireGalleryEvents(){
   });
   // ☑ 선택 모드 토글 (수동 진입)
   $('galSelectModeBtn').addEventListener('click', () => setSelectionMode(!_selectionMode));
+  // 🎞 만화 칸 만들기 — 갤러리 이미지를 페이지 레이아웃에 채우기
+  $('comicMakerBtn')?.addEventListener('click', () => openComicMakerModal());
   // ☰ 전체 선택 (보이는 모든 이미지)
   $('galSelAll').addEventListener('click', () => {
     if(!_selectionMode) setSelectionMode(true);
