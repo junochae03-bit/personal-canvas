@@ -13,7 +13,7 @@
 
 const RC_PATTERN = /\|\|([^|]*(?:\|[^|]*)*?)\|\|/g;
 
-export function expandRandomChoices(text, rng){
+export function expandRandomChoices(text, rng, onPick){
   if(!text || typeof text !== 'string') return text;
   const random = (typeof rng === 'function') ? rng : Math.random;
   return text.replace(RC_PATTERN, (full, inner) => {
@@ -21,7 +21,9 @@ export function expandRandomChoices(text, rng){
     const options = inner.split('|');
     if(options.length === 0) return '';
     const choice = options[Math.floor(random() * options.length)];
-    return (choice || '').trim();
+    const picked = (choice || '').trim();
+    if(typeof onPick === 'function') onPick(options.map(o => (o||'').trim()), picked);
+    return picked;
   });
 }
 

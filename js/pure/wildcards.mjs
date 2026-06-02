@@ -68,13 +68,16 @@ export function pickWildcardLine(wc, rng){
 /**
  * 텍스트의 모든 __name__ 치환. resolve(name) → 와일드카드 객체 {options,locked,lockedIdx} | null.
  *  - resolve 가 null/빈 옵션을 주면 토큰을 그대로 둔다.
+ *  - onPick(name, picked) 콜백을 주면 치환 발생할 때마다 호출 — 메타 로그용.
  */
-export function expandWildcards(text, resolve, rng){
+export function expandWildcards(text, resolve, rng, onPick){
   if(!text || typeof text !== 'string') return text;
   if(typeof resolve !== 'function') return text;
   return text.replace(WILDCARD_TOKEN_RE, (full, name) => {
     const wc = resolve(name);
     if(!wc || !Array.isArray(wc.options) || !wc.options.length) return full;
-    return pickWildcardLine(wc, rng);
+    const picked = pickWildcardLine(wc, rng);
+    if(typeof onPick === 'function') onPick(name, picked);
+    return picked;
   });
 }
