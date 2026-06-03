@@ -36,6 +36,8 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <!-- 🅣 텍스트 편집기용 한글 디스플레이 폰트 (Google Fonts) — 만화/동인지 풍 -->
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Jua&family=Nanum+Gothic:wght@400;700;800&family=Nanum+Myeongjo:wght@400;700;800&family=Nanum+Pen+Script&family=Gowun+Dodum&family=Gowun+Batang:wght@400;700&family=Gaegu:wght@300;400;700&family=Single+Day&family=Stylish&display=swap" rel="stylesheet">
+<!-- 🅣 추가 한글 폰트 2차 — 만화 효과음·손글씨·복고 -->
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Cute+Font&family=Dongle:wght@300;400;700&family=Gamja+Flower&family=Hi+Melody&family=Kirang+Haerang&family=Nanum+Brush+Script&family=Poor+Story&family=Song+Myung&family=Sunflower:wght@300;500;700&family=Yeon+Sung&family=Black+And+White+Picture&display=swap" rel="stylesheet">
 <style>
 /* 기본 — 베이지 (Beige) — 눈에 편한 종이 톤 */
 :root{
@@ -905,10 +907,19 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 #textEditModal .te-layer .te-l-btn.te-l-del:hover{color:var(--red)}
 #textEditModal .te-empty{font-size:11.5px;color:var(--t3);text-align:center;padding:14px 4px;font-style:italic}
 @media (max-width:820px){
-  #textEditModal .modal{width:100%;max-height:96vh}
+  #textEditModal .modal{width:100%;max-height:96vh;max-width:100vw;border-radius:0}
   #textEditModal .te-body{flex-direction:column}
-  #textEditModal .te-panel{width:100%;max-height:38vh}
-  #textEditModal .te-stage{min-height:240px}
+  #textEditModal .te-panel{width:100%;max-height:42vh}
+  #textEditModal .te-stage{min-height:34vh}
+  /* 📱 객체 추가 줄 — 말풍선 select 가 줄어들고 버튼이 안 잘리게 세로폭 확보 */
+  #textEditModal .te-add-row{grid-template-columns:1fr 1.3fr 1fr;gap:5px}
+  #textEditModal .te-add-btn{padding:9px 6px;font-size:12px;min-height:40px}
+  #textEditModal .te-bubble-pick{font-size:11.5px;padding:7px 4px;min-height:40px}
+  #textEditModal .te-inp{font-size:13px;min-height:36px}
+  #textEditModal .te-foot .btn,#textEditModal .modal-foot .btn{min-height:42px}
+  #textEditModal .te-color,#textEditModal input[type=color].te-inp{min-height:34px}
+  /* 폰트·정렬 등 select 터치 영역 */
+  #textEditModal select.te-inp{min-height:38px}
 }
 
 /* COMIC PANEL MAKER MODAL — 🎞 만화 컷 만들기 */
@@ -931,16 +942,39 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 #comicMakerModal .cm-layout-card svg{display:block;width:42px;height:auto;max-height:54px}
 #comicMakerModal .cm-layout-card .cm-lc-name{font-weight:600;line-height:1.15;font-size:10.5px}
 #comicMakerModal .cm-layout-card .cm-lc-meta{font-size:9.5px;opacity:.6;font-family:var(--mono)}
+#comicMakerModal .cm-custom-toggle{float:right;background:transparent;border:1.5px solid var(--b1);color:var(--t2);font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:12px;cursor:pointer;font-family:inherit;transition:all .12s}
+#comicMakerModal .cm-custom-toggle:hover{border-color:var(--acc);color:var(--acc)}
+#comicMakerModal .cm-custom-toggle.act{background:var(--acc);color:#fff8ec;border-color:var(--acc)}
+#comicMakerModal .cm-custom-builder{margin-top:8px;padding:10px;background:var(--bg);border:1.5px solid var(--b1);border-radius:6px}
+#comicMakerModal .cm-cb-help{font-size:11px;color:var(--t3);line-height:1.5;margin-bottom:8px}
+#comicMakerModal .cm-cb-pageratio{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+#comicMakerModal .cm-cb-label{font-size:11.5px;color:var(--t2);font-weight:600;white-space:nowrap}
+#comicMakerModal .cm-cb-pageratio .inp{flex:1;font-size:12px;padding:5px 8px}
+#comicMakerModal .cm-cb-rows{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+#comicMakerModal .cm-cb-row{display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--card);border:1.5px solid var(--b1);border-radius:5px}
+#comicMakerModal .cm-cb-row-label{font-size:11px;color:var(--acc);font-weight:700;font-family:var(--mono);min-width:36px}
+#comicMakerModal .cm-cb-stepper{display:flex;align-items:center;gap:4px;flex:1}
+#comicMakerModal .cm-cb-stepper .cm-cb-cnt{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--t1);min-width:46px;text-align:center}
+#comicMakerModal .cm-cb-btn{width:28px;height:28px;border:1.5px solid var(--b1);background:var(--bg);color:var(--t1);border-radius:5px;cursor:pointer;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center}
+#comicMakerModal .cm-cb-btn:hover{border-color:var(--acc);color:var(--acc)}
+#comicMakerModal .cm-cb-btn:disabled{opacity:.3;pointer-events:none}
+#comicMakerModal .cm-cb-delrow{color:var(--red);border:none;background:transparent;cursor:pointer;font-size:14px;padding:4px 6px;border-radius:4px}
+#comicMakerModal .cm-cb-delrow:hover{background:rgba(181,67,56,.1)}
+#comicMakerModal .cm-cb-addrow{width:100%;font-size:12px;padding:7px}
+#comicMakerModal .cm-canvas-wrap canvas.cm-gutter-h{cursor: row-resize}
+#comicMakerModal .cm-canvas-wrap canvas.cm-gutter-v{cursor:col-resize}
 #comicMakerModal .cm-style-row{display:flex;gap:6px;margin-bottom:4px}
 #comicMakerModal .cm-style-cell{flex:1;display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--t2);cursor:pointer}
 #comicMakerModal .cm-style-label{font-size:10.5px;color:var(--t3);font-weight:600;display:flex;justify-content:space-between;align-items:center}
 #comicMakerModal .cm-style-val{font-family:var(--mono);color:var(--acc);font-size:10.5px}
 #comicMakerModal .cm-color{width:100%;height:28px;border:1.5px solid var(--b1);border-radius:5px;padding:0;cursor:pointer;background:transparent}
 #comicMakerModal .cm-slot-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;padding-right:2px}
-#comicMakerModal .cm-slot{display:grid;grid-template-columns:24px 42px 1fr auto;align-items:center;gap:8px;padding:6px 8px;background:var(--bg);border:1.5px solid var(--b1);border-radius:5px;font-size:11.5px;transition:border-color .12s}
+#comicMakerModal .cm-slot{padding:6px 8px;background:var(--bg);border:1.5px solid var(--b1);border-radius:5px;font-size:11.5px;transition:border-color .12s}
+#comicMakerModal .cm-slot-main{display:grid;grid-template-columns:24px 42px 1fr auto;align-items:center;gap:8px}
 #comicMakerModal .cm-slot:hover{border-color:var(--b2)}
 #comicMakerModal .cm-slot.filled{border-color:rgba(85,138,52,.35);background:rgba(85,138,52,.04)}
 #comicMakerModal .cm-slot.empty{border-style:dashed;opacity:.7}
+#comicMakerModal .cm-slot.expanded{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
 #comicMakerModal .cm-slot .cm-s-idx{font-weight:700;color:var(--acc);font-size:13px;font-family:var(--mono);text-align:center}
 #comicMakerModal .cm-slot .cm-s-thumb{width:42px;height:42px;border-radius:4px;background-size:cover;background-position:center;background-color:var(--card2);border:1.5px solid var(--b1);display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:14px}
 #comicMakerModal .cm-slot .cm-s-status{color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -948,7 +982,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 #comicMakerModal .cm-slot .cm-s-acts{display:flex;gap:2px;flex-shrink:0}
 #comicMakerModal .cm-slot .cm-s-btn{background:transparent;border:none;cursor:pointer;color:var(--t3);padding:4px 7px;font-size:13px;border-radius:3px;line-height:1;min-width:28px;min-height:28px}
 #comicMakerModal .cm-slot .cm-s-btn:hover{background:var(--b1);color:var(--t1)}
+#comicMakerModal .cm-slot .cm-s-btn.on{background:var(--acc);color:#fff8ec}
 #comicMakerModal .cm-slot .cm-s-btn.danger:hover{color:var(--red);background:rgba(181,67,56,.1)}
+#comicMakerModal .cm-s-edit{margin-top:8px;padding-top:8px;border-top:1.5px dashed var(--b1);display:flex;flex-direction:column;gap:6px}
+#comicMakerModal .cm-s-edit-grp{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+#comicMakerModal .cm-s-edit-lbl{font-size:10.5px;color:var(--t3);font-weight:600;min-width:36px}
+#comicMakerModal .cm-s-zoom{flex:1;min-width:80px;accent-color:var(--acc)}
+#comicMakerModal .cm-s-zoom-val{font-family:var(--mono);font-size:11px;color:var(--acc);min-width:34px;text-align:right}
 #comicMakerModal .cm-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 #comicMakerModal .cm-foot-status{font-family:var(--mono);font-size:12px;color:var(--t2);font-weight:600;white-space:nowrap}
 #comicMakerModal .cm-savename{flex:1;min-width:140px;font-size:12.5px;padding:6px 10px;max-width:260px}
@@ -961,14 +1001,24 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   #comicMakerModal .modal{width:100%;max-height:97vh;max-width:100vw;border-radius:0}
   #comicMakerModal .cm-body{flex-direction:column;gap:8px}
   #comicMakerModal .cm-panel{width:100%;max-height:46vh;padding-right:0}
-  #comicMakerModal .cm-stage{min-height:38vh;padding:8px}
-  #comicMakerModal .cm-stage-hint{font-size:10.5px}
+  #comicMakerModal .cm-stage{min-height:36vh;padding:8px}
+  #comicMakerModal .cm-stage-hint{font-size:10px;line-height:1.5}
   #comicMakerModal .cm-layout-grid{grid-template-columns:repeat(4,1fr)}
   #comicMakerModal .cm-layout-card{min-height:72px;font-size:9.5px}
   #comicMakerModal .cm-layout-card svg{width:34px;max-height:42px}
-  #comicMakerModal .cm-foot{flex-wrap:wrap}
-  #comicMakerModal .cm-foot-status{order:-1;width:100%;text-align:center;margin:0 0 4px}
-  #comicMakerModal .cm-slot .cm-s-btn{min-width:32px;min-height:32px;font-size:14px}
+  /* 📱 푸터 2줄 구성 — 1줄: 이름+상태, 2줄: 버튼들 (라벨 영문 숨김으로 공간 확보) */
+  #comicMakerModal .cm-foot{flex-wrap:wrap;gap:6px;padding:8px 10px}
+  #comicMakerModal .cm-savename{order:-2;flex:1 1 100%;min-width:0;max-width:none;font-size:13px;padding:8px 10px}
+  #comicMakerModal .cm-foot-status{order:-1;flex:1 1 100%;text-align:center;margin:0}
+  #comicMakerModal .cm-foot .btn{flex:1;min-height:40px;font-size:12px;padding:6px 8px;justify-content:center}
+  #comicMakerModal .cm-foot .btn .en{display:none}
+  #comicMakerModal .cm-foot #cmSaveNew{flex:1 1 100%;order:1}
+  /* 슬롯 버튼 터치 영역 + 편집 패널 */
+  #comicMakerModal .cm-slot .cm-s-btn{min-width:34px;min-height:34px;font-size:15px}
+  #comicMakerModal .cm-cb-btn{width:34px;height:34px;font-size:17px}
+  #comicMakerModal .cm-custom-toggle{padding:5px 11px;font-size:11.5px}
+  #comicMakerModal .cm-s-edit-grp{gap:5px}
+  #comicMakerModal .cm-s-zoom{min-height:30px}
 }
 
 /* GUIDE MODAL — NAI 가이드 */
@@ -3454,12 +3504,17 @@ coffee shop, latte art"></textarea>
           <div class="te-section-title">＋ 객체 추가 <span class="en">Add</span></div>
           <div class="te-add-row">
             <button class="btn ghost te-add-btn" id="teAddText" title="텍스트 박스 추가">＋ 텍스트</button>
-            <select class="inp te-bubble-pick" id="teBubblePick" title="말풍선 모양">
-              <option value="speech">🗨 일반</option>
-              <option value="thought">💭 생각</option>
-              <option value="burst">💥 외침</option>
-              <option value="rect">▭ 사각</option>
-              <option value="rounded">⬭ 둥근사각</option>
+            <select class="inp te-bubble-pick" id="teBubblePick" title="말풍선 모양 (동인지 표준 패턴)">
+              <option value="speech">🗨 일반 (대사)</option>
+              <option value="rounded">⬭ 둥근사각 (대사)</option>
+              <option value="ellipse">⬬ 타원 (부드러운 대사)</option>
+              <option value="thought">💭 생각 (구름)</option>
+              <option value="whisper">┄ 속삭임 (점선)</option>
+              <option value="wavy">🌊 떨림 (두려움·울먹임)</option>
+              <option value="burst">💥 외침 (폭발)</option>
+              <option value="electric">⚡ 전자음 (전화·라디오·AI)</option>
+              <option value="heart">💗 하트 (애정)</option>
+              <option value="rect">▭ 내레이션 (박스)</option>
             </select>
             <button class="btn ghost te-add-btn" id="teAddBubble" title="선택된 모양 말풍선 추가">＋ 말풍선</button>
           </div>
@@ -3475,26 +3530,38 @@ coffee shop, latte art"></textarea>
               <option value="nanumg">나눔고딕</option>
               <option value="mono">JetBrains Mono</option>
             </optgroup>
-            <optgroup label="💥 굵은 임팩트 (외침·표지)">
+            <optgroup label="💥 굵은 임팩트·효과음 (외침·표지)">
               <option value="blackhan">Black Han Sans (블랙한산스)</option>
               <option value="dohyeon">Do Hyeon (도현)</option>
+              <option value="bagel">Bagel Fat One (통통볼드)</option>
+              <option value="brush">나눔붓글씨 (외침)</option>
+              <option value="bwpicture">흑백사진 (픽토굵은)</option>
             </optgroup>
             <optgroup label="🎀 귀여운·둥근 (대사)">
               <option value="jua">Jua (주아)</option>
               <option value="gaegu">Gaegu (개구)</option>
+              <option value="dongle">Dongle (동글)</option>
+              <option value="cute">Cute Font (큐트)</option>
+              <option value="yeonsung">Yeon Sung (연성)</option>
             </optgroup>
-            <optgroup label="📜 명조·내레이션 (회상)">
+            <optgroup label="📜 명조·내레이션 (회상·시)">
               <option value="nanummj">나눔명조</option>
               <option value="gowunb">고운바탕</option>
               <option value="serif">Noto Serif KR</option>
+              <option value="songmyung">송명 (가는명조)</option>
+              <option value="kirang">기랑해랑 (복고붓끝)</option>
             </optgroup>
-            <optgroup label="✍ 손글씨·일기 (속삭임)">
+            <optgroup label="✍ 손글씨·일기 (속삭임·메모)">
               <option value="nanumpen">나눔펜글씨</option>
               <option value="single">Single Day</option>
               <option value="gowund">고운돋움</option>
+              <option value="gamja">감자꽃 (삐뚤손글씨)</option>
+              <option value="himelody">하이멜로디 (소녀풍)</option>
+              <option value="poorstory">푸어스토리 (투박코믹)</option>
             </optgroup>
-            <optgroup label="✨ 디스플레이">
+            <optgroup label="✨ 디스플레이·본문">
               <option value="stylish">Stylish</option>
+              <option value="sunflower">Sunflower (해바라기고딕)</option>
               <option value="sans">sans-serif (시스템)</option>
             </optgroup>
           </select></div>
@@ -3556,8 +3623,25 @@ coffee shop, latte art"></textarea>
           </div>
         </div>
         <div class="te-section">
-          <div class="te-section-title">📐 페이지 레이아웃 <span class="en">Layout</span></div>
+          <div class="te-section-title">📐 페이지 레이아웃 <span class="en">Layout</span>
+            <button class="cm-custom-toggle" id="cmCustomToggle" type="button" title="🔧 직접 칸 배분 — 행·열 수 조정 + 캔버스에서 경계선 드래그로 크기 조절">🔧 직접 편집</button>
+          </div>
           <div class="cm-layout-grid" id="cmLayoutGrid"></div>
+          <!-- 🔧 커스텀 그리드 빌더 -->
+          <div class="cm-custom-builder" id="cmCustomBuilder" style="display:none">
+            <div class="cm-cb-help">행(가로 줄)과 각 행의 칸 수를 조절하세요. 캔버스에서 <b>경계선을 드래그</b>하면 칸 크기를 바꿀 수 있어요.</div>
+            <div class="cm-cb-pageratio">
+              <span class="cm-cb-label">페이지 비율</span>
+              <select class="inp" id="cmCustomRatio">
+                <option value="832x1216">세로 (832×1216)</option>
+                <option value="1024x1024">정방 (1024×1024)</option>
+                <option value="1216x832">가로 (1216×832)</option>
+                <option value="800x1800">웹툰 세로 (800×1800)</option>
+              </select>
+            </div>
+            <div class="cm-cb-rows" id="cmCustomRows"></div>
+            <button class="btn ghost cm-cb-addrow" id="cmCustomAddRow" type="button">＋ 행 추가</button>
+          </div>
         </div>
         <div class="te-section">
           <div class="te-section-title">🎨 스타일 <span class="en">Style</span></div>
@@ -13953,9 +14037,26 @@ const TE_FONTS = {
   gaegu:     `"Gaegu","Pretendard","Noto Sans KR",cursive`,               // 동글 손글씨 — 캐주얼
   single:    `"Single Day","Pretendard","Noto Sans KR",cursive`,          // 얇은 손글씨 — 일기풍
   stylish:   `"Stylish","Pretendard","Noto Sans KR",sans-serif`,          // 세련된 디스플레이
+  // ─── 2차 추가 (효과음·손글씨·복고) ───
+  bagel:     `"Bagel Fat One","Black Han Sans","Pretendard",sans-serif`,  // 통통 볼드 — 효과음/제목
+  cute:      `"Cute Font","Jua","Pretendard",cursive`,                    // 큼직 귀여운 — 어린이/개그
+  dongle:    `"Dongle","Jua","Pretendard",sans-serif`,                    // 동글동글 — 말랑 대사
+  gamja:     `"Gamja Flower","Gaegu","Pretendard",cursive`,               // 삐뚤 손글씨 — 낙서/메모
+  himelody:  `"Hi Melody","Gaegu","Pretendard",cursive`,                  // 가는 손글씨 — 소녀풍
+  kirang:    `"Kirang Haerang","Gowun Batang","serif"`,                   // 복고 붓끝 — 옛날/사극
+  brush:     `"Nanum Brush Script","Nanum Pen Script",cursive`,           // 붓글씨 — 강렬한 외침/효과음
+  poorstory: `"Poor Story","Gaegu","Pretendard",cursive`,                 // 투박 손글씨 — 코믹
+  songmyung: `"Song Myung","Nanum Myeongjo",serif`,                       // 가는 명조 — 시·내레이션
+  sunflower: `"Sunflower","Pretendard","Noto Sans KR",sans-serif`,        // 깔끔 고딕 — 본문
+  yeonsung:  `"Yeon Sung","Jua","Pretendard",cursive`,                    // 둥근 복고 — 간판/제목
+  bwpicture: `"Black And White Picture","Do Hyeon",sans-serif`,           // 픽토그램풍 굵은 — 강조
 };
 
 function _teFontFamily(key){ return TE_FONTS[key] || TE_FONTS.ui; }
+// 꼬리(tail) 가 있는 말풍선 모양인지 — 핸들 표시·hit-test 공용.
+function _teHasTail(obj){
+  return obj?.type === 'bubble' && ['speech','thought','wavy'].includes(obj.bubble?.shape);
+}
 
 async function openTextEditModal(item){
   if(!item || !item.blob){ toast('이미지를 불러올 수 없음', 'error'); return; }
@@ -14042,14 +14143,29 @@ function _teMakeBubble(shape){
   const h = Math.min(H * 0.22, 180);
   const fontSize = Math.max(18, Math.round(W * 0.032));
   const x = (W - w) / 2, y = H * 0.5 - h / 2;
+  const sh = shape || 'speech';
+  // 모양별 추천 폰트·기본 텍스트·굵기 (동인지 관행)
+  const presets = {
+    speech:   { font:'ui',       text:'대사를 입력',     weight:500 },
+    rounded:  { font:'dohyeon',  text:'대사를 입력',     weight:400 },
+    ellipse:  { font:'jua',      text:'부드러운 대사',   weight:400 },
+    thought:  { font:'gowund',   text:'마음속 생각…',    weight:400 },
+    whisper:  { font:'himelody', text:'(속삭임)',        weight:400 },
+    wavy:     { font:'gowund',   text:'으, 으아…',       weight:400 },
+    burst:    { font:'blackhan', text:'외침!!',          weight:700 },
+    electric: { font:'mono',     text:'전자음…',         weight:500 },
+    heart:    { font:'jua',      text:'♥',               weight:500 },
+    rect:     { font:'nanummj',  text:'내레이션 텍스트', weight:400 },
+  };
+  const pr = presets[sh] || presets.speech;
   return {
     id, type:'bubble',
     x, y, w, h, rotation: 0,
-    text: '말풍선 안에 글', font: 'ui', fontSize, fontWeight: 500,
+    text: pr.text, font: pr.font, fontSize, fontWeight: pr.weight,
     color: '#111111', align: 'center',
     stroke: { on: false, color: '#000000', width: 1 },
     bubble: {
-      shape: shape || 'speech',
+      shape: sh,
       fill: '#ffffff', border: '#1a1a1a', borderWidth: Math.max(2, W * 0.003),
       tailX: x + w * 0.25, tailY: y + h + h * 0.4,
     },
@@ -14241,6 +14357,82 @@ function _teShapeRoundedRect(ctx, x, y, w, h){
   ctx.closePath();
 }
 
+// 🌊 떨림 말풍선 (wavy) — 외곽이 물결치는 sine 곡선. 두려움·추위·약한 목소리·울먹임.
+//    꼬리는 speech 와 같은 곡선 꼬리.
+function _teShapeWavy(ctx, x, y, w, h, tailX, tailY){
+  const waves = 14;                       // 둘레의 물결 개수
+  const amp = Math.min(w, h) * 0.035;      // 물결 진폭
+  const cx = x + w / 2, cy = y + h / 2;
+  const rx = w / 2 - amp, ry = h / 2 - amp;
+  const tailHalf = Math.min(w * 0.09, Math.min(w,h) * 0.12);
+  const tailCx = Math.max(x + w*0.2, Math.min(x + w*0.8, tailX));
+  const bottomY = y + h;
+  ctx.beginPath();
+  // 타원 둘레를 따라 sine 진동 추가 — 닫힌 물결 외곽
+  const steps = waves * 6;
+  for(let i = 0; i <= steps; i++){
+    const a = (i / steps) * Math.PI * 2 - Math.PI / 2;
+    const wob = 1 + (amp / Math.min(rx, ry)) * Math.sin(a * waves);
+    const px = cx + Math.cos(a) * rx * wob;
+    const py = cy + Math.sin(a) * ry * wob;
+    if(i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  // 꼬리 (별도 path 로 본체 아래에 곡선 삼각형)
+  const dist = Math.hypot(tailX - tailCx, tailY - bottomY);
+  if(dist > 8){
+    ctx.moveTo(tailCx + tailHalf, bottomY - amp);
+    ctx.quadraticCurveTo(tailCx + tailHalf*0.4, bottomY + (tailY-bottomY)*0.4, tailX, tailY);
+    ctx.quadraticCurveTo(tailCx - tailHalf*0.4, bottomY + (tailY-bottomY)*0.4, tailCx - tailHalf, bottomY - amp);
+    ctx.closePath();
+  }
+}
+
+// ⚡ 전자음 말풍선 (electric) — 날카로운 지그재그 외곽. 전화·라디오·스피커·로봇·AI 음성.
+//    burst 보다 규칙적·뾰족하고 가시 끝이 안쪽으로 깊게 패임.
+function _teShapeElectric(ctx, x, y, w, h){
+  const cx = x + w / 2, cy = y + h / 2;
+  const spikes = 20;
+  const outerRx = w / 2, outerRy = h / 2;
+  const innerRx = outerRx * 0.82, innerRy = outerRy * 0.82;  // 얕은 톱니 (전자 느낌)
+  ctx.beginPath();
+  for(let i = 0; i < spikes * 2; i++){
+    const a = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2;
+    const isOuter = (i % 2 === 0);
+    const rx = isOuter ? outerRx : innerRx;
+    const ry = isOuter ? outerRy : innerRy;
+    const px = cx + Math.cos(a) * rx;
+    const py = cy + Math.sin(a) * ry;
+    if(i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+// 💗 하트 말풍선 (heart) — 애정·설렘. 꼬리 없음 (또는 작은 하트 꼬리).
+function _teShapeHeart(ctx, x, y, w, h){
+  const topY = y + h * 0.28;
+  const cx = x + w / 2;
+  ctx.beginPath();
+  ctx.moveTo(cx, y + h * 0.95);   // 하단 꼭짓점
+  // 왼쪽 곡선
+  ctx.bezierCurveTo(x - w*0.06, y + h*0.58, x + w*0.06, y - h*0.02, cx, topY);
+  // 오른쪽 곡선
+  ctx.bezierCurveTo(x + w - w*0.06, y - h*0.02, x + w + w*0.06, y + h*0.58, cx, y + h*0.95);
+  ctx.closePath();
+}
+
+// 🔪 속삭임/내레이션 — 점선은 renderer 에서 setLineDash 로 처리. 모양은 둥근 사각 재활용.
+//    (whisper 는 _teShapeRoundedRect 를 점선으로 그림)
+
+// ☁ 작은 속삭임 타원 (aside) — 작게 중얼거리는 대사. 부드러운 타원.
+function _teShapeEllipse(ctx, x, y, w, h){
+  ctx.beginPath();
+  ctx.ellipse(x + w/2, y + h/2, w/2, h/2, 0, 0, Math.PI * 2);
+  ctx.closePath();
+}
+
 function _teDrawObj(ctx, obj, withHandles){
   ctx.save();
   // 회전 — 객체 중심을 기준으로
@@ -14253,38 +14445,61 @@ function _teDrawObj(ctx, obj, withHandles){
 
   if(obj.type === 'bubble'){
     const b = obj.bubble;
+    const sh = b.shape;
     ctx.fillStyle = b.fill;
     ctx.strokeStyle = b.border;
     ctx.lineWidth = b.borderWidth || 2;
-    // 🅣 모양별 join 스타일 — burst 는 sharp miter, 나머지는 round (둥근 만화 느낌).
-    ctx.lineJoin = (b.shape === 'burst' || b.shape === 'rect') ? 'miter' : 'round';
+    // 🅣 모양별 join 스타일 — 뾰족한 것(burst/electric/rect)은 miter, 나머지는 round.
+    ctx.lineJoin = (sh === 'burst' || sh === 'electric' || sh === 'rect') ? 'miter' : 'round';
     ctx.lineCap = 'round';
     ctx.miterLimit = 4;
-    // 🌑 부드러운 그림자 — 만화체 부동 말풍선 느낌 (저장 출력에도 포함).
-    //    핸들 표시 모드(편집 중 선택된 객체)에서는 그림자 생략 — 핸들 가시성 우선.
+    // 🌑 부드러운 그림자 (핸들 모드 제외).
     if(!withHandles){
       ctx.shadowColor = 'rgba(0,0,0,0.18)';
       ctx.shadowBlur = Math.max(3, _teState.W * 0.004);
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = Math.max(1, _teState.W * 0.0015);
     }
-    if(b.shape === 'speech') _teShapeSpeech(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY);
-    else if(b.shape === 'thought') _teShapeThought(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY);
-    else if(b.shape === 'burst') _teShapeBurst(ctx, obj.x, obj.y, obj.w, obj.h);
-    else if(b.shape === 'rect') _teShapeRect(ctx, obj.x, obj.y, obj.w, obj.h);
-    else _teShapeRoundedRect(ctx, obj.x, obj.y, obj.w, obj.h);
+    const drawPath = () => {
+      if(sh === 'speech') _teShapeSpeech(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY);
+      else if(sh === 'thought') _teShapeThought(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY);
+      else if(sh === 'burst') _teShapeBurst(ctx, obj.x, obj.y, obj.w, obj.h);
+      else if(sh === 'electric') _teShapeElectric(ctx, obj.x, obj.y, obj.w, obj.h);
+      else if(sh === 'wavy') _teShapeWavy(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY);
+      else if(sh === 'heart') _teShapeHeart(ctx, obj.x, obj.y, obj.w, obj.h);
+      else if(sh === 'ellipse' || sh === 'whisper') _teShapeEllipse(ctx, obj.x, obj.y, obj.w, obj.h);
+      else if(sh === 'rect') _teShapeRect(ctx, obj.x, obj.y, obj.w, obj.h);
+      else _teShapeRoundedRect(ctx, obj.x, obj.y, obj.w, obj.h);
+    };
+    // 🔪 속삭임 — 점선 외곽선 (조용한 대사). fill 후 점선 stroke.
+    drawPath();
     ctx.fill();
+    if(sh === 'whisper'){
+      ctx.setLineDash([Math.max(6, _teState.W*0.012), Math.max(5, _teState.W*0.009)]);
+    }
     ctx.stroke();
-    // 그림자는 본체 외곽선까지만 — 이후 텍스트/핸들 그릴 때는 끔.
+    ctx.setLineDash([]);
+    // 그림자 off (텍스트/핸들 전)
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-    // 📖 내레이션 사각 — 만화 박스 스타일 이중 테두리 (안쪽에 가는 선 한 줄 더).
-    if(b.shape === 'rect'){
+    // 📖 내레이션 사각 — 이중 테두리.
+    if(sh === 'rect'){
       const inset = Math.max(3, (b.borderWidth || 2) * 1.6);
       ctx.lineWidth = Math.max(1, (b.borderWidth || 2) * 0.5);
       ctx.beginPath();
       ctx.rect(obj.x + inset, obj.y + inset, obj.w - inset * 2, obj.h - inset * 2);
       ctx.stroke();
+    }
+    // ⚡ 전자음 — 이중선 (안쪽 평행선) 으로 더 또렷하게.
+    if(sh === 'electric'){
+      ctx.lineWidth = Math.max(1, (b.borderWidth || 2) * 0.5);
+      ctx.save();
+      ctx.translate(obj.x + obj.w/2, obj.y + obj.h/2);
+      ctx.scale(0.86, 0.86);
+      ctx.translate(-(obj.x + obj.w/2), -(obj.y + obj.h/2));
+      _teShapeElectric(ctx, obj.x, obj.y, obj.w, obj.h);
+      ctx.stroke();
+      ctx.restore();
     }
   }
 
@@ -14352,7 +14567,7 @@ function _teDrawObj(ctx, obj, withHandles){
     ctx.fill();
     ctx.stroke();
     // 꼬리 핸들 (말풍선 중 꼬리 있는 것)
-    if(obj.type === 'bubble' && (obj.bubble.shape === 'speech' || obj.bubble.shape === 'thought')){
+    if(_teHasTail(obj)){
       ctx.fillStyle = '#3a6398';
       ctx.beginPath();
       ctx.arc(obj.bubble.tailX, obj.bubble.tailY, hs * 0.7, 0, Math.PI * 2);
@@ -14397,7 +14612,9 @@ function _teToLocal(obj, px, py){
 function _teHitTest(px, py){
   // 위쪽 객체 우선 (역순)
   const sel = _teGetSel();
-  const hs = Math.max(8, _teState.W * 0.012);
+  // 📱 터치 기기에선 핸들 hit 영역을 1.8배로 — 작은 핸들 누르기 쉽게.
+  const touchMul = (typeof matchMedia === 'function' && matchMedia('(pointer:coarse)').matches) ? 1.8 : 1;
+  const hs = Math.max(8, _teState.W * 0.012) * touchMul;
   // 선택된 객체의 핸들 우선 검사
   if(sel){
     const local = _teToLocal(sel, px, py);
@@ -14414,7 +14631,7 @@ function _teHitTest(px, py){
     const rotX = sel.x + sel.w / 2, rotY = sel.y - hs * 2.5;
     if(Math.hypot(local.x - rotX, local.y - rotY) < hs)
       return { kind: 'rotate', objId: sel.id };
-    if(sel.type === 'bubble' && (sel.bubble.shape === 'speech' || sel.bubble.shape === 'thought')){
+    if(_teHasTail(sel)){
       // 꼬리 핸들은 회전 무관 좌표 (꼬리 끝점은 원본 좌표계)
       if(Math.hypot(px - sel.bubble.tailX, py - sel.bubble.tailY) < hs * 1.2)
         return { kind: 'tail', objId: sel.id };
@@ -14733,38 +14950,149 @@ const CM_LAYOUTS = [
     {x:712,y:408,w:504,h:400},
     {x:712,y:816,w:504,h:400},
   ]},
+  // ─── 2차 추가 (다양한 컷 배분) ───
+  {id:'5manga', name:'만화 5컷', w:896, h:1280, panels:[
+    {x:0,y:0,w:430,h:380},{x:446,y:0,w:450,h:380},
+    {x:0,y:396,w:896,h:380},
+    {x:0,y:792,w:450,h:488},{x:466,y:792,w:430,h:488},
+  ]},
+  {id:'webtoon', name:'세로 스크롤 4', w:800, h:1800, panels:[
+    {x:0,y:0,w:800,h:430},{x:0,y:450,w:800,h:430},
+    {x:0,y:900,w:800,h:430},{x:0,y:1350,w:800,h:450},
+  ]},
+  {id:'inset',  name:'대형 + 인서트', w:1024, h:1280, panels:[
+    {x:0,y:0,w:1024,h:900},
+    {x:0,y:916,w:506,h:364},{x:518,y:916,w:506,h:364},
+  ]},
+  {id:'3h',     name:'가로 3칸', w:1280, h:720, panels:[
+    {x:0,y:0,w:413,h:720},{x:433,y:0,w:414,h:720},{x:867,y:0,w:413,h:720},
+  ]},
+  {id:'tb2',    name:'위아래 2 + 옆', w:1216, h:1216, panels:[
+    {x:0,y:0,w:780,h:600},{x:0,y:616,w:780,h:600},
+    {x:796,y:0,w:420,h:1216},
+  ]},
+  {id:'9grid',  name:'9컷 (3×3)', w:1080, h:1080, panels:(()=>{
+    const p=[]; const s=348, g=18;
+    for(let r=0;r<3;r++) for(let c=0;c<3;c++) p.push({x:c*(s+g),y:r*(s+g),w:s,h:s});
+    return p;
+  })()},
 ];
 
 let _cmState = null;  // {layoutId, layout, slots:[{blob,img}|null,...], gutter, gutterColor, bg, border, cvs, ctx, scale}
 
-function _cmGetLayout(id){ return CM_LAYOUTS.find(l => l.id === id) || CM_LAYOUTS[0]; }
+function _cmGetLayout(id){
+  if(id === 'custom' && _cmState?.customLayout) return _cmState.customLayout;
+  return CM_LAYOUTS.find(l => l.id === id) || CM_LAYOUTS[0];
+}
+
+// 🔧 커스텀 그리드 레이아웃 — rows[] 각 행은 {h:비율, cols:[{w:비율}...]}.
+//   비율 합이 1이 아니어도 정규화. gutter(px) 만큼 칸 사이 띄움.
+function _cmBuildCustomLayout(spec, W, H, gutterPx){
+  const g = Math.max(0, gutterPx || 0);
+  const rows = spec.rows || [{h:1, cols:[{w:1}]}];
+  const rowHSum = rows.reduce((s,r) => s + (r.h||1), 0) || 1;
+  const panels = [];
+  const innerH = H - g * (rows.length - 1);
+  let cy = 0;
+  for(const row of rows){
+    const rowH = innerH * ((row.h||1) / rowHSum);
+    const cols = row.cols && row.cols.length ? row.cols : [{w:1}];
+    const colWSum = cols.reduce((s,c) => s + (c.w||1), 0) || 1;
+    const innerW = W - g * (cols.length - 1);
+    let cx = 0;
+    for(const col of cols){
+      const colW = innerW * ((col.w||1) / colWSum);
+      panels.push({x: Math.round(cx), y: Math.round(cy), w: Math.round(colW), h: Math.round(rowH)});
+      cx += colW + g;
+    }
+    cy += rowH + g;
+  }
+  return {id:'custom', name:'커스텀', w:W, h:H, custom:true, spec, panels};
+}
+
+// 기본 커스텀 스펙 — 2행, 각 2칸 (4컷). 사용자가 +/- 로 조정.
+function _cmDefaultCustomSpec(){
+  return {rows: [
+    {h:1, cols:[{w:1},{w:1}]},
+    {h:1, cols:[{w:1},{w:1}]},
+  ]};
+}
+
+// 커스텀 스펙 → 레이아웃 재생성 + 슬롯 보존 + 렌더
+function _cmRegenCustom(){
+  if(!_cmState || !_cmState.customSpec) return;
+  const [W, H] = _cmState.customSize || [832, 1216];
+  _cmState.customLayout = _cmBuildCustomLayout(_cmState.customSpec, W, H, _cmState.gutter);
+  _cmState.layoutId = 'custom';
+  _cmState.layout = _cmState.customLayout;
+  const oldSlots = _cmState.slots || [];
+  _cmState.slots = _cmState.layout.panels.map((_, i) => oldSlots[i] || null);
+  _cmState.cvs.width = W; _cmState.cvs.height = H;
+  _cmFitStage();
+  _cmRender();
+  _cmRenderCustomBuilder();
+  _cmRenderSlotList();
+  // 레이아웃 카드 선택 해제 (커스텀 모드)
+  document.querySelectorAll('#cmLayoutGrid .cm-layout-card.sel').forEach(c => c.classList.remove('sel'));
+}
+
+function _cmRenderCustomBuilder(){
+  const root = $('cmCustomRows');
+  if(!root || !_cmState?.customSpec) return;
+  const rows = _cmState.customSpec.rows;
+  root.innerHTML = rows.map((row, ri) => {
+    const cols = row.cols?.length || 1;
+    return `<div class="cm-cb-row">
+      <span class="cm-cb-row-label">${ri+1}행</span>
+      <div class="cm-cb-stepper">
+        <span style="font-size:10.5px;color:var(--t3)">칸</span>
+        <button class="cm-cb-btn" data-cm-cb="col-minus" data-ri="${ri}" ${cols<=1?'disabled':''}>−</button>
+        <span class="cm-cb-cnt">${cols}</span>
+        <button class="cm-cb-btn" data-cm-cb="col-plus" data-ri="${ri}" ${cols>=5?'disabled':''}>＋</button>
+      </div>
+      <button class="cm-cb-delrow" data-cm-cb="del-row" data-ri="${ri}" title="이 행 삭제" ${rows.length<=1?'disabled style="opacity:.3"':''}>🗑</button>
+    </div>`;
+  }).join('');
+}
 
 // 한 패널에 이미지 cover-fit — 패널 영역에 꽉 채우고 비율 유지하며 잘림.
 // cover-fit: 패널에 꽉 채우면서 비율 유지, 잘려나가는 쪽은 slot.offsetX/Y(0~1) 로 위치 조정.
 //   offsetX/Y 0.5 = 중앙, 0 = 왼쪽/위, 1 = 오른쪽/아래. 미설정 시 0.5.
 function _cmDrawCover(ctx, img, panel, slot){
   if(!img || !panel) return;
-  const pAspect = panel.w / panel.h;
-  const iAspect = img.naturalWidth / img.naturalHeight;
   const ox = slot?.offsetX != null ? Math.max(0, Math.min(1, slot.offsetX)) : 0.5;
   const oy = slot?.offsetY != null ? Math.max(0, Math.min(1, slot.offsetY)) : 0.5;
-  let sx, sy, sw, sh;
-  if(iAspect > pAspect){
-    sh = img.naturalHeight;
-    sw = sh * pAspect;
-    sx = (img.naturalWidth - sw) * ox;
-    sy = 0;
-  } else {
-    sw = img.naturalWidth;
-    sh = sw / pAspect;
-    sx = 0;
-    sy = (img.naturalHeight - sh) * oy;
-  }
+  const zoom = Math.max(1, Math.min(4, slot?.zoom || 1));
+  const rot = ((slot?.rotate || 0) % 360 + 360) % 360;   // 0/90/180/270
+  const flipH = !!slot?.flipH;
+  const gray = !!slot?.grayscale;
+  // 90/270 회전이면 이미지의 유효 가로·세로가 바뀜
+  const swapWH = (rot === 90 || rot === 270);
+  const iW = swapWH ? img.naturalHeight : img.naturalWidth;
+  const iH = swapWH ? img.naturalWidth : img.naturalHeight;
+  const pAspect = panel.w / panel.h;
+  const iAspect = iW / iH;
+  // cover-fit 원본 영역 (회전 적용 후 좌표계 기준) + zoom 으로 더 크게 (잘림 ↑)
+  let sw, sh;
+  if(iAspect > pAspect){ sh = iH; sw = sh * pAspect; }
+  else { sw = iW; sh = sw / pAspect; }
+  sw /= zoom; sh /= zoom;
+  const sx = (iW - sw) * ox;
+  const sy = (iH - sh) * oy;
   ctx.save();
   ctx.beginPath();
   ctx.rect(panel.x, panel.y, panel.w, panel.h);
   ctx.clip();
-  ctx.drawImage(img, sx, sy, sw, sh, panel.x, panel.y, panel.w, panel.h);
+  if(gray) ctx.filter = 'grayscale(1)';
+  // 패널 중심에서 회전·반전 적용
+  const cx = panel.x + panel.w/2, cy = panel.y + panel.h/2;
+  ctx.translate(cx, cy);
+  if(rot) ctx.rotate(rot * Math.PI / 180);
+  if(flipH) ctx.scale(-1, 1);
+  // 회전으로 패널 가로/세로가 바뀐 경우 드로잉 대상 크기도 스왑
+  const dW = swapWH ? panel.h : panel.w;
+  const dH = swapWH ? panel.w : panel.h;
+  ctx.drawImage(img, sx, sy, sw, sh, -dW/2, -dH/2, dW, dH);
   ctx.restore();
 }
 
@@ -14863,30 +15191,51 @@ function _cmRenderSlotList(){
       ? `<div class="cm-s-thumb" style="background-image:url('${esc(s.url)}')"></div>`
       : `<div class="cm-s-thumb">＋</div>`;
     const status = filled
-      ? `${s.img.naturalWidth}×${s.img.naturalHeight}`
+      ? `${s.img.naturalWidth}×${s.img.naturalHeight}${s.zoom>1?` · ${s.zoom.toFixed(1)}×`:''}${s.rotate?` · ↻${s.rotate}°`:''}${s.flipH?' · ⇋':''}${s.grayscale?' · ⬛':''}`
       : '<span style="color:var(--t3);font-style:italic">비어있음 — 클릭해서 채우기</span>';
     const cls = filled ? 'cm-slot filled' : 'cm-slot empty';
-    // 위치 조정 (채워진 칸만) — 화살표 + 🎯 중앙 리셋
-    const nudgeBtns = filled ? `
-      <button class="cm-s-btn" data-cm-slot-act="nudge-up" data-cm-i="${i}" title="이미지 위로 (5%) · Shift 클릭=20%">↑</button>
-      <button class="cm-s-btn" data-cm-slot-act="nudge-down" data-cm-i="${i}" title="이미지 아래로 (5%) · Shift=20%">↓</button>
-      <button class="cm-s-btn" data-cm-slot-act="nudge-left" data-cm-i="${i}" title="이미지 왼쪽으로 (5%) · Shift=20%">←</button>
-      <button class="cm-s-btn" data-cm-slot-act="nudge-right" data-cm-i="${i}" title="이미지 오른쪽으로 (5%) · Shift=20%">→</button>
-      <button class="cm-s-btn" data-cm-slot-act="recenter" data-cm-i="${i}" title="🎯 중앙 정렬로 리셋">🎯</button>` : '';
-    // 순서 이동 — 위/아래 (1번/마지막은 한쪽 비활성)
+    const expanded = filled && _cmState.editSlot === i;
+    // 순서 이동
     const orderBtns = `
       <button class="cm-s-btn" data-cm-slot-act="move-up" data-cm-i="${i}" title="이 칸을 ↑ 위로 (이전 칸과 교환)" ${i === 0 ? 'disabled' : ''}>⬆</button>
       <button class="cm-s-btn" data-cm-slot-act="move-down" data-cm-i="${i}" title="이 칸을 ↓ 아래로 (다음 칸과 교환)" ${i === total - 1 ? 'disabled' : ''}>⬇</button>`;
-    return `<div class="${cls}">
-      <span class="cm-s-idx">${i+1}</span>
-      ${thumb}
-      <span class="cm-s-status">${status}</span>
-      <div class="cm-s-acts">
-        <button class="cm-s-btn" data-cm-slot-act="pick" data-cm-i="${i}" title="${filled?'다른 이미지로 교체':'갤러리에서 이미지 선택'}">🖼</button>
-        ${orderBtns}
-        ${nudgeBtns}
-        ${filled ? `<button class="cm-s-btn danger" data-cm-slot-act="clear" data-cm-i="${i}" title="비우기 (Undo 가능)">✕</button>` : ''}
+    // 🎨 이미지 편집 확장 패널 (선택된 칸만)
+    const editPanel = expanded ? `
+      <div class="cm-s-edit">
+        <div class="cm-s-edit-grp">
+          <span class="cm-s-edit-lbl">위치</span>
+          <button class="cm-s-btn" data-cm-slot-act="nudge-up" data-cm-i="${i}" title="위로 (Shift=크게)">↑</button>
+          <button class="cm-s-btn" data-cm-slot-act="nudge-down" data-cm-i="${i}" title="아래로">↓</button>
+          <button class="cm-s-btn" data-cm-slot-act="nudge-left" data-cm-i="${i}" title="왼쪽">←</button>
+          <button class="cm-s-btn" data-cm-slot-act="nudge-right" data-cm-i="${i}" title="오른쪽">→</button>
+          <button class="cm-s-btn" data-cm-slot-act="recenter" data-cm-i="${i}" title="중앙 리셋">🎯</button>
+        </div>
+        <div class="cm-s-edit-grp">
+          <span class="cm-s-edit-lbl">🔍 줌</span>
+          <input type="range" class="cm-s-zoom" data-cm-i="${i}" min="1" max="4" step="0.1" value="${s.zoom||1}">
+          <span class="cm-s-zoom-val">${(s.zoom||1).toFixed(1)}×</span>
+        </div>
+        <div class="cm-s-edit-grp">
+          <span class="cm-s-edit-lbl">변형</span>
+          <button class="cm-s-btn ${s.rotate?'on':''}" data-cm-slot-act="rotate" data-cm-i="${i}" title="90° 회전">↻</button>
+          <button class="cm-s-btn ${s.flipH?'on':''}" data-cm-slot-act="flip" data-cm-i="${i}" title="좌우 반전">⇋</button>
+          <button class="cm-s-btn ${s.grayscale?'on':''}" data-cm-slot-act="grayscale" data-cm-i="${i}" title="흑백">⬛</button>
+          <button class="cm-s-btn" data-cm-slot-act="reset-edit" data-cm-i="${i}" title="이미지 편집 초기화">↺</button>
+        </div>
+      </div>` : '';
+    return `<div class="${cls}${expanded?' expanded':''}">
+      <div class="cm-slot-main">
+        <span class="cm-s-idx">${i+1}</span>
+        ${thumb}
+        <span class="cm-s-status">${status}</span>
+        <div class="cm-s-acts">
+          ${filled ? `<button class="cm-s-btn ${expanded?'on':''}" data-cm-slot-act="edit" data-cm-i="${i}" title="🎨 이미지 편집 (위치·줌·회전·반전·흑백)">🎨</button>` : ''}
+          <button class="cm-s-btn" data-cm-slot-act="pick" data-cm-i="${i}" title="${filled?'다른 이미지로 교체':'갤러리에서 이미지 선택'}">🖼</button>
+          ${orderBtns}
+          ${filled ? `<button class="cm-s-btn danger" data-cm-slot-act="clear" data-cm-i="${i}" title="비우기 (Undo 가능)">✕</button>` : ''}
+        </div>
       </div>
+      ${editPanel}
     </div>`;
   }).join('');
   _cmUpdateStatus();
@@ -14916,6 +15265,19 @@ function _cmRecenter(idx){
   if(!s?.img) return;
   s.offsetX = 0.5; s.offsetY = 0.5;
   _cmRender();
+}
+
+// 🎨 패널 이미지 변형 — 회전(90°)·반전·흑백·초기화.
+function _cmImgTransform(idx, kind){
+  if(!_cmState) return;
+  const s = _cmState.slots[idx];
+  if(!s?.img) return;
+  if(kind === 'rotate') s.rotate = (((s.rotate || 0) + 90) % 360);
+  else if(kind === 'flip') s.flipH = !s.flipH;
+  else if(kind === 'grayscale') s.grayscale = !s.grayscale;
+  else if(kind === 'reset'){ s.rotate = 0; s.flipH = false; s.grayscale = false; s.zoom = 1; s.offsetX = 0.5; s.offsetY = 0.5; }
+  _cmRender();
+  _cmRenderSlotList();
 }
 
 // 두 슬롯 교환 — Undo 스택에 push 후 swap
@@ -15074,6 +15436,7 @@ function _cmSetLayout(id){
   const L = _cmGetLayout(id);
   _cmState.layoutId = L.id;
   _cmState.layout = L;
+  _cmState.editSlot = null;   // 레이아웃 바뀌면 편집 패널 닫힘
   // 슬롯 배열 크기 조절 — 기존 이미지는 같은 인덱스에 보존
   const oldSlots = _cmState.slots || [];
   _cmState.slots = L.panels.map((_, i) => oldSlots[i] || null);
@@ -15109,6 +15472,53 @@ function _cmHitPanel(clientX, clientY){
     if(x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h) return i;
   }
   return -1;
+}
+
+// 🔧 커스텀 모드 — 경계선(gutter) hit. row 경계 또는 특정 row 의 col 경계.
+//   반환 {type:'row', ri} (ri=위 행 인덱스, ri/ri+1 사이) | {type:'col', ri, ci} | null
+function _cmHitGutter(clientX, clientY){
+  if(!_cmState?.customSpec) return null;
+  const spec = _cmState.customSpec;
+  const [W, H] = _cmState.customSize;
+  const g = Math.max(0, _cmState.gutter || 0);
+  const r = _cmState.cvs.getBoundingClientRect();
+  const x = (clientX - r.left) * (W / r.width);
+  const y = (clientY - r.top) * (H / r.height);
+  const tol = Math.max(W, H) * 0.02 + g;   // 경계 근처 허용 오차
+  const rows = spec.rows;
+  const rowHSum = rows.reduce((s,rw) => s + (rw.h||1), 0) || 1;
+  const innerH = H - g * (rows.length - 1);
+  // 행 경계 검사
+  let cy = 0;
+  for(let ri = 0; ri < rows.length; ri++){
+    const rowH = innerH * ((rows[ri].h||1) / rowHSum);
+    const boundaryY = cy + rowH + g/2;   // ri 와 ri+1 사이
+    if(ri < rows.length - 1 && Math.abs(y - boundaryY) < tol && x >= 0 && x <= W){
+      return {type:'row', ri};
+    }
+    cy += rowH + g;
+  }
+  // 열 경계 검사 — 먼저 어느 행인지 찾고, 그 행의 col 경계
+  cy = 0;
+  for(let ri = 0; ri < rows.length; ri++){
+    const rowH = innerH * ((rows[ri].h||1) / rowHSum);
+    if(y >= cy && y <= cy + rowH){
+      const cols = rows[ri].cols;
+      const colWSum = cols.reduce((s,c) => s + (c.w||1), 0) || 1;
+      const innerW = W - g * (cols.length - 1);
+      let cx = 0;
+      for(let ci = 0; ci < cols.length; ci++){
+        const colW = innerW * ((cols[ci].w||1) / colWSum);
+        const bx = cx + colW + g/2;
+        if(ci < cols.length - 1 && Math.abs(x - bx) < tol){
+          return {type:'col', ri, ci};
+        }
+        cx += colW + g;
+      }
+    }
+    cy += rowH + g;
+  }
+  return null;
 }
 
 async function _cmPickForSlot(idx){
@@ -15407,7 +15817,53 @@ function _cmWireOnce(){
   $('cmLayoutGrid')?.addEventListener('click', e => {
     const card = e.target.closest('[data-cm-layout]');
     if(!card || !_cmState) return;
+    // 프리셋 선택 시 커스텀 모드 해제
+    _cmState.customSpec = null;
+    $('cmCustomToggle')?.classList.remove('act');
+    $('cmCustomBuilder') && ($('cmCustomBuilder').style.display = 'none');
     _cmSetLayout(card.dataset.cmLayout);
+  });
+  // 🔧 커스텀 직접 편집 토글
+  $('cmCustomToggle')?.addEventListener('click', () => {
+    if(!_cmState) return;
+    const builder = $('cmCustomBuilder');
+    const toggle = $('cmCustomToggle');
+    const on = builder.style.display === 'none';
+    builder.style.display = on ? 'block' : 'none';
+    toggle.classList.toggle('act', on);
+    if(on){
+      if(!_cmState.customSpec){
+        _cmState.customSpec = _cmDefaultCustomSpec();
+        const ratio = ($('cmCustomRatio')?.value || '832x1216').split('x').map(Number);
+        _cmState.customSize = ratio;
+      }
+      _cmRegenCustom();
+    }
+  });
+  $('cmCustomRatio')?.addEventListener('change', () => {
+    if(!_cmState?.customSpec) return;
+    _cmState.customSize = ($('cmCustomRatio').value || '832x1216').split('x').map(Number);
+    _cmRegenCustom();
+  });
+  $('cmCustomAddRow')?.addEventListener('click', () => {
+    if(!_cmState?.customSpec) return;
+    if(_cmState.customSpec.rows.length >= 6){ toast('최대 6행', 'info'); return; }
+    _cmPushUndo();
+    _cmState.customSpec.rows.push({h:1, cols:[{w:1}]});
+    _cmRegenCustom();
+  });
+  $('cmCustomRows')?.addEventListener('click', e => {
+    const btn = e.target.closest('[data-cm-cb]');
+    if(!btn || !_cmState?.customSpec) return;
+    const ri = parseInt(btn.dataset.ri, 10);
+    const act = btn.dataset.cmCb;
+    const row = _cmState.customSpec.rows[ri];
+    if(!row) return;
+    _cmPushUndo();
+    if(act === 'col-plus' && row.cols.length < 5) row.cols.push({w:1});
+    else if(act === 'col-minus' && row.cols.length > 1) row.cols.pop();
+    else if(act === 'del-row' && _cmState.customSpec.rows.length > 1) _cmState.customSpec.rows.splice(ri, 1);
+    _cmRegenCustom();
   });
   // 슬롯 리스트 버튼 (Shift 누르면 nudge 4배)
   $('cmSlotList')?.addEventListener('click', e => {
@@ -15418,22 +15874,66 @@ function _cmWireOnce(){
     const step = e.shiftKey ? 0.2 : 0.05;
     if(act === 'pick') _cmPickForSlot(i);
     else if(act === 'clear') _cmClearSlot(i);
+    else if(act === 'edit'){ _cmState.editSlot = (_cmState.editSlot === i) ? null : i; _cmRenderSlotList(); }
     else if(act === 'nudge-up')    _cmNudge(i, 0, -step);
     else if(act === 'nudge-down')  _cmNudge(i, 0, +step);
     else if(act === 'nudge-left')  _cmNudge(i, -step, 0);
     else if(act === 'nudge-right') _cmNudge(i, +step, 0);
     else if(act === 'recenter')    _cmRecenter(i);
+    else if(act === 'rotate')      _cmImgTransform(i, 'rotate');
+    else if(act === 'flip')        _cmImgTransform(i, 'flip');
+    else if(act === 'grayscale')   _cmImgTransform(i, 'grayscale');
+    else if(act === 'reset-edit')  _cmImgTransform(i, 'reset');
     else if(act === 'move-up' && i > 0)   _cmSwapSlots(i, i - 1);
     else if(act === 'move-down' && i < _cmState.slots.length - 1) _cmSwapSlots(i, i + 1);
+  });
+  // 🔍 줌 슬라이더
+  $('cmSlotList')?.addEventListener('input', e => {
+    const sl = e.target.closest('.cm-s-zoom');
+    if(!sl || !_cmState) return;
+    const i = parseInt(sl.dataset.cmI, 10);
+    const s = _cmState.slots[i];
+    if(!s?.img) return;
+    s.zoom = parseFloat(sl.value) || 1;
+    const valEl = sl.parentElement.querySelector('.cm-s-zoom-val');
+    if(valEl) valEl.textContent = s.zoom.toFixed(1) + '×';
+    _cmRender();
   });
   // 캔버스 포인터 인터랙션 — 클릭/드래그-스왑/SHIFT-팬/우클릭
   const wrap = $('cmCanvasWrap');
   if(wrap){
     let mouseDownPos = null, mouseDownIdx = -1, shiftPan = false, dragging = false;
+    let gutterDrag = null;   // {type,ri,ci, startVal, startVal2, startX, startY}
     const DRAG_THRESHOLD = 6;  // px before drag kicks in
+    // 마우스 이동 시 gutter 위 hover → 커서 변경 (커스텀 모드)
+    wrap.addEventListener('pointermove', e => {
+      if(!_cmState?.customSpec || mouseDownIdx >= 0 || gutterDrag) return;
+      const g = _cmHitGutter(e.clientX, e.clientY);
+      const cvs = _cmState.cvs;
+      cvs.classList.toggle('cm-gutter-h', g?.type === 'row');
+      cvs.classList.toggle('cm-gutter-v', g?.type === 'col');
+    });
     wrap.addEventListener('pointerdown', e => {
       if(!_cmState) return;
       if(e.button !== 0) return;  // left only (right handled by contextmenu)
+      // 🔧 커스텀 모드 — gutter 잡으면 크기 조절 시작
+      if(_cmState.customSpec){
+        const g = _cmHitGutter(e.clientX, e.clientY);
+        if(g){
+          _cmPushUndo();
+          const rows = _cmState.customSpec.rows;
+          if(g.type === 'row'){
+            gutterDrag = {type:'row', ri:g.ri, startX:e.clientX, startY:e.clientY,
+              v1: rows[g.ri].h||1, v2: rows[g.ri+1].h||1};
+          } else {
+            const cols = rows[g.ri].cols;
+            gutterDrag = {type:'col', ri:g.ri, ci:g.ci, startX:e.clientX, startY:e.clientY,
+              v1: cols[g.ci].w||1, v2: cols[g.ci+1].w||1};
+          }
+          e.preventDefault();
+          return;
+        }
+      }
       const i = _cmHitPanel(e.clientX, e.clientY);
       if(i < 0) return;
       mouseDownPos = {x: e.clientX, y: e.clientY};
@@ -15445,6 +15945,27 @@ function _cmWireOnce(){
       }
     });
     wrap.addEventListener('pointermove', e => {
+      // 🔧 gutter 드래그 우선
+      if(gutterDrag && _cmState?.customSpec){
+        const r = _cmState.cvs.getBoundingClientRect();
+        const [W, H] = _cmState.customSize;
+        const rows = _cmState.customSpec.rows;
+        if(gutterDrag.type === 'row'){
+          const dyRatio = ((e.clientY - gutterDrag.startY) / r.height) * rows.reduce((s,rw)=>s+(rw.h||1),0);
+          let n1 = gutterDrag.v1 + dyRatio, n2 = gutterDrag.v2 - dyRatio;
+          if(n1 > 0.15 && n2 > 0.15){ rows[gutterDrag.ri].h = n1; rows[gutterDrag.ri+1].h = n2; }
+        } else {
+          const cols = rows[gutterDrag.ri].cols;
+          const dxRatio = ((e.clientX - gutterDrag.startX) / r.width) * cols.reduce((s,c)=>s+(c.w||1),0);
+          let n1 = gutterDrag.v1 + dxRatio, n2 = gutterDrag.v2 - dxRatio;
+          if(n1 > 0.15 && n2 > 0.15){ cols[gutterDrag.ci].w = n1; cols[gutterDrag.ci+1].w = n2; }
+        }
+        // 레이아웃만 재생성 (슬롯 보존, 빌더 UI 재렌더 생략 → 부드러움)
+        _cmState.customLayout = _cmBuildCustomLayout(_cmState.customSpec, W, H, _cmState.gutter);
+        _cmState.layout = _cmState.customLayout;
+        _cmRender();
+        return;
+      }
       if(!_cmState || mouseDownIdx < 0) return;
       const dx = e.clientX - mouseDownPos.x;
       const dy = e.clientY - mouseDownPos.y;
@@ -15477,6 +15998,11 @@ function _cmWireOnce(){
     });
     const endDrag = (e) => {
       if(!_cmState) return;
+      if(gutterDrag){
+        gutterDrag = null;
+        _cmRenderSlotList();   // 크기 변경 후 슬롯 상태 갱신
+        return;
+      }
       if(shiftPan){
         const s = _cmState.slots[mouseDownIdx];
         if(s){ delete s._origOffsetX; delete s._origOffsetY; }
