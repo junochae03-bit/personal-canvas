@@ -224,7 +224,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .char-quick-btn:hover{background:rgba(162,90,31,.12);border-color:var(--acc);border-style:solid;transform:translateY(-1px)}
 .char-quick-btn .en{font-weight:400;font-size:.85em}
 
-#charPickModal .modal{max-width:760px;width:100%;max-height:88vh}
+#charPickModal .modal{max-width:760px;width:100%;max-height:88vh;max-height:88dvh}
 #charPickModal .modal-body{display:flex;flex-direction:column;gap:10px;padding:14px 18px}
 
 /* 📌 현재 액션 슬롯 상태 카드 */
@@ -265,7 +265,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .cp-cat:hover{color:var(--t1);background:var(--card2);border-color:var(--b2)}
 .cp-cat.act{background:var(--acc);color:#fff8ec;border-color:var(--acc)}
 .cp-cat .cp-cnt{font-family:var(--mono);font-size:10.5px;opacity:.7}
-.cp-list{max-height:60vh;overflow-y:auto;border:1.5px solid var(--b1);border-radius:6px;background:var(--card);min-height:200px}
+.cp-list{max-height:min(60vh,60dvh);overflow-y:auto;border:1.5px solid var(--b1);border-radius:6px;background:var(--card);min-height:200px;overscroll-behavior:contain}
+@media (max-width:880px){.cp-list{max-height:min(48vh,48dvh)}}
 .cp-list-grp{padding:8px 14px;font-size:12px;font-weight:700;color:var(--acc);background:var(--card2);border-bottom:1.5px solid var(--b1);position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:6px}
 .cp-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--b1);transition:all .12s}
 .cp-item:hover{background:rgba(162,90,31,.08);transform:translateX(2px)}
@@ -420,8 +421,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .g-item .g-dislike:hover{background:rgba(20,14,4,.85);color:#b54338}
 /* 📱 모바일에서는 hover 가 안 되므로 항상 노출 (살짝 옅게) */
 @media (max-width:880px){
-  .g-item .g-like, .g-item .g-dislike{opacity:.6}
+  /* 📱 갤러리 카드 액션 — 모바일 터치 영역 확대 (26→36, 34→40px) + 항상 표시 */
+  .g-item .g-like, .g-item .g-dislike{opacity:.7;width:36px;height:36px;font-size:16px}
+  .g-item .g-dislike{left:46px}
+  .g-item .g-fav{width:36px;height:36px;font-size:16px}
   .g-item .g-like[aria-pressed="true"], .g-item .g-dislike[aria-pressed="true"]{opacity:1}
+  .g-thumb .open-lb, .g-thumb .g-textedit, .g-thumb .g-exif-btn, .g-thumb .g-album-btn{width:40px !important;height:40px !important;font-size:16px}
+  .g-thumb .g-textedit{left:54px !important}
 }
 .g-item.liked{box-shadow:0 0 0 2px rgba(226,91,111,.55) inset}
 .g-item.disliked{box-shadow:0 0 0 2px rgba(181,67,56,.55) inset;filter:saturate(.85)}
@@ -1071,10 +1077,10 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 /* 휴대폰 (≤600px) — 좁은 화면 전용 미세 조정 (컴팩트) */
 @media (max-width:600px){
-  /* iOS Safari 자동 줌 방지 — 일반 input만 16px (tiny는 14px) */
-  .ta:not(.tiny),.inp:not(.tiny),input[type=text]:not(.tiny),input[type=number]:not(.tiny),input[type=password]:not(.tiny),input[type=search]:not(.tiny),textarea:not(.tiny){font-size:16px !important}
-  .ta.tiny,.inp.tiny{font-size:14px !important}
-  select.inp{font-size:14px !important;padding:6px 26px 6px 9px !important;min-height:34px;height:34px}
+  /* iOS Safari 자동 줌 방지 — 모든 input·textarea·select 16px (이전엔 tiny/select 가 14px 라 포커스 시 줌) */
+  .ta,.inp,input[type=text],input[type=number],input[type=password],input[type=search],input[type=email],input[type=url],textarea,select{font-size:16px !important}
+  .ta.tiny,.inp.tiny{font-size:16px !important}
+  select.inp{font-size:16px !important;padding:6px 26px 6px 9px !important;min-height:36px;height:36px}
 
   html,body{font-size:13px;line-height:1.4}
 
@@ -1571,9 +1577,10 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   /* 갤러리/프리셋/태그 상단 검색바도 하단 네비 가리지 않게 sticky */
   .gallery-bar,.preset-bar,.tag-bar{position:sticky;top:0;z-index:5}
 
-  /* 🍞 토스트 — 하단 네비 위로 (편집뷰는 생성바도 있어서 더 위로) */
-  #toastBox{bottom:calc(64px + env(safe-area-inset-bottom));transition:bottom .15s ease-out}
-  body[data-mview="edit"] #toastBox{bottom:calc(124px + env(safe-area-inset-bottom))}
+  /* 🍞 토스트 — 하단 네비 위로 충분히 띄움 (이전엔 nav 와 겹쳐 안 보이던 신고). 편집뷰는 생성바까지 추가 고려. */
+  #toastBox{bottom:calc(72px + env(safe-area-inset-bottom));right:12px;left:auto;transition:bottom .15s ease-out;max-width:min(360px,calc(100vw - 24px))}
+  body[data-mview="edit"] #toastBox{bottom:calc(136px + env(safe-area-inset-bottom))}
+  #toastBox .toast{font-size:12.5px;padding:9px 12px;line-height:1.4;border-radius:8px}
 
   /* 스와이프 전환 — 방향에 맞춰 슬라이드 인 (끊김 없는 자연스러운 전환) */
   body[data-mview="edit"] .sidebar,
@@ -4134,6 +4141,15 @@ const parseSeedInput = raw => {
   if(raw === '' || raw === '-1' || raw == null) return randomSeed();
   const n = parseInt(raw, 10);
   if(!Number.isFinite(n) || n < 0) return randomSeed();
+  // 👎 자동 제외 옵션 켜져있고 수동 입력한 시드가 blocklist 면 1회 토스트 안내 후 그대로 사용
+  //    (사용자가 명시 입력했으므로 강제 교체 X. 단, 이 시드가 막혔다는 사실은 알린다.)
+  if(typeof window !== 'undefined' && window.state?.seedBlocklistAuto){
+    const blocked = (typeof getSeedBlocklist === 'function') ? getSeedBlocklist() : new Set();
+    if(blocked.has(n) && typeof toast === 'function' && !window._seedBlockToastShown){
+      toast(`⚠ 시드 ${n} 은(는) 👎 차단 목록에 있어요 — 명시 입력이라 그대로 사용합니다`, 'warning', {timeoutMs: 7000});
+      window._seedBlockToastShown = setTimeout(() => { delete window._seedBlockToastShown; }, 60000);
+    }
+  }
   return n;
 };
 
@@ -4903,7 +4919,10 @@ const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 const fmtBytes = n => n<1024?n+'B':n<1048576?(n/1024).toFixed(1)+'KB':n<1073741824?(n/1048576).toFixed(1)+'MB':(n/1073741824).toFixed(2)+'GB';
 const fmtDate = ts => { const d=new Date(ts); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
 const blobToDataURL = blob => new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); });
-const dataURLtoBlob = url => fetch(url).then(r=>r.blob());
+const dataURLtoBlob = url => fetch(url).then(r => {
+  if(!r.ok) throw new Error('dataURL fetch failed: ' + r.status);
+  return r.blob();
+}).catch(e => { _swallow(e, 'dataURLtoBlob'); throw e; });
 
 /**
  * 토스트 알림 — 접힘/펼침 + 일괄 닫기 지원, 자동 닫힘 0.5초.
@@ -5162,9 +5181,27 @@ function confirmDialog(msg, onOk, title){
   ok.style.display = '';
   ok.innerHTML = '확인 <span class="en">OK</span>';
   cancel.innerHTML = '취소 <span class="en">Cancel</span>';
-  const close = ()=>{ $('confirmModal').classList.remove('open'); ok.onclick=null; cancel.onclick=null; };
-  ok.onclick = ()=>{ close(); onOk && onOk(); };
+  const close = () => {
+    $('confirmModal').classList.remove('open');
+    ok.onclick = null; cancel.onclick = null;
+    document.removeEventListener('keydown', onKey, true);
+  };
+  // ⌨ Enter = 확인, Esc = 취소 — modal 열려있을 때만. 다른 키보드 트랩과 충돌 방지 위해 capture phase.
+  const onKey = (e) => {
+    if(!$('confirmModal').classList.contains('open')) return;
+    if(e.key === 'Enter' && !e.target.matches('textarea, [contenteditable]')){
+      e.preventDefault(); e.stopPropagation();
+      close(); onOk && onOk();
+    } else if(e.key === 'Escape'){
+      e.preventDefault(); e.stopPropagation();
+      close();
+    }
+  };
+  ok.onclick = () => { close(); onOk && onOk(); };
   cancel.onclick = close;
+  document.addEventListener('keydown', onKey, true);
+  // 🎯 OK 버튼에 자동 포커스 — 키보드 사용자 친화. 모달 열림 직후 안전하게.
+  setTimeout(() => { try { ok.focus({preventScroll: true}); } catch(e){} }, 50);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -12840,7 +12877,17 @@ async function loadGallery(){
   // 🗂 세션 필터 드롭다운 갱신 — 세션별 항목으로
   populateSessionFilter(sessions);
   if(!sessions.length){
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--t2);padding:60px 20px;font-size:14px">아직 생성된 이미지가 없습니다<div style="font-size:11.5px;color:var(--t3);margin-top:8px">No images yet — 생성을 시작하면 여기에 자동 저장됩니다</div></div>';
+    grid.innerHTML = `<div class="gal-empty-cta" style="grid-column:1/-1;text-align:center;padding:60px 20px">
+      <div style="font-size:48px;line-height:1;margin-bottom:12px;opacity:.55">🖼</div>
+      <div style="font-size:15px;font-weight:700;color:var(--t1);margin-bottom:6px">아직 생성된 이미지가 없어요</div>
+      <div style="font-size:12.5px;color:var(--t3);margin-bottom:18px;line-height:1.55">생성한 이미지가 자동으로 여기에 저장됩니다.<br>편집 탭에서 프롬프트를 입력하고 시작해 보세요.</div>
+      <button class="btn primary" id="galEmptyStartBtn" type="button" style="padding:10px 20px;font-size:13.5px">✏️ 편집 탭으로 이동 <span class="en" style="opacity:.7;font-weight:400">Go to Edit</span></button>
+    </div>`;
+    document.getElementById('galEmptyStartBtn')?.addEventListener('click', () => {
+      const mob = window.matchMedia?.('(max-width:880px)').matches;
+      if(mob) setMainPane?.('edit'); else setMainPane?.('preview');
+      setTimeout(() => document.getElementById('prompt')?.focus(), 200);
+    });
     return;
   }
   const viewMode = grid.dataset.view || 'detail';
@@ -13471,15 +13518,24 @@ async function showLightboxAt(idx){
   if(idx < 0 || idx >= _lbList.length) return;
   _lbIdx = idx;
   const ref = _lbList[idx];
-  const imgs = await DB.getSessionImages(ref.sid, {includeTrashed: true});
+  // 🛡 세션이 통째로 삭제됐거나 이미지가 없으면 안전하게 종료 (예전 _lbCurrent 유지 안 함).
+  let imgs = [];
+  try { imgs = await DB.getSessionImages(ref.sid, {includeTrashed: true}); }
+  catch(e){ _swallow(e, 'lb:fetch'); toast('이미지 로드 실패', 'warning'); return; }
   const img = imgs.find(i => i.id === ref.id);
-  if(!img) return;
+  if(!img || !img.blob){
+    toast('이미지를 찾을 수 없어요 (삭제됐을 수 있음)', 'warning');
+    // 다음 가능 항목으로 자동 이동 — 무한 루프 방지 위해 1회만
+    _lbList.splice(idx, 1);
+    if(_lbList.length === 0){ closeLightbox(); return; }
+    return showLightboxAt(Math.min(idx, _lbList.length - 1));
+  }
   // 이전 URL 해제
-  if($('lbImg').dataset.url) URL.revokeObjectURL($('lbImg').dataset.url);
+  const prevImg = $('lbImg');
+  if(prevImg && prevImg.dataset.url) URL.revokeObjectURL(prevImg.dataset.url);
   _lbCurrent = img;
   const url = URL.createObjectURL(img.blob);
-  $('lbImg').src = url;
-  $('lbImg').dataset.url = url;
+  if(prevImg){ prevImg.src = url; prevImg.dataset.url = url; }
   // ❤️ 좋아요 / 👎 별로 버튼 상태 동기화 + ✏️ 수정 버튼 노출 (👎 일 때만)
   _refreshLbLikeDislikeUI();
   // 메타데이터 — EXIF 외 추가 필드들 풍부하게 표시
@@ -16076,6 +16132,11 @@ Object.defineProperty(window, '_cmState', { get(){ return _cmState; }, configura
 function setMode(mode){
   // 🐛 data-mode 없는 버튼(🎲 RC 탭 등)이 setMode(undefined)로 모든 mode-show 섹션을 숨기던 버그 방어.
   if(mode == null) return;
+  // 🛡 생성 진행 중 모드 전환 시도 — 시작 모드로 잠금 (이전엔 abort 컨트롤러 orphan 되어 결과가 잘못 라우팅됨).
+  if(state.running && state.mode !== mode){
+    if(typeof toast === 'function') toast(`⏸ 생성 중에는 모드 전환 불가 — '${state.mode}' 종료 후 다시 시도하세요`, 'warning');
+    return;
+  }
   state.mode = mode;
   $$('.mode-btn').forEach(b => b.classList.toggle('act', b.dataset.mode === mode));
   $$('.mode-show').forEach(el => {
@@ -17147,10 +17208,20 @@ function openTagCodexForCharNeg(slotIdx){
 
 function refreshPromptStats(){
   const n = $('prompt').value.length;
-  $('promptTokens').textContent = `${n.toLocaleString()} 글자 (chars)`;
+  const pT = $('promptTokens');
+  if(pT){
+    // ⚠ NAI 한도(대략 4000자 권장) 근접 시 색상 변경
+    const warn = n > 4000;
+    pT.textContent = `${n.toLocaleString()} 글자${warn ? ' ⚠ 권장 4000자 초과' : ''}`;
+    pT.style.color = warn ? 'var(--red)' : (n > 3000 ? 'var(--acc)' : '');
+  }
   const nNeg = ($('negPrompt')?.value || '').length;
   const negT = $('negTokens');
-  if(negT) negT.textContent = `${nNeg.toLocaleString()} 글자`;
+  if(negT){
+    const warn = nNeg > 2000;
+    negT.textContent = `${nNeg.toLocaleString()} 글자${warn ? ' ⚠ 너무 김' : ''}`;
+    negT.style.color = warn ? 'var(--red)' : '';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -19044,6 +19115,10 @@ function wireGenerationAndPresetEvents(){
 function wireGalleryEvents(){
   // Gallery
   $('gallerySearch').addEventListener('input', debounce(loadGallery, 250));
+  // ⌨ ESC 키 = 검색어 즉시 지우기 (모달 안에서가 아닐 때)
+  $('gallerySearch').addEventListener('keydown', e => {
+    if(e.key === 'Escape' && e.target.value){ e.preventDefault(); e.target.value=''; e.target.dispatchEvent(new Event('input')); }
+  });
   $('galleryFilter').addEventListener('change', loadGallery);
   // 🔀 정렬 변경 + 영속화 (localStorage)
   const sortSel = $('gallerySort');
@@ -21794,6 +21869,8 @@ function wildcardToggle(force){
   if(btn){ btn.classList.toggle('act', open); btn.setAttribute('aria-pressed', String(open)); }
   if(sec) sec.style.display = open ? '' : 'none';
   if(open) renderWildcards();
+  // 💾 패널 열림 상태 영속화 — 페이지 새로고침 후에도 유지
+  try { DB.setFlag?.('wildcard_panel_open', open); } catch(e){ _swallow(e, 'wc:persist'); }
 }
 
 let _wcSelectMode = false;
@@ -22639,6 +22716,15 @@ async function init(){
 
   // 샘플러 옵션을 loadSettings 호출 전에 먼저 채워야 saved sampler 값이 정상 복원됨
   refreshSamplerListByModel();
+  // 🪙 비용 추정 자동 갱신 — 사용자가 직접 조작하는 모든 생성 파라미터 입력에 input/change 리스너 연결.
+  //    (이전엔 일부 컨트롤만 호출 — resPreset/steps/cfg 변경해도 비용 표시 그대로였음.)
+  const _costInputs = ['resPreset','steps','cfgScale','cfgRescale','model','smeaCheck','smeaDynCheck','varietyCheck','decrisperCheck','sampler','noiseSchedule','ucPreset'];
+  for(const id of _costInputs){
+    const el = document.getElementById(id);
+    if(!el) continue;
+    const ev = el.tagName === 'INPUT' && el.type !== 'checkbox' ? 'input' : 'change';
+    el.addEventListener(ev, () => { try { refreshCost(); refreshResInfo?.(); } catch(e){ _swallow(e, 'cost:wire'); } });
+  }
   await DB.init();
   // 🗑 휴지통 7일 자동 영구 삭제 — 부트 시 1회 (fire-and-forget, 빠른 부트 우선)
   DB.purgeOldDeleted(7).then(n => { if(n > 0) console.log(`[trash] ${n}개 영구 삭제 (7일 이상)`); }).catch(()=>{});
@@ -22675,6 +22761,8 @@ async function init(){
   await _bootStep('randomBuilderPresets', loadRandomBuilderPresets);
   await _bootStep('templates', tplLoadTemplates);
   await _bootStep('wildcards', loadWildcards);
+  // 🃏 와일드카드 패널 열림 상태 복원
+  try { const wasOpen = await DB.getFlag?.('wildcard_panel_open'); if(wasOpen) wildcardToggle(true); } catch(e){ _swallow(e, 'wc:restore'); }
   // 👎 시드 blocklist + auto 토글 복원
   try {
     const bl = await DB.getFlag('seed_blocklist');
