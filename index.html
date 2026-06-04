@@ -2507,7 +2507,7 @@ mark{
           <span class="caret">▾</span>
         </div>
         <div class="sec-body">
-          <div class="wc-hint">프롬프트(또는 캐릭터 외형·액션)에 <code>__이름__</code> 을 넣으면 생성마다 해당 목록에서 한 줄을 무작위로 치환합니다. 칩을 클릭하면 커서 위치에 삽입돼요.</div>
+          <div class="wc-hint">프롬프트(또는 캐릭터 외형·액션)에 <code>__이름__</code> 을 넣으면 생성마다 해당 목록에서 한 줄을 무작위로 치환합니다. 칩을 클릭하면 커서 위치에 삽입돼요.<br><b style="color:var(--acc)">🔁 중첩 지원</b> — 옵션 텍스트 안에 또 <code>__다른이름__</code> 을 넣으면 재귀로 풀립니다. 예: <code>__character__</code> 옵션이 <code>"푸리나, __color__ hair"</code> → 색까지 자동 결정. 최대 5단계, 자기/상호 참조 시 자동 차단.</div>
           <input type="file" id="wildcardFileInput" accept=".zip,.txt,.json,text/plain,application/json" multiple style="display:none">
           <div id="wildcardSelBar" class="wc-sel-bar" style="display:none"></div>
           <div id="wildcardChips" class="wc-chips"></div>
@@ -3996,15 +3996,17 @@ function pickWildcardLine(wc, rng){
   }
   return String(opts[opts.length - 1]?.text || '');
 }
-function expandWildcards(text, resolve, rng, onPick){
+function expandWildcards(text, resolve, rng, onPick, _depth){
   if(!text || typeof text !== 'string') return text;
   if(typeof resolve !== 'function') return text;
+  const depth = (_depth | 0);
+  if(depth >= 5) return text;
   return text.replace(WILDCARD_TOKEN_RE, (full, name) => {
     const wc = resolve(name);
     if(!wc || !Array.isArray(wc.options) || !wc.options.length) return full;
     const picked = pickWildcardLine(wc, rng);
     if(typeof onPick === 'function') onPick(name, picked);
-    return picked;
+    return expandWildcards(picked, resolve, rng, onPick, depth + 1);
   });
 }
 // 🃏 와일드카드 이름 → state 의 와일드카드 객체 (생성 시 __name__ 치환용). 인라인 전용(state 의존).

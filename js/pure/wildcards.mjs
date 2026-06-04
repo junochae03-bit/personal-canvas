@@ -9,7 +9,8 @@
 // - 후보(줄) 안의 가중치 캡슐(1.5::tag::)·콤마는 그대로 보존 — "선택 weight" 와는 별개.
 // - 알 수 없는 이름(목록 없음/빈 목록)은 토큰을 그대로 둔다 (오타 보존, 무음 삭제 방지).
 // - rng 주입 가능 (테스트·결정적 재현).
-// - 중첩(__a__ 안에 또 __b__)은 1패스만 — 호출자가 필요 시 반복.
+// - 🔁 중첩 지원 — 옵션 안에 또 __name__ 이 있으면 재귀적으로 한 번 더 풀림.
+//   상호/자기참조 무한 루프 방지를 위해 최대 5 단계까지만 (그 이후 토큰 그대로 둠).
 
 // 와일드카드 이름 검증 — import/rename 시 사용.
 export const WILDCARD_NAME_RE = /^[A-Za-z0-9_\-]+$/;
@@ -69,15 +70,18 @@ export function pickWildcardLine(wc, rng){
  * 텍스트의 모든 __name__ 치환. resolve(name) → 와일드카드 객체 {options,locked,lockedIdx} | null.
  *  - resolve 가 null/빈 옵션을 주면 토큰을 그대로 둔다.
  *  - onPick(name, picked) 콜백을 주면 치환 발생할 때마다 호출 — 메타 로그용.
+ *  - 🔁 옵션 안에 또 __name__ 이 있으면 재귀 확장. _depth 는 내부 안전장치 (호출자 X).
  */
-export function expandWildcards(text, resolve, rng, onPick){
+export function expandWildcards(text, resolve, rng, onPick, _depth){
   if(!text || typeof text !== 'string') return text;
   if(typeof resolve !== 'function') return text;
+  const depth = (_depth | 0);
+  if(depth >= 5) return text;
   return text.replace(WILDCARD_TOKEN_RE, (full, name) => {
     const wc = resolve(name);
     if(!wc || !Array.isArray(wc.options) || !wc.options.length) return full;
     const picked = pickWildcardLine(wc, rng);
     if(typeof onPick === 'function') onPick(name, picked);
-    return picked;
+    return expandWildcards(picked, resolve, rng, onPick, depth + 1);
   });
 }

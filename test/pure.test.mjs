@@ -586,3 +586,64 @@ test('expandWildcards: resolve 미함수·빈 입력 안전', () => {
   assert.equal(expandWildcards(null, () => null), null);
 });
 
+test('expandWildcards: 🔁 중첩 — 옵션 안 __name__ 재귀 확장 (depth 5)', () => {
+  const wcs = {
+    character: [{text:'푸리나, __color__ hair', weight:1}],
+    color: [{text:'red', weight:1}],
+  };
+  const resolve = name => wcs[name] ? {options: wcs[name], locked:false} : null;
+  assert.equal(
+    expandWildcards('1girl, __character__', resolve, () => 0),
+    '1girl, 푸리나, red hair'
+  );
+});
+
+test('expandWildcards: 🔁 다단계 중첩 (3단계)', () => {
+  const wcs = {
+    scene: [{text:'__time__ at __place__', weight:1}],
+    time: [{text:'__hour__ sunset', weight:1}],
+    place: [{text:'beach', weight:1}],
+    hour: [{text:'evening', weight:1}],
+  };
+  const resolve = name => wcs[name] ? {options: wcs[name], locked:false} : null;
+  assert.equal(
+    expandWildcards('__scene__', resolve, () => 0),
+    'evening sunset at beach'
+  );
+});
+
+test('expandWildcards: 🛡 자기참조 무한루프 방지 (depth cap 5)', () => {
+  // __loop__ = "__loop__ x" — 5단계 후 멈춤. crash 하지 않으면 OK.
+  const wcs = { loop: [{text:'__loop__ x', weight:1}] };
+  const resolve = name => wcs[name] ? {options: wcs[name], locked:false} : null;
+  const result = expandWildcards('__loop__', resolve, () => 0);
+  // 깊이 5 에 도달하면 마지막 토큰은 그대로 — "__loop__ x x x x x" 형태
+  assert.ok(result.includes('x'), '재귀 종료 후 일부 x 가 살아남아야');
+  assert.ok(!result.match(/__loop__.*__loop__.*__loop__.*__loop__.*__loop__.*__loop__/), '무한 확장 안 됨');
+});
+
+test('expandWildcards: 🛡 상호참조 (a→b→a) 안전 종료', () => {
+  const wcs = {
+    a: [{text:'A:__b__', weight:1}],
+    b: [{text:'B:__a__', weight:1}],
+  };
+  const resolve = name => wcs[name] ? {options: wcs[name], locked:false} : null;
+  const result = expandWildcards('__a__', resolve, () => 0);
+  // 5 단계 사이클: a→A:b→A:B:a→A:B:A:b→A:B:A:B:a → 마지막은 토큰 그대로
+  assert.equal(result, 'A:B:A:B:A:__b__');
+});
+
+test('expandWildcards: 🔁 중첩 시 onPick 콜백은 각 단계마다 호출 (raw picked)', () => {
+  const wcs = {
+    outer: [{text:'before __inner__ after', weight:1}],
+    inner: [{text:'X', weight:1}],
+  };
+  const resolve = name => wcs[name] ? {options: wcs[name], locked:false} : null;
+  const log = [];
+  expandWildcards('__outer__', resolve, () => 0, (name, picked) => log.push([name, picked]));
+  assert.deepEqual(log, [
+    ['outer', 'before __inner__ after'],   // 외부 picked — 토큰 미해결
+    ['inner', 'X'],                          // 내부 picked
+  ]);
+});
+
