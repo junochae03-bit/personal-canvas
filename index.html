@@ -3756,7 +3756,7 @@ coffee shop, latte art"></textarea>
             <button class="cm-autogen-toggle" id="cmAutoToggle" type="button" title="접기/펴기">▾</button>
           </div>
           <div class="cm-autogen-body" id="cmAutoBody" style="display:none">
-            <div class="cm-autogen-help">현재 NAI 폼의 설정·캐릭터·시드 그대로 사용. 칸별로 다른 장면 프롬프트만 추가.</div>
+            <div class="cm-autogen-help">현재 NAI 폼의 설정·캐릭터·시드 그대로 사용. 칸별로 다른 장면 프롬프트만 추가.<br>🃏 <b>와일드카드 가능</b> — <code>__location__</code> · <code>__weather__</code> 같은 토큰을 쓰면 매 컷마다 다른 값으로 자동 치환.</div>
             <label class="cm-autogen-label">📝 공통 베이스 (모든 컷 앞에 붙음 — 비우면 NAI 폼 프롬프트 사용)</label>
             <textarea class="te-inp cm-autogen-base" id="cmAutoBase" rows="2" placeholder="예: masterpiece, best quality, 1girl, school uniform"></textarea>
             <label class="cm-autogen-label">🎬 칸별 장면 (한 줄 = 한 칸 · 빈 줄은 NAI 폼의 베이스만)</label>
@@ -16987,8 +16987,15 @@ async function _cmAutoRun(apiKey, targets, formOpts, autoBase, lockSeed, seedRoo
       if(!_cmState) break;
       // 페이지 전환 (다른 페이지일 때)
       if(t.pageIdx !== _cmState.currentPageIdx) _cmSwitchPage(t.pageIdx);
-      // 프롬프트 합성: baseText, scene
-      const prompt = t.scene ? `${baseText}, ${t.scene}` : baseText;
+      // 🃏 와일드카드 — baseText / scene 의 __name__ 을 매 컷마다 새로 expand.
+      //    buildGenBody 도 한 번 더 expand 하지만 이미 토큰이 없으니 no-op.
+      //    expanded 값을 t 에 저장해서 _cmAutoMakeDialogues 가 Gemini 에 같은 텍스트를 보냄.
+      const wcExpand = (typeof expandWildcards === 'function' && typeof _resolveWildcard === 'function')
+        ? (txt) => expandWildcards(txt || '', _resolveWildcard) : (txt) => txt;
+      const baseExp  = wcExpand(baseText);
+      const sceneExp = t.scene ? wcExpand(t.scene) : '';
+      t.sceneExpanded = sceneExp;
+      const prompt = sceneExp ? `${baseExp}, ${sceneExp}` : baseExp;
       // 시드: 고정이면 seedRoot, 아니면 매번 새 랜덤
       const seed = lockSeed
         ? seedRoot
@@ -17061,7 +17068,8 @@ async function _cmAutoMakeDialogues(targets, formOpts){
   }
   toast(`🗨 ${pageTargets.length}컷 대사 Gemini 호출 중...`, 'info');
   const tone = ($('cmAutoDialogTone')?.value || '').trim();
-  const scenes = pageTargets.map(t => t.scene);
+  // 🃏 와일드카드 expanded 결과를 우선 사용 — Gemini 는 __name__ 토큰을 모름
+  const scenes = pageTargets.map(t => t.sceneExpanded || t.scene);
   let dialogues;
   try {
     dialogues = await _cmCallGeminiForDialogue(apiKey, scenes, tone);
