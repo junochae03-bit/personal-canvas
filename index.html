@@ -934,6 +934,21 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   #textEditModal select.te-inp{min-height:38px}
 }
 
+/* 📚 F1: 다중 페이지 네비게이션 (헤더) */
+#comicMakerModal .cm-page-nav{display:inline-flex;align-items:center;gap:4px;margin-left:auto;padding:3px 6px;background:var(--card);border:1.5px solid var(--b1);border-radius:6px}
+#comicMakerModal .cm-pg-btn{width:26px;height:26px;border:1px solid var(--b1);background:var(--bg);color:var(--t1);border-radius:4px;cursor:pointer;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;font-family:inherit;padding:0;transition:all .12s}
+#comicMakerModal .cm-pg-btn:hover{border-color:var(--acc);color:var(--acc);background:rgba(214,160,80,.08)}
+#comicMakerModal .cm-pg-btn[disabled]{opacity:.3;pointer-events:none}
+#comicMakerModal .cm-pg-btn.danger:hover{color:var(--red);border-color:var(--red);background:rgba(181,67,56,.1)}
+#comicMakerModal .cm-pg-info{font-family:var(--mono);font-size:12px;color:var(--t1);padding:0 6px;display:inline-flex;align-items:center;gap:6px;min-width:64px;justify-content:center}
+#comicMakerModal .cm-pg-info b{color:var(--acc);font-weight:700}
+#comicMakerModal .cm-pg-info .cm-pg-fill{font-size:10px;color:var(--t3);font-weight:600;padding:1px 4px;border:1px solid var(--b1);border-radius:3px}
+#comicMakerModal .cm-pg-sep{width:1px;height:18px;background:var(--b1);margin:0 2px}
+@media (max-width:880px){
+  #comicMakerModal .cm-page-nav{margin-left:0;flex:1 1 100%;justify-content:center;flex-wrap:wrap}
+  #comicMakerModal .cm-pg-btn{width:30px;height:30px;font-size:13px}
+}
+
 /* COMIC PANEL MAKER MODAL — 🎞 만화 컷 만들기 */
 #comicMakerModal .modal{max-width:96vw;max-height:94vh;width:1240px;display:flex;flex-direction:column}
 #comicMakerModal .cm-body{display:flex;flex-direction:row;gap:12px;flex:1;min-height:0;align-items:stretch;overflow:hidden}
@@ -3678,6 +3693,8 @@ coffee shop, latte art"></textarea>
     <h3 id="comicMakerTitle" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <span>🎞 만화 컷 만들기 <span class="en">Comic Panels</span></span>
       <span data-anlas-mirror class="anlas-mirror" title="현재 NAI 잔량 — 새 컷용 이미지 생성 계획에 참고"></span>
+      <!-- 📚 F1: 다중 페이지 네비 -->
+      <span class="cm-page-nav" id="cmPageNav"></span>
     </h3>
     <div class="modal-body cm-body">
       <div class="cm-stage" id="cmStage">
@@ -3752,7 +3769,8 @@ coffee shop, latte art"></textarea>
       <input type="text" class="inp cm-savename" id="cmSaveName" placeholder="페이지 이름 (비우면 자동)" maxlength="40" title="저장될 만화 페이지의 라벨 (파일명에도 사용)">
       <span class="cm-foot-status" id="cmFootStatus">0 / 0 칸</span>
       <button class="btn ghost" id="cmAddBubbles" title="🅣 현재 페이지에 바로 말풍선·대사 얹기 (갤러리 중간 저장 없이 편집기로)">🅣 말풍선 얹기</button>
-      <button class="btn primary" id="cmSaveNew" title="완성된 페이지를 갤러리에 새 이미지로 저장 · Ctrl+S">💾 갤러리에 저장 <span class="en">Save</span></button>
+      <button class="btn ghost" id="cmSaveAllZip" title="📚 모든 페이지를 ZIP 한 파일로 다운로드 (책 단위 저장)">📚 책 ZIP <span class="en">Book</span></button>
+      <button class="btn primary" id="cmSaveNew" title="현재 페이지를 갤러리에 새 이미지로 저장 · Ctrl+S">💾 갤러리에 저장 <span class="en">Save</span></button>
     </div>
   </div>
 </div>
@@ -15890,6 +15908,7 @@ function _cmRenderLayoutGrid(){
 function _cmRenderSlotList(){
   const root = $('cmSlotList');
   if(!root || !_cmState) return;
+  _cmRenderPageNav();   // 📚 F1: 페이지 네비의 채움 카운트 동기화
   const total = _cmState.slots.length;
   root.innerHTML = _cmState.slots.map((s, i) => {
     const filled = !!s?.img;
@@ -15952,7 +15971,10 @@ function _cmUpdateStatus(){
   if(!el || !_cmState) return;
   const total = _cmState.slots.length;
   const filled = _cmState.slots.filter(s => s?.img).length;
-  el.textContent = `${filled} / ${total} 칸`;
+  // 📚 F1: 다중 페이지일 때 페이지 정보 포함
+  const pageCount = _cmPageCount();
+  const pageLabel = pageCount > 1 ? `📄${_cmState.currentPageIdx+1}/${pageCount} · ` : '';
+  el.textContent = `${pageLabel}${filled} / ${total} 칸`;
   el.style.color = filled === total ? 'var(--green)' : filled > 0 ? 'var(--acc)' : 'var(--t3)';
 }
 
@@ -16330,10 +16352,18 @@ async function openComicMakerModal(){
   const ctx = cvs.getContext('2d');
   wrap.appendChild(cvs);
   const savedStyle = await _cmLoadStyle();
-  _cmState = {
+  // 📚 F1: 다중 페이지 모델. layoutId/layout/slots/customSpec 은 페이지마다.
+  //   기존 코드의 _cmState.slots / _cmState.layout 등은 getter/setter 로 현재 페이지에 forward.
+  const firstPage = {
     layoutId: CM_LAYOUTS[0].id,
     layout: CM_LAYOUTS[0],
     slots: CM_LAYOUTS[0].panels.map(() => null),
+    customSpec: null,
+    name: '',
+  };
+  _cmState = {
+    pages: [firstPage],
+    currentPageIdx: 0,
     gutter: savedStyle.gutter,
     gutterColor: savedStyle.gutterColor,
     bg: savedStyle.bg,
@@ -16341,6 +16371,16 @@ async function openComicMakerModal(){
     cvs, ctx, scale: 1,
     undoStack: [],
   };
+  // 현재 페이지의 layoutId / layout / slots / customSpec / editSlot / dragSrc / dragTarget 을
+  // 자동 forward — 기존 호출부 그대로 동작.
+  const _cmPageProp = (name, defVal) => {
+    Object.defineProperty(_cmState, name, {
+      configurable: true,
+      get(){ const p = _cmState.pages?.[_cmState.currentPageIdx]; return p ? p[name] : defVal; },
+      set(v){ const p = _cmState.pages?.[_cmState.currentPageIdx]; if(p) p[name] = v; },
+    });
+  };
+  ['layoutId','layout','slots','customSpec','editSlot','dragSrc','dragTarget'].forEach(k => _cmPageProp(k, null));
   // 🎨 UI 컨트롤에 저장된 스타일 반영
   if($('cmGutterPx')){ $('cmGutterPx').value = savedStyle.gutter; $('cmGutterPxVal').textContent = savedStyle.gutter; }
   if($('cmBorderPx')){ $('cmBorderPx').value = savedStyle.border; $('cmBorderPxVal').textContent = savedStyle.border; }
@@ -16351,6 +16391,7 @@ async function openComicMakerModal(){
   if(nameInp) nameInp.value = '';
   _cmSetLayout(CM_LAYOUTS[0].id);
   _cmUpdateUndoBtn();
+  _cmRenderPageNav();   // 📚 F1: 페이지 네비 첫 표시
   // 📱 디바이스별 안내 텍스트 (터치/마우스)
   const hint = $('cmStageHint');
   if(hint){
@@ -16367,6 +16408,9 @@ async function openComicMakerModal(){
     if(e.key === 'Escape' && !inField){ e.preventDefault(); $('cmCancel')?.click(); }
     else if((e.ctrlKey || e.metaKey) && e.key === 'z' && !inField){ e.preventDefault(); _cmUndo(); }
     else if((e.ctrlKey || e.metaKey) && e.key === 's'){ e.preventDefault(); _cmSaveNew(); }
+    // 📚 F1: 페이지 이동
+    else if(e.key === 'PageUp'  && !inField){ e.preventDefault(); _cmSwitchPage(_cmState.currentPageIdx - 1); }
+    else if(e.key === 'PageDown'&& !inField){ e.preventDefault(); _cmSwitchPage(_cmState.currentPageIdx + 1); }
   };
   document.addEventListener('keydown', keydownHandler);
   _cmState._keydownHandler = keydownHandler;
@@ -16384,6 +16428,121 @@ async function openComicMakerModal(){
   } catch(e){ _swallow(e, 'cm:emptyCheck'); }
   if(typeof _broadcastAnlas === 'function') _broadcastAnlas();
   toast('🎞 칸을 클릭해서 갤러리 이미지로 채우세요', 'info');
+}
+
+// 📚 F1: 페이지 CRUD ──────────────────────────────────────────────
+function _cmPageCount(){ return _cmState?.pages?.length || 0; }
+function _cmCurrentPage(){ return _cmState?.pages?.[_cmState?.currentPageIdx] || null; }
+
+function _cmSwitchPage(idx){
+  if(!_cmState) return;
+  const total = _cmPageCount();
+  if(idx < 0 || idx >= total) return;
+  if(idx === _cmState.currentPageIdx) return;
+  _cmState.currentPageIdx = idx;
+  // 페이지 단위로 undo 분리 — 다른 페이지의 작업이 섞이지 않도록 stack reset
+  _cmState.undoStack = [];
+  _cmUpdateUndoBtn();
+  // 캔버스의 내부 해상도를 새 페이지 layout 기준으로 (페이지마다 다른 layout 가능)
+  _cmState.cvs.width = _cmState.layout.w;
+  _cmState.cvs.height = _cmState.layout.h;
+  _cmFitStage();
+  _cmRender();
+  _cmRenderLayoutGrid();   // 선택된 레이아웃 카드 하이라이트 동기화
+  _cmRenderSlotList();
+  _cmRenderPageNav();
+  _cmUpdateStatus();
+}
+
+function _cmAddPage(opts){
+  if(!_cmState) return;
+  // opts.copyFrom (idx) 가 있으면 그 페이지를 복제 (slots 의 img/blob/url 참조 공유)
+  const baseIdx = (opts && typeof opts.copyFrom === 'number') ? opts.copyFrom : _cmState.currentPageIdx;
+  const base = _cmState.pages[baseIdx] || _cmState.pages[0];
+  const newPage = {
+    layoutId: base.layoutId,
+    layout: base.layout,
+    slots: opts?.copyFrom != null
+      ? base.slots.map(s => s ? {...s} : null)   // 복제: img/blob/url 참조 공유 (의도된 동작)
+      : base.layout.panels.map(() => null),
+    customSpec: base.customSpec ? JSON.parse(JSON.stringify(base.customSpec)) : null,
+    name: '',
+  };
+  // 현재 페이지 바로 뒤에 삽입
+  const insertAt = _cmState.currentPageIdx + 1;
+  _cmState.pages.splice(insertAt, 0, newPage);
+  _cmState.currentPageIdx = insertAt;
+  _cmState.undoStack = [];
+  _cmUpdateUndoBtn();
+  _cmState.cvs.width = _cmState.layout.w;
+  _cmState.cvs.height = _cmState.layout.h;
+  _cmFitStage();
+  _cmRender();
+  _cmRenderLayoutGrid();
+  _cmRenderSlotList();
+  _cmRenderPageNav();
+  _cmUpdateStatus();
+  toast(opts?.copyFrom != null
+    ? `📋 페이지 ${insertAt+1} 복제 완료 (${_cmPageCount()}쪽)`
+    : `📄 페이지 ${insertAt+1} 추가 (${_cmPageCount()}쪽)`, 'success');
+}
+
+function _cmDeleteCurrentPage(){
+  if(!_cmState) return;
+  const total = _cmPageCount();
+  if(total <= 1){ toast('마지막 페이지는 삭제할 수 없어요', 'warning'); return; }
+  const idx = _cmState.currentPageIdx;
+  _cmState.pages.splice(idx, 1);
+  _cmState.currentPageIdx = Math.min(idx, _cmPageCount() - 1);
+  _cmState.undoStack = [];
+  _cmUpdateUndoBtn();
+  _cmState.cvs.width = _cmState.layout.w;
+  _cmState.cvs.height = _cmState.layout.h;
+  _cmFitStage();
+  _cmRender();
+  _cmRenderLayoutGrid();
+  _cmRenderSlotList();
+  _cmRenderPageNav();
+  _cmUpdateStatus();
+  toast(`🗑 페이지 삭제 — 남은 ${_cmPageCount()}쪽`, 'info');
+}
+
+function _cmMovePage(dir){
+  if(!_cmState) return;
+  const idx = _cmState.currentPageIdx;
+  const tgt = idx + (dir === 'left' ? -1 : 1);
+  if(tgt < 0 || tgt >= _cmPageCount()) return;
+  const a = _cmState.pages[idx];
+  _cmState.pages[idx] = _cmState.pages[tgt];
+  _cmState.pages[tgt] = a;
+  _cmState.currentPageIdx = tgt;
+  _cmRenderPageNav();
+  toast(`${dir==='left'?'⬅':'➡'} 페이지 이동 (${tgt+1}쪽)`, 'info');
+}
+
+function _cmRenderPageNav(){
+  const el = $('cmPageNav');
+  if(!el) return;
+  const total = _cmPageCount();
+  const cur = _cmState?.currentPageIdx ?? 0;
+  const prev = cur > 0;
+  const next = cur < total - 1;
+  const filled = (_cmState?.slots || []).filter(s => s?.img).length;
+  const slotCount = (_cmState?.slots || []).length;
+  el.innerHTML = `
+    <button class="cm-pg-btn" data-cm-page-act="prev" ${prev?'':'disabled'} title="이전 페이지 (PageUp)">◀</button>
+    <span class="cm-pg-info" title="현재 페이지 / 전체">
+      <b>${cur+1}</b> / ${total}
+      <span class="cm-pg-fill">${filled}/${slotCount}</span>
+    </span>
+    <button class="cm-pg-btn" data-cm-page-act="next" ${next?'':'disabled'} title="다음 페이지 (PageDown)">▶</button>
+    <span class="cm-pg-sep"></span>
+    <button class="cm-pg-btn" data-cm-page-act="add" title="새 페이지 추가">＋</button>
+    <button class="cm-pg-btn" data-cm-page-act="dup" title="현재 페이지 복제">📋</button>
+    <button class="cm-pg-btn" data-cm-page-act="move-left" ${prev?'':'disabled'} title="페이지 왼쪽으로 이동">⬅</button>
+    <button class="cm-pg-btn" data-cm-page-act="move-right" ${next?'':'disabled'} title="페이지 오른쪽으로 이동">➡</button>
+    <button class="cm-pg-btn danger" data-cm-page-act="del" ${total>1?'':'disabled'} title="현재 페이지 삭제">🗑</button>
+  `;
 }
 
 async function _cmCloseModal(){
@@ -16413,26 +16572,31 @@ async function _cmCloseModal(){
   $('comicMakerModal').classList.remove('open');
 }
 
-async function _cmComposite(){
+async function _cmComposite(pageIdx){
   if(!_cmState) return null;
+  // 📚 F1: pageIdx 명시되면 그 페이지를, 없으면 현재 페이지를 합성.
+  const page = (typeof pageIdx === 'number') ? _cmState.pages[pageIdx] : _cmCurrentPage();
+  if(!page) return null;
+  const layout = page.layout;
+  const slots = page.slots;
   const tmp = document.createElement('canvas');
-  tmp.width = _cmState.layout.w; tmp.height = _cmState.layout.h;
+  tmp.width = layout.w; tmp.height = layout.h;
   const ctx = tmp.getContext('2d');
   // 저장용 합성 — 빈 패널 placeholder 텍스트는 그리지 않음
   ctx.fillStyle = _cmState.gutterColor;
-  ctx.fillRect(0, 0, _cmState.layout.w, _cmState.layout.h);
-  for(let i = 0; i < _cmState.layout.panels.length; i++){
-    const p = _cmState.layout.panels[i];
+  ctx.fillRect(0, 0, layout.w, layout.h);
+  for(let i = 0; i < layout.panels.length; i++){
+    const p = layout.panels[i];
     ctx.fillStyle = _cmState.bg;
     ctx.fillRect(p.x, p.y, p.w, p.h);
-    const slot = _cmState.slots[i];
+    const slot = slots[i];
     if(slot?.img) _cmDrawCover(ctx, slot.img, p, slot);
   }
   if(_cmState.border > 0){
     ctx.strokeStyle = _cmState.gutterColor;
     ctx.lineWidth = _cmState.border;
     ctx.lineJoin = 'miter';
-    for(const p of _cmState.layout.panels){
+    for(const p of layout.panels){
       ctx.strokeRect(p.x + _cmState.border/2, p.y + _cmState.border/2, p.w - _cmState.border, p.h - _cmState.border);
     }
   }
@@ -16473,6 +16637,58 @@ function _cmDateStamp(){
   const d = new Date();
   const pad = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+}
+
+// 📚 F1: 모든 페이지 → ZIP 다운로드 (책 단위 저장).
+//   각 페이지를 _cmComposite 으로 PNG 합성 후 JSZip 으로 묶음. JSZip 는 main bundle 에 이미 있음.
+async function _cmSaveAllAsZip(){
+  if(!_cmState) return;
+  const total = _cmPageCount();
+  // 빈 페이지(채워진 칸 0) 는 경고 후 제외
+  const usable = [];
+  for(let i = 0; i < total; i++){
+    const p = _cmState.pages[i];
+    const filled = (p.slots || []).filter(s => s?.img).length;
+    if(filled > 0) usable.push(i);
+  }
+  if(usable.length === 0){ toast('저장할 페이지가 없어요 — 칸을 먼저 채워주세요', 'warning'); return; }
+  if(usable.length < total){
+    toast(`빈 페이지 ${total - usable.length}개 제외하고 ${usable.length}쪽 저장`, 'info');
+  }
+  if(typeof JSZip === 'undefined'){ toast('ZIP 라이브러리 로딩 실패', 'error'); return; }
+  const zip = new JSZip();
+  const userName = (($('cmSaveName')?.value) || '').trim().slice(0, 40);
+  const stamp = _cmDateStamp();
+  const baseLabel = userName || `만화책_${stamp}`;
+  const safeBase = baseLabel.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_');
+  toast(`📚 ${usable.length}쪽 합성 중...`, 'info');
+  // 페이지 PNG 합성 — 순차 처리 (대형 캔버스 동시 toBlob 으로 인한 메모리 폭증 방지)
+  for(let k = 0; k < usable.length; k++){
+    const idx = usable[k];
+    const blob = await _cmComposite(idx);
+    if(!blob){ _swallow(new Error('composite null'), 'cm:zip:'+idx); continue; }
+    const seq = String(k + 1).padStart(3, '0');   // page_001.png
+    const ab = await blob.arrayBuffer();
+    zip.file(`${safeBase}_page_${seq}.png`, ab);
+  }
+  // 메타 JSON 도 포함 (재현·디버깅 용)
+  zip.file(`${safeBase}_meta.json`, JSON.stringify({
+    title: baseLabel,
+    pages: usable.length,
+    style: { gutter:_cmState.gutter, gutterColor:_cmState.gutterColor, bg:_cmState.bg, border:_cmState.border },
+    created: new Date().toISOString(),
+    schema: 'comic-book/v1',
+  }, null, 2));
+  let zipBlob;
+  try { zipBlob = await zip.generateAsync({type:'blob'}); }
+  catch(e){ _swallow(e, 'cm:zip'); toast('ZIP 생성 실패', 'error'); return; }
+  // 다운로드 트리거
+  const url = URL.createObjectURL(zipBlob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${safeBase}.zip`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => { try { URL.revokeObjectURL(url); } catch(_){} }, 1500);
+  toast(`📚 ${safeBase}.zip 다운로드 (${usable.length}쪽)`, 'success');
 }
 
 // 저장 후 라이트박스에서 텍스트 편집기를 열고 싶을 때 사용 — 저장 결과 id 를 받음.
@@ -16555,7 +16771,27 @@ function _cmWireOnce(){
     }
   });
   $('cmSaveNew')?.addEventListener('click', () => _cmState && _cmSaveNew());
+  $('cmSaveAllZip')?.addEventListener('click', () => _cmState && _cmSaveAllAsZip());
   $('cmAddBubbles')?.addEventListener('click', () => _cmState && _cmToTextEditor());
+  // 📚 F1: 페이지 네비 클릭 핸들러 (event delegation)
+  $('cmPageNav')?.addEventListener('click', (e) => {
+    if(!_cmState) return;
+    const b = e.target.closest('[data-cm-page-act]');
+    if(!b || b.disabled) return;
+    const act = b.dataset.cmPageAct;
+    switch(act){
+      case 'prev': _cmSwitchPage(_cmState.currentPageIdx - 1); break;
+      case 'next': _cmSwitchPage(_cmState.currentPageIdx + 1); break;
+      case 'add':  _cmAddPage(); break;
+      case 'dup':  _cmAddPage({copyFrom: _cmState.currentPageIdx}); break;
+      case 'move-left':  _cmMovePage('left'); break;
+      case 'move-right': _cmMovePage('right'); break;
+      case 'del':
+        confirmDialog(`페이지 ${_cmState.currentPageIdx+1} 을 삭제할까요? (${_cmPageCount()}쪽 중)`,
+          () => _cmDeleteCurrentPage(), '🗑 페이지 삭제');
+        break;
+    }
+  });
   $('cmUndoBtn')?.addEventListener('click', () => _cmUndo());
   $('cmClearAll')?.addEventListener('click', () => {
     if(!_cmState) return;
