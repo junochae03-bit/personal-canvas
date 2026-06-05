@@ -15997,23 +15997,29 @@ function _cmSwapSlots(a, b){
   _cmRenderSlotList();
 }
 
-// ↩ Undo — 최근 1단계 (slots 배열 스냅샷). 5단계까지 보관 (메모리 부담 적음).
+// ↩ Undo — slots 배열 스냅샷. 20단계까지 보관 (9그리드도 전체 채움/되돌리기 가능).
 function _cmPushUndo(){
   if(!_cmState) return;
   if(!Array.isArray(_cmState.undoStack)) _cmState.undoStack = [];
   // 슬롯의 얕은 복사 — img/blob/url 은 참조 유지 (revoke 안 함)
   const snapshot = _cmState.slots.map(s => s ? {...s} : null);
   _cmState.undoStack.push(snapshot);
-  if(_cmState.undoStack.length > 5) _cmState.undoStack.shift();
+  if(_cmState.undoStack.length > 20) _cmState.undoStack.shift();
   _cmUpdateUndoBtn();
 }
 function _cmUndo(){
   if(!_cmState?.undoStack?.length){ toast('되돌릴 작업이 없어요', 'info'); return; }
   const prev = _cmState.undoStack.pop();
-  // 현재 slots 중 prev에 없는 url 은 revoke (메모리 누수 방지)
-  const prevUrls = new Set(prev.filter(s => s?.url).map(s => s.url));
+  // 더 이상 어디서도 (prev + 남은 undo stack) 참조되지 않는 url 만 revoke.
+  // 슬롯 리스트 썸네일이 background-image:url(...) 로 url 을 직접 쓰므로
+  // undo 스냅샷이 살아있는 동안엔 revoke 금지 (이전 버그 B2).
+  const refs = new Set();
+  for(const s of prev){ if(s?.url) refs.add(s.url); }
+  for(const snap of _cmState.undoStack){
+    for(const s of snap){ if(s?.url) refs.add(s.url); }
+  }
   for(const s of _cmState.slots){
-    if(s?.url && !prevUrls.has(s.url)){ try { URL.revokeObjectURL(s.url); } catch(_){} }
+    if(s?.url && !refs.has(s.url)){ try { URL.revokeObjectURL(s.url); } catch(_){} }
   }
   _cmState.slots = prev;
   _cmRender(); _cmRenderSlotList();
@@ -16078,7 +16084,7 @@ async function _cmFillFromSource(source){
       const url = URL.createObjectURL(im.blob);
       const img = new Image();
       await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
-      _cmState.slots[idx] = {blob: im.blob, img, url, offsetX: 0.5, offsetY: 0.5};
+      _cmState.slots[idx] = {blob: im.blob, img, url, offsetX: 0.5, offsetY: 0.5, zoom: 1, rotate: 0, flipH: false, grayscale: false};
       filled++;
     }
     _cmRender(); _cmRenderSlotList();
@@ -16110,7 +16116,7 @@ async function _cmFillFromMultiPick(){
           const url = URL.createObjectURL(blobs[k]);
           const img = new Image();
           await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
-          _cmState.slots[idx] = {blob: blobs[k], img, url, offsetX: 0.5, offsetY: 0.5};
+          _cmState.slots[idx] = {blob: blobs[k], img, url, offsetX: 0.5, offsetY: 0.5, zoom: 1, rotate: 0, flipH: false, grayscale: false};
           filled++;
         } catch(e){ _swallow(e, 'cm:multiPick:item'); }
       }
@@ -16234,16 +16240,23 @@ async function _cmPickForSlot(idx){
     hint: '클릭 = 칸에 자동 cover-fit 합성',
     onPick: async (blob) => {
       if(!_cmState) return;
+      // 새 URL 은 load 성공 후에만 적용 — 실패 시 누수 방지.
+      // 예전 URL 은 revoke 하지 않음 — undo 스택이 참조 중일 수 있음. _cmCloseModal 이 일괄 회수.
+      const url = URL.createObjectURL(blob);
       try {
-        _cmPushUndo();
-        const url = URL.createObjectURL(blob);
         const img = new Image();
         await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
-        if(_cmState.slots[idx]?.url){ try { URL.revokeObjectURL(_cmState.slots[idx].url); } catch(_){} }
-        _cmState.slots[idx] = {blob, img, url, offsetX: 0.5, offsetY: 0.5};
+        if(!_cmState){ URL.revokeObjectURL(url); return; }   // 로딩 중 모달 닫힘
+        _cmPushUndo();   // 성공 확정 후에만 undo 적층 (실패 시 가짜 상태 방지)
+        _cmState.slots[idx] = {
+          blob, img, url,
+          offsetX: 0.5, offsetY: 0.5,
+          zoom: 1, rotate: 0, flipH: false, grayscale: false,
+        };
         _cmRender();
         _cmRenderSlotList();
       } catch(e){
+        try { URL.revokeObjectURL(url); } catch(_){}
         _swallow(e, 'cm:pick');
         toast('이미지 로딩 실패', 'error');
       }
@@ -16346,6 +16359,17 @@ async function openComicMakerModal(){
       ? '💡 칸 탭 = 이미지 선택 · 칸을 다른 칸으로 길게 드래그 = 교환 · 슬롯 리스트 ↑↓⬆⬇🎯 버튼으로 위치·순서 조정'
       : '💡 클릭 = 이미지 선택 · 드래그 = 교환 · <kbd>Shift</kbd>+드래그 = 위치 조정 · 우클릭 = 비우기 · <kbd>Ctrl+Z</kbd> Undo · <kbd>Ctrl+S</kbd> 저장';
   }
+  // ⌨ B5: 모달 open 동안만 document keydown 등록 (close 시 detach).
+  const keydownHandler = (e) => {
+    if(!_cmState) return;
+    if(!$('comicMakerModal').classList.contains('open')) return;
+    const inField = e.target.matches('input, textarea, select');
+    if(e.key === 'Escape' && !inField){ e.preventDefault(); $('cmCancel')?.click(); }
+    else if((e.ctrlKey || e.metaKey) && e.key === 'z' && !inField){ e.preventDefault(); _cmUndo(); }
+    else if((e.ctrlKey || e.metaKey) && e.key === 's'){ e.preventDefault(); _cmSaveNew(); }
+  };
+  document.addEventListener('keydown', keydownHandler);
+  _cmState._keydownHandler = keydownHandler;
   // 🪺 빈 갤러리 감지 — 진입 시 안내
   try {
     const sessions = state.gallerySessions || await DB.getSessions?.() || [];
@@ -16371,7 +16395,17 @@ async function _cmCloseModal(){
         gutterColor: _cmState.gutterColor, bg: _cmState.bg,
       });
     } catch(e){ _swallow(e, 'cm:closeFlush'); }
-    for(const s of _cmState.slots){ if(s?.url){ try { URL.revokeObjectURL(s.url); } catch(_){} } }
+    // 🧹 현재 slots + undo 스택의 모든 url 일괄 회수 (B2: 중간에 revoke 하면 undo 시 썸네일 깨짐)
+    const allUrls = new Set();
+    for(const s of _cmState.slots){ if(s?.url) allUrls.add(s.url); }
+    for(const snap of (_cmState.undoStack || [])){
+      for(const s of snap){ if(s?.url) allUrls.add(s.url); }
+    }
+    for(const u of allUrls){ try { URL.revokeObjectURL(u); } catch(_){} }
+    // ⌨ B5: document-level keydown 리스너 detach
+    if(_cmState._keydownHandler){
+      try { document.removeEventListener('keydown', _cmState._keydownHandler); } catch(_){}
+    }
     _cmState = null;
   }
   const wrap = $('cmCanvasWrap');
@@ -16788,15 +16822,8 @@ function _cmWireOnce(){
   ['cmGutterPx','cmGutterColor','cmBgColor','cmBorderPx'].forEach(id => {
     $(id)?.addEventListener('input', onStyleChange);
   });
-  // ⌨ 키보드 단축키 — ESC 닫기, Ctrl+Z Undo, Ctrl+S 저장
-  document.addEventListener('keydown', e => {
-    if(!_cmState) return;
-    if(!$('comicMakerModal').classList.contains('open')) return;
-    const inField = e.target.matches('input, textarea, select');
-    if(e.key === 'Escape' && !inField){ e.preventDefault(); $('cmCancel')?.click(); }
-    else if((e.ctrlKey || e.metaKey) && e.key === 'z' && !inField){ e.preventDefault(); _cmUndo(); }
-    else if((e.ctrlKey || e.metaKey) && e.key === 's'){ e.preventDefault(); _cmSaveNew(); }
-  });
+  // ⌨ 키보드 단축키는 모달 open 시점에 attach (B5: document-level 상시 등록 제거).
+  //    핸들러는 _cmState._keydownHandler 에 저장 → _cmCloseModal 에서 removeEventListener.
   // 스테이지 리사이즈에 캔버스 자동 fit
   window.addEventListener('resize', () => { if(_cmState) { _cmFitStage(); _cmRender(); } });
 }
