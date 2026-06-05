@@ -12718,22 +12718,10 @@ function _popoutClose(){
   try { _popoutWin?.close(); } catch(_){}
   _popoutWin = null;
 }
-function openPreviewPopup(){
-  // 이미 떠있으면 포커스만
-  if(_popoutWin && !_popoutWin.closed){ try { _popoutWin.focus(); } catch(_){} return; }
-  const features = 'popup=yes,width=520,height=760,resizable=yes,scrollbars=no,toolbar=no,location=no,menubar=no,status=no';
-  const w = window.open('', 'nai-studio-popup', features);
-  if(!w){
-    toast('🚫 팝업이 차단됐어요 — 브라우저 주소창 옆 팝업 차단 해제 후 재시도', 'warning', {timeoutMs: 8000});
-    return;
-  }
-  _popoutWin = w;
-  // 팝업 HTML — 본창과 독립. BroadcastChannel 로 동기.
-  // 인라인 스크립트 작성. CSP 가 'unsafe-inline' 허용이고 동일 출처라 가능.
-  const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>🪟 NAI 미리보기</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
-*{box-sizing:border-box}
+// 🪟 팝업 콘텐츠 (CSS / body HTML / 인라인 JS) — element 주입 방식으로 작성하면
+//    Document PIP API 와 window.open 양쪽에 모두 동일하게 사용 가능.
+function _popoutCss(){
+  return `*{box-sizing:border-box}
 body{margin:0;background:#15110a;color:#f5e6c8;font-family:"Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;display:flex;flex-direction:column;height:100vh;overflow:hidden}
 .pop-bar{display:flex;align-items:center;gap:10px;padding:9px 14px;background:#2a1f0e;border-bottom:1.5px solid #4a3820;font-size:12.5px;flex-shrink:0;user-select:none}
 .pop-status{font-family:ui-monospace,monospace;color:#d6a050;font-weight:700;font-size:13px;min-width:78px}
@@ -12750,9 +12738,10 @@ body{margin:0;background:#15110a;color:#f5e6c8;font-family:"Pretendard","Noto Sa
 .pop-foot{display:flex;align-items:center;gap:8px;padding:7px 12px;background:#1f1709;border-top:1.5px solid #3a2810;font-size:11px;color:#8b7350;flex-shrink:0;user-select:none}
 .pop-foot .pop-hint{flex:1}
 .pop-btn{background:transparent;border:1.5px solid #4a3820;color:#b09870;padding:5px 10px;border-radius:5px;font-size:11.5px;cursor:pointer;font-family:inherit}
-.pop-btn:hover{border-color:#d6a050;color:#d6a050}
-</style></head><body>
-<div class="pop-bar">
+.pop-btn:hover{border-color:#d6a050;color:#d6a050}`;
+}
+function _popoutBodyHtml(modeLabel){
+  return `<div class="pop-bar">
   <span class="pop-status" id="status">대기 중</span>
   <span class="pop-info" id="info"></span>
   <span class="pop-meta" id="meta"></span>
@@ -12760,32 +12749,30 @@ body{margin:0;background:#15110a;color:#f5e6c8;font-family:"Pretendard","Noto Sa
 <div class="pop-progress" id="progressBox"><div class="pop-progress-bar" id="bar"></div></div>
 <div class="pop-stage" id="stage">
   <div class="pop-empty" id="empty">
-    <b>🎨 NAI 미리보기 창</b>
+    <b>🎨 NAI 미리보기 ${modeLabel}</b>
     본창에서 생성을 시작하면<br>완성된 이미지가 여기 표시됩니다.<br>
-    <span style="opacity:.6;font-size:11.5px">멀티 모니터에서 작업하면서 진행 상황 모니터링 용도</span>
+    <span style="opacity:.6;font-size:11.5px">${modeLabel === 'PIP' ? '다른 앱 위에도 떠있어요' : '멀티 모니터에서 작업·진행상황 모니터링'}</span>
   </div>
 </div>
 <div class="pop-foot">
   <span class="pop-hint">📡 본창과 실시간 동기</span>
   <button class="pop-btn" id="dlBtn" disabled title="다운로드">⬇ 저장</button>
-</div>
-<script>
-(function(){
+</div>`;
+}
+function _popoutInlineJs(){
+  return `(function(){
   const ch = new BroadcastChannel('nai-studio-popup');
   let currentUrl = null;
-  let currentBlob = null;
   let currentFname = 'nai_preview.png';
   function setImage(blob, meta){
     if(currentUrl) URL.revokeObjectURL(currentUrl);
-    currentBlob = blob;
     currentUrl = URL.createObjectURL(blob);
     currentFname = (meta && meta.fname) || 'nai_preview.png';
     const stage = document.getElementById('stage');
     stage.innerHTML = '<img alt="latest generated">';
     stage.querySelector('img').src = currentUrl;
     document.getElementById('status').textContent = '✓ 완성';
-    const info = document.getElementById('info');
-    info.textContent = (meta && meta.label) ? meta.label : '';
+    document.getElementById('info').textContent = (meta && meta.label) ? meta.label : '';
     const m = [];
     if(meta){
       if(meta.w && meta.h) m.push(meta.w + '×' + meta.h);
@@ -12820,27 +12807,85 @@ body{margin:0;background:#15110a;color:#f5e6c8;font-family:"Pretendard","Noto Sa
     const a = document.createElement('a');
     a.href = currentUrl; a.download = currentFname; document.body.appendChild(a); a.click(); a.remove();
   });
-  // 본창에 현재 상태 요청
   ch.postMessage({type:'hello'});
-  window.addEventListener('beforeunload', function(){
+  function cleanup(){
     try { if(currentUrl) URL.revokeObjectURL(currentUrl); } catch(e){}
     try { ch.postMessage({type:'goodbye'}); ch.close(); } catch(e){}
-  });
-})();
-<\/script>
-</body></html>`;
+  }
+  window.addEventListener('beforeunload', cleanup);
+  window.addEventListener('pagehide', cleanup);   // Document PIP 는 pagehide 로 닫힘 알림
+})();`;
+}
+
+// 팝업 창에 콘텐츠 주입 — Document PIP / window.open 둘 다 호환되는 element 기반 방식.
+function _popoutInjectContent(win, modeLabel){
   try {
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
+    win.document.title = '🪟 NAI 미리보기';
+    // 뷰포트 메타 (모바일 PIP 친화)
+    const meta = win.document.createElement('meta');
+    meta.name = 'viewport'; meta.content = 'width=device-width,initial-scale=1,viewport-fit=cover';
+    win.document.head.append(meta);
+    // 스타일
+    const style = win.document.createElement('style');
+    style.textContent = _popoutCss();
+    win.document.head.append(style);
+    // 본문
+    win.document.body.innerHTML = _popoutBodyHtml(modeLabel);
+    // 인라인 스크립트 — 팝업 컨텍스트에서 실행
+    const script = win.document.createElement('script');
+    script.textContent = _popoutInlineJs();
+    win.document.body.append(script);
+    return true;
   } catch(e){
-    _swallow(e, 'popout:write');
-    toast('팝업 초기화 실패 — ' + (e?.message || e), 'error');
+    _swallow(e, 'popout:inject');
+    return false;
+  }
+}
+
+// 🪟 미리보기 팝업 — Document PIP 우선, 미지원이면 window.open 폴백.
+async function openPreviewPopup(){
+  // 이미 떠있으면 포커스만
+  if(_popoutWin && !_popoutWin.closed){ try { _popoutWin.focus(); } catch(_){} return; }
+  // 🔵 1단계: Document Picture-in-Picture API — 다른 앱·창 위에 떠있는 floating 창
+  //   지원: Chrome 116+ / Edge 116+ / Android Chrome. iOS Safari · Firefox 미지원 (폴백).
+  const dpip = window.documentPictureInPicture;
+  if(dpip && typeof dpip.requestWindow === 'function'){
+    try {
+      const pipWin = await dpip.requestWindow({width: 360, height: 540});
+      _popoutWin = pipWin;
+      const okInject = _popoutInjectContent(pipWin, 'PIP');
+      if(!okInject){
+        try { pipWin.close(); } catch(_){}
+        _popoutWin = null;
+        throw new Error('주입 실패');
+      }
+      // PIP 닫힘 감지 — pagehide 가 표준 신호 (브라우저 X 누름·툴바 닫기 모두 포함)
+      pipWin.addEventListener('pagehide', () => { _popoutWin = null; }, { once: true });
+      _popoutChannel();
+      toast('🪟 PIP 미리보기 — 다른 앱 위에도 떠있어요', 'success', {timeoutMs: 4500});
+      return;
+    } catch(e){
+      _swallow(e, 'pip:request');
+      // 사용자 거부·시스템 거절 등 → 폴백
+    }
+  }
+  // 🪟 2단계 폴백: 일반 브라우저 창 (window.open)
+  const features = 'popup=yes,width=520,height=760,resizable=yes,scrollbars=no,toolbar=no,location=no,menubar=no,status=no';
+  const w = window.open('', 'nai-studio-popup', features);
+  if(!w){
+    toast('🚫 팝업이 차단됐어요 — 브라우저 주소창 옆 팝업 차단 해제 후 재시도', 'warning', {timeoutMs: 8000});
+    return;
+  }
+  _popoutWin = w;
+  if(!_popoutInjectContent(w, '창')){
+    toast('팝업 초기화 실패', 'error');
+    try { w.close(); } catch(_){}
     _popoutWin = null;
     return;
   }
-  _popoutChannel();   // 채널 초기화 + hello 대기
-  toast('🪟 미리보기 창이 열렸어요 — 새 이미지가 생성되면 자동 표시', 'success', {timeoutMs: 4000});
+  _popoutChannel();
+  const tip = dpip ? '' : ' (Chrome/Edge 116+ 에선 PIP 모드 자동 사용)';
+  toast(`🪟 미리보기 창이 열렸어요 — 새 이미지가 생성되면 자동 표시${tip}`, 'success', {timeoutMs: 4500});
 }
 // 본창 종료 시 팝업도 정리 (선택 — 일부 브라우저 차단할 수 있어 best-effort)
 window.addEventListener('beforeunload', () => { try { _popoutCh?.close(); } catch(_){} });
