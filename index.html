@@ -3518,17 +3518,28 @@ coffee shop, latte art"></textarea>
           <div class="te-section-title">＋ 객체 추가 <span class="en">Add</span></div>
           <div class="te-add-row">
             <button class="btn ghost te-add-btn" id="teAddText" title="텍스트 박스 추가">＋ 텍스트</button>
-            <select class="inp te-bubble-pick" id="teBubblePick" title="말풍선 모양 (동인지 표준 패턴)">
-              <option value="speech">🗨 일반 (대사)</option>
-              <option value="rounded">⬭ 둥근사각 (대사)</option>
-              <option value="ellipse">⬬ 타원 (부드러운 대사)</option>
-              <option value="thought">💭 생각 (구름)</option>
-              <option value="whisper">┄ 속삭임 (점선)</option>
-              <option value="wavy">🌊 떨림 (두려움·울먹임)</option>
-              <option value="burst">💥 외침 (폭발)</option>
-              <option value="electric">⚡ 전자음 (전화·라디오·AI)</option>
-              <option value="heart">💗 하트 (애정)</option>
-              <option value="rect">▭ 내레이션 (박스)</option>
+            <select class="inp te-bubble-pick" id="teBubblePick" title="말풍선 모양 (동인지 표준 패턴 13종)">
+              <optgroup label="💬 대사">
+                <option value="speech">🗨 일반 (둥근사각+꼬리)</option>
+                <option value="rounded">⬭ 둥근사각</option>
+                <option value="ellipse">⬬ 타원</option>
+                <option value="rect">▭ 사각 (내레이션)</option>
+              </optgroup>
+              <optgroup label="💭 생각·속삭임">
+                <option value="thought">💭 생각 (구름+꼬리)</option>
+                <option value="cloud">☁ 구름 (꼬리 없음)</option>
+                <option value="whisper">┄ 속삭임 (점선)</option>
+                <option value="wavy">🌊 떨림 (울먹임)</option>
+              </optgroup>
+              <optgroup label="💥 효과음·임팩트">
+                <option value="burst">💥 외침 (폭발)</option>
+                <option value="flash">✨ 플래시 (방사상)</option>
+                <option value="urchin_flash">🦔 우니플래시 (검은성게)</option>
+                <option value="electric">⚡ 전자음 (각진 다각형)</option>
+              </optgroup>
+              <optgroup label="❤ 감정">
+                <option value="heart">💗 하트 (애정)</option>
+              </optgroup>
             </select>
             <button class="btn ghost te-add-btn" id="teAddBubble" title="선택된 모양 말풍선 추가">＋ 말풍선</button>
           </div>
@@ -3597,6 +3608,49 @@ coffee shop, latte art"></textarea>
           <div class="te-field-row" id="teBubbleFields">
             <div class="te-field"><label>풍선 채움 <span class="en">Fill</span></label><input type="color" class="te-inp te-color" id="teBubbleFill" value="#ffffff"></div>
             <div class="te-field"><label>테두리 <span class="en">Border</span></label><input type="color" class="te-inp te-color" id="teBubbleBorder" value="#000000"></div>
+            <div class="te-field"><label>반투명 <span class="en">Opacity</span></label><input type="range" class="te-inp" id="teBubbleOpacity" min="0" max="1" step="0.05" value="1"><span class="te-val" id="teBubbleOpacityVal">100%</span></div>
+          </div>
+          <div class="te-field" id="teShapeSwapField" style="display:none">
+            <label>🔁 모양 변경 <span class="en">Change Shape</span></label>
+            <select class="inp te-inp" id="teShapeSwap" title="현재 풍선의 모양만 교체 (텍스트·위치·크기·색 보존)"></select>
+          </div>
+          <div id="teShapeParams" style="display:none">
+            <div class="te-section-title" style="margin-top:8px;font-size:11px">🎚 모양 세부 <span class="en" style="opacity:.65">Shape Detail</span></div>
+            <div class="te-field" data-tp-for="rounded,rect">
+              <label>모서리 둥글기 <span class="en">Corner</span></label>
+              <input type="range" class="te-inp" id="tpCornerRadius" min="0" max="0.4" step="0.02" value="0.22">
+              <span class="te-val" id="tpCornerRadiusVal">0.22</span>
+            </div>
+            <div class="te-field" data-tp-for="burst,flash">
+              <label>가시 개수 <span class="en">Spikes</span></label>
+              <input type="range" class="te-inp" id="tpSpikeCount" min="6" max="48" step="1" value="14">
+              <span class="te-val" id="tpSpikeCountVal">14</span>
+            </div>
+            <div class="te-field" data-tp-for="burst,flash">
+              <label>가시 깊이 <span class="en">Depth</span></label>
+              <input type="range" class="te-inp" id="tpSpikeDepth" min="0.35" max="0.92" step="0.02" value="0.56">
+              <span class="te-val" id="tpSpikeDepthVal">0.56</span>
+            </div>
+            <div class="te-field" data-tp-for="wavy">
+              <label>물결 횟수 <span class="en">Wave Count</span></label>
+              <input type="range" class="te-inp" id="tpWaveCount" min="6" max="24" step="1" value="14">
+              <span class="te-val" id="tpWaveCountVal">14</span>
+            </div>
+            <div class="te-field" data-tp-for="wavy">
+              <label>물결 크기 <span class="en">Wave Amp</span></label>
+              <input type="range" class="te-inp" id="tpWaveAmp" min="0.01" max="0.1" step="0.005" value="0.035">
+              <span class="te-val" id="tpWaveAmpVal">0.035</span>
+            </div>
+            <div class="te-field" data-tp-for="cloud,thought">
+              <label>구름 lobe 개수 <span class="en">Lobes</span></label>
+              <input type="range" class="te-inp" id="tpLobeCount" min="6" max="16" step="1" value="10">
+              <span class="te-val" id="tpLobeCountVal">10</span>
+            </div>
+            <div class="te-field" data-tp-for="speech">
+              <label>꼬리 너비 <span class="en">Tail Width</span></label>
+              <input type="range" class="te-inp" id="tpTailWidth" min="0.04" max="0.2" step="0.01" value="0.09">
+              <span class="te-val" id="tpTailWidthVal">0.09</span>
+            </div>
           </div>
           <div class="te-field-row">
             <div class="te-field"><label>정렬 <span class="en">Align</span></label><select class="inp te-inp" id="teAlign">
@@ -14445,29 +14499,33 @@ function _teMakeBubble(shape){
   const fontSize = Math.max(18, Math.round(W * 0.032));
   const x = (W - w) / 2, y = H * 0.5 - h / 2;
   const sh = shape || 'speech';
-  // 모양별 추천 폰트·기본 텍스트·굵기 (동인지 관행)
+  // 모양별 추천 폰트·기본 텍스트·굵기·색 (동인지 관행)
   const presets = {
-    speech:   { font:'ui',       text:'대사를 입력',     weight:500 },
-    rounded:  { font:'dohyeon',  text:'대사를 입력',     weight:400 },
-    ellipse:  { font:'jua',      text:'부드러운 대사',   weight:400 },
-    thought:  { font:'gowund',   text:'마음속 생각…',    weight:400 },
-    whisper:  { font:'himelody', text:'(속삭임)',        weight:400 },
-    wavy:     { font:'gowund',   text:'으, 으아…',       weight:400 },
-    burst:    { font:'blackhan', text:'외침!!',          weight:700 },
-    electric: { font:'mono',     text:'전자음…',         weight:500 },
-    heart:    { font:'jua',      text:'♥',               weight:500 },
-    rect:     { font:'nanummj',  text:'내레이션 텍스트', weight:400 },
+    speech:       { font:'ui',       text:'대사를 입력',     weight:500, color:'#111111' },
+    rounded:      { font:'dohyeon',  text:'대사를 입력',     weight:400, color:'#111111' },
+    ellipse:      { font:'jua',      text:'부드러운 대사',   weight:400, color:'#111111' },
+    thought:      { font:'gowund',   text:'마음속 생각…',    weight:400, color:'#111111' },
+    cloud:        { font:'gowund',   text:'꿈결같이…',       weight:400, color:'#111111' },
+    whisper:      { font:'himelody', text:'(속삭임)',        weight:400, color:'#111111' },
+    wavy:         { font:'gowund',   text:'으, 으아…',       weight:400, color:'#111111' },
+    burst:        { font:'blackhan', text:'외침!!',          weight:700, color:'#111111' },
+    electric:     { font:'mono',     text:'전자음…',         weight:500, color:'#111111' },
+    flash:        { font:'blackhan', text:'번쩍!',           weight:700, color:'#111111' },
+    urchin_flash: { font:'blackhan', text:'쾅!',             weight:700, color:'#ffffff' },
+    heart:        { font:'jua',      text:'♥',               weight:500, color:'#111111' },
+    rect:         { font:'nanummj',  text:'내레이션 텍스트', weight:400, color:'#111111' },
   };
   const pr = presets[sh] || presets.speech;
   return {
     id, type:'bubble',
     x, y, w, h, rotation: 0,
     text: pr.text, font: pr.font, fontSize, fontWeight: pr.weight,
-    color: '#111111', align: 'center',
+    color: pr.color, align: 'center',
     stroke: { on: false, color: '#000000', width: 1 },
     bubble: {
       shape: sh,
       fill: '#ffffff', border: '#1a1a1a', borderWidth: Math.max(2, W * 0.003),
+      opacity: 1,   // 🌫 반투명 (0=완전 투명, 1=불투명)
       tailX: x + w * 0.25, tailY: y + h + h * 0.4,
     },
   };
@@ -14609,10 +14667,11 @@ function _teWrapText(ctx, text, maxW){
 //   - 둥근 사각은 r = min(w,h)*0.22 로 살짝 더 둥글게 → 현대 만화체 느낌
 
 // 일반 말풍선 — 매끄럽게 이어지는 둥근 꼬리.
-function _teShapeSpeech(ctx, x, y, w, h, tailX, tailY){
+function _teShapeSpeech(ctx, x, y, w, h, tailX, tailY, p){
   const r = Math.min(w, h) * 0.2;
-  // 꼬리 폭 — 좁고 깔끔하게. 말풍선 안에 잘 맞춰지도록 좌우 한계 clamp.
-  const tailHalf = Math.min(w * 0.09, r * 0.9);
+  // 꼬리 폭 — params.tailWidth (0.04~0.2) 우선, 기본 0.09. 말풍선 안에 잘 맞춰지도록 좌우 한계 clamp.
+  const tailWidthRatio = (p && Number.isFinite(p.tailWidth)) ? p.tailWidth : 0.09;
+  const tailHalf = Math.min(w * tailWidthRatio, r * 0.9);
   const tailCx = Math.max(x + r + tailHalf, Math.min(x + w - r - tailHalf, tailX));
   // 꼬리 시작/끝점에서 본체로 부드럽게 합쳐지도록 control point 사용
   const bottomY = y + h;
@@ -14636,10 +14695,10 @@ function _teShapeSpeech(ctx, x, y, w, h, tailX, tailY){
 }
 
 // 생각 말풍선 — 자연스러운 구름 + 추적 점.
-function _teShapeThought(ctx, x, y, w, h, tailX, tailY){
+function _teShapeThought(ctx, x, y, w, h, tailX, tailY, p){
   const cx = x + w / 2, cy = y + h / 2;
-  // 큰/작은 lobe 교차 — 진짜 구름처럼 들쭉날쭉.
-  const lobes = 10;
+  // 큰/작은 lobe 교차 — 진짜 구름처럼 들쭉날쭉. params.lobeCount 로 조정.
+  const lobes = (p && Number.isFinite(p.lobeCount)) ? Math.max(6, Math.min(16, p.lobeCount|0)) : 10;
   const baseR = Math.min(w, h) * 0.16;
   ctx.beginPath();
   for(let i = 0; i < lobes; i++){
@@ -14674,11 +14733,12 @@ function _teShapeThought(ctx, x, y, w, h, tailX, tailY){
 }
 
 // 외침 말풍선 — 폭발/임팩트. 비대칭 스파이크로 진짜 폭발 같은 느낌.
-function _teShapeBurst(ctx, x, y, w, h){
+function _teShapeBurst(ctx, x, y, w, h, p){
   const cx = x + w / 2, cy = y + h / 2;
-  const points = 14;
+  const points = (p && Number.isFinite(p.spikeCount)) ? Math.max(6, Math.min(48, p.spikeCount|0)) : 14;
+  const depth = (p && Number.isFinite(p.spikeDepth)) ? Math.max(0.35, Math.min(0.92, p.spikeDepth)) : 0.56;
   const outerRx = w / 2, outerRy = h / 2;
-  const innerRx = outerRx * 0.56, innerRy = outerRy * 0.56;
+  const innerRx = outerRx * depth, innerRy = outerRy * depth;
   ctx.beginPath();
   for(let i = 0; i < points * 2; i++){
     const a = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
@@ -14695,15 +14755,28 @@ function _teShapeBurst(ctx, x, y, w, h){
   ctx.closePath();
 }
 
-// 내레이션 사각 — 평범한 사각형 (renderer 에서 이중 테두리 처리).
-function _teShapeRect(ctx, x, y, w, h){
+// 내레이션 사각 — params.cornerRadius > 0 이면 살짝 둥글림 (0~0.4 ratio).
+function _teShapeRect(ctx, x, y, w, h, p){
+  const ratio = (p && Number.isFinite(p.cornerRadius)) ? Math.max(0, Math.min(0.4, p.cornerRadius)) : 0;
+  if(ratio <= 0){ ctx.beginPath(); ctx.rect(x, y, w, h); return; }
+  const r = Math.min(w, h) * ratio;
   ctx.beginPath();
-  ctx.rect(x, y, w, h);
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
 }
 
-// 둥근 사각 — 현대 만화체 느낌으로 살짝 더 둥글게 (r 비율 0.14 → 0.22).
-function _teShapeRoundedRect(ctx, x, y, w, h){
-  const r = Math.min(w, h) * 0.22;
+// 둥근 사각 — 기본 r 비율 0.22, params.cornerRadius 로 조정 가능 (0.05~0.4).
+function _teShapeRoundedRect(ctx, x, y, w, h, p){
+  const ratio = (p && Number.isFinite(p.cornerRadius)) ? Math.max(0.02, Math.min(0.45, p.cornerRadius)) : 0.22;
+  const r = Math.min(w, h) * ratio;
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.lineTo(x + w - r, y);
@@ -14719,9 +14792,10 @@ function _teShapeRoundedRect(ctx, x, y, w, h){
 
 // 🌊 떨림 말풍선 (wavy) — 외곽이 물결치는 sine 곡선. 두려움·추위·약한 목소리·울먹임.
 //    꼬리는 speech 와 같은 곡선 꼬리.
-function _teShapeWavy(ctx, x, y, w, h, tailX, tailY){
-  const waves = 14;                       // 둘레의 물결 개수
-  const amp = Math.min(w, h) * 0.035;      // 물결 진폭
+function _teShapeWavy(ctx, x, y, w, h, tailX, tailY, p){
+  const waves = (p && Number.isFinite(p.waveCount)) ? Math.max(6, Math.min(24, p.waveCount|0)) : 14;
+  const ampRatio = (p && Number.isFinite(p.waveAmp)) ? Math.max(0.01, Math.min(0.1, p.waveAmp)) : 0.035;
+  const amp = Math.min(w, h) * ampRatio;
   const cx = x + w / 2, cy = y + h / 2;
   const rx = w / 2 - amp, ry = h / 2 - amp;
   const tailHalf = Math.min(w * 0.09, Math.min(w,h) * 0.12);
@@ -14751,14 +14825,59 @@ function _teShapeWavy(ctx, x, y, w, h, tailX, tailY){
 
 // ⚡ 전자음 말풍선 (electric) — 날카로운 지그재그 외곽. 전화·라디오·스피커·로봇·AI 음성.
 //    burst 보다 규칙적·뾰족하고 가시 끝이 안쪽으로 깊게 패임.
+// ⚡ 전자음 말풍선 (electric) — 각진 다각형. 전화·라디오·로봇·AI 음성.
+//    동인지 표준 패턴(電子音フキダシ): 5~6 각의 비대칭 폴리곤 + 날카로운 꼭짓점.
 function _teShapeElectric(ctx, x, y, w, h){
   const cx = x + w / 2, cy = y + h / 2;
-  const spikes = 20;
-  const outerRx = w / 2, outerRy = h / 2;
-  const innerRx = outerRx * 0.82, innerRy = outerRy * 0.82;  // 얕은 톱니 (전자 느낌)
+  // 시계 방향 5각 + 약한 어긋남 (정형 X → 자연스러운 인상)
+  const pts = [
+    {a: -Math.PI/2,           r: 1.00},   // top
+    {a: -Math.PI/2 + 1.05,    r: 0.96},   // upper-right
+    {a:  0.75,                r: 1.02},   // mid-right
+    {a:  Math.PI - 0.60,      r: 0.94},   // lower-left
+    {a: -Math.PI/2 - 0.85,    r: 0.98},   // upper-left
+  ];
   ctx.beginPath();
-  for(let i = 0; i < spikes * 2; i++){
-    const a = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2;
+  for(let i = 0; i < pts.length; i++){
+    const p = pts[i];
+    const px = cx + Math.cos(p.a) * (w / 2) * p.r;
+    const py = cy + Math.sin(p.a) * (h / 2) * p.r;
+    if(i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+// ☁ 구름 말풍선 (cloud) — 꼬리 없음. 부드러운 명상·꿈·일반 생각.
+//    동인지 표준(雲フキダシ): 외곽이 큰/작은 lobe 교차로 구름처럼.
+function _teShapeCloud(ctx, x, y, w, h, p){
+  const cx = x + w / 2, cy = y + h / 2;
+  const lobes = (p && Number.isFinite(p.lobeCount)) ? Math.max(6, Math.min(16, p.lobeCount|0)) : 12;
+  const baseR = Math.min(w, h) * 0.14;
+  ctx.beginPath();
+  for(let i = 0; i < lobes; i++){
+    const a = (i / lobes) * Math.PI * 2 - Math.PI / 2;
+    const rx = w / 2 * 0.82, ry = h / 2 * 0.82;
+    const px = cx + Math.cos(a) * rx;
+    const py = cy + Math.sin(a) * ry;
+    const lobeR = baseR * (i % 2 === 0 ? 1.0 : 0.72);
+    if(i === 0) ctx.moveTo(px + lobeR, py);
+    ctx.arc(px, py, lobeR, 0, Math.PI * 2);
+  }
+  ctx.closePath();
+}
+
+// ✨ 플래시 말풍선 (flash) — 방사상 첨두. 강렬한 효과음·충격·각성.
+//    동인지 표준(フラッシュフキダシ): 짧고 촘촘한 톱니가 중심 타원을 둘러쌈.
+function _teShapeFlash(ctx, x, y, w, h, p){
+  const cx = x + w / 2, cy = y + h / 2;
+  const rays = (p && Number.isFinite(p.spikeCount)) ? Math.max(8, Math.min(64, p.spikeCount|0)) : 32;
+  const depth = (p && Number.isFinite(p.spikeDepth)) ? Math.max(0.45, Math.min(0.92, p.spikeDepth)) : 0.74;
+  const outerRx = w / 2, outerRy = h / 2;
+  const innerRx = outerRx * depth, innerRy = outerRy * depth;
+  ctx.beginPath();
+  for(let i = 0; i < rays * 2; i++){
+    const a = (i / (rays * 2)) * Math.PI * 2 - Math.PI / 2;
     const isOuter = (i % 2 === 0);
     const rx = isOuter ? outerRx : innerRx;
     const ry = isOuter ? outerRy : innerRy;
@@ -14768,6 +14887,13 @@ function _teShapeElectric(ctx, x, y, w, h){
     else ctx.lineTo(px, py);
   }
   ctx.closePath();
+}
+
+// 🦔 우니 플래시 (urchin_flash) — 플래시와 동일 모양이지만 중앙을 진하게 채움.
+//    렌더러에서 fill = border 강제로 검은 성게 모양. 내부 텍스트는 흰색 권장.
+function _teShapeUrchinFlash(ctx, x, y, w, h){
+  // 동일 path — 렌더러가 채움 색을 border 와 동일하게 설정해서 솔리드 검정으로 보이게.
+  _teShapeFlash(ctx, x, y, w, h);
 }
 
 // 💗 하트 말풍선 (heart) — 애정·설렘. 꼬리 없음 (또는 작은 하트 꼬리).
@@ -14820,23 +14946,43 @@ function _teDrawObj(ctx, obj, withHandles){
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = Math.max(1, _teState.W * 0.0015);
     }
+    const pp = b.params || null;   // shape-specific params (optional)
     const drawPath = () => {
-      if(sh === 'speech') _teShapeSpeech(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY);
-      else if(sh === 'thought') _teShapeThought(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY);
-      else if(sh === 'burst') _teShapeBurst(ctx, obj.x, obj.y, obj.w, obj.h);
+      if(sh === 'speech') _teShapeSpeech(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY, pp);
+      else if(sh === 'thought') _teShapeThought(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY, pp);
+      else if(sh === 'cloud') _teShapeCloud(ctx, obj.x, obj.y, obj.w, obj.h, pp);
+      else if(sh === 'burst') _teShapeBurst(ctx, obj.x, obj.y, obj.w, obj.h, pp);
       else if(sh === 'electric') _teShapeElectric(ctx, obj.x, obj.y, obj.w, obj.h);
-      else if(sh === 'wavy') _teShapeWavy(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY);
+      else if(sh === 'flash') _teShapeFlash(ctx, obj.x, obj.y, obj.w, obj.h, pp);
+      else if(sh === 'urchin_flash') _teShapeFlash(ctx, obj.x, obj.y, obj.w, obj.h, pp);
+      else if(sh === 'wavy') _teShapeWavy(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY, pp);
       else if(sh === 'heart') _teShapeHeart(ctx, obj.x, obj.y, obj.w, obj.h);
       else if(sh === 'ellipse' || sh === 'whisper') _teShapeEllipse(ctx, obj.x, obj.y, obj.w, obj.h);
-      else if(sh === 'rect') _teShapeRect(ctx, obj.x, obj.y, obj.w, obj.h);
-      else _teShapeRoundedRect(ctx, obj.x, obj.y, obj.w, obj.h);
+      else if(sh === 'rect') _teShapeRect(ctx, obj.x, obj.y, obj.w, obj.h, pp);
+      else _teShapeRoundedRect(ctx, obj.x, obj.y, obj.w, obj.h, pp);
     };
-    // 🔪 속삭임 — 점선 외곽선 (조용한 대사). fill 후 점선 stroke.
+    // 🌫 반투명 — bubble.opacity (0~1, 기본 1). fill 에만 적용, stroke 는 항상 솔리드.
+    //   🦔 urchin_flash 는 fill 색을 강제로 border 색(검정)으로 → 솔리드 성게 효과.
     drawPath();
-    ctx.fill();
+    const op = (typeof b.opacity === 'number') ? Math.max(0, Math.min(1, b.opacity)) : 1;
+    if(sh === 'urchin_flash'){
+      // 채움 = 외곽선 색 (보통 검정) → 통째 솔리드. opacity 적용.
+      const savedFill = ctx.fillStyle;
+      ctx.fillStyle = b.border;
+      if(op < 1) ctx.globalAlpha = op;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = savedFill;
+    } else {
+      if(op < 1) ctx.globalAlpha = op;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    // 🔪 속삭임 — 점선 외곽선 (조용한 대사).
     if(sh === 'whisper'){
       ctx.setLineDash([Math.max(6, _teState.W*0.012), Math.max(5, _teState.W*0.009)]);
     }
+    // urchin_flash 는 외곽선까지 fill 로 솔리드라 stroke 생략 안 함 (날카로움 유지)
     ctx.stroke();
     ctx.setLineDash([]);
     // 그림자 off (텍스트/핸들 전)
@@ -14849,17 +14995,6 @@ function _teDrawObj(ctx, obj, withHandles){
       ctx.beginPath();
       ctx.rect(obj.x + inset, obj.y + inset, obj.w - inset * 2, obj.h - inset * 2);
       ctx.stroke();
-    }
-    // ⚡ 전자음 — 이중선 (안쪽 평행선) 으로 더 또렷하게.
-    if(sh === 'electric'){
-      ctx.lineWidth = Math.max(1, (b.borderWidth || 2) * 0.5);
-      ctx.save();
-      ctx.translate(obj.x + obj.w/2, obj.y + obj.h/2);
-      ctx.scale(0.86, 0.86);
-      ctx.translate(-(obj.x + obj.w/2), -(obj.y + obj.h/2));
-      _teShapeElectric(ctx, obj.x, obj.y, obj.w, obj.h);
-      ctx.stroke();
-      ctx.restore();
     }
   }
 
@@ -14902,7 +15037,7 @@ function _teDrawObj(ctx, obj, withHandles){
     ctx.setLineDash([hs * 0.6, hs * 0.4]);
     ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
     ctx.setLineDash([]);
-    // 모서리 4핸들
+    // 모서리 4핸들 (좌상·우상·좌하·우하) — 자유 비율 리사이즈
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = Math.max(1, _teState.W * 0.0018);
@@ -14913,6 +15048,20 @@ function _teDrawObj(ctx, obj, withHandles){
     for(const [cx, cy] of corners){
       ctx.fillRect(cx - hs/2, cy - hs/2, hs, hs);
       ctx.strokeRect(cx - hs/2, cy - hs/2, hs, hs);
+    }
+    // 가장자리 4핸들 (북·남·동·서 중점) — 축 단방향 리사이즈 (가로만/세로만)
+    //   원형 표시로 모서리 핸들과 시각 구분.
+    const edges = [
+      [obj.x + obj.w/2, obj.y],          // N
+      [obj.x + obj.w/2, obj.y + obj.h],  // S
+      [obj.x + obj.w,   obj.y + obj.h/2],// E
+      [obj.x,           obj.y + obj.h/2],// W
+    ];
+    for(const [ex, ey] of edges){
+      ctx.beginPath();
+      ctx.arc(ex, ey, hs * 0.55, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
     }
     // 회전 핸들 — 상단 중앙 위
     const rotX = obj.x + obj.w / 2;
@@ -14988,6 +15137,17 @@ function _teHitTest(px, py){
       if(Math.abs(local.x - cx) < hs && Math.abs(local.y - cy) < hs)
         return { kind: 'resize', objId: sel.id, corner: name };
     }
+    // 가장자리 4핸들 — 축 단방향 리사이즈 (코너보다 살짝 작게 검사 = 코너 우선)
+    const edges = [
+      ['n', sel.x + sel.w/2, sel.y],
+      ['s', sel.x + sel.w/2, sel.y + sel.h],
+      ['e', sel.x + sel.w,   sel.y + sel.h/2],
+      ['w', sel.x,           sel.y + sel.h/2],
+    ];
+    for(const [name, ex, ey] of edges){
+      if(Math.hypot(local.x - ex, local.y - ey) < hs * 0.85)
+        return { kind: 'resize', objId: sel.id, corner: name };
+    }
     const rotX = sel.x + sel.w / 2, rotY = sel.y - hs * 2.5;
     if(Math.hypot(local.x - rotX, local.y - rotY) < hs)
       return { kind: 'rotate', objId: sel.id };
@@ -15058,6 +15218,11 @@ function _teAttachCanvasEvents(){
       else if(d.corner === 'sw'){ nx = d.origX + dx; nw = Math.max(minDim, d.origW - dx); nh = Math.max(minDim, d.origH + dy); if(nw === minDim) nx = d.origX + d.origW - minDim; }
       else if(d.corner === 'ne'){ ny = d.origY + dy; nw = Math.max(minDim, d.origW + dx); nh = Math.max(minDim, d.origH - dy); if(nh === minDim) ny = d.origY + d.origH - minDim; }
       else if(d.corner === 'nw'){ nx = d.origX + dx; ny = d.origY + dy; nw = Math.max(minDim, d.origW - dx); nh = Math.max(minDim, d.origH - dy); if(nw === minDim) nx = d.origX + d.origW - minDim; if(nh === minDim) ny = d.origY + d.origH - minDim; }
+      // 가장자리 4방향 — 한 축만 변경 (자유 비율 깨기 좋음)
+      else if(d.corner === 'n'){ ny = d.origY + dy; nh = Math.max(minDim, d.origH - dy); if(nh === minDim) ny = d.origY + d.origH - minDim; }
+      else if(d.corner === 's'){ nh = Math.max(minDim, d.origH + dy); }
+      else if(d.corner === 'e'){ nw = Math.max(minDim, d.origW + dx); }
+      else if(d.corner === 'w'){ nx = d.origX + dx; nw = Math.max(minDim, d.origW - dx); if(nw === minDim) nx = d.origX + d.origW - minDim; }
       obj.x = nx; obj.y = ny; obj.w = nw; obj.h = nh;
       if(obj.type === 'text'){
         // 텍스트는 폰트 크기에 따른 자연 높이 — 사용자가 늘리면 그대로 유지
@@ -15204,8 +15369,46 @@ function _teSyncSelPanel(){
     bubbleFields.style.display = '';
     $('teBubbleFill').value = obj.bubble.fill || '#ffffff';
     $('teBubbleBorder').value = obj.bubble.border || '#000000';
+    const op = (typeof obj.bubble.opacity === 'number') ? obj.bubble.opacity : 1;
+    $('teBubbleOpacity').value = op;
+    $('teBubbleOpacityVal').textContent = Math.round(op * 100) + '%';
+    // 🔁 모양 변경 select — 처음 호출 시 옵션 채움 (teBubblePick 의 dropdown 복제)
+    const swap = $('teShapeSwap');
+    if(swap && !swap.dataset.filled){
+      swap.innerHTML = $('teBubblePick').innerHTML;
+      swap.dataset.filled = '1';
+    }
+    if(swap) swap.value = obj.bubble.shape || 'speech';
+    $('teShapeSwapField').style.display = '';
+    // 🎚 모양 세부 파라미터 — 현재 shape 에 해당하는 것만 노출
+    const params = obj.bubble.params || {};
+    const sh = obj.bubble.shape || 'speech';
+    const sec = $('teShapeParams');
+    let anyVisible = false;
+    sec.querySelectorAll('[data-tp-for]').forEach(field => {
+      const applies = field.dataset.tpFor.split(',').includes(sh);
+      field.style.display = applies ? '' : 'none';
+      if(applies) anyVisible = true;
+    });
+    sec.style.display = anyVisible ? '' : 'none';
+    // 슬라이더 현재값 동기 (default fallback)
+    const setSl = (id, val, valId, fmt) => {
+      const el = $(id); if(!el) return;
+      el.value = val;
+      const vEl = $(valId);
+      if(vEl) vEl.textContent = (typeof fmt === 'function') ? fmt(val) : val;
+    };
+    setSl('tpCornerRadius', params.cornerRadius != null ? params.cornerRadius : (sh === 'rounded' ? 0.22 : 0), 'tpCornerRadiusVal');
+    setSl('tpSpikeCount',   params.spikeCount   != null ? params.spikeCount   : (sh === 'flash' ? 32 : 14), 'tpSpikeCountVal');
+    setSl('tpSpikeDepth',   params.spikeDepth   != null ? params.spikeDepth   : (sh === 'flash' ? 0.74 : 0.56), 'tpSpikeDepthVal');
+    setSl('tpWaveCount',    params.waveCount    != null ? params.waveCount    : 14, 'tpWaveCountVal');
+    setSl('tpWaveAmp',      params.waveAmp      != null ? params.waveAmp      : 0.035, 'tpWaveAmpVal');
+    setSl('tpLobeCount',    params.lobeCount    != null ? params.lobeCount    : (sh === 'thought' ? 10 : 12), 'tpLobeCountVal');
+    setSl('tpTailWidth',    params.tailWidth    != null ? params.tailWidth    : 0.09, 'tpTailWidthVal');
   } else {
     bubbleFields.style.display = 'none';
+    $('teShapeSwapField').style.display = 'none';
+    $('teShapeParams').style.display = 'none';
   }
 }
 
@@ -15292,6 +15495,46 @@ function _teWireOnce(){
   sync($('teStrokeOn'), o => o.stroke.on = $('teStrokeOn').checked);
   sync($('teBubbleFill'), o => { if(o.bubble) o.bubble.fill = $('teBubbleFill').value; });
   sync($('teBubbleBorder'), o => { if(o.bubble) o.bubble.border = $('teBubbleBorder').value; });
+  sync($('teBubbleOpacity'), o => {
+    if(!o.bubble) return;
+    const v = parseFloat($('teBubbleOpacity').value);
+    o.bubble.opacity = Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1;
+    $('teBubbleOpacityVal').textContent = Math.round(o.bubble.opacity * 100) + '%';
+  });
+  // 🔁 모양 변경 — bubble.shape 만 교체 (텍스트·위치·크기 모두 유지)
+  $('teShapeSwap')?.addEventListener('change', () => {
+    const o = _teGetSel(); if(!o || !o.bubble) return;
+    const newShape = $('teShapeSwap').value;
+    if(newShape && newShape !== o.bubble.shape){
+      _tePushUndo();
+      o.bubble.shape = newShape;
+      // params 는 모양 변경 시 리셋 — 각 모양은 자체 기본값을 사용
+      delete o.bubble.params;
+      _teRender(); _teRenderLayers(); _teSyncSelPanel();
+    }
+  });
+  // 🎚 모양 세부 파라미터 슬라이더 — bubble.params 에 저장
+  const tpSync = (id, key, valId, parser, fmt) => {
+    const el = $(id); if(!el) return;
+    el.addEventListener('input', () => {
+      const o = _teGetSel(); if(!o || !o.bubble) return;
+      if(_teState._editCtl !== el){ _tePushUndo(); _teState._editCtl = el; }
+      if(!o.bubble.params) o.bubble.params = {};
+      const v = parser ? parser(el.value) : parseFloat(el.value);
+      o.bubble.params[key] = v;
+      const vEl = $(valId);
+      if(vEl) vEl.textContent = (typeof fmt === 'function') ? fmt(v) : v;
+      _teRender();
+    });
+    el.addEventListener('change', () => { _teState && (_teState._editCtl = null); });
+  };
+  tpSync('tpCornerRadius', 'cornerRadius', 'tpCornerRadiusVal', parseFloat, v => v.toFixed(2));
+  tpSync('tpSpikeCount',   'spikeCount',   'tpSpikeCountVal',   v => parseInt(v, 10));
+  tpSync('tpSpikeDepth',   'spikeDepth',   'tpSpikeDepthVal',   parseFloat, v => v.toFixed(2));
+  tpSync('tpWaveCount',    'waveCount',    'tpWaveCountVal',    v => parseInt(v, 10));
+  tpSync('tpWaveAmp',      'waveAmp',      'tpWaveAmpVal',      parseFloat, v => v.toFixed(3));
+  tpSync('tpLobeCount',    'lobeCount',    'tpLobeCountVal',    v => parseInt(v, 10));
+  tpSync('tpTailWidth',    'tailWidth',    'tpTailWidthVal',    parseFloat, v => v.toFixed(2));
   sync($('teAlign'), o => o.align = $('teAlign').value);
   sync($('teRot'), o => { o.rotation = parseInt($('teRot').value) || 0; $('teRotVal').textContent = o.rotation + '°'; });
   // 레이어 목록 클릭 위임
