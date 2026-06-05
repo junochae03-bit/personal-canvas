@@ -2724,6 +2724,7 @@ mark{
             <button class="iconbtn" id="reuseBtn" title="파라미터 복원 (Reuse)">↻</button>
             <button class="iconbtn" id="reseedBtn" title="시드 재생성 (Re-roll)">🎲</button>
             <button class="iconbtn" id="sendI2IBtn" title="그림→그림으로 보내기 (Send to I2I)">→I2I</button>
+            <button class="iconbtn" id="popoutPreviewBtn" title="🪟 미리보기를 별도 창으로 — 멀티 모니터에서 작업·진행상황을 따로 모니터링" style="color:var(--acc)">🪟</button>
           </div>
         </div>
         <div class="queue-strip">
@@ -9947,6 +9948,8 @@ function renderQueue(){
   const done = state.queue.filter(q => q.status === 'done').length;
   const err = state.queue.filter(q => q.status === 'err').length;
   $('queueStats').textContent = `${done+err}/${state.queue.length}`;
+  // 🪟 팝업 창에 진행상황 브로드캐스트
+  try { _popoutBroadcastProgress(done + err, state.queue.length, state.running); } catch(e){ _swallow(e, 'popout:progress'); }
   if(!state.queue.length){
     list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--t3);font-size:12.5px">생성 시작 시 진행 상황이 표시됩니다 <span style="opacity:.7">(Generation status will appear here)</span></div>';
     return;
@@ -12662,6 +12665,186 @@ function makeFilename(q){
 // 🖼 공통 저장 사이드이펙트 — auto-IP 세션 + saveImage + 출력 폴더 + 앨범 자동 추가 + 갤러리 새로고침.
 //   pgStart/pgStartScenes 도 이 함수를 호출해 일관된 후처리를 받도록 통일 (이전엔 DB.saveImage 만 호출 → 출력폴더·앨범·auto-IP 모두 스킵).
 //   반환: 저장된 이미지의 IDB id (또는 null).
+// ═══════════════════════════════════════════════════════════
+// 🪟 POPUP PREVIEW WINDOW — 멀티 모니터에서 미리보기/진행상황 떼어내기
+// ═══════════════════════════════════════════════════════════
+//   본창과 동기: BroadcastChannel('nai-studio-popup') 으로 새 이미지·큐 진행 푸시.
+//   팝업이 'hello' 보내면 본창이 현재 상태(state.lastImage / queue 진행률) 다시 전송.
+//   사용자가 팝업 닫으면 'goodbye' 받아 _popoutWin = null 으로 정리.
+let _popoutWin = null;
+let _popoutCh = null;
+function _popoutChannel(){
+  if(_popoutCh) return _popoutCh;
+  try {
+    _popoutCh = new BroadcastChannel('nai-studio-popup');
+    _popoutCh.onmessage = (e) => {
+      const m = e.data || {};
+      if(m.type === 'hello'){
+        // 팝업이 막 열렸거나 새로고침함 — 본창의 현재 상태를 다시 푸시
+        if(state.lastImage?.blob) _popoutBroadcastImage(state.lastImage.blob, state.lastImage.meta || {});
+        const done = state.queue.filter(q => q.status === 'done' || q.status === 'err').length;
+        _popoutBroadcastProgress(done, state.queue.length, !!state.running);
+      } else if(m.type === 'goodbye'){
+        _popoutWin = null;
+      }
+    };
+  } catch(e){ _swallow(e, 'popout:ch'); }
+  return _popoutCh;
+}
+function _popoutBroadcastImage(blob, info){
+  if(!_popoutWin || _popoutWin.closed){ _popoutWin = null; return; }
+  const ch = _popoutChannel();
+  if(!ch) return;
+  // info 에서 팝업에 보낼 안전 필드만 추출 (cloning 비용 + 사생활)
+  const meta = info?.meta || {};
+  const payload = {
+    label: info?.label || meta?.prompt?.slice(0, 60) || '',
+    fname: info?.fname || '',
+    seed: meta?.seed ?? null,
+    w: meta?.w ?? meta?.width ?? null,
+    h: meta?.h ?? meta?.height ?? null,
+    model: meta?.model || '',
+    ts: Date.now(),
+  };
+  try { ch.postMessage({type:'new-image', blob, meta: payload}); } catch(e){ _swallow(e, 'popout:postImage'); }
+}
+function _popoutBroadcastProgress(done, total, running){
+  if(!_popoutWin || _popoutWin.closed){ _popoutWin = null; return; }
+  const ch = _popoutChannel();
+  if(!ch) return;
+  try { ch.postMessage({type:'progress', done, total, running: !!running}); } catch(e){ _swallow(e, 'popout:postProg'); }
+}
+function _popoutClose(){
+  try { _popoutWin?.close(); } catch(_){}
+  _popoutWin = null;
+}
+function openPreviewPopup(){
+  // 이미 떠있으면 포커스만
+  if(_popoutWin && !_popoutWin.closed){ try { _popoutWin.focus(); } catch(_){} return; }
+  const features = 'popup=yes,width=520,height=760,resizable=yes,scrollbars=no,toolbar=no,location=no,menubar=no,status=no';
+  const w = window.open('', 'nai-studio-popup', features);
+  if(!w){
+    toast('🚫 팝업이 차단됐어요 — 브라우저 주소창 옆 팝업 차단 해제 후 재시도', 'warning', {timeoutMs: 8000});
+    return;
+  }
+  _popoutWin = w;
+  // 팝업 HTML — 본창과 독립. BroadcastChannel 로 동기.
+  // 인라인 스크립트 작성. CSP 가 'unsafe-inline' 허용이고 동일 출처라 가능.
+  const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>🪟 NAI 미리보기</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#15110a;color:#f5e6c8;font-family:"Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.pop-bar{display:flex;align-items:center;gap:10px;padding:9px 14px;background:#2a1f0e;border-bottom:1.5px solid #4a3820;font-size:12.5px;flex-shrink:0;user-select:none}
+.pop-status{font-family:ui-monospace,monospace;color:#d6a050;font-weight:700;font-size:13px;min-width:78px}
+.pop-info{color:#b09870;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px}
+.pop-meta{font-family:ui-monospace,monospace;color:#a89070;font-size:10.5px}
+.pop-progress{height:3px;background:rgba(214,160,80,.14);flex-shrink:0;position:relative}
+.pop-progress-bar{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#a25a1f,#d6a050);width:0%;transition:width .35s ease-out}
+.pop-progress.run .pop-progress-bar{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+.pop-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:16px;min-height:0;background:#0f0c06;overflow:auto;position:relative}
+.pop-stage img{max-width:100%;max-height:100%;object-fit:contain;display:block;box-shadow:0 6px 24px rgba(0,0,0,.55);border-radius:4px}
+.pop-empty{color:#6a5840;font-size:13.5px;text-align:center;line-height:1.85;padding:20px}
+.pop-empty b{color:#a89070;font-weight:700;display:block;margin-bottom:6px;font-size:15px}
+.pop-foot{display:flex;align-items:center;gap:8px;padding:7px 12px;background:#1f1709;border-top:1.5px solid #3a2810;font-size:11px;color:#8b7350;flex-shrink:0;user-select:none}
+.pop-foot .pop-hint{flex:1}
+.pop-btn{background:transparent;border:1.5px solid #4a3820;color:#b09870;padding:5px 10px;border-radius:5px;font-size:11.5px;cursor:pointer;font-family:inherit}
+.pop-btn:hover{border-color:#d6a050;color:#d6a050}
+</style></head><body>
+<div class="pop-bar">
+  <span class="pop-status" id="status">대기 중</span>
+  <span class="pop-info" id="info"></span>
+  <span class="pop-meta" id="meta"></span>
+</div>
+<div class="pop-progress" id="progressBox"><div class="pop-progress-bar" id="bar"></div></div>
+<div class="pop-stage" id="stage">
+  <div class="pop-empty" id="empty">
+    <b>🎨 NAI 미리보기 창</b>
+    본창에서 생성을 시작하면<br>완성된 이미지가 여기 표시됩니다.<br>
+    <span style="opacity:.6;font-size:11.5px">멀티 모니터에서 작업하면서 진행 상황 모니터링 용도</span>
+  </div>
+</div>
+<div class="pop-foot">
+  <span class="pop-hint">📡 본창과 실시간 동기</span>
+  <button class="pop-btn" id="dlBtn" disabled title="다운로드">⬇ 저장</button>
+</div>
+<script>
+(function(){
+  const ch = new BroadcastChannel('nai-studio-popup');
+  let currentUrl = null;
+  let currentBlob = null;
+  let currentFname = 'nai_preview.png';
+  function setImage(blob, meta){
+    if(currentUrl) URL.revokeObjectURL(currentUrl);
+    currentBlob = blob;
+    currentUrl = URL.createObjectURL(blob);
+    currentFname = (meta && meta.fname) || 'nai_preview.png';
+    const stage = document.getElementById('stage');
+    stage.innerHTML = '<img alt="latest generated">';
+    stage.querySelector('img').src = currentUrl;
+    document.getElementById('status').textContent = '✓ 완성';
+    const info = document.getElementById('info');
+    info.textContent = (meta && meta.label) ? meta.label : '';
+    const m = [];
+    if(meta){
+      if(meta.w && meta.h) m.push(meta.w + '×' + meta.h);
+      if(meta.seed != null) m.push('seed ' + meta.seed);
+      if(meta.model) m.push(meta.model);
+    }
+    document.getElementById('meta').textContent = m.join(' · ');
+    document.getElementById('dlBtn').disabled = false;
+  }
+  function setProgress(done, total, running){
+    const box = document.getElementById('progressBox');
+    const bar = document.getElementById('bar');
+    const stat = document.getElementById('status');
+    if(total > 0){
+      const pct = Math.min(100, Math.max(0, done / total * 100));
+      bar.style.width = pct + '%';
+      box.classList.toggle('run', !!running && done < total);
+      stat.textContent = running ? ('🎲 ' + done + '/' + total) : (done + '/' + total + ' 완료');
+    } else {
+      bar.style.width = '0%';
+      box.classList.remove('run');
+      stat.textContent = '대기 중';
+    }
+  }
+  ch.onmessage = function(e){
+    const m = e.data || {};
+    if(m.type === 'new-image' && m.blob){ setImage(m.blob, m.meta); }
+    else if(m.type === 'progress'){ setProgress(m.done || 0, m.total || 0, m.running); }
+  };
+  document.getElementById('dlBtn').addEventListener('click', function(){
+    if(!currentUrl) return;
+    const a = document.createElement('a');
+    a.href = currentUrl; a.download = currentFname; document.body.appendChild(a); a.click(); a.remove();
+  });
+  // 본창에 현재 상태 요청
+  ch.postMessage({type:'hello'});
+  window.addEventListener('beforeunload', function(){
+    try { if(currentUrl) URL.revokeObjectURL(currentUrl); } catch(e){}
+    try { ch.postMessage({type:'goodbye'}); ch.close(); } catch(e){}
+  });
+})();
+<\/script>
+</body></html>`;
+  try {
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  } catch(e){
+    _swallow(e, 'popout:write');
+    toast('팝업 초기화 실패 — ' + (e?.message || e), 'error');
+    _popoutWin = null;
+    return;
+  }
+  _popoutChannel();   // 채널 초기화 + hello 대기
+  toast('🪟 미리보기 창이 열렸어요 — 새 이미지가 생성되면 자동 표시', 'success', {timeoutMs: 4000});
+}
+// 본창 종료 시 팝업도 정리 (선택 — 일부 브라우저 차단할 수 있어 best-effort)
+window.addEventListener('beforeunload', () => { try { _popoutCh?.close(); } catch(_){} });
+
 async function _saveImageWithSideEffects(blob, fname, label, prompt, meta){
   // 🎴 캐릭터 IP별 자동 분류 모드 — 저장 직전 매번 적절한 세션으로 전환
   if($('targetSession')?.value === 'auto-ip'){
@@ -12669,6 +12852,8 @@ async function _saveImageWithSideEffects(blob, fname, label, prompt, meta){
     if(primary){ try { await ensureIpSessionForChar(primary); } catch(e){ _swallow(e, 'ipSession:ensure'); } }
   }
   const id = await DB.saveImage(blob, fname, label, prompt, meta);
+  // 🪟 팝업 미리보기 창에 새 이미지 브로드캐스트 — 열려있을 때만
+  try { _popoutBroadcastImage(blob, {label, fname, meta}); } catch(e){ _swallow(e, 'popout:broadcast'); }
   // 📂 출력 폴더가 설정돼 있으면 파일로도 저장
   if(state.outputDirHandle){
     try { await writeImageToOutputDir(blob, fname); } catch(e){ _swallow(e, 'outputDir:write'); }
@@ -18919,6 +19104,7 @@ function wireGenerationAndPresetEvents(){
     refreshResInfo(); refreshPromptStats();
     toast('파라미터 복원', 'success');
   });
+  $('popoutPreviewBtn')?.addEventListener('click', () => openPreviewPopup());
   $('sendI2IBtn').addEventListener('click', async () => {
     if(!state.lastImage) return;
     await setBaseImage(state.lastImage.blob);
