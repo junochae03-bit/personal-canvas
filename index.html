@@ -14408,7 +14408,7 @@ const TE_FONTS = {
 function _teFontFamily(key){ return TE_FONTS[key] || TE_FONTS.ui; }
 // 꼬리(tail) 가 있는 말풍선 모양인지 — 핸들 표시·hit-test 공용.
 function _teHasTail(obj){
-  return obj?.type === 'bubble' && ['speech','thought','wavy'].includes(obj.bubble?.shape);
+  return obj?.type === 'bubble' && ['speech','thought','wavy','ellipse','electric'].includes(obj.bubble?.shape);
 }
 
 async function openTextEditModal(item){
@@ -14695,37 +14695,27 @@ function _teShapeSpeech(ctx, x, y, w, h, tailX, tailY, p){
 }
 
 // 생각 말풍선 — 자연스러운 구름 + 추적 점.
-function _teShapeThought(ctx, x, y, w, h, tailX, tailY, p){
+// 💭 생각 말풍선 — reference 思考フキダシ 매칭: 순수 타원 본체 + 작아지는 거품 꼬리.
+//    (예전엔 cloud-with-trail 이었지만 reference 는 oval-with-trail. cloud 는 별도 모양.)
+function _teShapeThought(ctx, x, y, w, h, tailX, tailY){
   const cx = x + w / 2, cy = y + h / 2;
-  // 큰/작은 lobe 교차 — 진짜 구름처럼 들쭉날쭉. params.lobeCount 로 조정.
-  const lobes = (p && Number.isFinite(p.lobeCount)) ? Math.max(6, Math.min(16, p.lobeCount|0)) : 10;
-  const baseR = Math.min(w, h) * 0.16;
+  // 본체: 깔끔한 타원
   ctx.beginPath();
-  for(let i = 0; i < lobes; i++){
-    const a = (i / lobes) * Math.PI * 2 - Math.PI / 2;
-    // 외곽 위치는 약간 안쪽 (1.0 으로 두면 lobe 가 바깥으로 튀어나옴)
-    const rx = w / 2 * 0.78, ry = h / 2 * 0.78;
-    const px = cx + Math.cos(a) * rx;
-    const py = cy + Math.sin(a) * ry;
-    // 짝수 인덱스는 큰 lobe, 홀수는 작은 lobe — 자연스러운 들쭉날쭉
-    const lobeR = baseR * (i % 2 === 0 ? 1.0 : 0.7);
-    if(i === 0) ctx.moveTo(px + lobeR, py);
-    ctx.arc(px, py, lobeR, 0, Math.PI * 2);
-  }
+  ctx.ellipse(cx, cy, w/2, h/2, 0, 0, Math.PI * 2);
   ctx.closePath();
-  // 꼬리 — 본체에서 tailX,tailY 방향으로 점점 작아지는 원 3개.
+  // 꼬리: tailX,tailY 방향으로 점점 작아지는 원 3개 (본체와 별도 sub-path)
   const dx = tailX - cx, dy = tailY - cy;
   const dist = Math.hypot(dx, dy);
   if(dist > 8){
     const ux = dx / dist, uy = dy / dist;
-    // 시작은 본체 가장자리에서 살짝 떨어진 위치
-    const startX = cx + ux * (w / 2 * 0.95), startY = cy + uy * (h / 2 * 0.95);
+    const startX = cx + ux * (w/2 * 0.95), startY = cy + uy * (h/2 * 0.95);
+    const baseR = Math.min(w, h) * 0.13;
     for(let i = 1; i <= 3; i++){
-      const t = 0.18 + (i - 1) * 0.34;   // 0.18, 0.52, 0.86 → 시작점에서 끝점까지 균등하게
+      const t = 0.16 + (i - 1) * 0.34;
       const px = startX + (tailX - startX) * t;
       const py = startY + (tailY - startY) * t;
-      // 마지막이 가장 작게 (꼬리 끝부분 강조)
-      const tR = baseR * (0.5 - i * 0.12);
+      const tR = baseR * (0.55 - i * 0.13);
+      if(tR <= 0) continue;
       ctx.moveTo(px + tR, py);
       ctx.arc(px, py, tR, 0, Math.PI * 2);
     }
@@ -14735,8 +14725,9 @@ function _teShapeThought(ctx, x, y, w, h, tailX, tailY, p){
 // 외침 말풍선 — 폭발/임팩트. 비대칭 스파이크로 진짜 폭발 같은 느낌.
 function _teShapeBurst(ctx, x, y, w, h, p){
   const cx = x + w / 2, cy = y + h / 2;
-  const points = (p && Number.isFinite(p.spikeCount)) ? Math.max(6, Math.min(48, p.spikeCount|0)) : 14;
-  const depth = (p && Number.isFinite(p.spikeDepth)) ? Math.max(0.35, Math.min(0.92, p.spikeDepth)) : 0.56;
+  // reference 爆発フキダシ — 8각 가시 + 깊은 골 (이전 14각 얕은 골 → reference 닮게).
+  const points = (p && Number.isFinite(p.spikeCount)) ? Math.max(6, Math.min(48, p.spikeCount|0)) : 8;
+  const depth = (p && Number.isFinite(p.spikeDepth)) ? Math.max(0.35, Math.min(0.92, p.spikeDepth)) : 0.50;
   const outerRx = w / 2, outerRy = h / 2;
   const innerRx = outerRx * depth, innerRy = outerRy * depth;
   ctx.beginPath();
@@ -14791,21 +14782,47 @@ function _teShapeRoundedRect(ctx, x, y, w, h, p){
 }
 
 // 🌊 떨림 말풍선 (wavy) — 외곽이 물결치는 sine 곡선. 두려움·추위·약한 목소리·울먹임.
-//    꼬리는 speech 와 같은 곡선 꼬리.
+//    꼬리는 본체 외곽과 한 path 로 연결 — ellipse 와 동일 패턴.
 function _teShapeWavy(ctx, x, y, w, h, tailX, tailY, p){
   const waves = (p && Number.isFinite(p.waveCount)) ? Math.max(6, Math.min(24, p.waveCount|0)) : 14;
   const ampRatio = (p && Number.isFinite(p.waveAmp)) ? Math.max(0.01, Math.min(0.1, p.waveAmp)) : 0.035;
   const amp = Math.min(w, h) * ampRatio;
   const cx = x + w / 2, cy = y + h / 2;
   const rx = w / 2 - amp, ry = h / 2 - amp;
-  const tailHalf = Math.min(w * 0.09, Math.min(w,h) * 0.12);
-  const tailCx = Math.max(x + w*0.2, Math.min(x + w*0.8, tailX));
-  const bottomY = y + h;
+  // 꼬리 유무 — 본체 영역 밖 (타원 밖) 일 때만 꼬리
+  const hasTail = (tailX != null && tailY != null) && rx > 0 && ry > 0 && (() => {
+    const nx = (tailX - cx) / rx, ny = (tailY - cy) / ry;
+    return (nx*nx + ny*ny) > 1.1;
+  })();
+  // 꼬리 부착 각도 — 본체 하단 (a=π/2) 주변, tailX 위치에 따라 좌우 시프트
+  let startA = 0, endA = 0;
+  if(hasTail){
+    const cosTarget = Math.max(-0.85, Math.min(0.85, (tailX - cx) / rx));
+    const tailMid = Math.acos(cosTarget);   // 0..π (0=오른쪽, π=왼쪽, π/2=정중앙 하단)
+    const halfA = Math.PI * 0.06;
+    startA = tailMid - halfA;
+    endA = tailMid + halfA;
+  }
+  const steps = waves * 8;
   ctx.beginPath();
-  // 타원 둘레를 따라 sine 진동 추가 — 닫힌 물결 외곽
-  const steps = waves * 6;
+  let drewTail = false;
   for(let i = 0; i <= steps; i++){
     const a = (i / steps) * Math.PI * 2 - Math.PI / 2;
+    if(hasTail && a >= startA && a <= endA){
+      if(!drewTail){
+        const wobS = 1 + (amp / Math.min(rx, ry)) * Math.sin(startA * waves);
+        const wobE = 1 + (amp / Math.min(rx, ry)) * Math.sin(endA * waves);
+        const sx = cx + Math.cos(startA) * rx * wobS;
+        const sy = cy + Math.sin(startA) * ry * wobS;
+        const ex = cx + Math.cos(endA) * rx * wobE;
+        const ey = cy + Math.sin(endA) * ry * wobE;
+        ctx.lineTo(sx, sy);
+        ctx.quadraticCurveTo(sx + (tailX - sx) * 0.25, sy + (tailY - sy) * 0.5, tailX, tailY);
+        ctx.quadraticCurveTo(ex + (tailX - ex) * 0.25, ey + (tailY - ey) * 0.5, ex, ey);
+        drewTail = true;
+      }
+      continue;
+    }
     const wob = 1 + (amp / Math.min(rx, ry)) * Math.sin(a * waves);
     const px = cx + Math.cos(a) * rx * wob;
     const py = cy + Math.sin(a) * ry * wob;
@@ -14813,56 +14830,56 @@ function _teShapeWavy(ctx, x, y, w, h, tailX, tailY, p){
     else ctx.lineTo(px, py);
   }
   ctx.closePath();
-  // 꼬리 (별도 path 로 본체 아래에 곡선 삼각형)
-  const dist = Math.hypot(tailX - tailCx, tailY - bottomY);
-  if(dist > 8){
-    ctx.moveTo(tailCx + tailHalf, bottomY - amp);
-    ctx.quadraticCurveTo(tailCx + tailHalf*0.4, bottomY + (tailY-bottomY)*0.4, tailX, tailY);
-    ctx.quadraticCurveTo(tailCx - tailHalf*0.4, bottomY + (tailY-bottomY)*0.4, tailCx - tailHalf, bottomY - amp);
-    ctx.closePath();
-  }
 }
 
 // ⚡ 전자음 말풍선 (electric) — 날카로운 지그재그 외곽. 전화·라디오·스피커·로봇·AI 음성.
 //    burst 보다 규칙적·뾰족하고 가시 끝이 안쪽으로 깊게 패임.
-// ⚡ 전자음 말풍선 (electric) — 각진 다각형. 전화·라디오·로봇·AI 음성.
-//    동인지 표준 패턴(電子音フキダシ): 5~6 각의 비대칭 폴리곤 + 날카로운 꼭짓점.
-function _teShapeElectric(ctx, x, y, w, h){
-  const cx = x + w / 2, cy = y + h / 2;
-  // 시계 방향 5각 + 약한 어긋남 (정형 X → 자연스러운 인상)
-  const pts = [
-    {a: -Math.PI/2,           r: 1.00},   // top
-    {a: -Math.PI/2 + 1.05,    r: 0.96},   // upper-right
-    {a:  0.75,                r: 1.02},   // mid-right
-    {a:  Math.PI - 0.60,      r: 0.94},   // lower-left
-    {a: -Math.PI/2 - 0.85,    r: 0.98},   // upper-left
-  ];
+// ⚡ 전자음 말풍선 — reference 電子音フキダシ 매칭: 깔끔한 오각형 + 아래쪽 뾰족한 꼬리.
+//    꼬리 끝점(tailX/tailY) 가 본체 밖에 있으면 V 자 합류, 안에 있으면 꼬리 없는 오각형.
+function _teShapeElectric(ctx, x, y, w, h, tailX, tailY){
+  const cx = x + w / 2;
+  // 5개 꼭짓점 — 위 1, 좌상/우상 어깨, 좌하/우하 (꼬리 합류용)
+  const top   = { x: cx,            y: y };
+  const ur    = { x: x + w,         y: y + h * 0.34 };
+  const lr    = { x: x + w * 0.84,  y: y + h * 0.82 };
+  const ll    = { x: x + w * 0.16,  y: y + h * 0.82 };
+  const ul    = { x: x,             y: y + h * 0.34 };
+  // 꼬리 유무 — tailX/Y 가 본체 영역 밖에 있을 때만
+  const hasTail = tailX != null && tailY != null && (tailY > y + h * 0.85 || tailX < x || tailX > x + w);
   ctx.beginPath();
-  for(let i = 0; i < pts.length; i++){
-    const p = pts[i];
-    const px = cx + Math.cos(p.a) * (w / 2) * p.r;
-    const py = cy + Math.sin(p.a) * (h / 2) * p.r;
-    if(i === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
+  ctx.moveTo(top.x, top.y);
+  ctx.lineTo(ur.x, ur.y);
+  ctx.lineTo(lr.x, lr.y);
+  if(hasTail){
+    ctx.lineTo(tailX, tailY);   // 뾰족한 꼬리 끝
   }
+  ctx.lineTo(ll.x, ll.y);
+  ctx.lineTo(ul.x, ul.y);
   ctx.closePath();
 }
 
 // ☁ 구름 말풍선 (cloud) — 꼬리 없음. 부드러운 명상·꿈·일반 생각.
 //    동인지 표준(雲フキダシ): 외곽이 큰/작은 lobe 교차로 구름처럼.
 function _teShapeCloud(ctx, x, y, w, h, p){
+  // reference 雲フキダシ — 외곽 lobe 만 보이는 연속 외곽선 (이전 full-circle 은 내부 원 모두 노출).
+  //   각 lobe 는 바깥쪽을 향한 부분 호 (arcSpan ≈ 2π/lobes * 1.5) → 인접 lobe 와 자연 연결.
   const cx = x + w / 2, cy = y + h / 2;
-  const lobes = (p && Number.isFinite(p.lobeCount)) ? Math.max(6, Math.min(16, p.lobeCount|0)) : 12;
-  const baseR = Math.min(w, h) * 0.14;
+  const lobes = (p && Number.isFinite(p.lobeCount)) ? Math.max(6, Math.min(16, p.lobeCount|0)) : 10;
+  const baseR = Math.min(w, h) * 0.16;
+  const arcSpan = (Math.PI * 2 / lobes) * 1.55;   // 이웃 lobe 와 살짝 겹치게
   ctx.beginPath();
   for(let i = 0; i < lobes; i++){
     const a = (i / lobes) * Math.PI * 2 - Math.PI / 2;
-    const rx = w / 2 * 0.82, ry = h / 2 * 0.82;
-    const px = cx + Math.cos(a) * rx;
-    const py = cy + Math.sin(a) * ry;
-    const lobeR = baseR * (i % 2 === 0 ? 1.0 : 0.72);
-    if(i === 0) ctx.moveTo(px + lobeR, py);
-    ctx.arc(px, py, lobeR, 0, Math.PI * 2);
+    const lcx = cx + Math.cos(a) * (w / 2) * 0.78;
+    const lcy = cy + Math.sin(a) * (h / 2) * 0.78;
+    const lr  = baseR * (i % 2 === 0 ? 1.0 : 0.78);
+    // 바깥쪽 향한 부분 호 (중심 → a 방향에서 ±arcSpan/2)
+    if(i === 0){
+      const sx = lcx + lr * Math.cos(a - arcSpan/2);
+      const sy = lcy + lr * Math.sin(a - arcSpan/2);
+      ctx.moveTo(sx, sy);
+    }
+    ctx.arc(lcx, lcy, lr, a - arcSpan/2, a + arcSpan/2, false);
   }
   ctx.closePath();
 }
@@ -14871,8 +14888,9 @@ function _teShapeCloud(ctx, x, y, w, h, p){
 //    동인지 표준(フラッシュフキダシ): 짧고 촘촘한 톱니가 중심 타원을 둘러쌈.
 function _teShapeFlash(ctx, x, y, w, h, p){
   const cx = x + w / 2, cy = y + h / 2;
-  const rays = (p && Number.isFinite(p.spikeCount)) ? Math.max(8, Math.min(64, p.spikeCount|0)) : 32;
-  const depth = (p && Number.isFinite(p.spikeDepth)) ? Math.max(0.45, Math.min(0.92, p.spikeDepth)) : 0.74;
+  // reference フラッシュフキダシ — 가는 바늘 56개 (이전 32개 → 더 hairy 느낌).
+  const rays = (p && Number.isFinite(p.spikeCount)) ? Math.max(8, Math.min(80, p.spikeCount|0)) : 56;
+  const depth = (p && Number.isFinite(p.spikeDepth)) ? Math.max(0.45, Math.min(0.92, p.spikeDepth)) : 0.80;
   const outerRx = w / 2, outerRy = h / 2;
   const innerRx = outerRx * depth, innerRy = outerRy * depth;
   ctx.beginPath();
@@ -14913,9 +14931,49 @@ function _teShapeHeart(ctx, x, y, w, h){
 //    (whisper 는 _teShapeRoundedRect 를 점선으로 그림)
 
 // ☁ 작은 속삭임 타원 (aside) — 작게 중얼거리는 대사. 부드러운 타원.
-function _teShapeEllipse(ctx, x, y, w, h){
+// ⬬ 타원 — reference 楕円フキダシ에 맞춰 우하단에 작은 꼬리 옵션.
+//    tailX/tailY 가 풍선 밖이면 자동 꼬리 합류, 풍선 안이면 순수 타원.
+function _teShapeEllipse(ctx, x, y, w, h, tailX, tailY){
+  const cx = x + w/2, cy = y + h/2;
+  const rx = w/2, ry = h/2;
+  // 꼬리 유무 — tailX/Y 가 타원 밖에 있을 때만 꼬리 추가
+  const hasTail = (tailX != null && tailY != null) && (() => {
+    const nx = (tailX - cx) / rx, ny = (tailY - cy) / ry;
+    return (nx*nx + ny*ny) > 1.05;
+  })();
+  if(!hasTail){
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.closePath();
+    return;
+  }
+  // 꼬리 부착 각도 (우하단 ~68°)
+  const tailA = Math.PI * 0.38;
+  const halfA = Math.PI * 0.06;
+  const startA = tailA - halfA;
+  const endA = tailA + halfA;
+  // 우측에서 시작 (a=0) 시계방향 타원 둘레, 꼬리 영역에서 path 우회.
+  const steps = 80;
   ctx.beginPath();
-  ctx.ellipse(x + w/2, y + h/2, w/2, h/2, 0, 0, Math.PI * 2);
+  let drewTail = false;
+  for(let i = 0; i <= steps; i++){
+    const a = (i / steps) * Math.PI * 2 - Math.PI / 2;   // 위에서 시작
+    if(a >= startA && a <= endA){
+      if(!drewTail){
+        const sx = cx + rx * Math.cos(startA), sy = cy + ry * Math.sin(startA);
+        const ex = cx + rx * Math.cos(endA),   ey = cy + ry * Math.sin(endA);
+        ctx.lineTo(sx, sy);
+        ctx.quadraticCurveTo(sx + (tailX - sx) * 0.25, sy + (tailY - sy) * 0.45, tailX, tailY);
+        ctx.quadraticCurveTo(ex + (tailX - ex) * 0.25, ey + (tailY - ey) * 0.45, ex, ey);
+        drewTail = true;
+      }
+      continue;
+    }
+    const px = cx + rx * Math.cos(a);
+    const py = cy + ry * Math.sin(a);
+    if(i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
   ctx.closePath();
 }
 
@@ -14952,7 +15010,7 @@ function _teDrawObj(ctx, obj, withHandles){
       else if(sh === 'thought') _teShapeThought(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY, pp);
       else if(sh === 'cloud') _teShapeCloud(ctx, obj.x, obj.y, obj.w, obj.h, pp);
       else if(sh === 'burst') _teShapeBurst(ctx, obj.x, obj.y, obj.w, obj.h, pp);
-      else if(sh === 'electric') _teShapeElectric(ctx, obj.x, obj.y, obj.w, obj.h);
+      else if(sh === 'electric') _teShapeElectric(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY);
       else if(sh === 'flash') _teShapeFlash(ctx, obj.x, obj.y, obj.w, obj.h, pp);
       else if(sh === 'urchin_flash') _teShapeFlash(ctx, obj.x, obj.y, obj.w, obj.h, pp);
       else if(sh === 'wavy') _teShapeWavy(ctx, obj.x, obj.y, obj.w, obj.h, b.tailX, b.tailY, pp);
