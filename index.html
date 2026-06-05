@@ -991,6 +991,20 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 #comicMakerModal .cm-autogen-eye{width:32px;height:32px;border:1.5px solid var(--b1);background:var(--bg);color:var(--t1);border-radius:4px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
 #comicMakerModal .cm-autogen-eye:hover{border-color:var(--acc);color:var(--acc)}
 #comicMakerModal .cm-autogen-tone{font-size:12px;padding:6px 8px}
+#comicMakerModal .cm-autogen-personarow{display:flex;gap:6px;align-items:center}
+#comicMakerModal .cm-autogen-persona{flex:1;font-size:12px;padding:6px 8px}
+/* 페르소나 모달 — 목록 카드 */
+#personaModal .pm-card{padding:8px 10px;background:var(--card);border:1.5px solid var(--b1);border-radius:5px;display:flex;flex-direction:column;gap:4px;transition:border-color .12s}
+#personaModal .pm-card:hover{border-color:var(--b2)}
+#personaModal .pm-card-head{display:flex;align-items:center;justify-content:space-between;gap:6px}
+#personaModal .pm-name{font-weight:700;color:var(--t1);font-size:13px}
+#personaModal .pm-card-acts{display:flex;gap:3px}
+#personaModal .pm-act-btn{background:transparent;border:none;cursor:pointer;color:var(--t3);padding:4px 7px;font-size:13px;border-radius:3px;line-height:1;min-width:28px;min-height:28px}
+#personaModal .pm-act-btn:hover{background:var(--bg);color:var(--t1)}
+#personaModal .pm-act-btn.danger:hover{color:var(--red);background:rgba(181,67,56,.1)}
+#personaModal .pm-fields{display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--t2);line-height:1.4}
+#personaModal .pm-field-label{color:var(--t3);font-weight:600;margin-right:4px;font-size:10.5px}
+#personaModal .pm-empty{padding:14px;text-align:center;color:var(--t3);font-size:12px;font-style:italic}
 #comicMakerModal .cm-quick-row{display:flex;gap:6px}
 #comicMakerModal .cm-quick-btn{flex:1;padding:9px 8px;font-size:12.5px}
 #comicMakerModal .cm-layout-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
@@ -3788,6 +3802,11 @@ coffee shop, latte art"></textarea>
               </div>
               <label class="cm-autogen-label">🎭 톤·스타일 (선택 — Gemini 에 추가 지시)</label>
               <input type="text" class="te-inp cm-autogen-tone" id="cmAutoDialogTone" placeholder="예: 일상 코미디 · 시리어스 액션 · 감성 드라마">
+              <label class="cm-autogen-label">🧑 캐릭터 페르소나 (성격·말투·배경) — 대사 일관성 ↑</label>
+              <div class="cm-autogen-personarow">
+                <select class="inp cm-autogen-persona" id="cmAutoPersonaSelect"><option value="">(없음)</option></select>
+                <button class="cm-autogen-eye" id="cmAutoPersonaMgr" type="button" title="페르소나 관리 (추가/편집/삭제)">⚙</button>
+              </div>
             </div>
             <div class="cm-autogen-actions">
               <button class="btn primary cm-autogen-btn" id="cmAutoStart" type="button">▶ 시작</button>
@@ -3855,6 +3874,34 @@ coffee shop, latte art"></textarea>
       <button class="btn ghost" id="cmAddBubbles" title="🅣 현재 페이지에 바로 말풍선·대사 얹기 (갤러리 중간 저장 없이 편집기로)">🅣 말풍선 얹기</button>
       <button class="btn ghost" id="cmSaveAllZip" title="📚 모든 페이지를 ZIP 한 파일로 다운로드 (책 단위 저장)">📚 책 ZIP <span class="en">Book</span></button>
       <button class="btn primary" id="cmSaveNew" title="현재 페이지를 갤러리에 새 이미지로 저장 · Ctrl+S">💾 갤러리에 저장 <span class="en">Save</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- 🧑 PERSONA MANAGER MODAL — 캐릭터 성격·말투·배경 프리셋 -->
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="personaTitle" id="personaModal">
+  <div class="modal" style="max-width:680px;width:100%;display:flex;flex-direction:column;max-height:88vh">
+    <h3 id="personaTitle">🧑 캐릭터 페르소나 <span class="en">Personas</span></h3>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1;min-height:0">
+      <div style="font-size:11.5px;color:var(--t3);line-height:1.5">
+        만화 자동 대사 생성 시 캐릭터의 성격·말투·배경을 Gemini 에 알려주면 대사가 일관성 있게 나옵니다.
+      </div>
+      <div id="personaList" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="personaForm" style="border:1.5px solid var(--b1);border-radius:6px;padding:10px;background:var(--card);display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:12px;font-weight:700;color:var(--acc)" id="personaFormTitle">➕ 새 페르소나</span>
+          <button class="btn ghost" id="personaCancelEdit" type="button" style="display:none;font-size:11px;padding:3px 8px">취소</button>
+        </div>
+        <input type="hidden" id="personaEditId">
+        <input type="text" class="inp" id="personaName" placeholder="이름 (예: 리나, 미키) — 필수" maxlength="40">
+        <textarea class="inp" id="personaPersonality" placeholder="성격 (예: 활발하고 호기심 많음, 가끔 덜렁댐)" rows="2" style="resize:vertical"></textarea>
+        <textarea class="inp" id="personaSpeech" placeholder="말투 (예: 반말, 어미 -야/-지. 종종 '아하!' 사용)" rows="2" style="resize:vertical"></textarea>
+        <textarea class="inp" id="personaBackground" placeholder="배경 (예: 도쿄 출신 17세 고등학생, 미술부)" rows="2" style="resize:vertical"></textarea>
+        <button class="btn primary" id="personaSaveBtn" type="button">💾 저장</button>
+      </div>
+    </div>
+    <div class="modal-foot" style="justify-content:flex-end">
+      <button class="btn ghost" id="personaCloseBtn" type="button">닫기 <span class="en">Close</span></button>
     </div>
   </div>
 </div>
@@ -10887,6 +10934,30 @@ async function saveWildcards(){
 }
 const _saveWildcardsDebounced = debounce(saveWildcards, 400);
 
+// 🎭 페르소나 (캐릭터 성격·말투·배경) — Gemini 대사 자동 생성에 컨텍스트로 주입.
+//    데이터: {id, name, personality, speech, background, createdAt}
+function _normalizePersona(p){
+  if(!p || typeof p !== 'object') return null;
+  const name = String(p.name || '').trim().slice(0, 40);
+  if(!name) return null;
+  return {
+    id: String(p.id || ('p_' + Math.random().toString(36).slice(2,10))),
+    name,
+    personality: String(p.personality || '').trim().slice(0, 400),
+    speech:      String(p.speech      || '').trim().slice(0, 400),
+    background:  String(p.background  || '').trim().slice(0, 400),
+    createdAt:   Number(p.createdAt) || Date.now(),
+  };
+}
+async function loadPersonas(){
+  const p = await DB.getFlag?.('personas');
+  state.personas = Array.isArray(p) ? p.map(_normalizePersona).filter(Boolean) : [];
+}
+async function savePersonas(){
+  await DB.setFlag?.('personas', (state.personas || []).map(_normalizePersona).filter(Boolean));
+}
+const _savePersonasDebounced = debounce(savePersonas, 400);
+
 // 🃏 한국어/공백/특수문자 → ASCII 슬러그 (와일드카드 이름은 [A-Za-z0-9_-] 만 허용).
 //    한글은 강제로 day → "day", 비면 카운터로 wc{N}. 충돌 시 _2,_3 부여.
 function _wcSlugifyName(raw, fallbackIdx){
@@ -16530,6 +16601,7 @@ async function _cmInit(){
   _cmSetLayout(CM_LAYOUTS[0].id);
   _cmUpdateUndoBtn();
   _cmRenderPageNav();   // 📚 F1: 페이지 네비 첫 표시
+  if(typeof _personaRefreshSelect === 'function') _personaRefreshSelect();   // 🧑 페르소나 select 동기화
   // 📱 디바이스별 안내 텍스트 (터치/마우스)
   const hint = $('cmStageHint');
   if(hint){
@@ -16846,20 +16918,140 @@ async function _cmSaveAllAsZip(){
   toast(`📚 ${safeBase}.zip 다운로드 (${usable.length}쪽)`, 'success');
 }
 
+// 🧑 페르소나 관리 ─────────────────────────────────────────────
+function _personaOpenModal(){
+  const m = document.getElementById('personaModal');
+  if(!m) return;
+  m.classList.add('open');
+  _personaResetForm();
+  _personaRenderList();
+}
+function _personaCloseModal(){
+  const m = document.getElementById('personaModal');
+  if(!m) return;
+  m.classList.remove('open');
+}
+function _personaResetForm(){
+  document.getElementById('personaEditId').value = '';
+  document.getElementById('personaName').value = '';
+  document.getElementById('personaPersonality').value = '';
+  document.getElementById('personaSpeech').value = '';
+  document.getElementById('personaBackground').value = '';
+  document.getElementById('personaFormTitle').textContent = '➕ 새 페르소나';
+  document.getElementById('personaCancelEdit').style.display = 'none';
+  document.getElementById('personaSaveBtn').textContent = '💾 저장';
+}
+function _personaLoadIntoForm(p){
+  document.getElementById('personaEditId').value = p.id;
+  document.getElementById('personaName').value = p.name || '';
+  document.getElementById('personaPersonality').value = p.personality || '';
+  document.getElementById('personaSpeech').value = p.speech || '';
+  document.getElementById('personaBackground').value = p.background || '';
+  document.getElementById('personaFormTitle').textContent = `✏ "${p.name}" 편집`;
+  document.getElementById('personaCancelEdit').style.display = '';
+  document.getElementById('personaSaveBtn').textContent = '💾 변경 저장';
+}
+function _personaRenderList(){
+  const root = document.getElementById('personaList');
+  if(!root) return;
+  const list = state.personas || [];
+  if(list.length === 0){
+    root.innerHTML = '<div class="pm-empty">아직 페르소나 없음 — 아래 폼에서 만들기</div>';
+    return;
+  }
+  root.innerHTML = list.map(p => `
+    <div class="pm-card">
+      <div class="pm-card-head">
+        <span class="pm-name">🧑 ${esc(p.name)}</span>
+        <div class="pm-card-acts">
+          <button class="pm-act-btn" data-persona-act="edit" data-persona-id="${esc(p.id)}" title="편집">✏</button>
+          <button class="pm-act-btn danger" data-persona-act="del" data-persona-id="${esc(p.id)}" title="삭제">🗑</button>
+        </div>
+      </div>
+      <div class="pm-fields">
+        ${p.personality ? `<div><span class="pm-field-label">성격:</span>${esc(p.personality)}</div>` : ''}
+        ${p.speech      ? `<div><span class="pm-field-label">말투:</span>${esc(p.speech)}</div>` : ''}
+        ${p.background  ? `<div><span class="pm-field-label">배경:</span>${esc(p.background)}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+async function _personaSave(){
+  const id = (document.getElementById('personaEditId').value || '').trim();
+  const name = (document.getElementById('personaName').value || '').trim();
+  if(!name){ toast('이름이 비어있어요', 'warning'); return; }
+  const draft = {
+    id: id || ('p_' + Math.random().toString(36).slice(2,10)),
+    name,
+    personality: (document.getElementById('personaPersonality').value || '').trim(),
+    speech:      (document.getElementById('personaSpeech').value || '').trim(),
+    background:  (document.getElementById('personaBackground').value || '').trim(),
+    createdAt:   Date.now(),
+  };
+  if(!Array.isArray(state.personas)) state.personas = [];
+  if(id){
+    const idx = state.personas.findIndex(p => p.id === id);
+    if(idx >= 0){ draft.createdAt = state.personas[idx].createdAt; state.personas[idx] = draft; }
+    else state.personas.push(draft);
+  } else {
+    // 중복 이름 방지 — 같은 이름 있으면 update 하지 않고 사용자에게 알림
+    if(state.personas.find(p => p.name === name)){
+      toast('같은 이름의 페르소나가 이미 있어요 (편집해 주세요)', 'warning'); return;
+    }
+    state.personas.push(draft);
+  }
+  await savePersonas();
+  _personaResetForm();
+  _personaRenderList();
+  _personaRefreshSelect();
+  toast(`🧑 "${name}" ${id?'수정':'추가'} 완료`, 'success');
+}
+async function _personaDelete(id){
+  const p = (state.personas || []).find(x => x.id === id);
+  if(!p) return;
+  confirmDialog(`"${p.name}" 페르소나를 삭제할까요?`, async () => {
+    state.personas = (state.personas || []).filter(x => x.id !== id);
+    await savePersonas();
+    _personaRenderList();
+    _personaRefreshSelect();
+    toast(`🗑 "${p.name}" 삭제됨`, 'info');
+  }, '🧑 페르소나 삭제');
+}
+// 만화 자동 대사 박스의 페르소나 select 옵션 동기화
+function _personaRefreshSelect(){
+  const sel = document.getElementById('cmAutoPersonaSelect');
+  if(!sel) return;
+  const cur = sel.value;
+  const list = state.personas || [];
+  sel.innerHTML = '<option value="">(없음)</option>' + list.map(p =>
+    `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+  // 이전 선택 복원 (해당 id 가 살아있을 때만)
+  if(cur && list.find(p => p.id === cur)) sel.value = cur;
+}
+
 // 🗨 F3: Gemini 대사 생성 ─────────────────────────────────────────
 //   장면 리스트 → 각 컷별 대사 1~2줄 배열 반환.
 //   브라우저에서 Gemini REST 직접 호출 (CORS 허용된 엔드포인트).
-async function _cmCallGeminiForDialogue(apiKey, scenes, tone){
+async function _cmCallGeminiForDialogue(apiKey, scenes, tone, persona){
   if(!apiKey) throw new Error('Gemini key missing');
   const lines = scenes.map((s, i) => `${i+1}. ${s || '(장면 설명 없음)'}`).join('\n');
-  const toneNote = tone ? `\n\n톤·스타일: ${tone}` : '';
+  const toneNote = tone ? `\n- 톤·스타일: ${tone}` : '';
+  // 🧑 페르소나 컨텍스트 — 있으면 캐릭터 성격·말투·배경을 시스템 프롬프트에 주입
+  let personaBlock = '';
+  if(persona && persona.name){
+    const parts = [];
+    if(persona.personality) parts.push(`성격: ${persona.personality}`);
+    if(persona.speech)      parts.push(`말투: ${persona.speech}`);
+    if(persona.background)  parts.push(`배경: ${persona.background}`);
+    personaBlock = `\n\n주인공 캐릭터: ${persona.name}\n${parts.join('\n')}\n위 캐릭터의 성격·말투에 맞게 대사를 작성하세요.`;
+  }
   const systemPrompt = `당신은 만화 대사 작가입니다. 아래 ${scenes.length}개의 만화 컷 장면에 어울리는 짧은 한국어 대사 또는 효과음을 각 컷마다 한 줄씩 만들어 주세요.
 
 규칙:
 - 한 줄에 최대 25자
 - 줄바꿈/번호 매김/따옴표 없이 순수 대사 텍스트만
 - 대사가 어색한 컷 (배경·풍경 등) 은 짧은 의성어·내레이션 ("쓰…", "(고요하다)" 등)
-- 반드시 ${scenes.length}줄 출력 (각 컷에 정확히 한 줄)${toneNote}
+- 반드시 ${scenes.length}줄 출력 (각 컷에 정확히 한 줄)${toneNote}${personaBlock}
 
 장면:
 ${lines}
@@ -17070,9 +17262,12 @@ async function _cmAutoMakeDialogues(targets, formOpts){
   const tone = ($('cmAutoDialogTone')?.value || '').trim();
   // 🃏 와일드카드 expanded 결과를 우선 사용 — Gemini 는 __name__ 토큰을 모름
   const scenes = pageTargets.map(t => t.sceneExpanded || t.scene);
+  // 🧑 선택된 페르소나 — Gemini 에 캐릭터 성격·말투·배경 주입
+  const personaId = ($('cmAutoPersonaSelect')?.value || '').trim();
+  const persona = personaId ? (state.personas || []).find(p => p.id === personaId) : null;
   let dialogues;
   try {
-    dialogues = await _cmCallGeminiForDialogue(apiKey, scenes, tone);
+    dialogues = await _cmCallGeminiForDialogue(apiKey, scenes, tone, persona);
   } catch(e){
     _swallow(e, 'cm:gemini');
     toast(`🗨 대사 생성 실패 — ${e?.message?.slice(0,80) || e}`, 'error');
@@ -17192,6 +17387,26 @@ function _cmWireOnce(){
   });
   $('cmAutoStart')?.addEventListener('click', () => _cmAutoStart());
   $('cmAutoStop')?.addEventListener('click', () => _cmAutoStop());
+  // 🧑 페르소나 — 관리 버튼 + select 첫 렌더
+  $('cmAutoPersonaMgr')?.addEventListener('click', () => _personaOpenModal());
+  _personaRefreshSelect();
+  document.getElementById('personaCloseBtn')?.addEventListener('click', () => _personaCloseModal());
+  document.getElementById('personaSaveBtn')?.addEventListener('click', () => _personaSave());
+  document.getElementById('personaCancelEdit')?.addEventListener('click', () => _personaResetForm());
+  document.getElementById('personaList')?.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-persona-act]'); if(!b) return;
+    const id = b.dataset.personaId; const act = b.dataset.personaAct;
+    if(act === 'edit'){
+      const p = (state.personas || []).find(x => x.id === id);
+      if(p) _personaLoadIntoForm(p);
+    } else if(act === 'del'){
+      _personaDelete(id);
+    }
+  });
+  // 페르소나 모달 ESC/배경 클릭 닫기
+  document.getElementById('personaModal')?.addEventListener('click', (e) => {
+    if(e.target.id === 'personaModal') _personaCloseModal();
+  });
   // 🗨 F3: "+ 대사도" 토글 → Gemini 키/톤 박스 보이기/숨기기 + 저장된 키 prefill
   $('cmAutoMakeDialog')?.addEventListener('change', async (e) => {
     const box = $('cmAutoDialogBox');
@@ -24149,6 +24364,7 @@ async function init(){
   await _bootStep('randomBuilderPresets', loadRandomBuilderPresets);
   await _bootStep('templates', tplLoadTemplates);
   await _bootStep('wildcards', loadWildcards);
+  await _bootStep('personas', loadPersonas);
   // 🃏 와일드카드 패널 열림 상태 복원
   try { const wasOpen = await DB.getFlag?.('wildcard_panel_open'); if(wasOpen) wildcardToggle(true); } catch(e){ _swallow(e, 'wc:restore'); }
   // 👎 시드 blocklist + auto 토글 복원
