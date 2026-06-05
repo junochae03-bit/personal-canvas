@@ -949,7 +949,15 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   #comicMakerModal .cm-pg-btn{width:30px;height:30px;font-size:13px}
 }
 
-/* COMIC PANEL MAKER MODAL — 🎞 만화 컷 만들기 */
+/* COMIC PANEL MAKER PANE — 🎞 만화 컷 만들기 (main-pane 통합) */
+/* main-pane.act 가 display:flex 라 .cm-pane 자체가 화면 가득 차게 됨.
+   기존 .modal 래퍼는 첫 진입 시 JS 가 마크업 이동·제거하므로 더 이상 매칭되지 않음.
+   안전을 위해 폴백 규칙도 함께 두어 미마이그레이션 상태에서도 깨지지 않게. */
+.main-pane.cm-pane{padding:0;display:none;height:100%;flex-direction:column;overflow:hidden}
+.main-pane.cm-pane.act{display:flex}
+.main-pane.cm-pane > h3{margin:0;padding:10px 14px;border-bottom:1.5px solid var(--b1);background:var(--card);font-size:14px}
+.main-pane.cm-pane > .cm-body{flex:1;min-height:0;padding:10px 14px}
+.main-pane.cm-pane > .cm-foot{flex-shrink:0;padding:10px 14px;border-top:1.5px solid var(--b1);background:var(--card)}
 #comicMakerModal .modal{max-width:96vw;max-height:94vh;width:1240px;display:flex;flex-direction:column}
 #comicMakerModal .cm-body{display:flex;flex-direction:row;gap:12px;flex:1;min-height:0;align-items:stretch;overflow:hidden}
 #comicMakerModal .cm-stage{flex:1;min-width:0;min-height:360px;background:#15110a;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:auto;border:1.5px solid var(--b2);border-radius:6px;position:relative;padding:12px;gap:8px}
@@ -2740,6 +2748,7 @@ mark{
     <div class="main-tabs">
       <button class="main-tab-btn act" data-pane="preview">미리보기 <span class="en">Preview</span></button>
       <button class="main-tab-btn" data-pane="gallery">갤러리 <span class="en">Gallery</span> <span class="badge" id="gallerySize">0</span></button>
+      <button class="main-tab-btn" data-pane="comic">🎞 만화 <span class="en">Comic</span></button>
       <button class="main-tab-btn" data-pane="presets">프리셋 <span class="en">Presets</span></button>
       <button class="main-tab-btn" data-pane="templates">템플릿 <span class="en">Templates</span></button>
       <button class="main-tab-btn" data-pane="tags">태그 도감 <span class="en">Tags</span></button>
@@ -2963,6 +2972,10 @@ mark{
         <div class="tag-body" id="tagBody"></div>
       </div>
 
+
+      <!-- 🎞 COMIC PANE — 만화 컷 만들기 (modal → 메인 페이지로 통합)
+           실제 내부 마크업은 첫 진입 시 #comicMakerLegacy 에서 이동됨. -->
+      <div class="main-pane cm-pane" data-pane="comic" id="comicMakerModal"></div>
 
       <!-- SETTINGS PANE — 설정 -->
       <div class="main-pane" data-pane="settings">
@@ -3711,9 +3724,11 @@ coffee shop, latte art"></textarea>
 </div>
 
 <!-- 🎞 COMIC PANEL MAKER MODAL — 만화 칸 만들기 + 갤러리 이미지 채우기 -->
-<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="comicMakerTitle" id="comicMakerModal">
+<!-- 🎞 만화 컷 — 페이지 통합 후 사용 안 함. 첫 모달 호출 시 JS 가 내부 마크업을
+     main-pane[data-pane="comic"] 안으로 이동 후 이 wrapper 를 DOM 에서 제거. -->
+<div style="display:none" id="comicMakerLegacy" role="presentation">
   <div class="modal cm-modal">
-    <h3 id="comicMakerTitle" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <h3 id="comicMakerTitleLegacy" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <span>🎞 만화 컷 만들기 <span class="en">Comic Panels</span></span>
       <span data-anlas-mirror class="anlas-mirror" title="현재 NAI 잔량 — 새 컷용 이미지 생성 계획에 참고"></span>
       <!-- 📚 F1: 다중 페이지 네비 -->
@@ -16439,11 +16454,37 @@ const _cmSaveStyle = debounce(async () => {
   } catch(e){ _swallow(e, 'cm:saveStyle'); }
 }, 600);
 
+// 🎞 첫 진입 시 legacy 모달 마크업 → main-pane 으로 이동 (한 번만).
+//   placeholder 가 비어있을 때만 이동 — 이후엔 no-op.
+function _cmMigrateLegacyMarkup(){
+  const pane = document.getElementById('comicMakerModal');
+  if(!pane || pane.children.length > 0) return;   // 이미 마이그레이션됨
+  const legacy = document.getElementById('comicMakerLegacy');
+  if(!legacy) return;
+  // legacy > .modal > {h3, .cm-body, .cm-foot} 를 그대로 옮김
+  const inner = legacy.querySelector('.modal.cm-modal');
+  if(!inner){ legacy.remove(); return; }
+  // h3 id 를 legacy 에서 정상으로 복구
+  const h3 = inner.querySelector('#comicMakerTitleLegacy');
+  if(h3) h3.id = 'comicMakerTitle';
+  while(inner.firstChild) pane.appendChild(inner.firstChild);
+  legacy.remove();
+}
+
+// 외부 호출자(라이트박스 등) 진입점 — setMainPane 만 트리거. 실제 init 은 setMainPane 의 'comic' 분기에서.
 async function openComicMakerModal(){
-  const modal = $('comicMakerModal');
-  if(!modal) return;
-  modal.classList.add('open');
+  _cmMigrateLegacyMarkup();
+  if(typeof setMainPane === 'function') setMainPane('comic');
+  else await _cmInit();   // setMainPane 미정의 시 폴백
+}
+
+// 만화 본체 init — setMainPane 안에서 호출. _cmState 가 null 일 때만.
+async function _cmInit(){
+  _cmMigrateLegacyMarkup();
+  const pane = document.getElementById('comicMakerModal');
+  if(!pane) return;
   const wrap = $('cmCanvasWrap');
+  if(!wrap) return;
   wrap.innerHTML = '';
   const cvs = document.createElement('canvas');
   const ctx = cvs.getContext('2d');
@@ -16500,7 +16541,7 @@ async function openComicMakerModal(){
   // ⌨ B5: 모달 open 동안만 document keydown 등록 (close 시 detach).
   const keydownHandler = (e) => {
     if(!_cmState) return;
-    if(!$('comicMakerModal').classList.contains('open')) return;
+    if(!document.getElementById('comicMakerModal')?.classList.contains('act')) return;
     const inField = e.target.matches('input, textarea, select');
     if(e.key === 'Escape' && !inField){ e.preventDefault(); $('cmCancel')?.click(); }
     else if((e.ctrlKey || e.metaKey) && e.key === 'z' && !inField){ e.preventDefault(); _cmUndo(); }
@@ -16668,7 +16709,8 @@ async function _cmCloseModal(){
   }
   const wrap = $('cmCanvasWrap');
   if(wrap) wrap.innerHTML = '';
-  $('comicMakerModal').classList.remove('open');
+  // 메인 페이지 탭에서 미리보기로 복귀 (기존 modal close 패턴 대체)
+  if(typeof setMainPane === 'function' && state?.mainPane === 'comic') setMainPane('preview');
 }
 
 async function _cmComposite(pageIdx){
@@ -18273,6 +18315,12 @@ function setMainPane(pane){
   else if(pane === 'presets'){ renderPresetTabs(); renderPresets(); }
   else if(pane === 'templates'){ tplRenderCatChips(); tplRenderRoll(); tplRenderSavedList(); }
   else if(pane === 'tags'){ loadDanbooruTags(); renderTagCats(); renderTagBody(); }
+  // 🎞 만화 페이지 진입 — _cmState 가 없을 때만 init (재진입 시 작업 유지)
+  else if(pane === 'comic' && typeof _cmInit === 'function'){
+    if(typeof window._cmState === 'undefined' || window._cmState === null){
+      _cmInit();
+    }
+  }
   // 페인 변경 이벤트 발행 — 캐릭터 네거티브 모드 등이 자동 해제 가능
   if(prev !== pane){
     // 🎲 RC 빌더 자동 닫힘 — 다른 메인 탭으로 이동 시 사이드바 정리 (사용자 보고: 거슬림)
