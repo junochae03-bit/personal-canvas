@@ -976,6 +976,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 #comicMakerModal .cm-autogen-actions{display:flex;align-items:center;gap:8px;margin-top:4px}
 #comicMakerModal .cm-autogen-btn{flex:1;padding:8px 10px;font-size:12.5px}
 #comicMakerModal .cm-autogen-prog{font-family:var(--mono);font-size:11px;color:var(--acc);font-weight:700;min-width:60px;text-align:right}
+/* 🗨 F3: 대사 자동 생성 (Gemini) */
+#comicMakerModal .cm-autogen-dialog{margin-top:6px;padding:8px 10px;background:var(--card);border:1.5px dashed var(--b1);border-radius:5px;display:flex;flex-direction:column;gap:6px}
+#comicMakerModal .cm-autogen-keyrow{display:flex;gap:6px}
+#comicMakerModal .cm-autogen-key{flex:1;font-size:12px;padding:6px 8px;font-family:var(--mono)}
+#comicMakerModal .cm-autogen-eye{width:32px;height:32px;border:1.5px solid var(--b1);background:var(--bg);color:var(--t1);border-radius:4px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+#comicMakerModal .cm-autogen-eye:hover{border-color:var(--acc);color:var(--acc)}
+#comicMakerModal .cm-autogen-tone{font-size:12px;padding:6px 8px}
 #comicMakerModal .cm-quick-row{display:flex;gap:6px}
 #comicMakerModal .cm-quick-btn{flex:1;padding:9px 8px;font-size:12.5px}
 #comicMakerModal .cm-layout-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
@@ -3752,6 +3759,20 @@ coffee shop, latte art"></textarea>
                 <input type="checkbox" id="cmAutoThisPage" checked>
                 <span>📄 이 페이지만</span>
               </label>
+              <label class="cm-autogen-opt" title="🗨 이미지 생성 후 Gemini 로 대사 자동 생성 → 텍스트 편집기 열며 말풍선으로 자동 배치">
+                <input type="checkbox" id="cmAutoMakeDialog">
+                <span>🗨 + 대사도</span>
+              </label>
+            </div>
+            <!-- 🗨 F3: 대사 생성 옵션 (📨 + 대사도 켤 때만 노출) -->
+            <div class="cm-autogen-dialog" id="cmAutoDialogBox" style="display:none">
+              <label class="cm-autogen-label">🔑 Gemini API 키 (한 번만 입력, 로컬 저장)</label>
+              <div class="cm-autogen-keyrow">
+                <input type="password" class="te-inp cm-autogen-key" id="cmAutoGeminiKey" placeholder="AIza... — aistudio.google.com 에서 발급">
+                <button class="cm-autogen-eye" id="cmAutoGeminiEye" type="button" title="키 보기">👁</button>
+              </div>
+              <label class="cm-autogen-label">🎭 톤·스타일 (선택 — Gemini 에 추가 지시)</label>
+              <input type="text" class="te-inp cm-autogen-tone" id="cmAutoDialogTone" placeholder="예: 일상 코미디 · 시리어스 액션 · 감성 드라마">
             </div>
             <div class="cm-autogen-actions">
               <button class="btn primary cm-autogen-btn" id="cmAutoStart" type="button">▶ 시작</button>
@@ -14528,6 +14549,34 @@ async function openTextEditModal(item){
   if(document.fonts?.ready){
     document.fonts.ready.then(() => { if(_teState) _teRender(); }).catch(e => _swallow(e, 'te:fontsReady'));
   }
+  // 🗨 F3: 만화 컷에서 자동 대사가 함께 넘어왔으면 panel 좌표에 맞춰 말풍선 자동 배치.
+  const autoBubbles = item?.meta?.autoBubbles;
+  const panelRects = item?.meta?.comic?.panelRects;
+  if(Array.isArray(autoBubbles) && autoBubbles.length && Array.isArray(panelRects) && panelRects.length){
+    let added = 0;
+    for(const ab of autoBubbles){
+      const rect = panelRects[ab.panelIdx];
+      if(!rect || !ab.text) continue;
+      const bw = Math.min(rect.w * 0.62, 360);
+      const bh = Math.min(rect.h * 0.24, 140);
+      const bx = rect.x + (rect.w - bw) / 2;
+      const by = rect.y + Math.max(rect.h * 0.04, 12);
+      const fontSize = Math.max(16, Math.round(rect.w * 0.038));
+      const bubble = _teMakeBubble('speech');
+      bubble.x = bx; bubble.y = by; bubble.w = bw; bubble.h = bh;
+      bubble.text = ab.text;
+      bubble.fontSize = fontSize;
+      // 꼬리 끝점 — 칸 하단 ~70% 지점 (캐릭터 입 부근으로 사용자가 옮기기 좋게)
+      bubble.bubble.tailX = rect.x + rect.w / 2;
+      bubble.bubble.tailY = rect.y + rect.h * 0.7;
+      _teState.objs.push(bubble);
+      added++;
+    }
+    if(added > 0){
+      _teRender();
+      _teRenderLayers();
+    }
+  }
   toast('🅣 편집기 — 텍스트/말풍선을 추가하세요', 'info');
 }
 
@@ -16655,7 +16704,7 @@ async function _cmComposite(pageIdx){
 
 // 🅣 만화 → 텍스트 편집기 직결 — 갤러리 중간 저장 없이 현재 합성본을 편집기 배경으로.
 //   편집기에서 말풍선 얹고 저장하면 그게 최종 결과물(mode:textedit, comic 메타 보존).
-async function _cmToTextEditor(){
+async function _cmToTextEditor(opts){
   if(!_cmState) return;
   const filledCount = _cmState.slots.filter(s => s?.img).length;
   if(filledCount === 0){ toast('빈 칸만 있어요 — 이미지를 먼저 채워주세요', 'warning'); return; }
@@ -16664,19 +16713,33 @@ async function _cmToTextEditor(){
   const userName = (($('cmSaveName')?.value) || '').trim().slice(0, 40);
   const layoutLabel = (_cmGetLayout(_cmState.layoutId)?.name || _cmState.layoutId);
   const baseLabel = userName || `만화_${layoutLabel}_${_cmDateStamp()}`;
-  // 합성본을 편집기 item 으로 — id 없음(중간 저장 X). meta 에 comic 정보 보존.
+  // 합성본을 편집기 item 으로 — id 없음(중간 저장 X). meta 에 comic 정보 + panel 좌표 보존.
+  //   🗨 F3: panels 좌표(x,y,w,h)와 autoBubbles 가 있으면 텍스트 편집기가 자동 배치.
   const item = {
     id: null,
     blob,
     fname: baseLabel.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_') + '.png',
     label: baseLabel,
     prompt: '',
-    meta: { mode: 'comic', comic: { layoutId: _cmState.layoutId, panels: _cmState.layout.panels.length, filled: filledCount }, w: _cmState.layout.w, h: _cmState.layout.h },
+    meta: {
+      mode: 'comic',
+      comic: {
+        layoutId: _cmState.layoutId,
+        panels: _cmState.layout.panels.length,
+        filled: filledCount,
+        panelRects: _cmState.layout.panels.map(p => ({x:p.x, y:p.y, w:p.w, h:p.h})),
+      },
+      w: _cmState.layout.w, h: _cmState.layout.h,
+      autoBubbles: Array.isArray(opts?.autoBubbles) ? opts.autoBubbles : null,
+    },
   };
   await _cmCloseModal();
   if(typeof openTextEditModal === 'function'){
     await openTextEditModal(item);
-    toast('🅣 말풍선·대사를 얹고 저장하세요', 'info', {timeoutMs: 4000});
+    const note = item.meta.autoBubbles?.length
+      ? `🗨 대사 ${item.meta.autoBubbles.length}개 자동 배치됨 — 위치·크기 조정 가능`
+      : '🅣 말풍선·대사를 얹고 저장하세요';
+    toast(note, 'info', {timeoutMs: 4500});
   } else {
     toast('편집기를 열 수 없습니다', 'error');
   }
@@ -16739,6 +16802,58 @@ async function _cmSaveAllAsZip(){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => { try { URL.revokeObjectURL(url); } catch(_){} }, 1500);
   toast(`📚 ${safeBase}.zip 다운로드 (${usable.length}쪽)`, 'success');
+}
+
+// 🗨 F3: Gemini 대사 생성 ─────────────────────────────────────────
+//   장면 리스트 → 각 컷별 대사 1~2줄 배열 반환.
+//   브라우저에서 Gemini REST 직접 호출 (CORS 허용된 엔드포인트).
+async function _cmCallGeminiForDialogue(apiKey, scenes, tone){
+  if(!apiKey) throw new Error('Gemini key missing');
+  const lines = scenes.map((s, i) => `${i+1}. ${s || '(장면 설명 없음)'}`).join('\n');
+  const toneNote = tone ? `\n\n톤·스타일: ${tone}` : '';
+  const systemPrompt = `당신은 만화 대사 작가입니다. 아래 ${scenes.length}개의 만화 컷 장면에 어울리는 짧은 한국어 대사 또는 효과음을 각 컷마다 한 줄씩 만들어 주세요.
+
+규칙:
+- 한 줄에 최대 25자
+- 줄바꿈/번호 매김/따옴표 없이 순수 대사 텍스트만
+- 대사가 어색한 컷 (배경·풍경 등) 은 짧은 의성어·내레이션 ("쓰…", "(고요하다)" 등)
+- 반드시 ${scenes.length}줄 출력 (각 컷에 정확히 한 줄)${toneNote}
+
+장면:
+${lines}
+
+각 컷 대사 (${scenes.length}줄, 줄바꿈 구분):`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const body = {
+    contents: [{ parts: [{ text: systemPrompt }] }],
+    generationConfig: { temperature: 0.85, maxOutputTokens: 800, topP: 0.95 },
+    // safetySettings: 만화 컨텍스트라 기본값 — 401/403 시 사용자에게 안내
+  };
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body),
+  });
+  if(!res.ok){
+    const errText = await res.text().catch(()=>'');
+    throw new Error(`Gemini ${res.status}: ${errText.slice(0,200)}`);
+  }
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  // 응답 파싱 — 줄 단위 split, 빈 줄 제거, 번호·따옴표 제거
+  const raw = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const cleaned = raw.map(l => l.replace(/^\d+[\.\)]\s*/, '').replace(/^["'「『]|["'」』]$/g, '').trim());
+  // 부족하면 빈 문자열로 padding, 초과는 자름
+  const out = [];
+  for(let i = 0; i < scenes.length; i++) out.push(cleaned[i] || '');
+  return out;
+}
+
+async function _cmLoadGeminiKey(){
+  try { return (await DB.getFlag?.('cm_gemini_key')) || ''; } catch(_){ return ''; }
+}
+async function _cmSaveGeminiKey(key){
+  try { await DB.setFlag?.('cm_gemini_key', key || ''); } catch(_){}
 }
 
 // 🤖 F2: AI 자동 생성 ─────────────────────────────────────────────
@@ -16874,15 +16989,57 @@ async function _cmAutoRun(apiKey, targets, formOpts, autoBase, lockSeed, seedRoo
       }
       done++; updateProg();
     }
-    if(_cmAutoRunning()){
+    const ranToEnd = _cmAutoRunning();
+    if(ranToEnd){
       toast(`🤖 자동 생성 완료 — ${done}/${total}`, 'success');
     } else {
       toast(`⏹ 중단됨 (${done}/${total})`, 'info');
+    }
+    // 🗨 F3: 끝까지 돌고 "+ 대사도" 체크되어 있으면 Gemini 대사 생성 → 텍스트 편집기로
+    if(ranToEnd && $('cmAutoMakeDialog')?.checked && done > 0){
+      await _cmAutoMakeDialogues(targets, formOpts);
     }
   } finally {
     _cmAutoAbort = null;
     _cmAutoUpdateUi();
   }
+}
+
+// 🗨 F3: 대사 생성 → 현재 페이지를 텍스트 편집기로 넘기며 말풍선 자동 배치
+async function _cmAutoMakeDialogues(targets, formOpts){
+  if(!_cmState) return;
+  const apiKey = ($('cmAutoGeminiKey')?.value || '').trim();
+  if(!apiKey){ toast('Gemini API 키가 비어있어요 (🗨 옵션 박스)', 'warning'); return; }
+  // 현재 페이지의 타겟만 추출 (편집기는 한 페이지씩 처리)
+  const curIdx = _cmState.currentPageIdx;
+  const pageTargets = targets.filter(t => t.pageIdx === curIdx);
+  if(pageTargets.length === 0){
+    toast('현재 페이지에 대사 생성할 컷이 없어요', 'info');
+    return;
+  }
+  toast(`🗨 ${pageTargets.length}컷 대사 Gemini 호출 중...`, 'info');
+  const tone = ($('cmAutoDialogTone')?.value || '').trim();
+  const scenes = pageTargets.map(t => t.scene);
+  let dialogues;
+  try {
+    dialogues = await _cmCallGeminiForDialogue(apiKey, scenes, tone);
+  } catch(e){
+    _swallow(e, 'cm:gemini');
+    toast(`🗨 대사 생성 실패 — ${e?.message?.slice(0,80) || e}`, 'error');
+    return;
+  }
+  // 키 영속화 (성공 시에만 — 잘못된 키 저장 방지)
+  await _cmSaveGeminiKey(apiKey);
+  // 텍스트 편집기로 넘기기 — meta.autoBubbles 에 (panelIdx → text) 매핑
+  const autoBubbles = pageTargets.map((t, i) => ({
+    panelIdx: t.slotIdx,
+    text: dialogues[i] || '',
+  })).filter(b => b.text);
+  if(autoBubbles.length === 0){
+    toast('생성된 대사가 모두 비어있어요', 'warning');
+    return;
+  }
+  await _cmToTextEditor({ autoBubbles });
 }
 
 function _cmAutoStop(){
@@ -16985,6 +17142,26 @@ function _cmWireOnce(){
   });
   $('cmAutoStart')?.addEventListener('click', () => _cmAutoStart());
   $('cmAutoStop')?.addEventListener('click', () => _cmAutoStop());
+  // 🗨 F3: "+ 대사도" 토글 → Gemini 키/톤 박스 보이기/숨기기 + 저장된 키 prefill
+  $('cmAutoMakeDialog')?.addEventListener('change', async (e) => {
+    const box = $('cmAutoDialogBox');
+    if(!box) return;
+    box.style.display = e.target.checked ? '' : 'none';
+    if(e.target.checked){
+      const keyInp = $('cmAutoGeminiKey');
+      if(keyInp && !keyInp.value){
+        const saved = await _cmLoadGeminiKey();
+        if(saved) keyInp.value = saved;
+      }
+    }
+  });
+  $('cmAutoGeminiEye')?.addEventListener('click', () => {
+    const inp = $('cmAutoGeminiKey');
+    if(!inp) return;
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  });
+  // 키 입력 시 자동 저장 (debounce 없이 매번 — 너무 짧은 키는 _cmAutoMakeDialogues 가 검증)
+  $('cmAutoGeminiKey')?.addEventListener('change', (e) => _cmSaveGeminiKey(e.target.value.trim()));
   // 📚 F1: 페이지 네비 클릭 핸들러 (event delegation)
   $('cmPageNav')?.addEventListener('click', (e) => {
     if(!_cmState) return;
