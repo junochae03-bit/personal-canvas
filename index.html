@@ -991,6 +991,11 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 #comicMakerModal .cm-autogen-eye{width:32px;height:32px;border:1.5px solid var(--b1);background:var(--bg);color:var(--t1);border-radius:4px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
 #comicMakerModal .cm-autogen-eye:hover{border-color:var(--acc);color:var(--acc)}
 #comicMakerModal .cm-autogen-tone{font-size:12px;padding:6px 8px}
+#comicMakerModal .cm-autogen-keynote{display:flex;align-items:center;gap:8px;padding:6px 9px;background:var(--card);border:1.5px solid var(--b1);border-radius:5px;font-size:11.5px;color:var(--t2)}
+#comicMakerModal .cm-autogen-keynote.ok{border-color:rgba(85,138,52,.35);color:var(--green,#5a8a34)}
+#comicMakerModal .cm-autogen-keynote.warn{border-color:rgba(181,67,56,.35);color:var(--red,#b54338)}
+#comicMakerModal .cm-autogen-keylink{margin-left:auto;background:var(--bg);border:1.5px solid var(--b1);color:var(--t1);font-size:11px;padding:3px 9px;border-radius:11px;cursor:pointer;font-family:inherit;transition:all .12s}
+#comicMakerModal .cm-autogen-keylink:hover{border-color:var(--acc);color:var(--acc)}
 #comicMakerModal .cm-autogen-personarow{display:flex;gap:6px;align-items:center}
 #comicMakerModal .cm-autogen-persona{flex:1;font-size:12px;padding:6px 8px}
 /* 페르소나 모달 — 목록 카드 */
@@ -3045,6 +3050,16 @@ mark{
               </div>
               <div id="apiKeyStatusSettings" class="desc" style="font-family:var(--mono);font-size:11.5px"></div>
             </div>
+            <div class="set-row" style="flex-direction:column;align-items:stretch;gap:8px">
+              <div class="label">🗨 Gemini API 키 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Dialogue Generator</span>
+                <div class="desc">만화 자동 대사 생성용 (선택). <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--acc);text-decoration:underline">aistudio.google.com</a> 에서 무료 발급. 한 번 입력하면 로컬에 저장됨.</div>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center">
+                <input id="geminiKeySettings" class="inp pw" type="password" aria-label="Gemini API 키" placeholder="AIza..." autocomplete="off" spellcheck="false" style="flex:1;min-width:0">
+                <button class="iconbtn" id="toggleGeminiKeySettings" title="키 보이기/숨기기" type="button">👁</button>
+              </div>
+              <div id="geminiKeyStatusSettings" class="desc" style="font-family:var(--mono);font-size:11.5px"></div>
+            </div>
             <div class="set-row">
               <div class="label">API 키 PIN 보호 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">PIN Lock</span>
                 <div class="desc">활성화 시 4~12자리 PIN으로 API 키를 추가 암호화. 매 세션마다 PIN 입력 필요.</div>
@@ -3802,10 +3817,9 @@ coffee shop, latte art"></textarea>
             </div>
             <!-- 🗨 F3: 대사 생성 옵션 (📨 + 대사도 켤 때만 노출) -->
             <div class="cm-autogen-dialog" id="cmAutoDialogBox" style="display:none">
-              <label class="cm-autogen-label">🔑 Gemini API 키 (한 번만 입력, 로컬 저장)</label>
-              <div class="cm-autogen-keyrow">
-                <input type="password" class="te-inp cm-autogen-key" id="cmAutoGeminiKey" placeholder="AIza... — aistudio.google.com 에서 발급">
-                <button class="cm-autogen-eye" id="cmAutoGeminiEye" type="button" title="키 보기">👁</button>
+              <div class="cm-autogen-keynote" id="cmAutoKeyNote">
+                <span id="cmAutoKeyStatus">🔑 Gemini 키 확인 중...</span>
+                <button class="cm-autogen-keylink" id="cmAutoKeyToSettings" type="button" title="설정 페이지로 이동">⚙ 설정</button>
               </div>
               <label class="cm-autogen-label">🎭 톤·스타일 (선택 — Gemini 에 추가 지시)</label>
               <input type="text" class="te-inp cm-autogen-tone" id="cmAutoDialogTone" placeholder="예: 일상 코미디 · 시리어스 액션 · 감성 드라마">
@@ -17253,11 +17267,26 @@ async function _cmAutoRun(apiKey, targets, formOpts, autoBase, lockSeed, seedRoo
   }
 }
 
+// 🗨 F3: 대사 박스 안의 키 상태 라벨 갱신 — 설정 페이지에 키 저장되어 있으면 '저장됨' 표시.
+async function _cmAutoRefreshKeyStatus(){
+  const lbl = $('cmAutoKeyStatus');
+  const box = $('cmAutoKeyNote');
+  if(!lbl || !box) return;
+  const saved = (await _cmLoadGeminiKey()) || '';
+  if(saved){
+    lbl.textContent = '✓ Gemini 키 저장됨 — 바로 사용 가능';
+    box.classList.add('ok'); box.classList.remove('warn');
+  } else {
+    lbl.textContent = '⚠ Gemini 키 미설정 — 우측 설정 버튼으로 입력';
+    box.classList.add('warn'); box.classList.remove('ok');
+  }
+}
+
 // 🗨 F3: 대사 생성 → 현재 페이지를 텍스트 편집기로 넘기며 말풍선 자동 배치
 async function _cmAutoMakeDialogues(targets, formOpts){
   if(!_cmState) return;
-  const apiKey = ($('cmAutoGeminiKey')?.value || '').trim();
-  if(!apiKey){ toast('Gemini API 키가 비어있어요 (🗨 옵션 박스)', 'warning'); return; }
+  const apiKey = (await _cmLoadGeminiKey()) || '';
+  if(!apiKey){ toast('Gemini API 키 미설정 — 설정 페이지에서 입력하세요', 'warning'); return; }
   // 현재 페이지의 타겟만 추출 (편집기는 한 페이지씩 처리)
   const curIdx = _cmState.currentPageIdx;
   const pageTargets = targets.filter(t => t.pageIdx === curIdx);
@@ -17414,26 +17443,24 @@ function _cmWireOnce(){
   document.getElementById('personaModal')?.addEventListener('click', (e) => {
     if(e.target.id === 'personaModal') _personaCloseModal();
   });
-  // 🗨 F3: "+ 대사도" 토글 → Gemini 키/톤 박스 보이기/숨기기 + 저장된 키 prefill
+  // 🗨 F3: "+ 대사도" 토글 → 박스 보이기/숨기기 + 저장된 키 상태 표시
   $('cmAutoMakeDialog')?.addEventListener('change', async (e) => {
     const box = $('cmAutoDialogBox');
     if(!box) return;
     box.style.display = e.target.checked ? '' : 'none';
-    if(e.target.checked){
-      const keyInp = $('cmAutoGeminiKey');
-      if(keyInp && !keyInp.value){
-        const saved = await _cmLoadGeminiKey();
-        if(saved) keyInp.value = saved;
+    if(e.target.checked) await _cmAutoRefreshKeyStatus();
+  });
+  // ⚙ 설정 페이지로 — Gemini 키 입력 영역
+  $('cmAutoKeyToSettings')?.addEventListener('click', () => {
+    if(typeof setMainPane === 'function') setMainPane('settings');
+    setTimeout(() => {
+      const inp = $('geminiKeySettings');
+      if(inp){
+        inp.scrollIntoView({block:'center', behavior:'smooth'});
+        inp.focus();
       }
-    }
+    }, 250);
   });
-  $('cmAutoGeminiEye')?.addEventListener('click', () => {
-    const inp = $('cmAutoGeminiKey');
-    if(!inp) return;
-    inp.type = inp.type === 'password' ? 'text' : 'password';
-  });
-  // 키 입력 시 자동 저장 (debounce 없이 매번 — 너무 짧은 키는 _cmAutoMakeDialogues 가 검증)
-  $('cmAutoGeminiKey')?.addEventListener('change', (e) => _cmSaveGeminiKey(e.target.value.trim()));
   // 📚 F1: 페이지 네비 클릭 핸들러 (event delegation)
   $('cmPageNav')?.addEventListener('click', (e) => {
     if(!_cmState) return;
@@ -19719,6 +19746,35 @@ function wireTopbarAndFormEvents(){
       await saveApiKey(k);
       toast('API 키 저장됨 — 잔량 확인 중', 'success');
       refreshAnlas();
+    });
+  }
+
+  // 🗨 설정 탭의 Gemini API 키 — DB.setFlag('cm_gemini_key') 영속화
+  if($('geminiKeySettings')){
+    // 부팅 시 저장된 키 prefill
+    (async () => {
+      try {
+        const saved = (await DB.getFlag?.('cm_gemini_key')) || '';
+        if(saved){
+          $('geminiKeySettings').value = saved;
+          if($('geminiKeyStatusSettings')) $('geminiKeyStatusSettings').textContent = '✓ 저장됨';
+        }
+      } catch(_){}
+    })();
+    const persist = async (val) => {
+      const cleaned = (val || '').replace(/[\s​‌‍﻿]/g, '').trim();
+      try { await DB.setFlag?.('cm_gemini_key', cleaned); } catch(_){}
+      if($('geminiKeyStatusSettings')){
+        $('geminiKeyStatusSettings').textContent = cleaned ? '✓ 저장됨' : '';
+      }
+      // 만화 페이지의 키 상태 라벨도 동기화 (열려있을 때)
+      if(typeof _cmAutoRefreshKeyStatus === 'function') _cmAutoRefreshKeyStatus();
+    };
+    $('geminiKeySettings').addEventListener('input', e => persist(e.target.value));
+    $('geminiKeySettings').addEventListener('paste', e => setTimeout(() => persist(e.target.value), 10));
+    $('toggleGeminiKeySettings')?.addEventListener('click', () => {
+      const i = $('geminiKeySettings');
+      i.type = (i.type === 'password') ? 'text' : 'password';
     });
   }
 
