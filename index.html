@@ -1010,6 +1010,23 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 #personaModal .pm-fields{display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--t2);line-height:1.4}
 #personaModal .pm-field-label{color:var(--t3);font-weight:600;margin-right:4px;font-size:10.5px}
 #personaModal .pm-empty{padding:14px;text-align:center;color:var(--t3);font-size:12px;font-style:italic}
+/* 🧑 프리셋 탭의 페르소나 카드 */
+.preset-card.pp-card{display:flex;flex-direction:column;gap:6px;padding:10px;background:var(--card);border:1.5px solid var(--b1);border-radius:6px;transition:all .12s}
+.preset-card.pp-card:hover{border-color:var(--acc);transform:translateY(-1px)}
+.preset-card.pp-add{display:flex;align-items:center;justify-content:center;background:var(--bg);border:2px dashed var(--b1);border-radius:6px;cursor:pointer;transition:all .12s;min-height:90px}
+.preset-card.pp-add:hover{border-color:var(--acc);background:rgba(214,160,80,.05)}
+.preset-card.pp-add .pp-add-inner{display:flex;flex-direction:column;align-items:center;gap:4px}
+.pp-card .pp-head{display:flex;align-items:center;gap:6px}
+.pp-card .pp-name{font-weight:700;color:var(--t1);font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pp-card .pp-fav{font-size:13px;cursor:pointer;color:var(--t3);transition:color .12s;user-select:none}
+.pp-card .pp-fav.on{color:var(--yellow,#d6a050)}
+.pp-card .pp-fav:hover{color:var(--acc)}
+.pp-card .pp-acts{display:flex;gap:2px}
+.pp-card .pp-btn{background:transparent;border:none;cursor:pointer;color:var(--t3);padding:3px 6px;font-size:12px;border-radius:3px;line-height:1;min-width:24px;min-height:24px}
+.pp-card .pp-btn:hover{background:var(--bg);color:var(--t1)}
+.pp-card .pp-btn.danger:hover{color:var(--red);background:rgba(181,67,56,.1)}
+.pp-card .pp-fields{display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--t2);line-height:1.4}
+.pp-card .pp-fields b{color:var(--t3);font-weight:600;margin-right:3px}
 #comicMakerModal .cm-quick-row{display:flex;gap:6px}
 #comicMakerModal .cm-quick-btn{flex:1;padding:9px 8px;font-size:12.5px}
 #comicMakerModal .cm-layout-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
@@ -4782,6 +4799,7 @@ const PRESET_TYPES = [
   {id:'pose',        label:'포즈',      en:'Pose',         ico:'🤸', target:'char-action'},
   {id:'mood',        label:'분위기',    en:'Mood',         ico:'✨', target:'append'},
   {id:'lighting',    label:'조명',      en:'Lighting',     ico:'💡', target:'append'},
+  {id:'persona',     label:'페르소나',  en:'Persona',      ico:'🧑', target:'persona'},
 ];
 
 // 한국어 이름 접두사 → 카테고리 매핑 (자동 분류용)
@@ -7540,7 +7558,8 @@ function renderPresetTabs(){
   const wrap = $('presetTabs');
   if(!wrap) return;
   wrap.innerHTML = PRESET_TYPES.map(t => {
-    const count = (state.presets[t.id]||[]).length;
+    // 🧑 persona 는 별도 저장소(state.personas) 사용
+    const count = t.id === 'persona' ? (state.personas||[]).length : (state.presets[t.id]||[]).length;
     const active = state.presetType === t.id ? ' act' : '';
     const badge = count ? ` <span style="font-family:var(--mono);font-size:10.5px;opacity:.75;font-weight:500">${count}</span>` : '';
     return `<button class="preset-tab${active}" data-ptype="${t.id}"><span class="ico">${t.ico}</span>${esc(t.label)}<span class="en">${esc(t.en)}</span>${badge}</button>`;
@@ -7897,6 +7916,8 @@ async function bulkClearPresetThumbs(){
 
 function renderPresets(){
   const type = state.presetType;
+  // 🧑 페르소나 — 별도 데이터 소스(state.personas) + 전용 카드 렌더
+  if(type === 'persona'){ _renderPersonaPresets(); return; }
   const search = ($('presetSearch').value||'').trim();
   let list = state.presets[type] || [];
   // ⭐ 즐겨찾기만 필터
@@ -10967,6 +10988,7 @@ function _normalizePersona(p){
     personality: String(p.personality || '').trim().slice(0, 400),
     speech:      String(p.speech      || '').trim().slice(0, 400),
     background:  String(p.background  || '').trim().slice(0, 400),
+    fav:         !!p.fav,
     createdAt:   Number(p.createdAt) || Date.now(),
   };
 }
@@ -16939,6 +16961,55 @@ async function _cmSaveAllAsZip(){
   toast(`📚 ${safeBase}.zip 다운로드 (${usable.length}쪽)`, 'success');
 }
 
+// 🧑 페르소나 — 프리셋 탭 전용 카드 렌더
+function _renderPersonaPresets(){
+  const search = (($('presetSearch')?.value)||'').trim().toLowerCase();
+  let list = state.personas || [];
+  if(state._presetFavOnly) list = list.filter(p => p.fav);
+  if(search){
+    list = list.filter(p =>
+      (p.name||'').toLowerCase().includes(search) ||
+      (p.personality||'').toLowerCase().includes(search) ||
+      (p.speech||'').toLowerCase().includes(search) ||
+      (p.background||'').toLowerCase().includes(search)
+    );
+  }
+  const total = (state.personas||[]).length;
+  const favCount = (state.personas||[]).filter(p => p.fav).length;
+  if($('presetInfo')) $('presetInfo').textContent = `${list.length}개 표시 / 전체 ${total}개${favCount?` · ⭐ ${favCount}`:''}`;
+  const grid = $('presetGrid');
+  if(!grid) return;
+  const addBtn = `
+    <div class="preset-card pp-add" data-pp-act="add">
+      <div class="pp-add-inner">
+        <span style="font-size:32px;line-height:1;color:var(--acc)">＋</span>
+        <span style="font-size:12px;color:var(--t2);font-weight:600">새 페르소나</span>
+      </div>
+    </div>`;
+  if(list.length === 0 && !search){
+    grid.innerHTML = addBtn + '<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--t3);font-size:12px;font-style:italic">아직 페르소나가 없어요 — 위 카드를 눌러 추가</div>';
+    return;
+  }
+  grid.innerHTML = addBtn + list.map(p => `
+    <div class="preset-card pp-card" data-pp-id="${esc(p.id)}">
+      <div class="pp-head">
+        <span class="pp-fav ${p.fav?'on':''}" data-pp-act="fav" title="즐겨찾기">⭐</span>
+        <span class="pp-name">🧑 ${esc(p.name)}</span>
+        <span class="pp-acts">
+          <button class="pp-btn" data-pp-act="edit" title="편집">✏</button>
+          <button class="pp-btn danger" data-pp-act="del" title="삭제">🗑</button>
+        </span>
+      </div>
+      <div class="pp-fields">
+        ${p.personality ? `<div><b>성격:</b> ${esc(p.personality)}</div>` : ''}
+        ${p.speech      ? `<div><b>말투:</b> ${esc(p.speech)}</div>`      : ''}
+        ${p.background  ? `<div><b>배경:</b> ${esc(p.background)}</div>`  : ''}
+        ${!(p.personality||p.speech||p.background) ? '<div style="color:var(--t3);font-style:italic">(상세 없음 — 편집해 채우세요)</div>' : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
 // 🧑 페르소나 관리 ─────────────────────────────────────────────
 function _personaOpenModal(){
   const m = document.getElementById('personaModal');
@@ -17025,6 +17096,9 @@ async function _personaSave(){
   _personaResetForm();
   _personaRenderList();
   _personaRefreshSelect();
+  // 프리셋 탭에 페르소나 보이면 그리드/탭 카운트도 갱신
+  if(state.presetType === 'persona' && typeof renderPresets === 'function') renderPresets();
+  if(typeof renderPresetTabs === 'function') renderPresetTabs();
   toast(`🧑 "${name}" ${id?'수정':'추가'} 완료`, 'success');
 }
 async function _personaDelete(id){
@@ -17035,6 +17109,8 @@ async function _personaDelete(id){
     await savePersonas();
     _personaRenderList();
     _personaRefreshSelect();
+    if(state.presetType === 'persona' && typeof renderPresets === 'function') renderPresets();
+    if(typeof renderPresetTabs === 'function') renderPresetTabs();
     toast(`🗑 "${p.name}" 삭제됨`, 'info');
   }, '🧑 페르소나 삭제');
 }
@@ -20655,6 +20731,33 @@ function wireGenerationAndPresetEvents(){
   // (옛 상단바 import/export 버튼 이벤트는 제거됨 — 모든 백업은 설정 탭에서 처리)
 
   $('presetGrid').addEventListener('click', async e => {
+    // 🧑 페르소나 카드 — 별도 흐름
+    if(state.presetType === 'persona'){
+      const ppBtn = e.target.closest('[data-pp-act]');
+      const ppCard = e.target.closest('[data-pp-id]');
+      if(!ppBtn) return;
+      const act = ppBtn.dataset.ppAct;
+      if(act === 'add'){
+        _personaResetForm();
+        _personaOpenModal();
+        return;
+      }
+      const id = ppCard?.dataset.ppId;
+      if(!id) return;
+      const p = (state.personas||[]).find(x => x.id === id);
+      if(!p) return;
+      if(act === 'edit'){
+        _personaOpenModal();
+        _personaLoadIntoForm(p);
+      } else if(act === 'del'){
+        _personaDelete(id);
+      } else if(act === 'fav'){
+        p.fav = !p.fav;
+        await savePersonas();
+        renderPresets();
+      }
+      return;
+    }
     // 📚 그룹 이름 변경 — ✏ 클릭
     const renameBtn = e.target.closest('[data-act="rename-group"]');
     if(renameBtn){
