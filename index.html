@@ -1516,12 +1516,14 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   body[data-mview="edit"] .sidebar{display:flex}
   body[data-mview="preview"] .sidebar,
   body[data-mview="gallery"] .sidebar,
+  body[data-mview="comic"] .sidebar,
   body[data-mview="presets"] .sidebar,
   body[data-mview="templates"] .sidebar,
   body[data-mview="tags"] .sidebar,
   body[data-mview="settings"] .sidebar{display:none}
   body[data-mview="preview"] .main-area,
   body[data-mview="gallery"] .main-area,
+  body[data-mview="comic"] .main-area,
   body[data-mview="presets"] .main-area,
   body[data-mview="templates"] .main-area,
   body[data-mview="tags"] .main-area,
@@ -1652,6 +1654,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   body[data-mview="edit"] .sidebar,
   body[data-mview="preview"] .main-area,
   body[data-mview="gallery"] .main-area,
+  body[data-mview="comic"] .main-area,
   body[data-mview="presets"] .main-area,
   body[data-mview="templates"] .main-area,
   body[data-mview="tags"] .main-area,
@@ -1662,6 +1665,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   body[data-mventer="right"][data-mview="edit"] .sidebar,
   body[data-mventer="right"][data-mview="preview"] .main-area,
   body[data-mventer="right"][data-mview="gallery"] .main-area,
+  body[data-mventer="right"][data-mview="comic"] .main-area,
   body[data-mventer="right"][data-mview="presets"] .main-area,
   body[data-mventer="right"][data-mview="templates"] .main-area,
   body[data-mventer="right"][data-mview="tags"] .main-area,
@@ -1671,6 +1675,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   body[data-mventer="left"][data-mview="edit"] .sidebar,
   body[data-mventer="left"][data-mview="preview"] .main-area,
   body[data-mventer="left"][data-mview="gallery"] .main-area,
+  body[data-mventer="left"][data-mview="comic"] .main-area,
   body[data-mventer="left"][data-mview="presets"] .main-area,
   body[data-mventer="left"][data-mview="templates"] .main-area,
   body[data-mventer="left"][data-mview="tags"] .main-area,
@@ -3086,7 +3091,7 @@ mark{
   <button class="mn-btn" data-mview="templates" type="button" aria-label="템플릿">
     <span class="mn-ico">🎨</span><span class="mn-lbl">템플릿</span>
   </button>
-  <button class="mn-btn" id="mnComicBtn" type="button" aria-label="만화 만들기" title="🎞 만화 칸 만들기 — 갤러리 이미지로 페이지 합성">
+  <button class="mn-btn" id="mnComicBtn" data-mview="comic" type="button" aria-label="만화 만들기" title="🎞 만화 칸 만들기 — 갤러리 이미지로 페이지 합성">
     <span class="mn-ico">🎞</span><span class="mn-lbl">만화</span>
   </button>
 </nav>
@@ -19731,10 +19736,7 @@ function wireTopbarAndFormEvents(){
     if(!b.dataset.mview) return;
     b.onclick = () => setMainPane(b.dataset.mview);
   });
-  // 🎞 모바일 만화 버튼 — pane 전환 X, 모달만 오픈
-  $('mnComicBtn')?.addEventListener('click', () => {
-    if(typeof openComicMakerModal === 'function') openComicMakerModal();
-  });
+  // 🎞 모바일 만화 버튼 — 이제 data-mview="comic" 으로 일반 mn-btn 흐름 사용 (setMainPane('comic'))
   // Section collapse
   document.addEventListener('click', e => {
     const t = e.target.closest('.sec-title');
