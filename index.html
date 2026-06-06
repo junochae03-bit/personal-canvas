@@ -3803,51 +3803,34 @@ coffee shop, latte art"></textarea>
             <button class="btn ghost cm-quick-btn" id="cmShuffleFill" title="현재 채워진 칸들의 순서를 무작위 셔플">🔀 셔플</button>
           </div>
         </div>
-        <!-- 🤖 F2: AI 자동 생성 — 칸마다 다른 프롬프트로 NAI 일괄 생성 -->
+        <!-- 🗨 대사 자동 생성 — Gemini 가 칸별 장면을 보고 페르소나 말투로 대사 작성 -->
         <div class="te-section cm-autogen">
-          <div class="te-section-title">🤖 AI 자동 생성 <span class="en">Auto Generate</span>
+          <div class="te-section-title">🗨 대사 자동 생성 <span class="en">Dialogue AI</span>
             <button class="cm-autogen-toggle open" id="cmAutoToggle" type="button" title="접기/펴기">▴</button>
           </div>
           <div class="cm-autogen-body" id="cmAutoBody">
-            <div class="cm-autogen-help">현재 NAI 폼의 설정·캐릭터·시드 그대로 사용. 칸별로 다른 장면 프롬프트만 추가.<br>🃏 <b>와일드카드 가능</b> — <code>__location__</code> · <code>__weather__</code> 같은 토큰을 쓰면 매 컷마다 다른 값으로 자동 치환.</div>
-            <label class="cm-autogen-label">📝 공통 베이스 (모든 컷 앞에 붙음 — 비우면 NAI 폼 프롬프트 사용)</label>
-            <textarea class="te-inp cm-autogen-base" id="cmAutoBase" rows="2" placeholder="예: masterpiece, best quality, 1girl, school uniform"></textarea>
-            <label class="cm-autogen-label">🎬 칸별 장면 (한 줄 = 한 칸 · 빈 줄은 NAI 폼의 베이스만)</label>
+            <div class="cm-autogen-help">칸별 장면을 한 줄씩 입력하면 Gemini 가 각 컷의 대사를 작성해 텍스트 편집기의 말풍선으로 배치합니다.<br>🧑 <b>페르소나</b> 선택 시 그 캐릭터의 성격·말투로 대사가 나옵니다.</div>
+            <div class="cm-autogen-keynote" id="cmAutoKeyNote">
+              <span id="cmAutoKeyStatus">🔑 Gemini 키 확인 중...</span>
+              <button class="cm-autogen-keylink" id="cmAutoKeyToSettings" type="button" title="설정 페이지로 이동">⚙ 설정</button>
+            </div>
+            <label class="cm-autogen-label">🧑 페르소나 (선택)</label>
+            <div class="cm-autogen-personarow">
+              <select class="inp cm-autogen-persona" id="cmAutoPersonaSelect"><option value="">(없음)</option></select>
+              <button class="cm-autogen-eye" id="cmAutoPersonaMgr" type="button" title="페르소나 관리">⚙</button>
+            </div>
+            <label class="cm-autogen-label">🎭 톤·스타일 (선택)</label>
+            <input type="text" class="te-inp cm-autogen-tone" id="cmAutoDialogTone" placeholder="예: 일상 코미디 · 시리어스 액션 · 감성 드라마">
+            <label class="cm-autogen-label">🎬 칸별 장면 (한 줄 = 한 칸 · 필수)</label>
             <textarea class="te-inp cm-autogen-scenes" id="cmAutoScenes" rows="4" placeholder="1. 교실에서 책 펴는 모습&#10;2. 창밖 바라보는 옆얼굴&#10;3. 친구와 웃는 클로즈업&#10;4. 가방 메고 일어서는 뒷모습"></textarea>
             <div class="cm-autogen-opts">
-              <label class="cm-autogen-opt" title="모든 컷이 같은 시드 사용 — 캐릭터 일관성↑">
-                <input type="checkbox" id="cmAutoLockSeed" checked>
-                <span>🌱 시드 고정</span>
-              </label>
-              <label class="cm-autogen-opt" title="빈 칸만 생성 — OFF 면 채워진 칸도 덮어씀 (위험)">
-                <input type="checkbox" id="cmAutoEmptyOnly" checked>
-                <span>🪺 빈 칸만</span>
-              </label>
-              <label class="cm-autogen-opt" title="현재 페이지만 — OFF 면 모든 페이지 일괄 생성 (Anlas 주의)">
+              <label class="cm-autogen-opt" title="현재 페이지만 — OFF 면 모든 페이지 일괄">
                 <input type="checkbox" id="cmAutoThisPage" checked>
                 <span>📄 이 페이지만</span>
               </label>
-              <label class="cm-autogen-opt" title="🗨 이미지 생성 후 Gemini 로 대사 자동 생성 → 텍스트 편집기 열며 말풍선으로 자동 배치">
-                <input type="checkbox" id="cmAutoMakeDialog">
-                <span>🗨 + 대사도</span>
-              </label>
-            </div>
-            <!-- 🗨 F3: 대사 생성 옵션 (📨 + 대사도 켤 때만 노출) -->
-            <div class="cm-autogen-dialog" id="cmAutoDialogBox" style="display:none">
-              <div class="cm-autogen-keynote" id="cmAutoKeyNote">
-                <span id="cmAutoKeyStatus">🔑 Gemini 키 확인 중...</span>
-                <button class="cm-autogen-keylink" id="cmAutoKeyToSettings" type="button" title="설정 페이지로 이동">⚙ 설정</button>
-              </div>
-              <label class="cm-autogen-label">🎭 톤·스타일 (선택 — Gemini 에 추가 지시)</label>
-              <input type="text" class="te-inp cm-autogen-tone" id="cmAutoDialogTone" placeholder="예: 일상 코미디 · 시리어스 액션 · 감성 드라마">
-              <label class="cm-autogen-label">🧑 캐릭터 페르소나 (성격·말투·배경) — 대사 일관성 ↑</label>
-              <div class="cm-autogen-personarow">
-                <select class="inp cm-autogen-persona" id="cmAutoPersonaSelect"><option value="">(없음)</option></select>
-                <button class="cm-autogen-eye" id="cmAutoPersonaMgr" type="button" title="페르소나 관리 (추가/편집/삭제)">⚙</button>
-              </div>
             </div>
             <div class="cm-autogen-actions">
-              <button class="btn primary cm-autogen-btn" id="cmAutoStart" type="button">▶ 시작</button>
+              <button class="btn primary cm-autogen-btn" id="cmAutoStart" type="button">▶ 대사 생성</button>
               <button class="btn ghost cm-autogen-btn" id="cmAutoStop" type="button" style="display:none">⏹ 중단</button>
               <span class="cm-autogen-prog" id="cmAutoProg"></span>
             </div>
@@ -16645,6 +16628,7 @@ async function _cmInit(){
   _cmUpdateUndoBtn();
   _cmRenderPageNav();   // 📚 F1: 페이지 네비 첫 표시
   if(typeof _personaRefreshSelect === 'function') _personaRefreshSelect();   // 🧑 페르소나 select 동기화
+  if(typeof _cmAutoRefreshKeyStatus === 'function') _cmAutoRefreshKeyStatus();   // 🗨 Gemini 키 상태 표시
   // 📱 디바이스별 안내 텍스트 (터치/마우스)
   const hint = $('cmStageHint');
   if(hint){
@@ -17199,9 +17183,9 @@ function _cmAutoUpdateUi(){
 }
 
 function _cmAutoCollectTargets(){
-  // (pageIdx, slotIdx, sceneLine) 리스트 수집
+  // 채워진 칸만 대상 — 대사는 이미지 있는 칸에만 의미.
+  // (pageIdx, slotIdx, sceneLine) 리스트.
   if(!_cmState) return [];
-  const emptyOnly = $('cmAutoEmptyOnly')?.checked !== false;
   const thisPage  = $('cmAutoThisPage')?.checked !== false;
   const scenes = ($('cmAutoScenes')?.value || '').split(/\r?\n/).map(l => l.trim());
   const out = [];
@@ -17211,7 +17195,7 @@ function _cmAutoCollectTargets(){
     const page = _cmState.pages[pi];
     for(let si = 0; si < page.slots.length; si++){
       const slot = page.slots[si];
-      if(emptyOnly && slot?.img) continue;
+      if(!slot?.img) continue;   // 채워진 칸만
       const line = scenes[sceneCursor++] || '';
       out.push({ pageIdx: pi, slotIdx: si, scene: line });
     }
@@ -17219,127 +17203,30 @@ function _cmAutoCollectTargets(){
   return out;
 }
 
+// 🗨 대사 자동 생성 — 칸별 장면 → Gemini → 텍스트 편집기 말풍선
 async function _cmAutoStart(){
   if(!_cmState || _cmAutoRunning()) return;
-  // API 키 확인
-  const apiKey = (state.apiKey || $('apiKey')?.value || '').trim();
-  if(!apiKey){ toast('NAI API 키가 설정 안 됨 — 설정에서 등록 후 다시', 'error'); return; }
-  // 타겟 수집
+  // 칸 채워져 있는지 확인 — 빈 만화는 대사 무의미
+  const filled = _cmState.slots.filter(s => s?.img).length;
+  if(filled === 0){ toast('만화 칸이 비어있어요 — 먼저 이미지를 채워주세요', 'warning'); return; }
+  // 타겟 수집 — 현재 페이지 옵션 따라
   const targets = _cmAutoCollectTargets();
   if(targets.length === 0){ toast('대상 칸이 없어요', 'info'); return; }
-  // 베이스 프롬프트 결정 — autoBase 우선, 비어있으면 NAI 폼의 prompt
-  const formOpts = (typeof currentPromptOpts === 'function') ? currentPromptOpts() : null;
-  if(!formOpts){ toast('NAI 폼 설정을 가져올 수 없어요', 'error'); return; }
-  const autoBase = ($('cmAutoBase')?.value || '').trim();
-  const baseText = autoBase || (formOpts.prompt || '').trim();
-  if(!baseText){
-    toast('베이스 프롬프트가 비어있어요 (NAI 폼이나 위 텍스트박스에 입력)', 'warning');
+  // 장면 입력 검증
+  const scenes = ($('cmAutoScenes')?.value || '').split(/\r?\n/).map(l => l.trim());
+  if(!scenes.some(Boolean)){
+    toast('🎬 칸별 장면이 비어있어요 — 한 줄에 한 칸씩 입력하세요', 'warning');
     return;
   }
-  // 시드 결정
-  const lockSeed = $('cmAutoLockSeed')?.checked !== false;
-  const seedRoot = lockSeed
-    ? (Number.isInteger(formOpts.seed) && formOpts.seed > 0
-        ? formOpts.seed
-        : (typeof randomSeed === 'function' ? randomSeed() : Math.floor(Math.random() * 2_147_483_647)))
-    : null;
-  // 대량 생성 경고 — 6장 초과면 확인. confirmDialog 는 onOk 만 지원 → 분기 nesting.
-  if(targets.length > 6){
-    confirmDialog(
-      `${targets.length}장 생성 — Anlas 가 소모됩니다. 계속할까요?`,
-      () => _cmAutoRun(apiKey, targets, formOpts, autoBase, lockSeed, seedRoot),
-      '🤖 AI 자동 생성'
-    );
-    return;
-  }
-  await _cmAutoRun(apiKey, targets, formOpts, autoBase, lockSeed, seedRoot);
-}
-
-// 큐 본체 — confirm 분기와 직접 호출 양쪽에서 진입.
-async function _cmAutoRun(apiKey, targets, formOpts, autoBase, lockSeed, seedRoot){
-  if(_cmAutoRunning()) return;
-  if(!_cmState) return;
-  const baseText = (autoBase || (formOpts.prompt || '').trim());
   _cmAutoAbort = new AbortController();
   _cmAutoUpdateUi();
-  let done = 0;
-  const total = targets.length;
-  const updateProg = () => {
-    const el = $('cmAutoProg');
-    if(el) el.textContent = `${done} / ${total}`;
-  };
-  updateProg();
-  toast(`🤖 자동 생성 시작 (${total}장)`, 'info');
+  if($('cmAutoProg')) $('cmAutoProg').textContent = `Gemini 호출 중...`;
   try {
-    for(const t of targets){
-      if(!_cmAutoRunning()) break;
-      if(!_cmState) break;
-      // 페이지 전환 (다른 페이지일 때)
-      if(t.pageIdx !== _cmState.currentPageIdx) _cmSwitchPage(t.pageIdx);
-      // 🃏 와일드카드 — baseText / scene 의 __name__ 을 매 컷마다 새로 expand.
-      //    buildGenBody 도 한 번 더 expand 하지만 이미 토큰이 없으니 no-op.
-      //    expanded 값을 t 에 저장해서 _cmAutoMakeDialogues 가 Gemini 에 같은 텍스트를 보냄.
-      const wcExpand = (typeof expandWildcards === 'function' && typeof _resolveWildcard === 'function')
-        ? (txt) => expandWildcards(txt || '', _resolveWildcard) : (txt) => txt;
-      const baseExp  = wcExpand(baseText);
-      const sceneExp = t.scene ? wcExpand(t.scene) : '';
-      t.sceneExpanded = sceneExp;
-      const prompt = sceneExp ? `${baseExp}, ${sceneExp}` : baseExp;
-      // 시드: 고정이면 seedRoot, 아니면 매번 새 랜덤
-      const seed = lockSeed
-        ? seedRoot
-        : (typeof randomSeed === 'function' ? randomSeed() : Math.floor(Math.random() * 2_147_483_647));
-      const opts = { ...formOpts, prompt, seed };
-      const body = (typeof buildGenBody === 'function') ? buildGenBody({...opts, action:'generate'}) : null;
-      if(!body){ throw new Error('buildGenBody 사용 불가'); }
-      let blob;
-      try {
-        blob = await naiGenerate(apiKey, body, _cmAutoAbort.signal);
-      } catch(e){
-        if(_cmAutoAbort?.signal?.aborted) break;
-        _swallow(e, 'cm:auto:gen');
-        toast(`⚠ ${done+1}/${total} 생성 실패 — 다음 컷 계속`, 'warning');
-        done++; updateProg();
-        continue;
-      }
-      // 슬롯 채움 (B1 패턴)
-      const url = URL.createObjectURL(blob);
-      try {
-        const img = new Image();
-        await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
-        if(!_cmState){ URL.revokeObjectURL(url); break; }
-        _cmPushUndo();
-        const page = _cmState.pages[t.pageIdx];
-        if(!page){ URL.revokeObjectURL(url); continue; }
-        page.slots[t.slotIdx] = {
-          blob, img, url,
-          offsetX: 0.5, offsetY: 0.5,
-          zoom: 1, rotate: 0, flipH: false, grayscale: false,
-        };
-        if(t.pageIdx === _cmState.currentPageIdx){
-          _cmRender();
-          _cmRenderSlotList();
-        }
-        _cmUpdateStatus();
-      } catch(e){
-        URL.revokeObjectURL(url);
-        _swallow(e, 'cm:auto:load');
-      }
-      done++; updateProg();
-    }
-    const ranToEnd = _cmAutoRunning();
-    if(ranToEnd){
-      toast(`🤖 자동 생성 완료 — ${done}/${total}`, 'success');
-    } else {
-      toast(`⏹ 중단됨 (${done}/${total})`, 'info');
-    }
-    // 🗨 F3: 끝까지 돌고 "+ 대사도" 체크되어 있으면 Gemini 대사 생성 → 텍스트 편집기로
-    if(ranToEnd && $('cmAutoMakeDialog')?.checked && done > 0){
-      await _cmAutoMakeDialogues(targets, formOpts);
-    }
+    await _cmAutoMakeDialogues(targets);
   } finally {
     _cmAutoAbort = null;
     _cmAutoUpdateUi();
+    if($('cmAutoProg')) $('cmAutoProg').textContent = '';
   }
 }
 
@@ -17358,8 +17245,8 @@ async function _cmAutoRefreshKeyStatus(){
   }
 }
 
-// 🗨 F3: 대사 생성 → 현재 페이지를 텍스트 편집기로 넘기며 말풍선 자동 배치
-async function _cmAutoMakeDialogues(targets, formOpts){
+// 🗨 대사 생성 → 현재 페이지를 텍스트 편집기로 넘기며 말풍선 자동 배치
+async function _cmAutoMakeDialogues(targets){
   if(!_cmState) return;
   const apiKey = (await _cmLoadGeminiKey()) || '';
   if(!apiKey){ toast('Gemini API 키 미설정 — 설정 페이지에서 입력하세요', 'warning'); return; }
@@ -17518,13 +17405,6 @@ function _cmWireOnce(){
   // 페르소나 모달 ESC/배경 클릭 닫기
   document.getElementById('personaModal')?.addEventListener('click', (e) => {
     if(e.target.id === 'personaModal') _personaCloseModal();
-  });
-  // 🗨 F3: "+ 대사도" 토글 → 박스 보이기/숨기기 + 저장된 키 상태 표시
-  $('cmAutoMakeDialog')?.addEventListener('change', async (e) => {
-    const box = $('cmAutoDialogBox');
-    if(!box) return;
-    box.style.display = e.target.checked ? '' : 'none';
-    if(e.target.checked) await _cmAutoRefreshKeyStatus();
   });
   // ⚙ 설정 페이지로 — Gemini 키 입력 영역
   $('cmAutoKeyToSettings')?.addEventListener('click', () => {
