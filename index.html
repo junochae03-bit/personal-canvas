@@ -3915,9 +3915,14 @@ coffee shop, latte art"></textarea>
         </div>
         <input type="hidden" id="personaEditId">
         <input type="text" class="inp" id="personaName" placeholder="이름 (예: 리나, 미키) — 필수" maxlength="40">
+        <div style="display:flex;gap:6px;align-items:stretch">
+          <input type="text" class="inp" id="personaAiHint" placeholder="컨셉 힌트 (선택 — 예: 차분한 도서부장, 츤데레 부잣집 아가씨)" style="flex:1;min-width:0">
+          <button class="btn ghost" id="personaAiGenBtn" type="button" title="🪄 Gemini 로 성격·말투·배경 자동 작성" style="font-size:11px;padding:6px 10px;white-space:nowrap">🪄 AI 작성</button>
+        </div>
         <textarea class="inp" id="personaPersonality" placeholder="성격 (예: 활발하고 호기심 많음, 가끔 덜렁댐)" rows="2" style="resize:vertical"></textarea>
         <textarea class="inp" id="personaSpeech" placeholder="말투 (예: 반말, 어미 -야/-지. 종종 '아하!' 사용)" rows="2" style="resize:vertical"></textarea>
         <textarea class="inp" id="personaBackground" placeholder="배경 (예: 도쿄 출신 17세 고등학생, 미술부)" rows="2" style="resize:vertical"></textarea>
+        <div id="personaAiNote" class="desc" style="font-size:10.5px;color:var(--t3);font-style:italic;display:none"></div>
         <button class="btn primary" id="personaSaveBtn" type="button">💾 저장</button>
       </div>
     </div>
@@ -17010,9 +17015,11 @@ function _personaCloseModal(){
 function _personaResetForm(){
   document.getElementById('personaEditId').value = '';
   document.getElementById('personaName').value = '';
+  const hint = document.getElementById('personaAiHint'); if(hint) hint.value = '';
   document.getElementById('personaPersonality').value = '';
   document.getElementById('personaSpeech').value = '';
   document.getElementById('personaBackground').value = '';
+  const note = document.getElementById('personaAiNote'); if(note){ note.style.display = 'none'; note.textContent = ''; }
   document.getElementById('personaFormTitle').textContent = '➕ 새 페르소나';
   document.getElementById('personaCancelEdit').style.display = 'none';
   document.getElementById('personaSaveBtn').textContent = '💾 저장';
@@ -17108,6 +17115,82 @@ function _personaRefreshSelect(){
     `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
   // 이전 선택 복원 (해당 id 가 살아있을 때만)
   if(cur && list.find(p => p.id === cur)) sel.value = cur;
+}
+
+// 🪄 페르소나 자동 작성 — Gemini 에 이름·힌트 주고 성격·말투·배경 받기
+async function _personaCallGemini(apiKey, name, hint){
+  if(!apiKey) throw new Error('Gemini key missing');
+  if(!name) throw new Error('이름 필수');
+  const systemPrompt = `다음 만화 캐릭터의 페르소나를 작성하세요.
+
+이름: ${name}
+컨셉 힌트: ${hint || '(없음 — 자유롭게 창작)'}
+
+규칙:
+- 한국어로 작성
+- 각 필드는 한 줄 (줄바꿈 X)
+- personality: 성격 (40자 이내, 구체적 — "활발 호기심 많음, 가끔 덜렁댐" 식)
+- speech: 말투 (60자 이내, 어미·습관어 구체적 — "반말, 어미 '-야/-지', 종종 '아하!' 외침")
+- background: 배경 (80자 이내, 나이·직업·환경)
+
+순수 JSON 만 출력하세요 (코드블럭·설명 X):
+{"personality":"...","speech":"...","background":"..."}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      contents: [{ parts:[{ text: systemPrompt }] }],
+      generationConfig: { temperature: 0.9, maxOutputTokens: 600, topP: 0.95 },
+    }),
+  });
+  if(!res.ok){
+    const errText = await res.text().catch(()=>'');
+    throw new Error(`Gemini ${res.status}: ${errText.slice(0,200)}`);
+  }
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  // 코드블럭 wrapper 제거 + JSON 파싱
+  const cleaned = text.replace(/```json\s*|\s*```/g, '').trim();
+  // 첫 { 부터 마지막 } 까지만 추출
+  const start = cleaned.indexOf('{');
+  const end   = cleaned.lastIndexOf('}');
+  if(start < 0 || end < 0) throw new Error('Gemini 응답 파싱 실패');
+  let parsed;
+  try { parsed = JSON.parse(cleaned.slice(start, end+1)); }
+  catch(e){ throw new Error('Gemini JSON 파싱 실패: ' + (e.message||e)); }
+  return {
+    personality: String(parsed.personality || '').trim().slice(0, 200),
+    speech:      String(parsed.speech      || '').trim().slice(0, 200),
+    background:  String(parsed.background  || '').trim().slice(0, 200),
+  };
+}
+
+async function _personaAiGenerate(){
+  const apiKey = (await _cmLoadGeminiKey()) || '';
+  if(!apiKey){ toast('Gemini 키 미설정 — 설정에서 입력하세요', 'warning'); return; }
+  const name = (document.getElementById('personaName').value || '').trim();
+  if(!name){ toast('이름을 먼저 입력하세요', 'warning'); return; }
+  const hint = (document.getElementById('personaAiHint').value || '').trim();
+  const btn = document.getElementById('personaAiGenBtn');
+  const note = document.getElementById('personaAiNote');
+  const orig = btn?.textContent;
+  if(btn){ btn.disabled = true; btn.textContent = '🪄 생성 중...'; }
+  if(note){ note.style.display = ''; note.textContent = 'Gemini 호출 중...'; }
+  try {
+    const out = await _personaCallGemini(apiKey, name, hint);
+    document.getElementById('personaPersonality').value = out.personality;
+    document.getElementById('personaSpeech').value = out.speech;
+    document.getElementById('personaBackground').value = out.background;
+    if(note){ note.textContent = '✓ 검토 후 💾 저장 (필요시 직접 수정)'; }
+    toast('🪄 페르소나 자동 작성 완료', 'success');
+  } catch(e){
+    _swallow(e, 'persona:ai');
+    if(note){ note.textContent = '⚠ ' + (e?.message?.slice(0,100) || e); }
+    toast('자동 작성 실패 — ' + (e?.message?.slice(0,80) || e), 'error');
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = orig || '🪄 AI 작성'; }
+  }
 }
 
 // 🗨 F3: Gemini 대사 생성 ─────────────────────────────────────────
@@ -17392,6 +17475,8 @@ function _cmWireOnce(){
   document.getElementById('personaCloseBtn')?.addEventListener('click', () => _personaCloseModal());
   document.getElementById('personaSaveBtn')?.addEventListener('click', () => _personaSave());
   document.getElementById('personaCancelEdit')?.addEventListener('click', () => _personaResetForm());
+  // 🪄 페르소나 AI 자동 작성
+  document.getElementById('personaAiGenBtn')?.addEventListener('click', () => _personaAiGenerate());
   document.getElementById('personaList')?.addEventListener('click', (e) => {
     const b = e.target.closest('[data-persona-act]'); if(!b) return;
     const id = b.dataset.personaId; const act = b.dataset.personaAct;
