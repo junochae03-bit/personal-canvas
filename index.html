@@ -2561,6 +2561,8 @@ mark{
             <button class="iconbtn sec-util-btn" id="openTagsBtn" title="📖 태그 도감 열기">📖</button>
             <button class="iconbtn sec-util-btn" id="openGuideBtn" title="📘 NAI 4.5 가이드">📘</button>
             <button class="iconbtn sec-util-btn" id="wildcardBtn" title="🃏 와일드카드 — 프롬프트에 __이름__ 을 넣으면 생성마다 목록에서 한 줄 무작위 치환" aria-pressed="false">🃏</button>
+            <button class="iconbtn sec-util-btn" id="aiKoToTagsBtn" title="🌐 한국어 → NAI 영문 태그 — 한글로 컨셉 적고 Gemini 로 태그 변환">🌐</button>
+            <button class="iconbtn sec-util-btn" id="aiEnrichBtn" title="✨ 프롬프트 풍성화 — 짧은 태그를 NAI 스타일로 확장">✨</button>
           </span>
           <span class="caret">▾</span>
         </div>
@@ -2624,6 +2626,7 @@ mark{
             <div class="row" style="gap:6px;flex-wrap:wrap">
               <button class="btn ghost" id="openWorkflowBtnNeg" style="padding:4px 10px;font-size:11.5px;border-color:rgba(162,90,31,.4);color:var(--acc)" title="현재 상태(프롬프트+캐릭터+파라미터) 저장·복원">💾 워크플로우 <span class="en" style="opacity:.6">Snap</span></button>
               <button class="btn ghost" id="lockNegBtn" style="padding:4px 10px;font-size:11.5px" title="네거티브 수정 잠금 (다시 누르면 해제)" aria-pressed="false">🔓 잠금</button>
+              <button class="btn ghost" id="aiNegSuggestBtn" style="padding:4px 10px;font-size:11.5px;border-color:rgba(214,160,80,.4);color:var(--acc)" title="🛡 Gemini 가 현재 프롬프트 분석 후 네거티브 자동 추천 (기존 네거티브 끝에 append)">🛡 AI 추천</button>
               <button class="btn ghost" id="dedupeNegBtn" style="padding:4px 10px;font-size:11.5px" title="콤마 구분 중복 태그 정리">🧹 중복 정리</button>
               <button class="btn ghost" id="clearNegBtn" style="padding:4px 10px;font-size:11.5px">비우기</button>
             </div>
@@ -3156,6 +3159,7 @@ mark{
     <button class="iconbtn lb-act-btn" id="lbI2I" title="→ I2I로 보내기 (Send to I2I)"><span class="lb-act-ico">→I</span><span class="lb-act-lbl">I2I</span></button>
     <button class="iconbtn lb-act-btn" id="lbVibe" title="→ Vibe 참조로 사용 (Send to Vibe)"><span class="lb-act-ico">→V</span><span class="lb-act-lbl">Vibe</span></button>
     <button class="iconbtn lb-act-btn" id="lbExtractTags" title="📋 이 이미지의 태그를 도감에 추출"><span class="lb-act-ico">📋</span><span class="lb-act-lbl">태그</span></button>
+    <button class="iconbtn lb-act-btn" id="lbAiImageToTags" title="🔍 Gemini Vision — 이미지를 보고 NAI 영문 태그 자동 추출 → 프롬프트에 적용" style="border-color:rgba(214,160,80,.4);color:var(--acc)"><span class="lb-act-ico">🔍</span><span class="lb-act-lbl">i2p</span></button>
     <div style="height:1px;background:var(--b1);margin:2px 0"></div>
     <button class="iconbtn lb-act-btn" id="lbInfoBtn" title="ℹ 상세정보 펼치기/접기 (메타·프롬프트)" aria-pressed="false"><span class="lb-act-ico">ℹ</span><span class="lb-act-lbl">정보</span></button>
     <button class="iconbtn lb-act-btn" id="lbLike" title="❤️ 좋아요 — 마음에 든 결과물 표시 + 통계 집계 + ❤️🎲 시드 풀에 추가" aria-pressed="false"><span class="lb-act-ico">♡</span><span class="lb-act-lbl">좋아요</span></button>
@@ -17128,6 +17132,257 @@ function _personaRefreshSelect(){
   if(cur && list.find(p => p.id === cur)) sel.value = cur;
 }
 
+// 🤖 Gemini 공통 헬퍼 ─────────────────────────────────────────────
+//    텍스트 → 텍스트: _geminiCallText(apiKey, systemPrompt, opts?)
+//    이미지+텍스트 (vision) → 텍스트: _geminiCallVision(apiKey, blob, systemPrompt, opts?)
+const _GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
+
+async function _geminiCallText(apiKey, systemPrompt, opts){
+  if(!apiKey) throw new Error('Gemini key missing');
+  const url = `${_GEMINI_BASE}?key=${encodeURIComponent(apiKey)}`;
+  const res = await fetch(url, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      contents: [{ parts:[{ text: systemPrompt }] }],
+      generationConfig: {
+        temperature: opts?.temperature ?? 0.85,
+        maxOutputTokens: opts?.maxOutputTokens ?? 800,
+        topP: opts?.topP ?? 0.95,
+      },
+    }),
+  });
+  if(!res.ok){
+    const errText = await res.text().catch(()=>'');
+    throw new Error(`Gemini ${res.status}: ${errText.slice(0,200)}`);
+  }
+  const data = await res.json();
+  return (data?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+}
+
+async function _blobToBase64(blob){
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const str = String(r.result || '');
+      const comma = str.indexOf(',');
+      res(comma >= 0 ? str.slice(comma + 1) : str);
+    };
+    r.onerror = rej;
+    r.readAsDataURL(blob);
+  });
+}
+
+async function _geminiCallVision(apiKey, blob, systemPrompt, opts){
+  if(!apiKey) throw new Error('Gemini key missing');
+  if(!blob) throw new Error('blob 없음');
+  const mime = blob.type || 'image/png';
+  const b64 = await _blobToBase64(blob);
+  const url = `${_GEMINI_BASE}?key=${encodeURIComponent(apiKey)}`;
+  const res = await fetch(url, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      contents: [{ parts:[
+        { inline_data: { mime_type: mime, data: b64 } },
+        { text: systemPrompt },
+      ]}],
+      generationConfig: {
+        temperature: opts?.temperature ?? 0.6,
+        maxOutputTokens: opts?.maxOutputTokens ?? 800,
+        topP: opts?.topP ?? 0.95,
+      },
+    }),
+  });
+  if(!res.ok){
+    const errText = await res.text().catch(()=>'');
+    throw new Error(`Gemini vision ${res.status}: ${errText.slice(0,200)}`);
+  }
+  const data = await res.json();
+  return (data?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+}
+
+// 🌐 한국어 컨셉 → NAI 영문 태그
+async function _geminiKoreanToTags(apiKey, korean){
+  const sys = `사용자가 한국어로 묘사한 그림 컨셉을 NovelAI 용 영문 Danbooru 태그로 변환하세요.
+
+입력: ${korean}
+
+규칙:
+- 콤마로 구분된 영문 태그만 출력 (한국어·번역·설명 X)
+- 핵심 요소 (인물·옷·배경·앵글·조명·표정) 우선
+- 25~40 태그
+- "masterpiece, best quality" 같은 quality 태그는 맨 앞에
+- 마지막 줄에 한 줄로 모두 출력`;
+  const out = await _geminiCallText(apiKey, sys, { temperature: 0.6, maxOutputTokens: 600 });
+  // 첫 줄 (또는 통째로) — 영문 태그 라인
+  const lines = out.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  return lines[lines.length - 1] || out;
+}
+
+// ✨ 프롬프트 풍성화 — 짧은 태그를 NAI 스타일로 확장
+async function _geminiEnrichPrompt(apiKey, current){
+  const sys = `다음 NovelAI 프롬프트를 풍부하게 확장하세요.
+
+현재 프롬프트:
+${current}
+
+규칙:
+- 기존 태그는 유지·재배치만 (의미 변경 X)
+- 빠진 디테일(조명·표정·배경·앵글·재질·소품)을 NAI/Danbooru 스타일 영문 태그로 추가
+- 총 30~50 태그 사이
+- 콤마 구분 한 줄
+- 한국어·설명·따옴표 없이 태그만`;
+  const out = await _geminiCallText(apiKey, sys, { temperature: 0.7, maxOutputTokens: 800 });
+  const lines = out.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  return lines[lines.length - 1] || out;
+}
+
+// 🛡 네거티브 추천 — 현재 프롬프트 분석 후 자주 깨지는 요소 차단
+async function _geminiSuggestNegative(apiKey, currentPrompt, existingNeg){
+  const sys = `NovelAI 생성을 위한 네거티브 프롬프트를 추천하세요.
+
+현재 프롬프트:
+${currentPrompt || '(비어있음)'}
+
+이미 있는 네거티브:
+${existingNeg || '(없음)'}
+
+규칙:
+- 콤마 구분 영문 태그만 출력
+- 기본 품질 차단 ("lowres, bad anatomy, bad hands, watermark, text" 등)
+- 현재 프롬프트에서 흔히 깨지는 요소 추가 (예: 손가락, 눈, 인체 비율)
+- 이미 있는 네거티브와 중복 X
+- 20~35 태그 한 줄`;
+  const out = await _geminiCallText(apiKey, sys, { temperature: 0.5, maxOutputTokens: 600 });
+  const lines = out.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  return lines[lines.length - 1] || out;
+}
+
+// 🔍 이미지 → NAI 태그 (vision)
+async function _geminiImageToTags(apiKey, blob){
+  const sys = `이 이미지를 NovelAI 용 Danbooru 영문 태그로 묘사하세요.
+
+규칙:
+- 콤마 구분 영문 태그만 출력 (한국어·문장 X)
+- 인물(나이·성별·머리·복장·표정)·배경·앵글·조명·재질 모두 포함
+- 25~40 태그 한 줄
+- "masterpiece, best quality" 처럼 quality 태그도 포함`;
+  const out = await _geminiCallVision(apiKey, blob, sys, { temperature: 0.4, maxOutputTokens: 800 });
+  const lines = out.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  return lines[lines.length - 1] || out;
+}
+
+// 🤖 Gemini 다활용 UI 래퍼 ──────────────────────────────────────
+async function _aiEnsureKey(){
+  const apiKey = (await _cmLoadGeminiKey()) || '';
+  if(!apiKey){ toast('Gemini 키 미설정 — 설정에서 입력하세요', 'warning'); return null; }
+  return apiKey;
+}
+
+// 🌐 한국어 → 영문 NAI 태그 — 프롬프트 박스 내용 분석.
+//    영문이 이미 많으면 풍성화 동작이 더 자연스러우니 사용자 가이드.
+async function _aiKoreanToTags(){
+  const apiKey = await _aiEnsureKey(); if(!apiKey) return;
+  const inp = $('prompt'); if(!inp) return;
+  const cur = (inp.value || '').trim();
+  // 한국어 컨셉을 별도 prompt 로 받기 (현재 박스 내용이 한국어면 그걸 사용)
+  const isKorean = /[가-힯]/.test(cur);
+  const concept = isKorean ? cur : (window.prompt('한국어로 컨셉을 입력하세요 (예: 비 오는 거리의 우산 든 소녀)', '') || '').trim();
+  if(!concept){ toast('한국어 컨셉을 입력해 주세요', 'info'); return; }
+  const btn = $('aiKoToTagsBtn'); const orig = btn?.textContent;
+  if(btn){ btn.disabled = true; btn.textContent = '🌐 변환 중...'; }
+  try {
+    const tags = await _geminiKoreanToTags(apiKey, concept);
+    inp.value = tags;
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
+    toast('🌐 한국어 → NAI 태그 변환 완료', 'success');
+  } catch(e){
+    _swallow(e, 'ai:koToTags');
+    toast('변환 실패 — ' + (e?.message?.slice(0,80) || e), 'error');
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = orig || '🌐'; }
+  }
+}
+
+// ✨ 프롬프트 풍성화 — 현재 프롬프트의 영문 태그를 NAI 스타일로 확장
+async function _aiEnrichPrompt(){
+  const apiKey = await _aiEnsureKey(); if(!apiKey) return;
+  const inp = $('prompt'); if(!inp) return;
+  const cur = (inp.value || '').trim();
+  if(!cur){ toast('프롬프트가 비어있어요 — 시드 태그를 먼저 입력하세요', 'warning'); return; }
+  const btn = $('aiEnrichBtn'); const orig = btn?.textContent;
+  if(btn){ btn.disabled = true; btn.textContent = '✨ 확장 중...'; }
+  try {
+    const enriched = await _geminiEnrichPrompt(apiKey, cur);
+    inp.value = enriched;
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
+    toast('✨ 프롬프트 풍성화 완료', 'success');
+  } catch(e){
+    _swallow(e, 'ai:enrich');
+    toast('풍성화 실패 — ' + (e?.message?.slice(0,80) || e), 'error');
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = orig || '✨'; }
+  }
+}
+
+// 🛡 네거티브 자동 추천 — 현재 프롬프트 분석 → 네거티브 끝에 append
+async function _aiSuggestNegative(){
+  const apiKey = await _aiEnsureKey(); if(!apiKey) return;
+  const neg = $('negPrompt'); if(!neg) return;
+  const cur = ($('prompt')?.value || '').trim();
+  if(!cur){ toast('먼저 프롬프트를 입력하세요 (분석 대상 필요)', 'warning'); return; }
+  const btn = $('aiNegSuggestBtn'); const orig = btn?.innerHTML;
+  if(btn){ btn.disabled = true; btn.textContent = '🛡 분석 중...'; }
+  try {
+    const suggested = await _geminiSuggestNegative(apiKey, cur, neg.value || '');
+    const cleaned = suggested.replace(/^[,\s]+|[,\s]+$/g, '');
+    if(!cleaned){ toast('추천 결과가 비어있어요', 'warning'); return; }
+    const existing = (neg.value || '').trim();
+    neg.value = existing ? `${existing}, ${cleaned}` : cleaned;
+    neg.dispatchEvent(new Event('input', { bubbles: true }));
+    toast('🛡 네거티브 추천 완료 — 끝에 추가됨', 'success');
+  } catch(e){
+    _swallow(e, 'ai:negSuggest');
+    toast('추천 실패 — ' + (e?.message?.slice(0,80) || e), 'error');
+  } finally {
+    if(btn){ btn.disabled = false; btn.innerHTML = orig || '🛡 AI 추천'; }
+  }
+}
+
+// 🔍 라이트박스 이미지 → NAI 태그 (Vision)
+async function _aiImageToTags(){
+  const apiKey = await _aiEnsureKey(); if(!apiKey) return;
+  const cur = window._lbCurrent;
+  const blob = cur?.blob;
+  if(!blob){ toast('이미지가 없어요', 'warning'); return; }
+  const btn = $('lbAiImageToTags');
+  if(btn){ btn.disabled = true; }
+  toast('🔍 Gemini Vision 분석 중...', 'info');
+  try {
+    const tags = await _geminiImageToTags(apiKey, blob);
+    if(!tags){ toast('태그 추출 실패 — 빈 응답', 'warning'); return; }
+    // 프롬프트 박스에 적용 옵션 — confirm 으로
+    confirmDialog(
+      `Gemini 추출 태그 (${tags.length}자):\n\n${tags.slice(0, 300)}${tags.length>300?'...':''}\n\n프롬프트 박스에 덮어쓸까요?`,
+      () => {
+        const inp = $('prompt');
+        if(inp){
+          inp.value = tags;
+          inp.dispatchEvent(new Event('input', { bubbles: true }));
+          toast('🔍 프롬프트 박스에 적용됨', 'success');
+        }
+      },
+      '🔍 이미지 → NAI 태그'
+    );
+  } catch(e){
+    _swallow(e, 'ai:i2p');
+    toast('Vision 호출 실패 — ' + (e?.message?.slice(0,80) || e), 'error');
+  } finally {
+    if(btn){ btn.disabled = false; }
+  }
+}
+
+// 🤖 Gemini 다활용 ─────────────────────────────────────────────────
+
 // 🪄 와일드카드 자동 작성 — 이름·라벨로 NAI 태그 후보 N개 생성
 async function _wcCallGemini(apiKey, name, label, count){
   if(!apiKey) throw new Error('Gemini key missing');
@@ -24085,6 +24340,11 @@ function wireWildcardEvents(){
     }
   });
   $('wildcardBtn')?.addEventListener('click', () => wildcardToggle());
+  // 🤖 Gemini 다활용 — 프롬프트 보조 + 네거티브 추천 + 이미지→태그 (라이트박스)
+  $('aiKoToTagsBtn')?.addEventListener('click', () => _aiKoreanToTags());
+  $('aiEnrichBtn')?.addEventListener('click', () => _aiEnrichPrompt());
+  $('aiNegSuggestBtn')?.addEventListener('click', () => _aiSuggestNegative());
+  $('lbAiImageToTags')?.addEventListener('click', () => _aiImageToTags());
   $('wildcardCloseBtn')?.addEventListener('click', () => wildcardToggle(false));
   $('wildcardNewBtn')?.addEventListener('click', newWildcard);
   $('wildcardDemoBtn')?.addEventListener('click', wildcardDemo);
