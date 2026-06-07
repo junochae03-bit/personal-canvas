@@ -3077,6 +3077,7 @@ mark{
               <div style="display:flex;gap:6px;align-items:center">
                 <input id="geminiKeySettings" class="inp pw" type="password" aria-label="Gemini API 키" placeholder="AIza..." autocomplete="off" spellcheck="false" style="flex:1;min-width:0">
                 <button class="iconbtn" id="toggleGeminiKeySettings" title="키 보이기/숨기기" type="button">👁</button>
+                <button class="btn ghost" id="testGeminiKeyBtn" type="button" title="🧪 Gemini API 연결 테스트 — 키가 유효한지 즉시 확인">🧪 테스트</button>
               </div>
               <div id="geminiKeyStatusSettings" class="desc" style="font-family:var(--mono);font-size:11.5px"></div>
             </div>
@@ -17153,10 +17154,23 @@ async function _geminiCallText(apiKey, systemPrompt, opts){
   });
   if(!res.ok){
     const errText = await res.text().catch(()=>'');
-    throw new Error(`Gemini ${res.status}: ${errText.slice(0,200)}`);
+    // Gemini 표준 에러 JSON 파싱 시도 — message 만 깔끔히 표시
+    let detail = errText.slice(0,200);
+    try {
+      const j = JSON.parse(errText);
+      if(j?.error?.message) detail = j.error.message;
+    } catch(_){}
+    throw new Error(`Gemini ${res.status} — ${detail}`);
   }
   const data = await res.json();
-  return (data?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+  const txt = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if(!txt){
+    // safety 필터 / blockReason 진단
+    const block = data?.promptFeedback?.blockReason;
+    if(block) throw new Error(`Gemini 응답 차단 (safety): ${block}`);
+    throw new Error('Gemini 빈 응답 — 다시 시도 또는 프롬프트 수정');
+  }
+  return txt.trim();
 }
 
 async function _blobToBase64(blob){
@@ -17194,10 +17208,18 @@ async function _geminiCallVision(apiKey, blob, systemPrompt, opts){
   });
   if(!res.ok){
     const errText = await res.text().catch(()=>'');
-    throw new Error(`Gemini vision ${res.status}: ${errText.slice(0,200)}`);
+    let detail = errText.slice(0,200);
+    try { const j = JSON.parse(errText); if(j?.error?.message) detail = j.error.message; } catch(_){}
+    throw new Error(`Gemini vision ${res.status} — ${detail}`);
   }
   const data = await res.json();
-  return (data?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+  const txt = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if(!txt){
+    const block = data?.promptFeedback?.blockReason;
+    if(block) throw new Error(`Gemini vision 응답 차단 (safety): ${block}`);
+    throw new Error('Gemini vision 빈 응답');
+  }
+  return txt.trim();
 }
 
 // 🌐 한국어 컨셉 → NAI 영문 태그
@@ -20192,15 +20214,18 @@ function wireTopbarAndFormEvents(){
         const saved = (await DB.getFlag?.('cm_gemini_key')) || '';
         if(saved){
           $('geminiKeySettings').value = saved;
-          if($('geminiKeyStatusSettings')) $('geminiKeyStatusSettings').textContent = '✓ 저장됨';
+          if($('geminiKeyStatusSettings')) $('geminiKeyStatusSettings').textContent = `✓ 저장됨 (${saved.length}자)`;
         }
-      } catch(_){}
+      } catch(e){
+        console.error('[gemini-key] prefill failed', e);
+      }
     })();
     const persist = async (val) => {
       const cleaned = (val || '').replace(/[\s​‌‍﻿]/g, '').trim();
-      try { await DB.setFlag?.('cm_gemini_key', cleaned); } catch(_){}
+      try { await DB.setFlag?.('cm_gemini_key', cleaned); }
+      catch(e){ console.error('[gemini-key] save failed', e); }
       if($('geminiKeyStatusSettings')){
-        $('geminiKeyStatusSettings').textContent = cleaned ? '✓ 저장됨' : '';
+        $('geminiKeyStatusSettings').textContent = cleaned ? `✓ 저장됨 (${cleaned.length}자)` : '';
       }
       // 만화 페이지의 키 상태 라벨도 동기화 (열려있을 때)
       if(typeof _cmAutoRefreshKeyStatus === 'function') _cmAutoRefreshKeyStatus();
@@ -20210,6 +20235,37 @@ function wireTopbarAndFormEvents(){
     $('toggleGeminiKeySettings')?.addEventListener('click', () => {
       const i = $('geminiKeySettings');
       i.type = (i.type === 'password') ? 'text' : 'password';
+    });
+    // 🧪 연결 테스트 — 즉시 ping 으로 키 유효성 확인
+    $('testGeminiKeyBtn')?.addEventListener('click', async () => {
+      const status = $('geminiKeyStatusSettings');
+      const btn = $('testGeminiKeyBtn');
+      const orig = btn?.textContent;
+      // 입력 박스 값 우선 (저장 전이라도 테스트 가능), 없으면 IDB
+      let key = ($('geminiKeySettings')?.value || '').replace(/[\s​‌‍﻿]/g, '').trim();
+      if(!key){ try { key = (await DB.getFlag?.('cm_gemini_key')) || ''; } catch(_){} }
+      if(!key){ if(status) status.textContent = '⚠ 키 입력 후 테스트'; return; }
+      if(btn){ btn.disabled = true; btn.textContent = '🧪 호출 중...'; }
+      if(status) status.textContent = `🧪 Gemini API 호출 중...`;
+      try {
+        // 최소 호출 — "OK" 한 단어만 받기
+        const out = await _geminiCallText(key, '"OK" 한 단어만 응답하세요.', { temperature: 0, maxOutputTokens: 10 });
+        if(status){
+          status.textContent = `✓ 연결 성공 — 응답: "${(out||'').slice(0,30)}" (키 ${key.length}자)`;
+          status.style.color = 'var(--green, #5a8a34)';
+        }
+        toast('🧪 Gemini 키 정상 — 모든 기능 사용 가능', 'success');
+      } catch(e){
+        const msg = (e?.message || String(e)).slice(0, 200);
+        if(status){
+          status.textContent = `✗ 실패: ${msg}`;
+          status.style.color = 'var(--red, #b54338)';
+        }
+        toast('🧪 Gemini 키 실패 — ' + msg.slice(0,80), 'error', { timeoutMs: 8000 });
+        console.error('[gemini-test]', e);
+      } finally {
+        if(btn){ btn.disabled = false; btn.textContent = orig || '🧪 테스트'; }
+      }
     });
   }
 
