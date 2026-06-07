@@ -20251,18 +20251,35 @@ function wireTopbarAndFormEvents(){
         // 최소 호출 — "OK" 한 단어만 받기
         const out = await _geminiCallText(key, '"OK" 한 단어만 응답하세요.', { temperature: 0, maxOutputTokens: 10 });
         if(status){
-          status.textContent = `✓ 연결 성공 — 응답: "${(out||'').slice(0,30)}" (키 ${key.length}자)`;
+          status.innerHTML = `✓ 연결 성공 — 응답: "${esc((out||'').slice(0,30))}" (키 ${key.length}자)`;
           status.style.color = 'var(--green, #5a8a34)';
         }
         toast('🧪 Gemini 키 정상 — 모든 기능 사용 가능', 'success');
       } catch(e){
         const msg = (e?.message || String(e)).slice(0, 200);
+        const isFetchFail = /Failed to fetch|NetworkError|net::|TypeError/i.test(msg);
+        // 진단 정보 수집
+        const origin = location.origin;
+        const online = navigator.onLine;
+        const swActive = navigator.serviceWorker?.controller ? 'active' : 'none';
         if(status){
-          status.textContent = `✗ 실패: ${msg}`;
+          let html = `✗ 실패: ${esc(msg)}<br>`;
+          html += `<span style="font-family:var(--mono);font-size:10px;color:var(--t3)">origin: ${esc(origin)} · online: ${online} · sw: ${swActive} · 키 ${key.length}자</span>`;
+          if(isFetchFail){
+            html += `<br><span style="font-size:11px;color:var(--yellow,#d6a050)">⚠ "Failed to fetch" — 흔한 원인:</span>`;
+            html += `<ul style="font-size:11px;margin:2px 0 0 16px;padding:0;line-height:1.5">`;
+            html += `<li>광고 차단·개인정보 확장(uBlock·Brave Shield) — googleapis.com 차단됨</li>`;
+            html += `<li>회사/학교/통신사 방화벽 차단 — 다른 네트워크(모바일 데이터/wifi) 시도</li>`;
+            html += `<li>VPN/프록시 — 일시 해제 후 재시도</li>`;
+            html += `<li>시크릿 모드 / 다른 브라우저 — 캐시·확장 영향 배제</li>`;
+            html += `<li>키가 새로 발급되어 활성화 대기 중 — 1~2분 후 재시도</li>`;
+            html += `</ul>`;
+          }
+          status.innerHTML = html;
           status.style.color = 'var(--red, #b54338)';
         }
-        toast('🧪 Gemini 키 실패 — ' + msg.slice(0,80), 'error', { timeoutMs: 8000 });
-        console.error('[gemini-test]', e);
+        toast('🧪 ' + (isFetchFail ? 'fetch 실패 — 확장/방화벽 차단 의심' : 'Gemini 실패 — ') + msg.slice(0,60), 'error', { timeoutMs: 10000 });
+        console.error('[gemini-test]', e, { origin, online, swActive });
       } finally {
         if(btn){ btn.disabled = false; btn.textContent = orig || '🧪 테스트'; }
       }
