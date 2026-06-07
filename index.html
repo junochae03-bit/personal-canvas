@@ -3080,6 +3080,14 @@ mark{
                 <button class="iconbtn" id="toggleGeminiKeySettings" title="키 보이기/숨기기" type="button">👁</button>
                 <button class="btn ghost" id="testGeminiKeyBtn" type="button" title="🧪 Gemini API 연결 테스트 — 키가 유효한지 즉시 확인">🧪 테스트</button>
               </div>
+              <div style="display:flex;gap:6px;align-items:center;font-size:11.5px;color:var(--t3)">
+                <span>모델:</span>
+                <select id="geminiModelSel" class="inp" style="flex:1;font-size:12px;padding:4px 8px">
+                  <option value="gemini-2.0-flash">gemini-2.0-flash (기본, 안정)</option>
+                  <option value="gemini-2.5-flash">gemini-2.5-flash (최신, 일부 리전 제한)</option>
+                  <option value="gemini-1.5-flash">gemini-1.5-flash (구버전)</option>
+                </select>
+              </div>
               <div id="geminiKeyStatusSettings" class="desc" style="font-family:var(--mono);font-size:11.5px"></div>
             </div>
             <div class="set-row">
@@ -17182,36 +17190,58 @@ function _personaRefreshSelect(){
 // 🤖 Gemini 공통 헬퍼 ─────────────────────────────────────────────
 //    텍스트 → 텍스트: _geminiCallText(apiKey, systemPrompt, opts?)
 //    이미지+텍스트 (vision) → 텍스트: _geminiCallVision(apiKey, blob, systemPrompt, opts?)
-const _GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
+//    모델은 DB.setFlag('gemini_model') 에 저장된 값 (기본 'gemini-2.0-flash').
+const _GEMINI_DEFAULT_MODEL = 'gemini-2.0-flash';
+const _GEMINI_FALLBACK_MODELS = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
+const _geminiBase = (model) => `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+
+async function _geminiResolveModel(){
+  try { return (await DB.getFlag?.('gemini_model')) || _GEMINI_DEFAULT_MODEL; }
+  catch(_){ return _GEMINI_DEFAULT_MODEL; }
+}
+
+// 404(모델 없음) 시 자동 fallback — 첫 호출만, 성공한 모델을 영속화.
+async function _geminiFetchWithFallback(apiKey, body){
+  const primary = await _geminiResolveModel();
+  const tried = [primary, ..._GEMINI_FALLBACK_MODELS.filter(m => m !== primary)];
+  let lastErr;
+  for(let i = 0; i < tried.length; i++){
+    const m = tried[i];
+    const url = `${_geminiBase(m)}?key=${encodeURIComponent(apiKey)}`;
+    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body });
+    if(res.ok){
+      // 첫 시도가 아니면 성공 모델로 교체 저장
+      if(i > 0){ try { await DB.setFlag?.('gemini_model', m); } catch(_){} console.warn('[gemini] fallback to', m); }
+      return res;
+    }
+    if(res.status !== 404){
+      // 404 외 에러는 fallback 의미 없음 — 그대로 throw
+      const errText = await res.text().catch(()=>'');
+      let detail = errText.slice(0,200);
+      try { const j = JSON.parse(errText); if(j?.error?.message) detail = j.error.message; } catch(_){}
+      throw new Error(`Gemini ${res.status} — ${detail}`);
+    }
+    const errText = await res.text().catch(()=>'');
+    lastErr = `Gemini 404 ${m}: ${errText.slice(0,150)}`;
+    // 다음 모델 시도
+  }
+  throw new Error(lastErr || 'Gemini 모든 모델 404');
+}
 
 async function _geminiCallText(apiKey, systemPrompt, opts){
   if(!apiKey) throw new Error('Gemini key missing');
-  const url = `${_GEMINI_BASE}?key=${encodeURIComponent(apiKey)}`;
-  const res = await fetch(url, {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      contents: [{ parts:[{ text: systemPrompt }] }],
-      generationConfig: {
-        temperature: opts?.temperature ?? 0.85,
-        maxOutputTokens: opts?.maxOutputTokens ?? 800,
-        topP: opts?.topP ?? 0.95,
-      },
-    }),
+  const body = JSON.stringify({
+    contents: [{ parts:[{ text: systemPrompt }] }],
+    generationConfig: {
+      temperature: opts?.temperature ?? 0.85,
+      maxOutputTokens: opts?.maxOutputTokens ?? 800,
+      topP: opts?.topP ?? 0.95,
+    },
   });
-  if(!res.ok){
-    const errText = await res.text().catch(()=>'');
-    // Gemini 표준 에러 JSON 파싱 시도 — message 만 깔끔히 표시
-    let detail = errText.slice(0,200);
-    try {
-      const j = JSON.parse(errText);
-      if(j?.error?.message) detail = j.error.message;
-    } catch(_){}
-    throw new Error(`Gemini ${res.status} — ${detail}`);
-  }
+  const res = await _geminiFetchWithFallback(apiKey, body);
   const data = await res.json();
   const txt = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if(!txt){
-    // safety 필터 / blockReason 진단
     const block = data?.promptFeedback?.blockReason;
     if(block) throw new Error(`Gemini 응답 차단 (safety): ${block}`);
     throw new Error('Gemini 빈 응답 — 다시 시도 또는 프롬프트 수정');
@@ -17237,27 +17267,18 @@ async function _geminiCallVision(apiKey, blob, systemPrompt, opts){
   if(!blob) throw new Error('blob 없음');
   const mime = blob.type || 'image/png';
   const b64 = await _blobToBase64(blob);
-  const url = `${_GEMINI_BASE}?key=${encodeURIComponent(apiKey)}`;
-  const res = await fetch(url, {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      contents: [{ parts:[
-        { inline_data: { mime_type: mime, data: b64 } },
-        { text: systemPrompt },
-      ]}],
-      generationConfig: {
-        temperature: opts?.temperature ?? 0.6,
-        maxOutputTokens: opts?.maxOutputTokens ?? 800,
-        topP: opts?.topP ?? 0.95,
-      },
-    }),
+  const body = JSON.stringify({
+    contents: [{ parts:[
+      { inline_data: { mime_type: mime, data: b64 } },
+      { text: systemPrompt },
+    ]}],
+    generationConfig: {
+      temperature: opts?.temperature ?? 0.6,
+      maxOutputTokens: opts?.maxOutputTokens ?? 800,
+      topP: opts?.topP ?? 0.95,
+    },
   });
-  if(!res.ok){
-    const errText = await res.text().catch(()=>'');
-    let detail = errText.slice(0,200);
-    try { const j = JSON.parse(errText); if(j?.error?.message) detail = j.error.message; } catch(_){}
-    throw new Error(`Gemini vision ${res.status} — ${detail}`);
-  }
+  const res = await _geminiFetchWithFallback(apiKey, body);
   const data = await res.json();
   const txt = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if(!txt){
@@ -20282,6 +20303,17 @@ function wireTopbarAndFormEvents(){
       const i = $('geminiKeySettings');
       i.type = (i.type === 'password') ? 'text' : 'password';
     });
+    // 모델 선택 — DB.setFlag('gemini_model')
+    (async () => {
+      const sel = $('geminiModelSel');
+      if(!sel) return;
+      const saved = (await DB.getFlag?.('gemini_model')) || _GEMINI_DEFAULT_MODEL;
+      sel.value = saved;
+      sel.addEventListener('change', async () => {
+        try { await DB.setFlag?.('gemini_model', sel.value); } catch(_){}
+        toast(`🤖 모델 변경 — ${sel.value}`, 'info');
+      });
+    })();
     // 🧪 연결 테스트 — 즉시 ping 으로 키 유효성 확인
     $('testGeminiKeyBtn')?.addEventListener('click', async () => {
       const status = $('geminiKeyStatusSettings');
