@@ -12,7 +12,7 @@
 <!-- SRI(integrity) 는 release.yml 워크플로(workflow_dispatch) 에서 npm run sri 로 주입. -->
 <!-- ⚠ frame-ancestors / X-Frame-Options 는 HTTP 헤더 전용 — GitHub Pages 정적 호스팅에선 적용 불가.
      iframe 임베드 방어가 필요하면 JS 프레임 버스터를 별도로 고려. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://image.novelai.net https://api.novelai.net; worker-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://image.novelai.net https://api.novelai.net https://generativelanguage.googleapis.com; worker-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="theme-color" content="#a25a1f">
 <title>NAI Studio</title>
 
@@ -2392,6 +2392,7 @@ mark{
     <span id="anlasPill" class="pill pill-off">오프라인 (Offline)</span>
     <button class="iconbtn" id="refreshAnlas" title="잔량 새로고침 (Refresh Anlas)">⟳</button>
     <button class="iconbtn" id="fullscreenBtn" title="전체화면 켜기·끄기 (Fullscreen)" aria-pressed="false">⛶</button>
+    <button class="iconbtn" id="orientLockBtn" title="🔒 화면 회전 잠금 — 모바일 PWA 에서 세로/가로 고정" aria-pressed="false">🔓</button>
     <button class="iconbtn" id="settingsBtn" title="설정 (Settings)" aria-label="설정">⚙</button>
   </div>
   <div class="tb-grow"></div>
@@ -4465,6 +4466,51 @@ function updateFullscreenBtn(){
   btn.classList.toggle('act', isFs);
   btn.setAttribute('aria-pressed', String(isFs));
   btn.title = isFs ? '전체화면 끄기 (Esc)' : '전체화면 켜기 (Fullscreen)';
+}
+
+// 🔒 화면 회전 잠금 — off → portrait → landscape → off 순환.
+//   영속화: DB.setFlag('orientLock', 'off'|'portrait'|'landscape').
+//   진짜 lock 은 PWA standalone fullscreen 일 때만 — 일반 브라우저는 안내 토스트.
+async function toggleOrientationLock(){
+  const cur = (await DB.getFlag?.('orientLock')) || 'off';
+  const next = cur === 'off' ? 'portrait-primary'
+             : cur === 'portrait-primary' ? 'landscape-primary'
+             : 'off';
+  await DB.setFlag?.('orientLock', next).catch(()=>{});
+  _updateOrientLockBtn(next);
+  if(next === 'off'){
+    try { screen.orientation?.unlock?.(); } catch(_){}
+    toast('🔓 화면 회전 자유', 'info');
+    return;
+  }
+  // 즉시 lock 시도 — fullscreen 아니면 NotSupportedError. 안내.
+  const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if(!inFs){
+    toast('🔒 잠금 모드 설정됨 — 전체화면 ⛶ 또는 PWA 설치 후 적용', 'warning', { timeoutMs: 6000 });
+    return;
+  }
+  try {
+    await screen.orientation.lock(next);
+    toast(next.startsWith('portrait') ? '🔒 세로 고정' : '🔒 가로 고정', 'success');
+  } catch(e){
+    const msg = e?.message || String(e);
+    toast(`회전 잠금 실패 — ${msg.slice(0,80)}\n팁: PWA 설치 후 다시 시도하면 적용됨`, 'warning', { timeoutMs: 7000 });
+  }
+}
+
+function _updateOrientLockBtn(state){
+  const btn = document.getElementById('orientLockBtn');
+  if(!btn) return;
+  if(state === 'portrait-primary'){
+    btn.textContent = '🔒'; btn.classList.add('act');
+    btn.title = '🔒 세로 고정 — 다시 누르면 가로'; btn.setAttribute('aria-pressed','true');
+  } else if(state === 'landscape-primary'){
+    btn.textContent = '🔐'; btn.classList.add('act');
+    btn.title = '🔐 가로 고정 — 다시 누르면 해제'; btn.setAttribute('aria-pressed','true');
+  } else {
+    btn.textContent = '🔓'; btn.classList.remove('act');
+    btn.title = '🔓 회전 자유 — 누르면 세로 고정'; btn.setAttribute('aria-pressed','false');
+  }
 }
 
 function toggleMobilePreview(){
@@ -20289,9 +20335,34 @@ function wireTopbarAndFormEvents(){
   $('refreshAnlas').addEventListener('click', refreshAnlas);
   // ⛶ 전체화면 토글 — 시스템 네비/상태바 숨김 (브라우저 모두 + 비-설치 환경 호환)
   $('fullscreenBtn').addEventListener('click', toggleFullscreen);
+  // 🔒 화면 회전 잠금 — PWA standalone fullscreen 일 때만 진짜 잠금. 일반 브라우저는 안내.
+  $('orientLockBtn')?.addEventListener('click', toggleOrientationLock);
+  // 부팅 시 저장된 잠금 상태 복원 (가능하면 자동 lock 시도)
+  (async () => {
+    try {
+      const saved = await DB.getFlag?.('orientLock');
+      if(saved && saved !== 'off' && document.fullscreenElement){
+        await screen.orientation?.lock(saved).catch(()=>{});
+        _updateOrientLockBtn(saved);
+      } else if(saved){
+        _updateOrientLockBtn(saved);   // 라벨만 업데이트 (실제 lock 은 fullscreen 진입 시)
+      }
+    } catch(_){}
+  })();
   $('settingsBtn')?.addEventListener('click', () => setMainPane('settings'));
   document.addEventListener('fullscreenchange', updateFullscreenBtn);
   document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+  // 전체화면 진입 시 저장된 잠금 자동 재적용
+  document.addEventListener('fullscreenchange', async () => {
+    if(document.fullscreenElement){
+      try {
+        const saved = await DB.getFlag?.('orientLock');
+        if(saved && saved !== 'off'){
+          await screen.orientation?.lock(saved).catch(e => console.warn('[orient]', e?.message));
+        }
+      } catch(_){}
+    }
+  });
 
   // Mode bar
   $$('.mode-btn[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
