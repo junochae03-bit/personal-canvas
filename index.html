@@ -2642,6 +2642,7 @@ mark{
           <div class="row" style="margin-bottom:8px;gap:14px;flex-wrap:wrap">
             <label class="chk"><input type="checkbox" id="useCoords" checked>좌표 사용 <span class="en">Use Coordinates</span></label>
             <label class="chk" title="ON 이면 썸네일 탭 랜덤(🎲)이 ⭐ 즐겨찾기한 캐릭터 프리셋 중에서만 뽑습니다. 그룹별 랜덤은 '🎴 둘러보기'에서."><input type="checkbox" id="charRandFav">⭐ 즐겨찾기 랜덤 <span class="en">Fav only</span></label>
+            <label class="chk" title="🗨 ON 이면 만화 자동 생성 시 — 각 캐릭터에 설정한 페르소나 말투로 대사를 Gemini 가 자동 작성하고 말풍선까지 자동 배치"><input type="checkbox" id="autoDialogToggle">🗨 자동 대사 <span class="en">Auto Dialog</span></label>
           </div>
           <div id="charList"></div>
           <button class="add-char" id="addCharBtn">＋ 캐릭터 추가 <span class="en">Add Character</span></button>
@@ -7428,6 +7429,7 @@ function renderCharacters(){
           <button class="char-act-btn ${c.enabled?'act':''}" data-act="toggle" data-idx="${i}" title="이 캐릭터 슬롯 활성/비활성 토글"><span class="cab-ico">${c.enabled?'✓':'⭕'}</span><span class="cab-lbl"> ${c.enabled?'활성':'비활성'}</span> <span class="en" style="opacity:.55;font-weight:400">${c.enabled?'On':'Off'}</span></button>
           <button class="char-act-btn ${c.randPerGen?'act':''}" data-act="rand-pergen" data-idx="${i}" title="🎲 매 대기열 추가·생성마다 이 슬롯을 무작위 교체 (⭐즐겨찾기·📂그룹고정·후보풀 설정 모두 존중)"><span class="cab-ico">🎲</span><span class="cab-lbl"> 매번 랜덤</span> <span class="en" style="opacity:.55;font-weight:400">${c.randPerGen?'On':'Off'}</span></button>
           <button class="char-act-btn edit" data-act="expand" data-idx="${i}" title="외형·액션·네거티브 textarea 펼치기/접기"><span class="cab-ico">✏</span><span class="cab-lbl"> 프롬프트</span> <span class="en" style="opacity:.55;font-weight:400">Edit</span></button>
+          <button class="char-act-btn ${c.persona?'act':''}" data-act="persona-mgr" data-idx="${i}" title="🧑 페르소나 관리 — 이 캐릭터의 성격·말투 (만화 자동 대사에 사용)"><span class="cab-ico">🧑</span><span class="cab-lbl"> ${c.persona?'페르소나':'페르소나'}</span> <span class="en" style="opacity:.55;font-weight:400">Persona</span></button>
           <button class="char-act-btn" data-act="clear-char-all" data-idx="${i}" title="🧹 텍스트만 비움 — 슬롯 카드는 그대로 (실행 취소 6초)"><span class="cab-ico">🧹</span><span class="cab-lbl"> 텍스트 비우기</span> <span class="en" style="opacity:.55;font-weight:400">Clear text</span></button>
           <button class="char-act-btn del" data-act="del" data-idx="${i}" title="🗑 슬롯 카드 자체 삭제 — 카드가 사라짐 (텍스트만 지우려면 옆 🧹 텍스트 비우기 사용)"><span class="cab-ico del-ico">🗑</span><span class="cab-lbl del-lbl"> 슬롯 삭제</span></button>
         </div>
@@ -7448,6 +7450,12 @@ function renderCharacters(){
         </div>
         <button class="char-quick-btn" data-act="quickadd" data-idx="${i}">🪄 빠른 추가 — 액션·프리셋 찾기 <span class="en" style="opacity:.6">Quick Add</span></button>
 
+        <div class="char-section-label">🧑 페르소나 <span class="en">Persona</span> <span style="font-size:10.5px;color:var(--t3);font-weight:400;margin-left:6px">만화 자동 대사용</span></div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+          <select class="ta tiny char-persona-select" data-act="persona-pick" data-idx="${i}" style="flex:1;font-size:12px;padding:6px 8px"><option value="">(없음 — 페르소나 선택)</option></select>
+          <button class="char-act-btn" data-act="persona-mgr" data-idx="${i}" type="button" title="🧑 페르소나 추가/편집" style="font-size:11px;padding:4px 9px">⚙</button>
+        </div>
+
         <div class="char-section-label">🚫 네거티브 <span class="en">Negative</span>
           <button class="char-tagcodex-btn" data-act="open-char-tagcodex" data-idx="${i}" title="태그 도감에서 이 캐릭터 네거티브로 추가" type="button">📖 도감에서 추가</button>
         </div>
@@ -7467,6 +7475,14 @@ function renderCharacters(){
     list.querySelectorAll('textarea[data-act="appearance"],textarea[data-act="action"],textarea[data-act="neg"]')
       .forEach(ta => attachAcToTextarea(ta));
   }
+  // 🧑 페르소나 select 옵션 채움 — 캐릭터별 dropdown 동기화
+  const personas = state.personas || [];
+  list.querySelectorAll('.char-persona-select').forEach((sel, i) => {
+    const cur = state.characters[i]?.persona || '';
+    sel.innerHTML = '<option value="">(없음 — 페르소나 선택)</option>' + personas.map(p =>
+      `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+    if(cur && personas.find(p => p.id === cur)) sel.value = cur;
+  });
 }
 
 function posLabel(p){
@@ -17160,6 +17176,8 @@ async function _personaSave(){
   // 프리셋 탭에 페르소나 보이면 그리드/탭 카운트도 갱신
   if(state.presetType === 'persona' && typeof renderPresets === 'function') renderPresets();
   if(typeof renderPresetTabs === 'function') renderPresetTabs();
+  // NAI 캐릭터 카드의 페르소나 select 도 갱신
+  if(typeof renderCharacters === 'function') renderCharacters();
   toast(`🧑 "${name}" ${id?'수정':'추가'} 완료`, 'success');
 }
 async function _personaDelete(id){
@@ -17172,6 +17190,9 @@ async function _personaDelete(id){
     _personaRefreshSelect();
     if(state.presetType === 'persona' && typeof renderPresets === 'function') renderPresets();
     if(typeof renderPresetTabs === 'function') renderPresetTabs();
+    // 캐릭터 카드의 persona 참조도 정리 (삭제된 페르소나 id 제거)
+    (state.characters || []).forEach(c => { if(c?.persona === id) c.persona = ''; });
+    if(typeof renderCharacters === 'function') renderCharacters();
     toast(`🗑 "${p.name}" 삭제됨`, 'info');
   }, '🧑 페르소나 삭제');
 }
@@ -17190,42 +17211,98 @@ function _personaRefreshSelect(){
 // 🤖 Gemini 공통 헬퍼 ─────────────────────────────────────────────
 //    텍스트 → 텍스트: _geminiCallText(apiKey, systemPrompt, opts?)
 //    이미지+텍스트 (vision) → 텍스트: _geminiCallVision(apiKey, blob, systemPrompt, opts?)
-//    모델은 DB.setFlag('gemini_model') 에 저장된 값 (기본 'gemini-2.0-flash').
-const _GEMINI_DEFAULT_MODEL = 'gemini-2.0-flash';
-const _GEMINI_FALLBACK_MODELS = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
+//    모델은 DB.setFlag('gemini_model') 에 저장된 값 (기본 'gemini-2.5-flash').
+//    ListModels API 로 사용자 키 접근 가능 모델 동적 조회 후 캐시.
+const _GEMINI_DEFAULT_MODEL = 'gemini-2.5-flash';
+const _GEMINI_PREFERRED_ORDER = [
+  'gemini-2.5-flash', 'gemini-2.5-pro',
+  'gemini-2.0-flash', 'gemini-2.0-flash-001', 'gemini-2.0-flash-exp',
+  'gemini-1.5-flash', 'gemini-1.5-flash-002', 'gemini-1.5-pro',
+];
 const _geminiBase = (model) => `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
 
-async function _geminiResolveModel(){
-  try { return (await DB.getFlag?.('gemini_model')) || _GEMINI_DEFAULT_MODEL; }
-  catch(_){ return _GEMINI_DEFAULT_MODEL; }
+// 사용자 키로 사용 가능한 모델 목록 조회 (캐시 1시간)
+let _geminiAvailableCache = null;
+async function _geminiListAvailable(apiKey){
+  if(!apiKey) throw new Error('Gemini key missing');
+  // 1h 메모리 캐시
+  if(_geminiAvailableCache && (Date.now() - _geminiAvailableCache.ts) < 3600_000){
+    return _geminiAvailableCache.list;
+  }
+  const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}&pageSize=100`;
+  const res = await fetch(url);
+  if(!res.ok){
+    const errText = await res.text().catch(()=>'');
+    let detail = errText.slice(0,200);
+    try { const j = JSON.parse(errText); if(j?.error?.message) detail = j.error.message; } catch(_){}
+    throw new Error(`ListModels ${res.status} — ${detail}`);
+  }
+  const data = await res.json();
+  // generateContent 지원하는 모델만, name 에서 "models/" prefix 제거
+  const list = (data?.models || [])
+    .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+    .map(m => String(m.name||'').replace(/^models\//, ''))
+    .filter(Boolean);
+  _geminiAvailableCache = { ts: Date.now(), list };
+  return list;
 }
 
-// 404(모델 없음) 시 자동 fallback — 첫 호출만, 성공한 모델을 영속화.
-async function _geminiFetchWithFallback(apiKey, body){
-  const primary = await _geminiResolveModel();
-  const tried = [primary, ..._GEMINI_FALLBACK_MODELS.filter(m => m !== primary)];
-  let lastErr;
-  for(let i = 0; i < tried.length; i++){
-    const m = tried[i];
-    const url = `${_geminiBase(m)}?key=${encodeURIComponent(apiKey)}`;
-    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body });
-    if(res.ok){
-      // 첫 시도가 아니면 성공 모델로 교체 저장
-      if(i > 0){ try { await DB.setFlag?.('gemini_model', m); } catch(_){} console.warn('[gemini] fallback to', m); }
-      return res;
+async function _geminiResolveModel(apiKey){
+  try {
+    const saved = await DB.getFlag?.('gemini_model');
+    if(saved) return saved;
+  } catch(_){}
+  // 저장된 게 없으면 ListModels 로 첫 선호 모델 자동 선택 (1회만)
+  if(!apiKey) return _GEMINI_DEFAULT_MODEL;
+  try {
+    const avail = await _geminiListAvailable(apiKey);
+    if(!avail.length) return _GEMINI_DEFAULT_MODEL;
+    // 선호 순서대로 매칭 (prefix 포함)
+    for(const pref of _GEMINI_PREFERRED_ORDER){
+      const hit = avail.find(m => m === pref || m.startsWith(pref));
+      if(hit){
+        try { await DB.setFlag?.('gemini_model', hit); } catch(_){}
+        console.log('[gemini] auto-pick model:', hit);
+        return hit;
+      }
     }
-    if(res.status !== 404){
-      // 404 외 에러는 fallback 의미 없음 — 그대로 throw
-      const errText = await res.text().catch(()=>'');
-      let detail = errText.slice(0,200);
-      try { const j = JSON.parse(errText); if(j?.error?.message) detail = j.error.message; } catch(_){}
-      throw new Error(`Gemini ${res.status} — ${detail}`);
-    }
-    const errText = await res.text().catch(()=>'');
-    lastErr = `Gemini 404 ${m}: ${errText.slice(0,150)}`;
-    // 다음 모델 시도
+    // 매칭 실패 → 첫 가용 모델
+    const fallback = avail[0];
+    try { await DB.setFlag?.('gemini_model', fallback); } catch(_){}
+    return fallback;
+  } catch(e){
+    console.warn('[gemini] ListModels failed, using default', e?.message);
+    return _GEMINI_DEFAULT_MODEL;
   }
-  throw new Error(lastErr || 'Gemini 모든 모델 404');
+}
+
+// 모델 호출 — 404 면 ListModels 로 자동 재선택
+async function _geminiFetchSmart(apiKey, body){
+  let model = await _geminiResolveModel(apiKey);
+  let url = `${_geminiBase(model)}?key=${encodeURIComponent(apiKey)}`;
+  let res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body });
+  if(res.ok) return res;
+  if(res.status !== 404){
+    const errText = await res.text().catch(()=>'');
+    let detail = errText.slice(0,200);
+    try { const j = JSON.parse(errText); if(j?.error?.message) detail = j.error.message; } catch(_){}
+    throw new Error(`Gemini ${res.status} — ${detail}`);
+  }
+  // 404 → 캐시 무효화 후 ListModels 재조회·교체
+  console.warn('[gemini] 404 on', model, '— retry via ListModels');
+  _geminiAvailableCache = null;
+  try { await DB.setFlag?.('gemini_model', ''); } catch(_){}
+  const newModel = await _geminiResolveModel(apiKey);
+  if(newModel === model){
+    throw new Error(`Gemini 404 — ${model} 미지원. 설정에서 다른 모델 선택`);
+  }
+  url = `${_geminiBase(newModel)}?key=${encodeURIComponent(apiKey)}`;
+  res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body });
+  if(res.ok){ console.log('[gemini] fallback success →', newModel); return res; }
+  const errText = await res.text().catch(()=>'');
+  let detail = errText.slice(0,200);
+  try { const j = JSON.parse(errText); if(j?.error?.message) detail = j.error.message; } catch(_){}
+  throw new Error(`Gemini ${res.status} (after fallback) — ${detail}`);
 }
 
 async function _geminiCallText(apiKey, systemPrompt, opts){
@@ -17238,7 +17315,7 @@ async function _geminiCallText(apiKey, systemPrompt, opts){
       topP: opts?.topP ?? 0.95,
     },
   });
-  const res = await _geminiFetchWithFallback(apiKey, body);
+  const res = await _geminiFetchSmart(apiKey, body);
   const data = await res.json();
   const txt = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if(!txt){
@@ -17656,7 +17733,12 @@ async function _cmAutoGenScenes(){
   if(!concept){ toast('컨셉을 한 줄 입력해 주세요', 'warning'); return; }
   const panelCount = _cmState.slots.length;
   if(panelCount === 0){ toast('레이아웃이 비어있어요', 'warning'); return; }
-  const personaId = ($('cmAutoPersonaSelect')?.value || '').trim();
+  // 🧑 페르소나 — 만화 페이지 select 우선, 없으면 NAI 캐릭터 카드의 페르소나 폴백 (사용자가 자동 대사 토글 ON 시)
+  let personaId = ($('cmAutoPersonaSelect')?.value || '').trim();
+  if(!personaId && $('autoDialogToggle')?.checked){
+    const c = (state.characters || []).find(c => c?.enabled && c?.persona);
+    if(c) personaId = c.persona;
+  }
   const persona = personaId ? (state.personas || []).find(p => p.id === personaId) : null;
   const tone = ($('cmAutoDialogTone')?.value || '').trim();
   const btn = $('cmAutoScenesAiBtn');
@@ -17826,7 +17908,12 @@ async function _cmAutoMakeDialogues(targets){
   // 🃏 와일드카드 expanded 결과를 우선 사용 — Gemini 는 __name__ 토큰을 모름
   const scenes = pageTargets.map(t => t.sceneExpanded || t.scene);
   // 🧑 선택된 페르소나 — Gemini 에 캐릭터 성격·말투·배경 주입
-  const personaId = ($('cmAutoPersonaSelect')?.value || '').trim();
+  // 🧑 페르소나 — 만화 페이지 select 우선, 없으면 NAI 캐릭터 카드의 페르소나 폴백 (사용자가 자동 대사 토글 ON 시)
+  let personaId = ($('cmAutoPersonaSelect')?.value || '').trim();
+  if(!personaId && $('autoDialogToggle')?.checked){
+    const c = (state.characters || []).find(c => c?.enabled && c?.persona);
+    if(c) personaId = c.persona;
+  }
   const persona = personaId ? (state.personas || []).find(p => p.id === personaId) : null;
   let dialogues;
   try {
@@ -19637,6 +19724,7 @@ async function saveSettings(){
     smeaDynCheck: $('smeaDynCheck').checked,
     useCoords: $('useCoords').checked,
     charRandFav: $('charRandFav')?.checked,
+    autoDialogToggle: $('autoDialogToggle')?.checked,
     genCount: $('genCount').value,
     genDelay: $('genDelay').value,
     continueOnError: $('continueOnError').checked,
@@ -19701,6 +19789,7 @@ async function loadSettings(){
   apply('smeaDynCheck', s.smeaDynCheck);
   apply('useCoords', s.useCoords ?? true);
   apply('charRandFav', s.charRandFav);
+  apply('autoDialogToggle', s.autoDialogToggle);
   apply('genCount', s.genCount);
   apply('genDelay', s.genDelay);
   apply('continueOnError', s.continueOnError ?? true);
@@ -20673,6 +20762,16 @@ function wireCharacterEvents(){
     else if(act === 'grouplock-reroll'){ applyRandomCharacter(idx, {fav: !!$('charRandFav')?.checked}); return; }
     else if(act === 'grouplock-clear'){ const ch = state.characters[idx]; if(ch){ ch.groupLock = null; renderCharacters(); saveSettingsDebounced(); toast('📂 그룹 고정 해제', 'info'); } return; }
     else if(act === 'open-char-tagcodex'){ openTagCodexForCharNeg(idx); }
+    else if(act === 'persona-mgr'){
+      // 🧑 페르소나 관리 — 이 캐릭터에 연결된 페르소나가 있으면 그걸 편집, 없으면 새로 추가
+      if(typeof _personaOpenModal !== 'function'){ toast('페르소나 관리자 미준비', 'error'); return; }
+      _personaOpenModal();
+      const pid = state.characters[idx]?.persona;
+      if(pid){
+        const p = (state.personas||[]).find(x => x.id === pid);
+        if(p) _personaLoadIntoForm(p);
+      }
+    }
     else if(act === 'clear-char-field'){
       // ✕ 캐릭터 카드 textarea 비우기 (외형·액션·네거티브) — 실행 취소 토스트 제공
       const c = state.characters[idx];
@@ -20785,6 +20884,11 @@ function wireCharacterEvents(){
     else if(act === 'appearance') state.characters[idx].appearance = t.value;
     else if(act === 'action')     state.characters[idx].action     = t.value;
     else if(act === 'neg')        state.characters[idx].neg        = t.value;
+    else if(act === 'persona-pick'){
+      state.characters[idx].persona = t.value || '';
+      const p = (state.personas||[]).find(x => x.id === t.value);
+      toast(p ? `🧑 ${p.name} 연결됨 — 만화 자동 대사에 사용` : '🧑 페르소나 연결 해제', 'info');
+    }
     // 옛 호환: prompt 필드 직접 편집 (legacy)
     else if(act === 'prompt')     state.characters[idx].prompt     = t.value;
     saveSettingsDebounced();
