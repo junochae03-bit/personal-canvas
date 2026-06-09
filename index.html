@@ -8578,6 +8578,7 @@ function renderRestoreOptions(filename, data){
     workflows: !!(Array.isArray(data.workflows) && data.workflows.length),
     randomCategories: !!(Array.isArray(data.randomCategories) && data.randomCategories.length),
     wildcards: !!(Array.isArray(data.wildcards) && data.wildcards.length),
+    personas: !!(Array.isArray(data.personas) && data.personas.length),
     presets: {},
   };
   let totalPresets = 0;
@@ -8641,6 +8642,7 @@ function renderRestoreOptions(filename, data){
       <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_workflows" ${has.workflows?'checked':'disabled'}>저장된 워크플로 ${has.workflows?`(${data.workflows.length}개)`:'(파일에 없음)'}</label>
       <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_random" ${has.randomCategories?'checked':'disabled'}>🎲 랜덤 카테고리 빌더 ${has.randomCategories?`(${data.randomCategories.length}개)`:'(파일에 없음)'}</label>
       <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_wildcards" ${has.wildcards?'checked':'disabled'}>🃏 와일드카드 ${has.wildcards?`(${data.wildcards.length}개)`:'(파일에 없음)'}</label>
+      <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_personas" ${has.personas?'checked':'disabled'}>🧑 페르소나 ${has.personas?`(${data.personas.length}개)`:'(파일에 없음)'}</label>
     </fieldset>
 
     <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_autoclassify" checked>복원 후 이름 접두사로 자동 분류 (🪄)</label>
@@ -8689,6 +8691,7 @@ async function computeRestoreDiff(data){
   if($('rs_workflows')?.checked && Array.isArray(data.workflows)) diff.workflows = `워크플로 ${data.workflows.length}개 전체 교체`;
   if($('rs_random')?.checked && Array.isArray(data.randomCategories)) diff.randomCategories = `🎲 랜덤 카테고리 ${data.randomCategories.length}개 전체 교체`;
   if($('rs_wildcards')?.checked && Array.isArray(data.wildcards)) diff.wildcards = `🃏 와일드카드 ${data.wildcards.length}개 전체 교체`;
+  if($('rs_personas')?.checked && Array.isArray(data.personas)) diff.personas = `🧑 페르소나 ${data.personas.length}개 병합 (같은 이름 덮어쓰기)`;
   return diff;
 }
 
@@ -8709,6 +8712,7 @@ function renderRestoreDiff(diff){
   if(diff.workflows) rows.push(`<div style="padding:6px 10px;background:rgba(58,99,152,.05);border-left:3px solid var(--blue);margin-bottom:4px;border-radius:0 4px 4px 0"><b>💾 워크플로</b> — ${diff.workflows}</div>`);
   if(diff.randomCategories) rows.push(`<div style="padding:6px 10px;background:rgba(58,99,152,.05);border-left:3px solid var(--blue);margin-bottom:4px;border-radius:0 4px 4px 0"><b>🎲 랜덤 카테고리</b> — ${diff.randomCategories}</div>`);
   if(diff.wildcards) rows.push(`<div style="padding:6px 10px;background:rgba(58,99,152,.05);border-left:3px solid var(--blue);margin-bottom:4px;border-radius:0 4px 4px 0"><b>🃏 와일드카드</b> — ${diff.wildcards}</div>`);
+  if(diff.personas) rows.push(`<div style="padding:6px 10px;background:rgba(214,160,80,.06);border-left:3px solid var(--acc);margin-bottom:4px;border-radius:0 4px 4px 0"><b>🧑 페르소나</b> — ${diff.personas}</div>`);
   if(!rows.length) return '<div style="text-align:center;color:var(--t3);padding:20px">변경될 항목 없음 (선택된 항목 없음)</div>';
   return `<div style="font-size:12.5px">${rows.join('')}</div>`;
 }
@@ -8846,6 +8850,21 @@ async function doSelectiveRestore(){
       if(typeof saveWildcards === 'function') await saveWildcards();
       if(typeof renderWildcards === 'function') renderWildcards();
       restored.push(`🃏 와일드카드 ${state.wildcards.length}개`);
+    }
+    // 🧑 페르소나 복원 — 같은 이름이 있으면 병합(덮어쓰기), 없으면 추가
+    if($('rs_personas')?.checked && Array.isArray(data.personas)){
+      const incoming = data.personas.map(_normalizePersona).filter(Boolean);
+      if(!Array.isArray(state.personas)) state.personas = [];
+      const byName = new Map(state.personas.map(p => [p.name, p]));
+      for(const p of incoming){
+        const ex = byName.get(p.name);
+        if(ex){ Object.assign(ex, p, { id: ex.id }); }   // 기존 id 유지
+        else { state.personas.push(p); byName.set(p.name, p); }
+      }
+      if(typeof savePersonas === 'function') await savePersonas();
+      if(typeof renderCharacters === 'function') renderCharacters();
+      if(typeof renderPresetTabs === 'function') renderPresetTabs();
+      restored.push(`🧑 페르소나 ${incoming.length}개`);
     }
     // 자동 분류
     if($('rs_autoclassify')?.checked){
