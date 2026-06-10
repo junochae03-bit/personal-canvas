@@ -1788,268 +1788,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   outline-offset: 2px;
 }
 
-/* 🎲 RANDOM BUILDER — 카테고리 카드 + 옵션 칩 + 가중치 */
-.mode-btn.rc-tab{color:var(--blue);font-weight:700}
-.mode-btn.rc-tab.act{color:var(--blue);border-bottom-color:var(--blue);background:rgba(58,99,152,.08)}
-.mode-btn.rc-tab:hover{color:var(--blue);background:rgba(58,99,152,.06)}
-.mode-btn.rc-tab.rc-applying{position:relative}
-.mode-btn.rc-tab.rc-applying::after{content:'';position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 2px var(--panel)}
-
-/* 빌더 sec — 다른 sec 와 비슷한 톤, 좌측 보더로 정체성 표시 (전체 컬러 강조 톤다운) */
-/* 🎲 RC 빌더는 '편집 모드' 의 사이드바에서만 표시 — 다른 페인(미리보기/갤러리/...) 에선 강제 숨김. */
-/* 데스크탑은 body[data-mview] 가 메인 페인 값이라, edit 외 페인에선 자동 안 보임. */
-body:not([data-mview="edit"]) #randomBuilderSec,
+/* 🃏 와일드카드 sec — '편집 모드' 사이드바에서만 표시. */
 body:not([data-mview="edit"]) #wildcardSec{display:none !important}
-.rc-builder-sec{
-  border:1.5px solid var(--b1);
-  border-left:4px solid var(--blue);
-  background:linear-gradient(to right, rgba(58,99,152,.05), transparent 30%)
-}
-.rc-builder-sec .sec-title{color:var(--blue)}
-.rc-category-list{display:flex;flex-direction:column;gap:10px}
 
-/* 🎨 카테고리 색상 팔레트 — 9색. 사용자가 ⋯ 메뉴에서 선택. */
-.rc-card{
-  --rc-color: var(--acc);
-  background:var(--card);
-  border:1.5px solid var(--b2);
-  border-left:5px solid var(--rc-color);
-  border-radius:7px;
-  overflow:hidden;
-  box-shadow:0 1px 3px rgba(74,52,20,.07);
-  transition:border-color .15s, transform .12s, box-shadow .15s
-}
-.rc-card:hover{
-  border-color:var(--b2);
-  transform:translateY(-1px);
-  box-shadow:0 4px 12px rgba(74,52,20,.08)
-}
-.rc-card[data-color="red"]{--rc-color:#b54338}
-.rc-card[data-color="orange"]{--rc-color:#d97706}
-.rc-card[data-color="yellow"]{--rc-color:#b88820}
-.rc-card[data-color="green"]{--rc-color:#5d8a30}
-.rc-card[data-color="teal"]{--rc-color:#0d9488}
-.rc-card[data-color="blue"]{--rc-color:#3a6398}
-.rc-card[data-color="purple"]{--rc-color:#7c3aed}
-.rc-card[data-color="pink"]{--rc-color:#db2777}
-
-/* 상태별 보더는 색상 태그 위에 덮어쓰기 (disabled/locked 우선) */
-.rc-card.disabled{border-left-color:var(--b2)!important;opacity:.5;transform:none;box-shadow:none}
-.rc-card.disabled:hover{transform:none}
-.rc-card.disabled .rc-options{filter:grayscale(.4)}
-.rc-card.warn{border-left-color:var(--yellow)!important}
-.rc-card.locked{border-left-color:var(--blue)!important;background:rgba(58,99,152,.05)}
-
-.rc-card-hdr{display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--card2);border-bottom:1px solid var(--b1);font-size:13px;position:relative}
-.rc-card.disabled .rc-card-hdr{background:var(--card)}
-.rc-card-hdr .rc-color-dot{
-  width:10px;
-  height:10px;
-  border-radius:50%;
-  background:var(--rc-color);
-  flex-shrink:0;
-  box-shadow:0 0 0 1.5px var(--card2), 0 1px 3px rgba(0,0,0,.15);
-  margin-right:2px
-}
-.rc-card-hdr input.rc-label{flex:1;min-width:0;background:transparent;border:1px solid transparent;color:var(--t1);font-weight:700;padding:4px 8px;border-radius:4px;font-size:13.5px;font-family:inherit}
-.rc-card-hdr input.rc-label:focus{outline:none;border-color:var(--rc-color);background:var(--panel);box-shadow:0 0 0 2px color-mix(in oklab, var(--rc-color) 22%, transparent)}
-.rc-card-hdr input.rc-label:hover:not(:focus){background:rgba(0,0,0,.04)}
-.rc-card-hdr .rc-count{font-size:11px;color:var(--t3);font-family:var(--mono);flex-shrink:0;background:var(--card);padding:2px 7px;border-radius:10px;border:1px solid var(--b1);font-weight:600;min-width:24px;text-align:center}
-.rc-card.locked .rc-card-hdr .rc-count{background:rgba(58,99,152,.12);color:var(--blue);border-color:rgba(58,99,152,.35)}
-.rc-card.warn .rc-card-hdr .rc-count{background:rgba(184,136,32,.12);color:var(--yellow);border-color:rgba(184,136,32,.35)}
-.rc-card-hdr button{background:transparent;border:0;padding:4px 7px;cursor:pointer;font-size:14px;color:var(--t2);border-radius:4px;line-height:1;transition:all .12s}
-.rc-card-hdr button:hover{background:rgba(0,0,0,.07);color:var(--t1)}
-.rc-card-hdr button.act{color:var(--green)}
-.rc-card-hdr .rc-toggle{font-weight:700;font-size:14px;min-width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center}
-.rc-card-hdr .rc-toggle.off{color:var(--t3);text-decoration:line-through}
-.rc-card-hdr .rc-toggle.act{background:rgba(93,138,48,.10)}
-
-.rc-options{padding:5px 7px;display:flex;flex-direction:column;gap:4px;max-height:440px;overflow-y:auto;background:var(--panel)}
-/* 옵션 행 — 2줄 grid 레이아웃 (가독성 ↑) — 모바일·데스크탑 둘 다 텍스트 한 줄 가득 */
-.rc-option{
-  display:grid;
-  grid-template-columns: auto 1fr auto auto;
-  grid-template-rows: auto auto;
-  align-items:center;
-  gap:2px 6px;
-  padding:5px 7px;
-  border-radius:4px;
-  border:1px solid var(--b1);
-  background:var(--card2);
-  transition:background .12s,border-color .12s
-}
-.rc-option .rc-opt-drag{grid-column:1;grid-row:1 / -1}
-.rc-option:hover{background:var(--card);border-color:var(--b2)}
-.rc-option.locked-opt{background:rgba(58,99,152,.10);border-color:var(--blue);border-style:dashed}
-.rc-option .rc-opt-text{
-  grid-column:2 / -1;
-  grid-row:1;
-  background:var(--panel);
-  border:1.5px solid var(--b1);
-  color:var(--t1);
-  padding:5px 8px;
-  border-radius:4px;
-  font-family:var(--mono);
-  font-size:12.5px;
-  line-height:1.45;
-  width:100%
-}
-.rc-option .rc-opt-text:focus{outline:none;border-color:var(--acc);background:var(--panel);box-shadow:0 0 0 2px rgba(162,90,31,.12)}
-.rc-option .rc-opt-text:hover:not(:focus){border-color:var(--b2)}
-.rc-option .rc-opt-text.placeholder{color:var(--t3);font-style:italic}
-.rc-option .rc-opt-empty-badge{
-  grid-column:2;
-  grid-row:2;
-  font-size:10px;
-  color:var(--t3);
-  background:var(--card);
-  padding:2px 7px;
-  border-radius:8px;
-  font-family:var(--mono);
-  justify-self:start;
-  align-self:center
-}
-.rc-option .rc-weight-ctrl{
-  grid-column:3;
-  grid-row:2;
-  display:flex;
-  align-items:center;
-  gap:3px;
-  font-family:var(--mono);
-  font-size:11px;
-  justify-self:end
-}
-.rc-option .rc-weight-ctrl button{
-  background:var(--card);
-  border:1.5px solid var(--b1);
-  color:var(--t2);
-  padding:4px 9px;
-  cursor:pointer;
-  border-radius:3px;
-  font-size:12px;
-  line-height:1;
-  min-width:28px;
-  font-weight:700;
-  transition:all .12s
-}
-.rc-option .rc-weight-ctrl button:hover{background:var(--panel);color:var(--t1);border-color:var(--acc)}
-.rc-option .rc-weight-ctrl .rc-weight-val{
-  min-width:36px;
-  text-align:center;
-  color:var(--t1);
-  font-weight:700;
-  font-size:11.5px;
-  padding:0 4px
-}
-.rc-option .rc-weight-ctrl .rc-weight-val.heavy{color:var(--acc)}
-.rc-option .rc-weight-ctrl .rc-weight-val.negative{color:var(--red)}
-.rc-option .rc-weight-ctrl .rc-weight-val.zero{color:var(--t3)}
-.rc-option .rc-opt-actions{
-  grid-column:4;
-  grid-row:2;
-  display:flex;
-  gap:2px;
-  justify-self:end
-}
-.rc-option .rc-opt-actions button{
-  background:var(--card);
-  border:1.5px solid var(--b1);
-  color:var(--t3);
-  padding:4px 9px;
-  cursor:pointer;
-  font-size:12px;
-  border-radius:3px;
-  line-height:1;
-  min-width:28px;
-  transition:all .12s
-}
-.rc-option .rc-opt-actions button:hover{background:var(--panel);color:var(--t1);border-color:var(--b2)}
-.rc-option .rc-opt-actions button.lock-act{color:var(--blue)}
-.rc-option .rc-opt-actions button.lock-act:hover{border-color:var(--blue)}
-.rc-option .rc-opt-actions button.del-act:hover{color:var(--red);background:rgba(181,67,56,.08);border-color:var(--red)}
-
-/* 카테고리 카드 헤더 — 버튼 간격 + 라벨 입력 가독성 ↑ + 모바일 wrap */
-.rc-card-hdr{padding:8px 10px;gap:6px;flex-wrap:wrap;align-items:center}
-.rc-card-hdr input.rc-label{font-size:13px;padding:5px 8px;font-weight:700;min-width:80px;flex:1 1 130px}
-.rc-card-hdr .rc-count{flex-shrink:0}
-.rc-card-hdr .rc-collapse{font-size:11px;padding:2px 5px;min-width:22px;color:var(--t2)}
-.rc-card-hdr .rc-collapse:hover{color:var(--acc)}
-.rc-card-hdr .rc-hdr-actions{display:flex;flex-wrap:wrap;gap:3px;margin-left:auto;align-items:center}
-.rc-card-hdr .rc-hdr-actions button{padding:4px 7px;font-size:13px;min-width:26px;border-radius:4px}
-.rc-card-hdr .rc-hdr-actions button.has-note{color:var(--acc);background:rgba(162,90,31,.08)}
-.rc-card-hdr .rc-hdr-actions button[disabled]{opacity:.3;cursor:not-allowed}
-
-/* 📝 노트 표시 — 카드 헤더 아래 별도 행 */
-.rc-note-display{
-  padding:5px 12px;
-  background:rgba(162,90,31,.06);
-  border-bottom:1px solid var(--b1);
-  font-size:11.5px;
-  color:var(--t2);
-  line-height:1.5;
-  cursor:pointer;
-  font-style:italic
-}
-.rc-note-display:hover{background:rgba(162,90,31,.12);color:var(--t1)}
-
-/* 접힌 카드 — 헤더만 표시, 옵션 영역 숨김 */
-.rc-card.collapsed{padding-bottom:0}
-.rc-card.collapsed .rc-card-hdr{border-bottom:none}
-
-/* 빌더 sec-title — 한글 텍스트가 글자 단위로 wrap 되지 않도록 명시적 span + nowrap */
-.rc-builder-sec .sec-title{flex-wrap:wrap;gap:6px;align-items:center;row-gap:4px}
-.rc-builder-sec .rc-sec-title-label{
-  white-space:nowrap;
-  flex-shrink:0;
-  color:var(--blue);
-  font-weight:700;
-  font-size:13px
-}
-.rc-builder-sec .rc-sec-stats{
-  font-size:10.5px;
-  color:var(--t3);
-  font-family:var(--mono);
-  font-weight:500;
-  margin-left:auto;
-  min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-  cursor:default
-}
-.rc-builder-sec .sec-utils{flex-wrap:wrap;gap:3px;justify-content:flex-end;flex-shrink:0}
-/* 📂 카테고리 그룹 */
-.rc-group-header{font-size:12.5px;color:var(--t2);font-weight:700;padding:10px 12px 6px;border-top:1px dashed var(--b1);margin-top:8px;display:flex;align-items:center;gap:8px;background:linear-gradient(180deg, rgba(162,90,31,.04), transparent)}
-.rc-group-header:first-child{border-top:none;margin-top:0;padding-top:4px}
-.rc-group-header.rc-group-empty{color:var(--t3)}
-.rc-group-del{margin-left:auto;background:transparent;border:1px solid rgba(181,67,56,.35);color:var(--red);font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:inherit;flex-shrink:0}
-.rc-group-del:hover{background:rgba(181,67,56,.12)}
-.rc-group-count{font-size:11px;color:var(--t3);font-weight:500;font-family:var(--mono)}
-.rc-group-chip{background:rgba(162,90,31,.08);border:1px dashed rgba(162,90,31,.35);color:var(--acc);padding:2px 8px;border-radius:10px;font-size:10.5px;cursor:pointer;font-family:inherit;line-height:1.3;white-space:nowrap}
-.rc-group-chip:hover{background:rgba(162,90,31,.15);border-style:solid}
-.rc-group-chip.rc-group-chip-empty{background:transparent;border-color:var(--b1);color:var(--t3)}
-.rc-group-chip.rc-group-chip-empty:hover{color:var(--acc);border-color:rgba(162,90,31,.35)}
-/* 빌더 프리셋 버튼 강조 — 더 큰 시각적 분리 */
-.rcp-btn{background:rgba(162,90,31,.10);border-color:rgba(162,90,31,.4)}
-.rcp-btn:hover{background:rgba(162,90,31,.18);border-color:var(--acc)}
-/* 📂 그룹 탭 바 — 여러 그룹 동시 운용 */
-.rc-groups-bar{display:flex;gap:4px;padding:6px 8px;background:var(--card2);border-bottom:1px solid var(--b1);overflow-x:auto;flex-wrap:nowrap}
-.rc-enable-row{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:6px;background:var(--card2);border:1.5px solid var(--b1);border-radius:6px;cursor:pointer;user-select:none}
-.rc-enable-row input{width:auto;cursor:pointer}
-.rc-enable-label{font-size:13px;font-weight:700;color:var(--t1)}
-.rc-enable-state{margin-left:auto;font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 8px;border-radius:4px;background:var(--b1);color:var(--t3)}
-.rc-enable-row.on{border-color:var(--acc);background:rgba(162,90,31,.08)}
-.rc-enable-row.on .rc-enable-state{background:var(--acc);color:#fff8ec}
-.rc-groups-bar::-webkit-scrollbar{height:6px}
-.rcg-tab{flex-shrink:0;background:var(--panel);border:1.5px solid var(--b1);color:var(--t2);padding:5px 12px;font-size:12px;font-weight:600;border-radius:5px 5px 0 0;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;min-height:30px;white-space:nowrap;transition:all .12s}
-.rcg-tab:hover{border-color:var(--acc);color:var(--t1)}
-.rcg-tab.act{background:var(--card);border-color:var(--acc);color:var(--acc);box-shadow:0 -2px 0 var(--acc) inset}
-.rcg-tab .rcg-count{font-size:10px;color:var(--t3);font-family:var(--mono);font-weight:500}
-.rcg-tab.act .rcg-count{color:var(--acc)}
-.rcg-tab-menu{background:none;border:none;color:var(--t3);cursor:pointer;padding:0 2px;font-size:11px;line-height:1;border-radius:3px;font-family:inherit}
-.rcg-tab-menu:hover{background:rgba(162,90,31,.15);color:var(--acc)}
-.rcg-add{flex-shrink:0;background:transparent;border:1.5px dashed var(--b2);color:var(--t3);padding:5px 12px;font-size:12px;font-weight:600;border-radius:5px;cursor:pointer;font-family:inherit;min-height:30px;white-space:nowrap;transition:all .12s}
-.rcg-add:hover{border-color:var(--acc);color:var(--acc);background:rgba(162,90,31,.05)}
 /* 베이스 이미지 영역 — 갤러리 가져오기 버튼 */
 .img-source-row{display:flex;gap:6px;margin-top:6px;justify-content:flex-end}
 .img-source-row .btn.small{font-size:11.5px;padding:5px 10px;min-height:28px}
@@ -2086,16 +1827,6 @@ body:not([data-mview="edit"]) #wildcardSec{display:none !important}
 .gp-sel-badge{position:absolute;top:6px;right:6px;background:var(--acc);color:#fff8ec;font-weight:700;font-size:13px;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);box-shadow:0 2px 6px rgba(0,0,0,.4);z-index:2}
 .galPickerModal.gp-multi .gp-item:hover{border-color:rgba(214,160,80,.6)}
 /* 🎴 빌더 프리셋 모달 */
-.rcp-modal{width:min(560px,92vw)}
-.rcp-intro{font-size:12.5px;color:var(--t2);line-height:1.6;background:var(--panel);padding:9px 12px;border-radius:5px;border-left:3px solid var(--acc);margin-bottom:12px}
-.rcp-add-row{display:flex;gap:6px;align-items:center;padding:10px 12px;background:var(--card);border-radius:6px;border:1.5px solid var(--b1);margin-bottom:12px}
-.rcp-add-row .inp{flex:1;font-size:13px}
-.rcp-list{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto}
-.rcp-item{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:8px 10px;background:var(--panel);border:1px solid var(--b1);border-radius:5px}
-.rcp-item-name{font-weight:700;color:var(--t1);font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rcp-item-meta{font-size:11px;color:var(--t3);font-family:var(--mono);white-space:nowrap}
-.rcp-item .btn.small{padding:4px 9px;font-size:11.5px;min-height:28px;white-space:nowrap}
-.rcp-empty{color:var(--t3);text-align:center;padding:24px;font-size:13px;background:var(--card);border-radius:5px}
 
 /* 모바일 (max-width:880px) — 빌더 헤더 압축: 통계 + 액션 바를 별도 줄로 */
 @media (max-width:880px){
@@ -2410,65 +2141,10 @@ mark{
       <button class="mode-btn" data-mode="vibe">참조<span class="en">Vibe</span></button>
       <button class="mode-btn" data-mode="director">보정<span class="en">Director</span></button>
       <!-- 🎲 랜덤 — 모드가 아닌 토글 (다른 모드 유지 + 빌더 sec 표시). data-mode 없이 별도 처리. -->
-      <button class="mode-btn rc-tab" id="randomBuilderTab" type="button" title="🎲 랜덤 카테고리 빌더 — 매 생성마다 활성 카테고리에서 옵션 무작위 선택 (모드와 독립)" aria-pressed="false">🎲<span class="en">Rnd</span></button>
     </div>
     <div class="side-body" id="sideBody">
       <div class="sec-toggle-row">
         <button class="btn ghost" id="toggleAllSecBtn" title="현재 보이는 모든 섹션을 한꺼번에 펼치거나 접습니다">⤡ 전체 접기 <span class="en">Collapse All</span></button>
-      </div>
-
-      <!-- 🎲 RANDOM CATEGORY BUILDER — 모드 바의 🎲 탭으로 열림. 다른 모드와 독립. -->
-      <div class="sec rc-builder-sec" id="randomBuilderSec" style="display:none">
-        <div class="sec-title">
-          <span class="rc-sec-title-label">🎲 랜덤 카테고리 빌더 <span style="font-size:.8em;color:var(--acc);font-weight:500;margin-left:4px">→ 🃏 와일드카드 만들기</span> <span class="en">Random→Wildcard</span></span>
-          <span class="rc-sec-stats" id="rcStatsBadge"></span>
-          <span class="sec-utils" onclick="event.stopPropagation()">
-            <button class="iconbtn sec-util-btn" id="rcAddBtn" title="＋ 새 카테고리 추가">＋</button>
-            <button class="iconbtn sec-util-btn rcp-btn" id="rcPresetsBtn" title="📚 빌더 프리셋 라이브러리 — 카테고리 전체 세트를 여러 개 저장·전환">📚</button>
-            <button class="iconbtn sec-util-btn" id="rcImportBtn" title="📥 텍스트에서 가져오기 — ||A|B|C|| 패턴 자동 인식 + 라벨 자동 추측">📥</button>
-            <button class="iconbtn sec-util-btn" id="rcCollapseAllBtn" title="📦 모든 카테고리 일괄 접기/펼치기">📦</button>
-            <button class="iconbtn sec-util-btn" id="rcApplyToCharBtn" title="🎴 캐릭터 프리셋에 적용 — 활성 카테고리를 ||A|B|C|| 텍스트로 컴파일 → 캐릭터 슬롯 추가 또는 새 프리셋 저장">🎴</button>
-            <button class="iconbtn sec-util-btn" id="rcExportWildcardsBtn" title="🃏 활성 카테고리를 와일드카드로 저장 — 각 카테고리 = 1 와일드카드 (이름·옵션 그대로). __category__ 토큰으로 프롬프트에서 사용" style="color:var(--acc)">🃏</button>
-            <button class="iconbtn sec-util-btn" id="rcClearLocksBtn" title="🔓 모든 옵션 고정 해제">🔓</button>
-            <button class="iconbtn sec-util-btn" id="rcCloseBtn" title="빌더 닫기">✕</button>
-          </span>
-          <span class="caret">▾</span>
-        </div>
-        <div class="sec-body">
-          <!-- 💡 사용 흐름 안내 — RC 빌더는 이제 와일드카드 생성 도구 -->
-          <div style="font-size:11.5px;color:var(--t3);padding:6px 10px;background:var(--bg);border-left:3px solid var(--acc);border-radius:0 4px 4px 0;margin-bottom:6px;line-height:1.55">
-            카테고리·옵션 편집 후 <b style="color:var(--acc)">🃏 버튼</b>으로 와일드카드 저장 → 프롬프트에서 <code>__name__</code> 토큰으로 사용.
-          </div>
-          <!-- 📂 그룹 탭 바 — 여러 그룹을 탭처럼 동시 운용, 클릭으로 전환 -->
-          <div class="rc-groups-bar" id="rcGroupsBar" role="tablist" aria-label="RC 빌더 그룹 탭"></div>
-          <!-- 🔍 카테고리·옵션 검색 + 필터 -->
-          <div class="rc-search-row">
-            <input type="text" id="rcSearchInp" class="inp" placeholder="🔍 카테고리 라벨·옵션 텍스트 검색 (한글 초성 가능)" spellcheck="false" autocomplete="off">
-            <select id="rcFilterSel" class="inp" title="필터">
-              <option value="all">전체</option>
-              <option value="enabled">활성만</option>
-              <option value="disabled">비활성만</option>
-              <option value="locked">고정만</option>
-              <option value="warn">경고만</option>
-              <option value="empty">옵션 없음</option>
-              <option value="has-note">노트 있음</option>
-            </select>
-            <button type="button" id="rcSearchClearBtn" class="iconbtn" title="검색·필터 초기화" style="flex-shrink:0">✕</button>
-          </div>
-          <div id="rcCategoryList" class="rc-category-list"></div>
-          <div id="rcEmptyState" style="text-align:center;color:var(--t3);padding:30px 16px;font-size:12.5px;line-height:1.7;display:none">
-            🎲 아직 등록된 카테고리가 없습니다<br>
-            <span style="font-size:11px">＋ 새 카테고리 · 📥 ||A|B|C|| 붙여넣기 · 📚 저장된 빌더 프리셋 불러오기</span>
-            <div style="margin-top:14px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
-              <button type="button" class="btn small primary" id="rcEmptyAddBtn">＋ 새 카테고리</button>
-              <button type="button" class="btn small" id="rcEmptyLoadBtn">📚 프리셋 불러오기</button>
-              <button type="button" class="btn small ghost" id="rcEmptyImportBtn">📥 텍스트에서 가져오기</button>
-            </div>
-          </div>
-          <div id="rcSearchEmptyState" style="text-align:center;color:var(--t3);padding:24px 16px;font-size:12.5px;line-height:1.7;display:none">
-            🔍 검색·필터 결과 없음
-          </div>
-        </div>
       </div>
 
       <!-- DIRECTOR — 디렉터 도구 -->
@@ -2953,7 +2629,7 @@ mark{
             </div>
           </div>
           <div class="set-card">
-            <h3>🎨 템플릿 — 프리셋 랜덤 조합 <span style="font-size:.8em;color:var(--acc);font-weight:500;margin-left:4px">→ 📤 RC 빌더로 보내기</span> <span class="en">Templates → RC</span></h3>
+            <h3>🎨 템플릿 — 프리셋 랜덤 조합 <span class="en">Templates</span></h3>
             <div style="font-size:12px;color:var(--t3);margin-bottom:10px;line-height:1.55">
               체크한 카테고리에서 랜덤 1개씩 골라서 조합을 만듭니다. 마음에 들면 적용해서 즉시 생성하거나, 이름 붙여 저장하세요.
             </div>
@@ -2971,9 +2647,7 @@ mark{
                 <input type="checkbox" id="tplFavOnlyToggle"> ⭐ 즐겨찾기 프리셋만 사용
               </label>
               <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <button class="btn primary" id="tplRollBtn" type="button" style="flex:1;min-width:140px;padding:11px;font-size:14px">🎲 랜덤 조합 생성 <span class="en">Roll</span></button>
-                <button class="btn ghost" id="tplToRcBtn" type="button" title="🎲 활성 카테고리의 전체 프리셋 목록을 RC 빌더 카테고리로 복사 — 각 프리셋 = 옵션 (가중치 1.0)" style="flex:1;min-width:140px;padding:11px;font-size:13px;border-color:rgba(214,160,80,.45);color:var(--acc)">📤 RC 빌더로 보내기 <span class="en">→ RC</span></button>
-                <button class="btn ghost" id="tplApplyBtn" type="button" title="(선택) 현재 조합을 메인 폼에 적용" style="flex:1;min-width:100px;padding:11px;font-size:13px;border-color:rgba(58,99,152,.4);color:var(--blue)">✅ 폼에 적용</button>
+                <button class="btn primary" id="tplRollBtn" type="button" style="flex:1;min-width:140px;padding:11px;font-size:14px">🎲 랜덤 조합 생성 <span class="en">Roll</span></button>                <button class="btn ghost" id="tplApplyBtn" type="button" title="(선택) 현재 조합을 메인 폼에 적용" style="flex:1;min-width:100px;padding:11px;font-size:13px;border-color:rgba(58,99,152,.4);color:var(--blue)">✅ 폼에 적용</button><button class="btn ghost" id="tplToWildcardBtn" type="button" title="🃏 활성 카테고리의 프리셋 목록을 와일드카드로 내보내기 — 카테고리당 1개, 프리셋 = 후보. 프롬프트에서 __이름__ 으로 사용" style="flex:1;min-width:140px;padding:11px;font-size:13px;border-color:rgba(214,160,80,.45);color:var(--acc)">🃏 와일드카드로 <span class="en">→ WC</span></button>
               </div>
             </div>
           </div>
@@ -3969,23 +3643,6 @@ coffee shop, latte art"></textarea>
   </div>
 </div>
 
-<!-- 🎴 RC BUILDER PRESETS — 현재 카테고리 세트 저장·전환·삭제 -->
-<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="rcpTitle" id="rcPresetsModal">
-  <div class="modal rcp-modal">
-    <h3 id="rcpTitle">🎴 빌더 프리셋 관리 <span class="en">Builder Presets</span></h3>
-    <div class="modal-body">
-      <div class="rcp-intro">현재 카테고리 전체를 프리셋으로 저장. 나중에 불러오면 전체 카테고리가 교체됩니다.</div>
-      <div class="rcp-add-row">
-        <input type="text" id="rcpNewName" class="inp" placeholder="새 프리셋 이름 (예: NSFW 기본 세트)" maxlength="40">
-        <button type="button" class="btn primary small" id="rcpAddBtn">💾 현재 설정 저장</button>
-      </div>
-      <div class="rcp-list" id="rcpList"></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn ghost" id="rcpCloseBtn">닫기 <span class="en">Close</span></button>
-    </div>
-  </div>
-</div>
 
 
 
@@ -5152,13 +4809,7 @@ const state = {
   seedHistory: [],        // ⏱ [{seed, ts, fav, note}] — 최근 시드 + 즐겨찾기 (최대 100)
   seedBlocklist: [],      // 👎 별로 표시한 시드들 — randomSeed() 시 자동 회피 (최대 1000)
   seedBlocklistAuto: false,  // 👎 시드 자동 제외 옵션
-  rcEnabled: false,       // 🎲 RC 빌더 마스터 스위치 — OFF 면 생성 시 카테고리 주입 안 함
   workflows: [],          // 💾 [{id, name, ts, thumb, data}] — 워크플로우 스냅샷 슬롯
-  randomCategories: [],   // 🎲 활성 그룹의 카테고리 (rcGroups[rcActiveGroupIdx].categories 의 live reference)
-  randomBuilderOpen: false,   // 빌더 sec 토글 (모드 바의 🎲 버튼)
-  randomBuilderPresets: [],   // 🎴 [{id, name, ts, categories}] — RC 빌더 전체 세트 저장 (별도 라이브러리)
-  rcGroups: [],           // 📂 [{id, name, categories}] — 여러 그룹을 탭처럼 동시 보유, 자유 전환
-  rcActiveGroupIdx: 0,    // 현재 활성 그룹 인덱스
   wildcards: [],          // 🃏 [{name, options:[{text,weight}], locked, lockedIdx}] — 프롬프트 __name__ 치환
   wildcardPanelOpen: false,   // 🃏 와일드카드 패널 토글 (프롬프트 헤더의 🃏 버튼)
   gallerySessions: [],
@@ -8347,7 +7998,6 @@ function openBackupModal(){
     <fieldset style="border:1.5px solid var(--b1);border-radius:6px;padding:10px 14px 12px;margin-bottom:10px">
       <legend style="font-weight:700;color:var(--acc);padding:0 6px;font-size:13px">💾 워크플로 슬롯</legend>
       <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="bk_workflows" ${(state.workflows||[]).length>0?'checked':'disabled'}>저장된 워크플로 ${(state.workflows||[]).length>0?`(${state.workflows.length}개)`:'(없음)'} + 즐겨찾기·잠금 상태</label>
-      <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="bk_random" ${(state.randomCategories||[]).length>0?'checked':'disabled'}>🎲 랜덤 카테고리 빌더 ${(state.randomCategories||[]).length>0?`(${state.randomCategories.length}개)`:'(없음)'} + 옵션·가중치·노트</label>
       <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="bk_wildcards" ${(state.wildcards||[]).length>0?'checked':'disabled'}>🃏 와일드카드 ${(state.wildcards||[]).length>0?`(${state.wildcards.length}개)`:'(없음)'} + 후보·가중치·잠금</label>
     </fieldset>
 
@@ -8372,7 +8022,6 @@ async function doSelectiveBackup(){
     out.flags = {
       seed_blocklist: await DB.getFlag('seed_blocklist'),
       seed_blocklist_auto: await DB.getFlag('seed_blocklist_auto'),
-      rc_enabled: await DB.getFlag('rc_enabled'),
       tpl_fav_only: await DB.getFlag('tpl_fav_only'),
     };
     parts.push('settings');
@@ -8397,14 +8046,6 @@ async function doSelectiveBackup(){
   if($('bk_workflows')?.checked && (state.workflows||[]).length){
     out.workflows = state.workflows;
     parts.push('workflows');
-  }
-  if($('bk_random')?.checked && (state.randomCategories||[]).length){
-    out.randomCategories = state.randomCategories;   // 활성 그룹 (구버전 호환)
-    // 🐛 다중 그룹 전체 백업 — 비활성 그룹도 보존
-    if(Array.isArray(state.rcGroups) && state.rcGroups.length){
-      out.rcGroups = {groups: state.rcGroups.map(g => ({id:g.id, name:g.name, categories:g.categories})), activeIdx: state.rcActiveGroupIdx};
-    }
-    parts.push('randomCategories');
   }
   if($('bk_wildcards')?.checked && (state.wildcards||[]).length){
     out.wildcards = state.wildcards;
@@ -8446,7 +8087,6 @@ function renderRestoreOptions(filename, data){
     apikey: !!data.apiKey,
     albums: !!(data.userAlbums && data.userAlbums.length),
     workflows: !!(Array.isArray(data.workflows) && data.workflows.length),
-    randomCategories: !!(Array.isArray(data.randomCategories) && data.randomCategories.length),
     wildcards: !!(Array.isArray(data.wildcards) && data.wildcards.length),
     personas: !!(Array.isArray(data.personas) && data.personas.length),
     presets: {},
@@ -8510,7 +8150,6 @@ function renderRestoreOptions(filename, data){
     <fieldset style="border:1.5px solid var(--b1);border-radius:6px;padding:10px 14px 12px;margin-bottom:10px">
       <legend style="font-weight:700;color:var(--acc);padding:0 6px;font-size:13px">💾 워크플로 슬롯</legend>
       <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_workflows" ${has.workflows?'checked':'disabled'}>저장된 워크플로 ${has.workflows?`(${data.workflows.length}개)`:'(파일에 없음)'}</label>
-      <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_random" ${has.randomCategories?'checked':'disabled'}>🎲 랜덤 카테고리 빌더 ${has.randomCategories?`(${data.randomCategories.length}개)`:'(파일에 없음)'}</label>
       <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_wildcards" ${has.wildcards?'checked':'disabled'}>🃏 와일드카드 ${has.wildcards?`(${data.wildcards.length}개)`:'(파일에 없음)'}</label>
       <label class="chk" style="display:flex;padding:5px 0"><input type="checkbox" id="rs_personas" ${has.personas?'checked':'disabled'}>🧑 페르소나 ${has.personas?`(${data.personas.length}개)`:'(파일에 없음)'}</label>
     </fieldset>
@@ -8559,7 +8198,6 @@ async function computeRestoreDiff(data){
   }
   if($('rs_albums')?.checked && data.userAlbums) diff.albums = `사용자 앨범 ${data.userAlbums.length}개 전체 교체`;
   if($('rs_workflows')?.checked && Array.isArray(data.workflows)) diff.workflows = `워크플로 ${data.workflows.length}개 전체 교체`;
-  if($('rs_random')?.checked && Array.isArray(data.randomCategories)) diff.randomCategories = `🎲 랜덤 카테고리 ${data.randomCategories.length}개 전체 교체`;
   if($('rs_wildcards')?.checked && Array.isArray(data.wildcards)) diff.wildcards = `🃏 와일드카드 ${data.wildcards.length}개 전체 교체`;
   if($('rs_personas')?.checked && Array.isArray(data.personas)) diff.personas = `🧑 페르소나 ${data.personas.length}개 병합 (같은 이름 덮어쓰기)`;
   return diff;
@@ -8580,7 +8218,6 @@ function renderRestoreDiff(diff){
   }
   if(diff.albums) rows.push(`<div style="padding:6px 10px;background:rgba(58,99,152,.05);border-left:3px solid var(--blue);margin-bottom:4px;border-radius:0 4px 4px 0"><b>📁 앨범</b> — ${diff.albums}</div>`);
   if(diff.workflows) rows.push(`<div style="padding:6px 10px;background:rgba(58,99,152,.05);border-left:3px solid var(--blue);margin-bottom:4px;border-radius:0 4px 4px 0"><b>💾 워크플로</b> — ${diff.workflows}</div>`);
-  if(diff.randomCategories) rows.push(`<div style="padding:6px 10px;background:rgba(58,99,152,.05);border-left:3px solid var(--blue);margin-bottom:4px;border-radius:0 4px 4px 0"><b>🎲 랜덤 카테고리</b> — ${diff.randomCategories}</div>`);
   if(diff.wildcards) rows.push(`<div style="padding:6px 10px;background:rgba(58,99,152,.05);border-left:3px solid var(--blue);margin-bottom:4px;border-radius:0 4px 4px 0"><b>🃏 와일드카드</b> — ${diff.wildcards}</div>`);
   if(diff.personas) rows.push(`<div style="padding:6px 10px;background:rgba(214,160,80,.06);border-left:3px solid var(--acc);margin-bottom:4px;border-radius:0 4px 4px 0"><b>🧑 페르소나</b> — ${diff.personas}</div>`);
   if(!rows.length) return '<div style="text-align:center;color:var(--t3);padding:20px">변경될 항목 없음 (선택된 항목 없음)</div>';
@@ -8692,28 +8329,6 @@ async function doSelectiveRestore(){
       })).slice(0, 50);
       if(typeof saveWorkflows === 'function') await saveWorkflows();
       restored.push(`워크플로 ${state.workflows.length}개`);
-    }
-    if($('rs_random')?.checked && Array.isArray(data.randomCategories)){
-      // 🎲 다중 그룹 백업(rcGroups) 이 있으면 그룹 전체 복원, 없으면 단일 배열만 (구버전 호환)
-      if(data.rcGroups && Array.isArray(data.rcGroups.groups) && data.rcGroups.groups.length){
-        state.rcGroups = data.rcGroups.groups.map(g => ({
-          id: String(g?.id || _rcNewGroupId()),
-          name: String(g?.name || '그룹').slice(0, 30),
-          categories: Array.isArray(g?.categories) ? g.categories.map(_normalizeRandomCategory).filter(Boolean) : [],
-        }));
-        const ai = Number.isInteger(data.rcGroups.activeIdx) ? data.rcGroups.activeIdx : 0;
-        state.rcActiveGroupIdx = (ai >= 0 && ai < state.rcGroups.length) ? ai : 0;
-        _ensureRcGroups();
-      } else {
-        _rcSetCategories(data.randomCategories
-          .map(_normalizeRandomCategory)
-          .filter(Boolean)
-          .slice(0, 200));
-      }
-      if(typeof saveRandomCategories === 'function') await saveRandomCategories();
-      if(typeof _renderRcGroupsBar === 'function') _renderRcGroupsBar();
-      if(typeof rcRender === 'function' && state.randomBuilderOpen) rcRender();
-      restored.push(`🎲 랜덤 카테고리 ${state.randomCategories.length}개`);
     }
     if($('rs_wildcards')?.checked && Array.isArray(data.wildcards)){
       state.wildcards = data.wildcards.map(_normalizeWildcard).filter(Boolean);
@@ -10701,138 +10316,6 @@ async function saveWorkflows(){
   await DB.setFlag('workflows', state.workflows);
 }
 
-// 🎲 RANDOM CATEGORIES — 빌더 UI 로 관리, buildGenBody 가 매 생성마다 활성 카테고리에서 옵션 무작위 선택.
-//    카테고리 모델: {id, label, enabled, locked, lockedOptionIdx, options: [{text, weight}]}
-// 📂 RC 그룹 — 카테고리 묶음을 여러 개 동시 보유, 빌더 상단 탭으로 전환.
-//   state.rcGroups = [{id, name, categories: [...]}]
-//   state.rcActiveGroupIdx = 활성 그룹 인덱스
-//   state.randomCategories = rcGroups[active].categories (live reference)
-
-function _rcNewGroupId(){ return 'rcg_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
-
-// 🔄 외부 코드가 state.randomCategories 를 새 배열로 교체할 때 항상 이 함수 사용.
-//   직접 reassign 하면 _ensureRcGroups() 가 다음 render 에서 활성 그룹 빈 배열로 덮어쓰는 버그 발생.
-//   이 헬퍼는 양쪽(state.randomCategories + rcGroups[active].categories)을 동시에 갱신.
-function _rcSetCategories(arr){
-  const a = Array.isArray(arr) ? arr : [];
-  state.randomCategories = a;
-  if(Array.isArray(state.rcGroups) && state.rcGroups[state.rcActiveGroupIdx]){
-    state.rcGroups[state.rcActiveGroupIdx].categories = a;
-  }
-}
-
-function _ensureRcGroups(){
-  if(!Array.isArray(state.rcGroups) || state.rcGroups.length === 0){
-    state.rcGroups = [{id: _rcNewGroupId(), name: '기본', categories: state.randomCategories || []}];
-    state.rcActiveGroupIdx = 0;
-  }
-  if(!Number.isInteger(state.rcActiveGroupIdx) || state.rcActiveGroupIdx < 0 || state.rcActiveGroupIdx >= state.rcGroups.length){
-    state.rcActiveGroupIdx = 0;
-  }
-  // live reference 동기화
-  state.randomCategories = state.rcGroups[state.rcActiveGroupIdx].categories;
-}
-
-function rcSwitchGroup(idx){
-  if(!Array.isArray(state.rcGroups) || idx < 0 || idx >= state.rcGroups.length) return;
-  state.rcActiveGroupIdx = idx;
-  state.randomCategories = state.rcGroups[idx].categories;
-  saveRandomCategories();
-  rcRender();
-  if(typeof _renderRcGroupsBar === 'function') _renderRcGroupsBar();
-}
-
-function rcAddGroup(name){
-  if(!Array.isArray(state.rcGroups)) state.rcGroups = [];
-  const n = String(name||'').trim().slice(0, 30) || `그룹 ${state.rcGroups.length+1}`;
-  state.rcGroups.push({id: _rcNewGroupId(), name: n, categories: []});
-  state.rcActiveGroupIdx = state.rcGroups.length - 1;
-  state.randomCategories = state.rcGroups[state.rcActiveGroupIdx].categories;
-  saveRandomCategories();
-  rcRender();
-  if(typeof _renderRcGroupsBar === 'function') _renderRcGroupsBar();
-  toast(`📂 '${n}' 그룹 추가 + 활성화`, 'success');
-}
-
-function rcRenameGroup(idx, name){
-  const g = state.rcGroups?.[idx];
-  if(!g) return;
-  const n = String(name||'').trim().slice(0, 30);
-  if(!n) return;
-  g.name = n;
-  saveRandomCategories();
-  if(typeof _renderRcGroupsBar === 'function') _renderRcGroupsBar();
-}
-
-function rcDeleteGroup(idx){
-  if(!Array.isArray(state.rcGroups) || state.rcGroups.length <= 1){
-    toast('그룹이 최소 1개는 있어야 해요', 'warning');
-    return;
-  }
-  const g = state.rcGroups[idx];
-  if(!g) return;
-  if(!confirm(`'${g.name}' 그룹을 삭제할까요?\n(카테고리 ${g.categories.length}개 함께 삭제. 복원 불가)`)) return;
-  state.rcGroups.splice(idx, 1);
-  if(state.rcActiveGroupIdx >= state.rcGroups.length) state.rcActiveGroupIdx = state.rcGroups.length - 1;
-  if(state.rcActiveGroupIdx < 0) state.rcActiveGroupIdx = 0;
-  state.randomCategories = state.rcGroups[state.rcActiveGroupIdx].categories;
-  saveRandomCategories();
-  rcRender();
-  if(typeof _renderRcGroupsBar === 'function') _renderRcGroupsBar();
-  toast(`🗑 '${g.name}' 그룹 삭제`, 'info');
-}
-
-function rcDuplicateGroup(idx){
-  const g = state.rcGroups?.[idx];
-  if(!g) return;
-  const copy = {id: _rcNewGroupId(), name: g.name + ' (사본)', categories: JSON.parse(JSON.stringify(g.categories)).map(_normalizeRandomCategory).filter(Boolean)};
-  state.rcGroups.splice(idx+1, 0, copy);
-  state.rcActiveGroupIdx = idx + 1;
-  state.randomCategories = state.rcGroups[state.rcActiveGroupIdx].categories;
-  saveRandomCategories();
-  rcRender();
-  if(typeof _renderRcGroupsBar === 'function') _renderRcGroupsBar();
-  toast(`📋 '${g.name}' 복제됨`, 'success');
-}
-
-async function loadRandomCategories(){
-  // 새 키 'rc_groups' 우선 로드 — 없으면 옛 'random_categories' (단일 배열) 마이그레이션
-  // 저장 포맷: {groups: [...], activeIdx: 0} (구버전 호환: 그냥 배열일 수도 있음)
-  const savedGroups = await DB.getFlag('rc_groups');
-  const groupArr = Array.isArray(savedGroups) ? savedGroups : (Array.isArray(savedGroups?.groups) ? savedGroups.groups : null);
-  if(groupArr && groupArr.length){
-    state.rcGroups = groupArr.map(g => ({
-      id: String(g?.id || _rcNewGroupId()),
-      name: String(g?.name || '그룹').slice(0, 30),
-      categories: Array.isArray(g?.categories) ? g.categories.map(_normalizeRandomCategory).filter(Boolean) : [],
-    }));
-    const ai = (savedGroups && Number.isInteger(savedGroups.activeIdx)) ? savedGroups.activeIdx : 0;
-    state.rcActiveGroupIdx = (ai >= 0 && ai < state.rcGroups.length) ? ai : 0;
-  } else {
-    const saved = await DB.getFlag('random_categories');
-    const cats = Array.isArray(saved) ? saved.map(_normalizeRandomCategory).filter(Boolean) : [];
-    state.rcGroups = [{id: _rcNewGroupId(), name: '기본', categories: cats}];
-    state.rcActiveGroupIdx = 0;
-  }
-  _ensureRcGroups();
-}
-
-async function saveRandomCategories(){
-  // 새 키 'rc_groups' — {groups, activeIdx} 래핑(Array 추가 속성은 structured clone 시 손실)
-  _ensureRcGroups();
-  // 동기화 — import/undo/preset 등 외부 코드가 state.randomCategories 를 새 배열로 교체한 경우 활성 그룹에 반영
-  const activeIdx = state.rcActiveGroupIdx;
-  if(state.randomCategories !== state.rcGroups[activeIdx].categories){
-    state.rcGroups[activeIdx].categories = state.randomCategories || [];
-  }
-  const payload = {
-    groups: state.rcGroups.map(g => ({id: g.id, name: g.name, categories: g.categories})),
-    activeIdx,
-  };
-  await DB.setFlag('rc_groups', payload);
-}
-
-// ═══ 🃏 WILDCARDS — __name__ 목록 저장/로드 (DB.setFlag/getFlag 'wildcards' 재사용, 스키마 변경 없음) ═══
 function _normalizeWildcard(w){
   if(!w || typeof w !== 'object') return null;
   const name = String(w.name || '').trim().slice(0, 40);
@@ -10902,55 +10385,6 @@ function _wcUniqueName(base){
 // 🃏 RC 카테고리 1개 → 와일드카드 1개 변환·저장.
 //    category.label → wildcard.label (한글 그대로) + wildcard.name 은 ASCII 슬러그.
 //    옵션 {text,weight} 그대로 옮김. 빈 옵션은 생략.
-async function rcCategoryToWildcard(catIdx){
-  const cat = state.randomCategories?.[catIdx];
-  if(!cat){ toast('카테고리 없음', 'error'); return; }
-  const opts = (cat.options || []).filter(o => (o.text || '').trim());
-  if(!opts.length){ toast('옵션이 비어있는 카테고리 — 채우고 다시', 'warning'); return; }
-  const baseName = _wcSlugifyName(cat.label || cat.name || '', catIdx + 1);
-  const name = _wcUniqueName(baseName);
-  const wc = {
-    name,
-    label: (cat.label || '').trim() || name,
-    options: opts.map(o => ({text: String(o.text || ''), weight: Number.isFinite(Number(o.weight)) ? Number(o.weight) : 1})),
-    locked: false, lockedIdx: 0,
-  };
-  if(!Array.isArray(state.wildcards)) state.wildcards = [];
-  state.wildcards.push(wc);
-  await saveWildcards();
-  if(typeof renderWildcards === 'function') renderWildcards();
-  toast(`🃏 와일드카드 저장됨 — __${name}__ (옵션 ${opts.length}개)`, 'success', {timeoutMs: 6000});
-}
-
-// 🃏 활성 RC 카테고리 전체 → 와일드카드 일괄 저장.
-async function rcExportAllToWildcards(){
-  const cats = (state.randomCategories || []).filter(c => c.enabled && (c.options || []).length);
-  if(!cats.length){ toast('활성+옵션 있는 카테고리가 없어요', 'warning'); return; }
-  if(!Array.isArray(state.wildcards)) state.wildcards = [];
-  const created = [];
-  cats.forEach((cat, i) => {
-    const opts = (cat.options || []).filter(o => (o.text || '').trim());
-    if(!opts.length) return;
-    const baseName = _wcSlugifyName(cat.label || cat.name || '', i + 1);
-    const name = _wcUniqueName(baseName);
-    state.wildcards.push({
-      name,
-      label: (cat.label || '').trim() || name,
-      options: opts.map(o => ({text: String(o.text || ''), weight: Number.isFinite(Number(o.weight)) ? Number(o.weight) : 1})),
-      locked: false, lockedIdx: 0,
-    });
-    created.push(`__${name}__`);
-  });
-  if(!created.length){ toast('변환할 카테고리 없음', 'warning'); return; }
-  await saveWildcards();
-  if(typeof renderWildcards === 'function') renderWildcards();
-  toast(`🃏 ${created.length}개 와일드카드 저장: ${created.slice(0,4).join(' ')}${created.length>4?'…':''}`, 'success', {timeoutMs: 8000});
-}
-
-// 📊 통계 모달 — IDB 의 모든 이미지(휴지통 제외) 순회하여 좋아요·캐릭터 집계.
-//   좋아요(❤️) 기반: 시드 / 프롬프트(첫 60자) / 모델 top 10
-//   전체 이미지: 캐릭터 이름(meta.characters) top 10
-// 🧨 toxic 토큰 캐시 — 60초 TTL. 같은 세션 내 반복 호출 (👎 누를 때마다) 절약.
 let _toxicCache = {ts: 0, set: new Set()};
 const TOXIC_TTL_MS = 60000;
 // 공유 토크나이저 — getToxicTokens 의 키 생성과 hint/highlight 의 매칭이 동일해야 함 (가중치 표기 정규화 포함).
@@ -11173,127 +10607,6 @@ async function _renderGpGrid(){
       + `</button>`;
   }).join('');
 }
-
-// 🎴 RC 빌더 프리셋 — 카테고리 전체를 이름 붙여 저장. 별도 DB 키.
-async function loadRandomBuilderPresets(){
-  const saved = await DB.getFlag('random_builder_presets');
-  state.randomBuilderPresets = Array.isArray(saved) ? saved.filter(p =>
-    p && typeof p.id === 'string' && typeof p.name === 'string' && Array.isArray(p.categories)
-  ).slice(0, 100) : [];
-}
-async function saveRandomBuilderPresets(){
-  await DB.setFlag('random_builder_presets', state.randomBuilderPresets || []);
-}
-function rcpNewId(){ return 'rcp_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
-
-function rcpSaveCurrent(name){
-  const n = String(name||'').trim().slice(0, 40);
-  if(!n){ toast('프리셋 이름이 비어있어요', 'warning'); return null; }
-  if(!Array.isArray(state.randomBuilderPresets)) state.randomBuilderPresets = [];
-  if(state.randomBuilderPresets.some(p => p.name === n)){
-    if(!confirm(`'${n}' 이름의 프리셋이 이미 있어요. 덮어쓸까요?`)) return null;
-    state.randomBuilderPresets = state.randomBuilderPresets.filter(p => p.name !== n);
-  }
-  const p = {
-    id: rcpNewId(),
-    name: n,
-    ts: Date.now(),
-    categories: JSON.parse(JSON.stringify(state.randomCategories || [])),
-  };
-  state.randomBuilderPresets.unshift(p);
-  saveRandomBuilderPresets();
-  return p;
-}
-
-function rcpApply(id){
-  const p = state.randomBuilderPresets?.find(x => x.id === id);
-  if(!p) return false;
-  if(!confirm(`'${p.name}' 프리셋을 불러올까요?\n현재 카테고리 ${state.randomCategories.length}개가 모두 교체됩니다.`)) return false;
-  _rcSetCategories(JSON.parse(JSON.stringify(p.categories || []))
-    .map(_normalizeRandomCategory).filter(Boolean));
-  _saveRandomCategoriesDebounced();
-  rcRender();
-  toast(`🎴 '${p.name}' 프리셋 적용됨 — ${state.randomCategories.length}개 카테고리`, 'success');
-  return true;
-}
-
-function rcpDelete(id){
-  const p = state.randomBuilderPresets?.find(x => x.id === id);
-  if(!p) return false;
-  if(!confirm(`'${p.name}' 프리셋을 삭제할까요?`)) return false;
-  state.randomBuilderPresets = state.randomBuilderPresets.filter(x => x.id !== id);
-  saveRandomBuilderPresets();
-  return true;
-}
-
-function _renderRcpList(){
-  const list = $('rcpList');
-  if(!list) return;
-  const presets = state.randomBuilderPresets || [];
-  if(!presets.length){
-    list.innerHTML = `<div class="rcp-empty">저장된 빌더 프리셋이 없어요. 위에서 현재 설정을 저장하세요.</div>`;
-    return;
-  }
-  list.innerHTML = presets.map(p => {
-    const total = (p.categories || []).length;
-    const enabled = (p.categories || []).filter(c => c.enabled !== false).length;
-    const date = new Date(p.ts).toLocaleDateString();
-    return `<div class="rcp-item" data-pid="${esc(p.id)}">`
-      + `<div class="rcp-item-name" title="${esc(p.name)}">${esc(p.name)}</div>`
-      + `<div class="rcp-item-meta">${total}개 (활성 ${enabled}) · ${date}</div>`
-      + `<button class="btn primary small" data-act="rcp-apply">불러오기</button>`
-      + `<button class="btn danger small" data-act="rcp-del" title="삭제">🗑</button>`
-      + `</div>`;
-  }).join('');
-}
-
-function openRcpModal(){
-  $('rcpNewName').value = '';
-  $('rcPresetsModal').classList.add('open');
-  _renderRcpList();
-}
-// 🎨 카테고리 색상 팔레트 — 8색 + 기본. 데이터 모델의 'color' 필드.
-const RC_CATEGORY_COLORS = [
-  {id: '',       label: '기본',  hex: '#a25a1f'},
-  {id: 'red',    label: '빨강',  hex: '#b54338'},
-  {id: 'orange', label: '주황',  hex: '#d97706'},
-  {id: 'yellow', label: '노랑',  hex: '#b88820'},
-  {id: 'green',  label: '초록',  hex: '#5d8a30'},
-  {id: 'teal',   label: '청록',  hex: '#0d9488'},
-  {id: 'blue',   label: '파랑',  hex: '#3a6398'},
-  {id: 'purple', label: '보라',  hex: '#7c3aed'},
-  {id: 'pink',   label: '분홍',  hex: '#db2777'},
-];
-const _RC_COLOR_IDS = new Set(RC_CATEGORY_COLORS.map(c => c.id));
-
-function _normalizeRandomCategory(c){
-  if(!c || typeof c !== 'object') return null;
-  const colorId = typeof c.color === 'string' && _RC_COLOR_IDS.has(c.color) ? c.color : '';
-  return {
-    id: String(c.id || `rc-${Date.now()}-${Math.random().toString(36).slice(2,8)}`),
-    label: String(c.label || '').slice(0, 80) || '카테고리',
-    note: String(c.note || '').slice(0, 500),       // 📝 사용자 설명/주석
-    color: colorId,                                 // 🎨 색상 태그 (빈 문자열 = 기본)
-    group: String(c.group || '').slice(0, 40),       // 📂 그룹명 — 카테고리 묶음 (선택)
-    enabled: c.enabled !== false,
-    collapsed: !!c.collapsed,                        // 📦 옵션 영역 접힘
-    locked: !!c.locked,
-    lockedOptionIdx: Number.isInteger(c.lockedOptionIdx) ? c.lockedOptionIdx : null,
-    options: Array.isArray(c.options) ? c.options.slice(0, 200).map(o => ({
-      text: String(o?.text || '').slice(0, 500),
-      weight: Number.isFinite(Number(o?.weight)) ? Math.max(0, Math.min(10, Number(o.weight))) : 1.0,
-    })) : [],
-  };
-}
-function rcNewCategory(label){
-  return _normalizeRandomCategory({
-    id: `rc-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
-    label: label || '새 카테고리',
-    enabled: true,
-    options: [{text: '', weight: 1.0}],
-  });
-}
-const _saveRandomCategoriesDebounced = debounce(saveRandomCategories, 400);
 
 async function _wfThumb(){
   // 현재 미리보기 이미지를 작은 data URL로 — 없으면 null
@@ -13985,10 +13298,6 @@ async function showLightboxAt(idx){
     if(xl.choices?.length){
       const items = xl.choices.map(c => `<div style="margin-left:6px"><code style="color:var(--acc)">||${esc((c.options||[]).join('|'))}||</code> → ${esc(c.value)}${c.source && c.source !== 'prompt' ? ` <span class="muted">(${esc(c.source)})</span>` : ''}</div>`).join('');
       rows.push(`<div style="margin-top:4px"><b>🎲 동적 선택</b>${items}</div>`);
-    }
-    if(xl.rc?.length){
-      const items = xl.rc.map(r => `<div style="margin-left:6px"><span class="muted">${esc(r.category || '카테고리')}</span> → ${esc(r.value)}</div>`).join('');
-      rows.push(`<div style="margin-top:4px"><b>🎰 RC 빌더</b>${items}</div>`);
     }
     lines.push(`<div class="lb-prompt">${rows.join('')}</div>`);
   }
@@ -17409,10 +16718,6 @@ function setMode(mode){
     const allowed = Array.from(el.classList).filter(c => ['t2i','i2i','inpaint','vibe','director'].includes(c));
     el.style.display = allowed.includes(mode) ? '' : 'none';
   });
-  // 🎲 RC 빌더 자동 닫힘 — 모드 전환 시 거슬리지 않게 (사용자 보고: "편집모드까지 따라옴")
-  if(state.randomBuilderOpen && typeof rcToggleBuilder === 'function'){
-    rcToggleBuilder(false);
-  }
   refreshCost();
 }
 
@@ -17656,39 +16961,47 @@ function tplRenderRoll(){
   if($('tplRollStatus')) $('tplRollStatus').textContent = `${_tplCurrentRoll.length}개 항목`;
 }
 
-// 📤 활성 템플릿 카테고리 → RC 빌더 카테고리 일괄 복사
-//   각 활성 템플릿 카테고리(state.presets[cat]) 의 프리셋 목록을 그대로 RC 카테고리 옵션으로 옮김.
-//   ⭐ 즐겨찾기 필터 ON 이면 fav 만 옵션화. 빈 카테고리는 스킵.
-//   기존 RC 카테고리는 그대로 두고 끝에 append.
-async function tplExportActiveToRc(){
+// 🃏 활성 템플릿 카테고리 → 와일드카드 직행 내보내기
+//   카테고리당 와일드카드 1개. 프리셋 이름 그대로 후보(text)가 됨.
+//   ⭐ 즐겨찾기 필터 ON 이면 fav 만. 같은 이름 와일드카드가 있으면 후보 병합(중복 줄 제외).
+async function tplExportActiveToWildcards(){
   if(!_tplActiveCats || !_tplActiveCats.size){ toast('활성 카테고리가 없어요 — 칩을 골라주세요', 'warning'); return; }
   const favOnly = !!state._tplFavOnly;
-  if(!Array.isArray(state.randomCategories)) _rcSetCategories([]);
-  let added = 0, totalOpts = 0;
-  const skipped = [];
-  for(const cid of TPL_AVAILABLE_CATS){
-    if(!_tplActiveCats.has(cid)) continue;
+  if(!Array.isArray(state.wildcards)) state.wildcards = [];
+  let created = 0, merged = 0, optTotal = 0;
+  for(const cid of _tplActiveCats){
     let list = state.presets[cid] || [];
     if(favOnly) list = list.filter(p => p.fav);
-    if(!list.length){ skipped.push(cid); continue; }
-    const def = PRESET_TYPES.find(t => t.id === cid) || {label: cid, ico: '•'};
-    const cat = rcNewCategory(`${def.ico} ${def.label}${favOnly?' ⭐':''}`);
-    // 프리셋 1개 → 옵션 1개. 프리셋 이름은 옵션 인라인 prefix 가 아니라 text 만 옮김 (RC 빌더는 옵션 식별을 text 로 함).
-    cat.options = list.map(p => ({text: String(p.text || '').trim(), weight: 1.0})).filter(o => o.text);
-    if(!cat.options.length){ skipped.push(cid); continue; }
-    state.randomCategories.push(cat);
-    added++;
-    totalOpts += cat.options.length;
+    if(!list.length) continue;
+    const def = PRESET_TYPES.find(t => t.id === cid);
+    const options = list
+      .map(p => ({ text: String(p.text || '').trim(), weight: 1 }))
+      .filter(o => o.text);
+    if(!options.length) continue;
+    optTotal += options.length;
+    // 기존 같은 이름 → 병합, 없으면 새로
+    const wcName = _wcSlugifyName(cid, created);
+    const existing = state.wildcards.find(w => w.name === wcName);
+    if(existing){
+      const seen = new Set((existing.options || []).map(o => o.text));
+      for(const o of options){ if(!seen.has(o.text)){ existing.options.push(o); seen.add(o.text); } }
+      merged++;
+    } else {
+      state.wildcards.push({
+        name: wcName,
+        label: `🎨 ${def?.label || cid} (템플릿)`,
+        options, locked: false, lockedIdx: 0,
+      });
+      created++;
+    }
   }
-  if(!added){ toast(`복사할 항목 없음 — 활성 카테고리에 ${favOnly?'⭐ 즐겨찾기 ':''}프리셋이 모두 비어있음`, 'warning'); return; }
-  _saveRandomCategoriesDebounced();
-  // RC 빌더가 열려있으면 즉시 렌더, 아니면 다음 열림 때.
-  if(typeof rcRender === 'function' && state.randomBuilderOpen) rcRender();
-  const skipMsg = skipped.length ? ` · 건너뜀 ${skipped.length}` : '';
-  toast(`📤 RC 빌더에 ${added}개 카테고리 추가 (옵션 총 ${totalOpts}개)${skipMsg}\n🎲 탭에서 확인 → 🃏 버튼으로 와일드카드 변환 가능`, 'success', {timeoutMs: 8000});
+  if(created + merged === 0){ toast('내보낼 프리셋이 없어요 (빈 카테고리 또는 즐겨찾기 0개)', 'warning'); return; }
+  await saveWildcards();
+  if(typeof renderWildcards === 'function') renderWildcards();
+  if(typeof wildcardToggle === 'function') wildcardToggle(true);
+  toast(`🃏 와일드카드 ${created}개 생성 · ${merged}개 병합 — 후보 ${optTotal}개. 프롬프트에서 __이름__ 으로 사용`, 'success', {timeoutMs: 7000});
 }
 
-// 현재 조합을 메인 폼에 적용
 function tplApplyRoll(){
   if(!_tplCurrentRoll.length){ toast('조합이 비어있습니다 — 먼저 🎲 랜덤 생성', 'warning'); return; }
   const applyMode = document.querySelector('input[name="tplApplyMode"]:checked')?.value || 'merge';
@@ -18214,10 +17527,6 @@ function setMainPane(pane){
   }
   // 페인 변경 이벤트 발행 — 캐릭터 네거티브 모드 등이 자동 해제 가능
   if(prev !== pane){
-    // 🎲 RC 빌더 자동 닫힘 — 다른 메인 탭으로 이동 시 사이드바 정리 (사용자 보고: 거슬림)
-    if(state.randomBuilderOpen && typeof rcToggleBuilder === 'function'){
-      rcToggleBuilder(false);
-    }
     document.dispatchEvent(new CustomEvent('mview-change', {detail:{prev, next:pane}}));
   }
 }
@@ -21623,7 +20932,7 @@ function wireMiscEvents(){
     });
   }
   $('tplApplyBtn')?.addEventListener('click', tplApplyRoll);
-  $('tplToRcBtn')?.addEventListener('click', tplExportActiveToRc);
+  $('tplToWildcardBtn')?.addEventListener('click', tplExportActiveToWildcards);
   // ➕ 현재 조합에 캐릭터 항목 추가 — 캐릭터 선택 모달 (검색 + 랜덤)
   $('tplAddCharSlotBtn')?.addEventListener('click', () => {
     openTplCharPicker();
@@ -21996,1337 +21305,6 @@ function showRandomChoicePreview(){
 
 // ═══════════════════════════════════════════════════════════
 // 🎲 RANDOM CATEGORY BUILDER — 빌더 UI 렌더 + CRUD
-// ═══════════════════════════════════════════════════════════
-function rcToggleBuilder(force){
-  const open = (typeof force === 'boolean') ? force : !state.randomBuilderOpen;
-  state.randomBuilderOpen = open;
-  const tab = $('randomBuilderTab');
-  const sec = $('randomBuilderSec');
-  if(tab){ tab.classList.toggle('act', open); tab.setAttribute('aria-pressed', String(open)); }
-  if(sec) sec.style.display = open ? '' : 'none';
-  if(open){
-    _renderRcGroupsBar();
-    rcRender();
-    // 🎴 빌더 프리셋 안내 — 첫 진입 시 1회 (localStorage 영구화)
-    try {
-      if(!localStorage.getItem('nai_rcp_hint_shown')){
-        toast('💡 빌더 헤더의 🎴 버튼으로 전체 카테고리 세트를 프리셋으로 저장·전환할 수 있어요', 'info');
-        localStorage.setItem('nai_rcp_hint_shown', '1');
-      }
-    } catch(_){}
-  }
-}
-
-// 🔍 검색·필터 상태 (메모리만 — 세션 한정)
-const _rcSearch = {query: '', filter: 'all'};
-
-// 🪄 카드/옵션 드래그 정렬 — HTML5 drag&drop, 카드와 옵션 따로 처리.
-// 이벤트 위임으로 list 한 곳에서 처리. 카드 자체 또는 옵션 행이 draggable.
-function _rcInstallDragSort(list){
-  if(!list) return;
-  let dragging = null;   // {type:'card'|'opt', catIdx, optIdx}
-  list.addEventListener('dragstart', e => {
-    // input/textarea/button/select 안에서 시작한 드래그는 무시 (텍스트 선택·기본 동작 보존)
-    if(e.target.matches && e.target.matches('input, textarea, button, select')) return;
-    const optEl = e.target.closest('.rc-option');
-    const cardEl = e.target.closest('.rc-card');
-    // 옵션 드래그 — opt-drag 핸들에서만 (옵션 카드 본체에서 시작하면 입력칸 선택 방해)
-    if(optEl && e.target.classList?.contains('rc-opt-drag')){
-      const catIdx = parseInt(cardEl.dataset.catIdx, 10);
-      const optIdx = parseInt(optEl.dataset.optIdx, 10);
-      dragging = {type: 'opt', catIdx, optIdx};
-      optEl.classList.add('dragging');
-      try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'opt'); } catch(_){}
-      return;
-    }
-    // 카드 드래그 — drag handle 에서만
-    if(cardEl && e.target.classList?.contains('rc-drag-handle')){
-      const catIdx = parseInt(cardEl.dataset.catIdx, 10);
-      dragging = {type: 'card', catIdx};
-      cardEl.classList.add('dragging');
-      try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'card'); } catch(_){}
-      return;
-    }
-    // 그 외에서 시작한 드래그는 무시 (브라우저 기본 동작 막지 않음)
-  });
-  list.addEventListener('dragend', () => {
-    list.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
-    list.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-    dragging = null;
-  });
-  list.addEventListener('dragover', e => {
-    if(!dragging) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    // 드래그 위치 시각 표시 (drop target 하이라이트)
-    list.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-    if(dragging.type === 'card'){
-      const targetCard = e.target.closest('.rc-card');
-      if(targetCard && !targetCard.classList.contains('dragging')){
-        targetCard.classList.add('drag-over');
-      }
-    } else if(dragging.type === 'opt'){
-      const targetCard = e.target.closest('.rc-card');
-      if(!targetCard) return;
-      // 같은 카드 안에서만 옵션 정렬 (다른 카테고리로 이동은 지원 안 함)
-      const targetOpt = e.target.closest('.rc-option');
-      if(targetOpt && !targetOpt.classList.contains('dragging') &&
-         parseInt(targetCard.dataset.catIdx, 10) === dragging.catIdx){
-        targetOpt.classList.add('drag-over');
-      }
-    }
-  });
-  list.addEventListener('drop', e => {
-    if(!dragging){ return; }
-    e.preventDefault();
-    list.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-    if(dragging.type === 'card'){
-      const targetCard = e.target.closest('.rc-card');
-      if(!targetCard) { dragging = null; return; }
-      const fromIdx = dragging.catIdx;
-      const toIdx = parseInt(targetCard.dataset.catIdx, 10);
-      if(Number.isNaN(toIdx) || fromIdx === toIdx){ dragging = null; return; }
-      const cats = state.randomCategories;
-      const item = cats.splice(fromIdx, 1)[0];
-      cats.splice(toIdx, 0, item);
-      _saveRandomCategoriesDebounced();
-      rcRender();
-      toast(`📦 "${item.label}" 이동됨 (${fromIdx+1} → ${toIdx+1})`, 'info');
-    } else if(dragging.type === 'opt'){
-      const targetCard = e.target.closest('.rc-card');
-      const targetOpt = e.target.closest('.rc-option');
-      if(!targetCard || !targetOpt){ dragging = null; return; }
-      const catIdx = dragging.catIdx;
-      if(parseInt(targetCard.dataset.catIdx, 10) !== catIdx){ dragging = null; return; }
-      const fromIdx = dragging.optIdx;
-      const toIdx = parseInt(targetOpt.dataset.optIdx, 10);
-      if(Number.isNaN(toIdx) || fromIdx === toIdx){ dragging = null; return; }
-      const cat = state.randomCategories?.[catIdx];
-      if(!cat?.options){ dragging = null; return; }
-      const item = cat.options.splice(fromIdx, 1)[0];
-      cat.options.splice(toIdx, 0, item);
-      // 고정 옵션 인덱스 조정
-      if(cat.locked && Number.isInteger(cat.lockedOptionIdx)){
-        if(cat.lockedOptionIdx === fromIdx) cat.lockedOptionIdx = toIdx;
-        else if(fromIdx < cat.lockedOptionIdx && toIdx >= cat.lockedOptionIdx) cat.lockedOptionIdx--;
-        else if(fromIdx > cat.lockedOptionIdx && toIdx <= cat.lockedOptionIdx) cat.lockedOptionIdx++;
-      }
-      _saveRandomCategoriesDebounced();
-      rcRender();
-    }
-    dragging = null;
-  });
-}
-
-// 카테고리가 검색·필터 매칭에 통과하는지
-function _rcMatches(cat){
-  // 필터 우선
-  const f = _rcSearch.filter || 'all';
-  if(f === 'enabled' && !cat.enabled) return false;
-  if(f === 'disabled' && cat.enabled) return false;
-  if(f === 'locked' && !cat.locked) return false;
-  if(f === 'warn' && !_rcOptionWarning(cat)) return false;
-  if(f === 'empty' && (cat.options?.length || 0) > 0) return false;
-  if(f === 'has-note' && !(cat.note && cat.note.trim())) return false;
-  // 검색 — 라벨·노트·옵션 텍스트 모두 검사 (koMatch — Batch 2 한글 초성)
-  const q = (_rcSearch.query || '').trim();
-  if(!q) return true;
-  if(typeof koMatch === 'function'){
-    if(koMatch(cat.label || '', q).match) return true;
-    if(koMatch(cat.note || '', q).match) return true;
-    for(const o of (cat.options || [])){
-      if(koMatch(o.text || '', q).match) return true;
-    }
-    return false;
-  }
-  // 폴백
-  const ql = q.toLowerCase();
-  if((cat.label || '').toLowerCase().includes(ql)) return true;
-  if((cat.note || '').toLowerCase().includes(ql)) return true;
-  return (cat.options || []).some(o => (o.text || '').toLowerCase().includes(ql));
-}
-
-function _rcWeightClass(w){
-  if(w < 0) return 'negative';
-  if(w === 0) return 'zero';
-  if(w >= 1.5) return 'heavy';
-  return '';
-}
-
-function _rcOptionWarning(cat){
-  // 옵션 중 카메라 앵글이 단독으로 있으면 경고 (다른 토큰과 결합된 'sex from behind' 류는 안전)
-  if(!cat?.options) return null;
-  const hits = cat.options.filter(o => hasCameraAngle(o.text)).map(o => o.text);
-  if(!hits.length) return null;
-  return `⚠ 카메라 앵글 옵션 감지 — 다른 체위·표정과 모순 가능: <b>${esc(hits.slice(0, 3).join(', '))}</b>${hits.length>3?` 외 ${hits.length-3}개`:''}`;
-}
-
-function rcRender(){
-  const list = $('rcCategoryList');
-  const empty = $('rcEmptyState');
-  const searchEmpty = $('rcSearchEmptyState');
-  const statsBadge = $('rcStatsBadge');
-  if(!list) return;
-  if(typeof _renderRcGroupsBar === 'function') _renderRcGroupsBar();
-  const cats = state.randomCategories || [];
-  if(empty) empty.style.display = cats.length === 0 ? '' : 'none';
-  if(statsBadge){
-    const enabled = cats.filter(c => c.enabled).length;
-    const totalOpts = cats.filter(c => c.enabled).reduce((s, c) => s + (c.options?.length || 0), 0);
-    const combo = cats.filter(c => c.enabled && (c.options?.length || 0) > 0)
-      .reduce((s, c) => s * c.options.length, 1);
-    const fmtCombo = n => {
-      if(!Number.isFinite(n)) return '∞';
-      if(n >= 1e15) return n.toExponential(1);
-      if(n >= 1e9) return (n/1e9).toFixed(1) + 'B';
-      if(n >= 1e6) return (n/1e6).toFixed(1) + 'M';
-      if(n >= 1e3) return n.toLocaleString();
-      return String(n);
-    };
-    statsBadge.textContent = `${cats.length}개 · 활성 ${enabled} · 옵션 ${totalOpts} · 조합 ${fmtCombo(combo)}`;
-    statsBadge.title = `${cats.length} 카테고리 (활성 ${enabled}개 · 총 옵션 ${totalOpts}개 · 조합 ${combo.toLocaleString()})`;
-  }
-  if(cats.length === 0){
-    list.innerHTML = '';
-    if(searchEmpty) searchEmpty.style.display = 'none';
-    return;
-  }
-  // 🔍 검색·필터 적용 — 매칭 카드만 표시 (원본 인덱스 보존을 위해 ci 사용)
-  const filtered = cats.map((c, ci) => ({c, ci})).filter(({c}) => _rcMatches(c));
-  if(searchEmpty){
-    const hasFilter = (_rcSearch.query || '').trim() || _rcSearch.filter !== 'all';
-    searchEmpty.style.display = (hasFilter && filtered.length === 0) ? '' : 'none';
-  }
-  // 📂 그룹별 묶음 렌더링 — 같은 그룹의 카테고리들을 연속으로 표시 + 그룹 헤더
-  const byGroup = new Map();
-  for(const item of filtered){
-    const g = item.c.group || '';
-    if(!byGroup.has(g)) byGroup.set(g, []);
-    byGroup.get(g).push(item);
-  }
-  // 그룹 정렬: 빈 그룹(없음) 마지막, 나머지는 가나다순
-  const groups = [...byGroup.keys()].sort((a, b) => {
-    if(!a) return 1;
-    if(!b) return -1;
-    return a.localeCompare(b, 'ko');
-  });
-  list.innerHTML = groups.map(g => {
-    const items = byGroup.get(g);
-    const enabledN = items.filter(i => i.c.enabled).length;
-    const header = g
-      ? `<div class="rc-group-header" data-group="${esc(g)}">📂 ${esc(g)} <span class="rc-group-count">${items.length}개 (활성 ${enabledN})</span>`
-        + `<button class="rc-group-del" data-act="rc-group-dissolve" data-group="${esc(g)}" title="이 그룹 해제 — 카테고리는 유지하고 묶음만 풉니다" aria-label="그룹 해제">✕ 그룹 해제</button></div>`
-      : (byGroup.size > 1 ? `<div class="rc-group-header rc-group-empty">📦 그룹 없음 <span class="rc-group-count">${items.length}개</span></div>` : '');
-    return header + items.map(({c, ci}) => _rcRenderCard(c, ci)).join('');
-  }).join('');
-}
-
-function _rcRenderCard(cat, catIdx){
-  const enabled = cat.enabled !== false;
-  const locked = !!cat.locked;
-  const collapsed = !!cat.collapsed;
-  const note = (cat.note || '').trim();
-  const warn = _rcOptionWarning(cat);
-  const optsHtml = (cat.options || []).map((o, i) => {
-    const isLockedOpt = locked && cat.lockedOptionIdx === i;
-    const w = Number(o.weight);
-    const wDisplay = Number.isFinite(w) ? w.toFixed(1) : '1.0';
-    const isEmpty = !(o.text || '').trim();
-    return `
-      <div class="rc-option${isLockedOpt?' locked-opt':''}" data-opt-idx="${i}" draggable="true">
-        <span class="rc-opt-drag" title="드래그해서 순서 변경">⋮⋮</span>
-        <input type="text" class="rc-opt-text${isEmpty?' placeholder':''}" data-act="edit-opt" data-cat-idx="${catIdx}" data-opt-idx="${i}" value="${esc(o.text || '')}" placeholder="(빈 옵션 — 아무것도 사용 안 함)" spellcheck="false">
-        ${isEmpty ? '<span class="rc-opt-empty-badge" title="빈 옵션 = 이 옵션이 선택되면 카테고리에서 아무 태그도 추가 안 함">∅</span>' : ''}
-        <span class="rc-weight-ctrl">
-          <button data-act="weight-down" data-cat-idx="${catIdx}" data-opt-idx="${i}" title="가중치 -0.2">−</button>
-          <span class="rc-weight-val ${_rcWeightClass(w)}" title="가중치 ${wDisplay}">${wDisplay}</span>
-          <button data-act="weight-up" data-cat-idx="${catIdx}" data-opt-idx="${i}" title="가중치 +0.2">＋</button>
-        </span>
-        <span class="rc-opt-actions">
-          <button class="lock-act" data-act="lock-opt" data-cat-idx="${catIdx}" data-opt-idx="${i}" title="${isLockedOpt?'고정 해제':'이 옵션 고정 (debug — 매 생성마다 이 옵션만)'}">${isLockedOpt?'🔒':'🔓'}</button>
-          <button class="del-act" data-act="del-opt" data-cat-idx="${catIdx}" data-opt-idx="${i}" title="옵션 삭제">✕</button>
-        </span>
-      </div>`;
-  }).join('');
-  const cls = ['rc-card'];
-  if(!enabled) cls.push('disabled');
-  if(warn) cls.push('warn');
-  if(locked) cls.push('locked');
-  if(collapsed) cls.push('collapsed');
-  const hasOptions = (cat.options || []).length > 0;
-  const emptyCTA = `
-    <div class="rc-empty-cta">
-      <div class="rc-empty-cta-title">옵션이 비어있습니다 — 추가 방법을 선택하세요</div>
-      <div class="rc-empty-cta-grid">
-        <button type="button" data-act="add-opt" data-cat-idx="${catIdx}" class="rc-cta-btn">
-          <span class="rc-cta-icon">＋</span>
-          <span class="rc-cta-label">직접 입력</span>
-        </button>
-        <button type="button" data-act="more-add-bulk" data-cat-idx="${catIdx}" class="rc-cta-btn">
-          <span class="rc-cta-icon">📋</span>
-          <span class="rc-cta-label">일괄 추가</span>
-        </button>
-        <button type="button" data-act="add-from-preset" data-cat-idx="${catIdx}" class="rc-cta-btn">
-          <span class="rc-cta-icon">📚</span>
-          <span class="rc-cta-label">프리셋에서</span>
-        </button>
-        <button type="button" data-act="add-from-tagdex" data-cat-idx="${catIdx}" class="rc-cta-btn">
-          <span class="rc-cta-icon">📖</span>
-          <span class="rc-cta-label">태그 도감</span>
-        </button>
-      </div>
-    </div>
-  `;
-  return `
-    <div class="${cls.join(' ')}" data-cat-idx="${catIdx}" data-cat-id="${esc(cat.id || '')}" ${cat.color?`data-color="${esc(cat.color)}"`:''} draggable="true">
-      <div class="rc-drag-handle" title="드래그해서 카테고리 순서 변경" aria-label="드래그 핸들">⋮⋮</div>
-      <div class="rc-card-hdr">
-        <span class="rc-color-dot" data-act="more-menu" data-cat-idx="${catIdx}" title="🎨 색상 변경 (⋯ 메뉴)" role="button" tabindex="0"></span>
-        <button class="rc-collapse" data-act="toggle-collapse" data-cat-idx="${catIdx}" title="${collapsed?'펼치기':'접기'}" aria-label="${collapsed?'펼치기':'접기'}">${collapsed?'▶':'▼'}</button>
-        <button class="rc-toggle${enabled?' act':' off'}" data-act="toggle-enabled" data-cat-idx="${catIdx}" title="${enabled?'비활성화':'활성화'}">${enabled?'✓':'○'}</button>
-        <input type="text" class="rc-label" data-act="edit-label" data-cat-idx="${catIdx}" value="${esc(cat.label || '')}" placeholder="카테고리 이름" maxlength="80">
-        <button class="rc-group-chip${cat.group?'':' rc-group-chip-empty'}" data-act="edit-group" data-cat-idx="${catIdx}" title="📂 그룹 — 카테고리를 폴더처럼 묶기">📂 ${esc(cat.group || '그룹')}</button>
-        <span class="rc-count" title="${(cat.options||[]).length}개 옵션">${(cat.options||[]).length}</span>
-        <span class="rc-hdr-actions">
-          <button data-act="add-opt" data-cat-idx="${catIdx}" title="＋ 옵션 추가">＋</button>
-          <button data-act="add-from-preset" data-cat-idx="${catIdx}" title="📚 프리셋에서 옵션 채우기 (그룹별·썸네일·다중선택)" style="color:var(--acc)">📚</button>
-          <button data-act="cat-to-wildcard" data-cat-idx="${catIdx}" title="🃏 이 카테고리를 와일드카드로 저장 → 프롬프트에서 __이름__ 으로 사용" style="color:var(--acc)">🃏</button>
-          <button data-act="more-menu" data-cat-idx="${catIdx}" title="⋯ 더보기 — 색상·노트·일괄 추가·도감·이동·복제" class="${note?'has-note':''}" aria-haspopup="menu">⋯</button>
-          <button data-act="del-cat" data-cat-idx="${catIdx}" title="✕ 카테고리 삭제" style="color:var(--red)">✕</button>
-        </span>
-      </div>
-      ${note ? `<div class="rc-note-display" data-act="edit-note" data-cat-idx="${catIdx}" title="클릭해서 편집">📝 ${esc(note)}</div>` : ''}
-      <div class="rc-options" ${collapsed?'style="display:none"':''}>${hasOptions ? optsHtml : emptyCTA}</div>
-      ${warn && !collapsed ? `<div class="rc-warn-bar">${warn}</div>` : ''}
-    </div>
-  `;
-}
-
-function rcSetCatField(catIdx, field, value){
-  const c = state.randomCategories?.[catIdx];
-  if(!c) return;
-  c[field] = value;
-  _saveRandomCategoriesDebounced();
-}
-function rcSetOptText(catIdx, optIdx, text){
-  const c = state.randomCategories?.[catIdx];
-  if(!c || !c.options?.[optIdx]) return;
-  c.options[optIdx].text = String(text || '').slice(0, 500);
-  _saveRandomCategoriesDebounced();
-}
-function rcAdjustOptWeight(catIdx, optIdx, delta){
-  const c = state.randomCategories?.[catIdx];
-  if(!c || !c.options?.[optIdx]) return;
-  const w = Number(c.options[optIdx].weight) || 1.0;
-  const next = Math.max(0, Math.min(10, +(w + delta).toFixed(1)));
-  c.options[optIdx].weight = next;
-  _saveRandomCategoriesDebounced();
-  // 부분 갱신 — 전체 rcRender 대신 해당 옵션의 가중치 표시만 업데이트 (UI 흔들림 차단)
-  const el = document.querySelector(`.rc-card[data-cat-idx="${catIdx}"] .rc-option[data-opt-idx="${optIdx}"] .rc-weight-val`);
-  if(el){
-    el.textContent = next.toFixed(1);
-    el.title = `가중치 ${next.toFixed(1)}`;
-    el.className = `rc-weight-val ${_rcWeightClass(next)}`;
-  }
-  // 통계 배지만 갱신 (옵션 수는 안 변하지만 가중치 분포가 통계에 영향 없으므로 그대로)
-}
-function rcAddOption(catIdx, text){
-  const c = state.randomCategories?.[catIdx];
-  if(!c) return;
-  c.options = c.options || [];
-  c.options.push({text: String(text || '').slice(0, 500), weight: 1.0});
-  _saveRandomCategoriesDebounced();
-  rcRender();
-}
-function rcDelOption(catIdx, optIdx){
-  const c = state.randomCategories?.[catIdx];
-  if(!c || !c.options?.[optIdx]) return;
-  c.options.splice(optIdx, 1);
-  // 고정 옵션 인덱스 조정
-  if(c.locked && Number.isInteger(c.lockedOptionIdx)){
-    if(c.lockedOptionIdx === optIdx){ c.locked = false; c.lockedOptionIdx = null; }
-    else if(c.lockedOptionIdx > optIdx){ c.lockedOptionIdx -= 1; }
-  }
-  _saveRandomCategoriesDebounced();
-  rcRender();
-}
-function rcToggleEnabled(catIdx){
-  const c = state.randomCategories?.[catIdx];
-  if(!c) return;
-  c.enabled = !c.enabled;
-  _saveRandomCategoriesDebounced();
-  rcRender();
-}
-function rcLockOption(catIdx, optIdx){
-  const c = state.randomCategories?.[catIdx];
-  if(!c || !c.options?.[optIdx]) return;
-  if(c.locked && c.lockedOptionIdx === optIdx){
-    c.locked = false; c.lockedOptionIdx = null;
-  } else {
-    c.locked = true; c.lockedOptionIdx = optIdx;
-  }
-  _saveRandomCategoriesDebounced();
-  rcRender();
-}
-function rcMoveCategory(catIdx, dir){
-  const cats = state.randomCategories;
-  if(!cats) return;
-  const j = catIdx + dir;
-  if(j < 0 || j >= cats.length) return;
-  [cats[catIdx], cats[j]] = [cats[j], cats[catIdx]];
-  _saveRandomCategoriesDebounced();
-  rcRender();
-}
-function rcDelCategory(catIdx){
-  const c = state.randomCategories?.[catIdx];
-  if(!c) return;
-  const snap = state.randomCategories.slice();
-  state.randomCategories.splice(catIdx, 1);
-  _saveRandomCategoriesDebounced();
-  rcRender();
-  toastUndo(`🗑 카테고리 "${c.label}" 삭제`, () => {
-    _rcSetCategories(snap);
-    _saveRandomCategoriesDebounced();
-    rcRender();
-  });
-}
-function rcAddCategory(label){
-  const c = rcNewCategory(label || `카테고리 ${(state.randomCategories?.length || 0) + 1}`);
-  if(!Array.isArray(state.randomCategories)) _rcSetCategories([]);
-  state.randomCategories.push(c);
-  _saveRandomCategoriesDebounced();
-  rcRender();
-  // 새 카테고리의 라벨 입력 필드에 자동 포커스 + list 끝으로 스크롤
-  setTimeout(() => {
-    const lastIdx = state.randomCategories.length - 1;
-    const card = document.querySelector(`#rcCategoryList .rc-card[data-cat-idx="${lastIdx}"]`);
-    if(card){
-      card.scrollIntoView({block: 'center', behavior: 'smooth'});
-      const labelInput = card.querySelector('.rc-label');
-      if(labelInput){ labelInput.focus(); labelInput.select(); }
-    }
-  }, 50);
-}
-
-// ⋯ 카테고리 더보기 메뉴 — 자주 안 쓰는 액션 묶음 (popover)
-let _rcMoreEl = null;
-let _rcMoreScope = null;
-function _rcCloseMoreMenu(){
-  if(_rcMoreEl){ _rcMoreEl.remove(); _rcMoreEl = null; }
-  if(_rcMoreScope){ _rcMoreScope.dispose(); _rcMoreScope = null; }
-}
-function rcOpenMoreMenu(catIdx, anchorBtn){
-  _rcCloseMoreMenu();
-  const cat = state.randomCategories?.[catIdx];
-  if(!cat || !anchorBtn) return;
-  const isFirst = catIdx === 0;
-  const isLast = catIdx === (state.randomCategories.length - 1);
-  const hasNote = !!(cat.note && cat.note.trim());
-  const wrap = document.createElement('div');
-  wrap.className = 'rc-more-menu';
-  wrap.setAttribute('role', 'menu');
-  // 🎨 색상 팔레트 (현재 선택 표시)
-  const colorPalette = RC_CATEGORY_COLORS.map(col => {
-    const isCur = (cat.color || '') === col.id;
-    return `<button type="button" class="rc-color-swatch ${isCur?'cur':''}" data-act="more-color" data-cat-idx="${catIdx}" data-color="${esc(col.id)}" title="${esc(col.label)}" style="background:${col.hex}" aria-label="색상 ${esc(col.label)}">${isCur?'✓':''}</button>`;
-  }).join('');
-  wrap.innerHTML = `
-    <div class="rc-more-section-title">🎨 카테고리 색상</div>
-    <div class="rc-color-palette">${colorPalette}</div>
-    <div class="rc-more-sep"></div>
-    <button type="button" data-act="more-edit-note" data-cat-idx="${catIdx}">📝 노트 편집${hasNote?' <span style="color:var(--acc);font-size:10px">●</span>':''}</button>
-    <button type="button" data-act="more-add-empty" data-cat-idx="${catIdx}">∅ 빈 옵션 추가</button>
-    <button type="button" data-act="more-add-bulk" data-cat-idx="${catIdx}">📋 옵션 일괄 추가 (콤마 분리)</button>
-    <div class="rc-more-sep"></div>
-    <button type="button" data-act="more-add-from-preset" data-cat-idx="${catIdx}">📚 프리셋에서 추가</button>
-    <button type="button" data-act="more-add-from-tagdex" data-cat-idx="${catIdx}">📖 태그 도감에서 추가</button>
-    <div class="rc-more-sep"></div>
-    <button type="button" data-act="more-duplicate" data-cat-idx="${catIdx}">📑 카테고리 복제</button>
-    <button type="button" data-act="more-export" data-cat-idx="${catIdx}">📤 이 카테고리만 텍스트 복사</button>
-    <div class="rc-more-sep"></div>
-    <button type="button" data-act="more-move-up" data-cat-idx="${catIdx}" ${isFirst?'disabled':''}>▲ 위로 이동</button>
-    <button type="button" data-act="more-move-down" data-cat-idx="${catIdx}" ${isLast?'disabled':''}>▼ 아래로 이동</button>
-  `;
-  document.body.appendChild(wrap);
-  _rcMoreEl = wrap;
-  // 위치 — 앵커 버튼 우하단 (화면 밖 안 나가게 clamp)
-  const r = anchorBtn.getBoundingClientRect();
-  const dw = wrap.offsetWidth, dh = wrap.offsetHeight;
-  let left = r.right - dw;
-  let top = r.bottom + 4;
-  if(left < 8) left = 8;
-  if(left + dw > window.innerWidth - 8) left = window.innerWidth - dw - 8;
-  if(top + dh > window.innerHeight - 8) top = r.top - dh - 4;
-  wrap.style.left = left + 'px';
-  wrap.style.top = top + 'px';
-  // 인터랙션
-  _rcMoreScope = _listenerScope();
-  _rcMoreScope.on(wrap, 'click', e => {
-    const btn = e.target.closest('button[data-act]');
-    if(!btn || btn.disabled) return;
-    const act = btn.dataset.act;
-    if(act === 'more-color'){
-      // 색상은 메뉴 닫지 않음 — 사용자가 비교 후 다른 색 선택 가능
-      const col = btn.dataset.color || '';
-      rcSetCategoryColor(catIdx, col);
-      // 메뉴 안 모든 swatch 의 cur 상태 갱신
-      wrap.querySelectorAll('.rc-color-swatch').forEach(s => {
-        const isCur = (s.dataset.color || '') === col;
-        s.classList.toggle('cur', isCur);
-        s.textContent = isCur ? '✓' : '';
-      });
-      return;
-    }
-    _rcCloseMoreMenu();
-    if(act === 'more-edit-note') rcEditNote(catIdx);
-    else if(act === 'more-add-empty') rcAddOption(catIdx, '');
-    else if(act === 'more-add-bulk') rcAddBulkOptions(catIdx);
-    else if(act === 'more-add-from-preset') rcAddFromPreset(catIdx);
-    else if(act === 'more-add-from-tagdex') rcAddFromTagdex(catIdx);
-    else if(act === 'more-duplicate') rcDuplicateCategory(catIdx);
-    else if(act === 'more-export') rcExportCategory(catIdx);
-    else if(act === 'more-move-up') rcMoveCategory(catIdx, -1);
-    else if(act === 'more-move-down') rcMoveCategory(catIdx, +1);
-  });
-  _rcMoreScope.on(document, 'mousedown', e => {
-    if(!wrap.contains(e.target) && e.target !== anchorBtn) _rcCloseMoreMenu();
-  });
-  _rcMoreScope.on(document, 'keydown', e => {
-    if(e.key === 'Escape') _rcCloseMoreMenu();
-  });
-}
-
-// 🎨 카테고리 색상 변경 — color 필드 갱신 + 카드 data-color 즉시 반영
-function rcSetCategoryColor(catIdx, colorId){
-  const c = state.randomCategories?.[catIdx];
-  if(!c) return;
-  if(!_RC_COLOR_IDS.has(colorId)) colorId = '';
-  c.color = colorId;
-  _saveRandomCategoriesDebounced();
-  // 부분 갱신 — 전체 rerender 피해서 색상만 바꿈 (포커스 보존)
-  const card = document.querySelector(`#rcCategoryList .rc-card[data-cat-idx="${catIdx}"]`);
-  if(card){
-    if(colorId) card.setAttribute('data-color', colorId);
-    else card.removeAttribute('data-color');
-  }
-}
-
-// 📑 카테고리 복제 — 라벨 끝에 (복사) 붙여서 같은 옵션으로 새 카드
-function rcDuplicateCategory(catIdx){
-  const c = state.randomCategories?.[catIdx];
-  if(!c) return;
-  const clone = _normalizeRandomCategory({
-    ...c,
-    id: `rc-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
-    label: `${c.label} (복사)`.slice(0, 80),
-    options: (c.options || []).map(o => ({text: o.text, weight: o.weight})),
-    locked: false,
-    lockedOptionIdx: null,
-  });
-  if(!clone) return;
-  state.randomCategories.splice(catIdx + 1, 0, clone);
-  _saveRandomCategoriesDebounced();
-  rcRender();
-  toast(`📑 카테고리 "${c.label}" 복제됨`, 'success');
-}
-
-// 📤 단일 카테고리 export — ||A|B|C|| 텍스트로 클립보드 복사
-async function rcExportCategory(catIdx){
-  const c = state.randomCategories?.[catIdx];
-  if(!c) return;
-  const compiled = compileCategoriesToText([{...c, enabled: true}]);
-  if(!compiled){ toast('이 카테고리에 옵션이 없습니다', 'warning'); return; }
-  const labelLine = `# ${c.label}`;
-  const text = `${labelLine}\n${compiled}`;
-  try {
-    await navigator.clipboard.writeText(text);
-    toast(`📤 "${c.label}" 복사됨 (${c.options.length}개 옵션)`, 'success');
-  } catch(e){
-    try {
-      const ta = document.createElement('textarea');
-      ta.value = text; ta.style.position = 'fixed'; ta.style.top = '-100px';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      ta.remove();
-      toast('📤 복사됨', 'success');
-    } catch(e2){ toast('클립보드 복사 실패 — 브라우저가 차단했어요. 주소창 자물쇠 → 권한에서 허용 설정', 'error'); }
-  }
-}
-
-// 📋 옵션 일괄 추가 — 콤마/줄바꿈 분리 텍스트 → 여러 옵션 자동 split
-function rcAddBulkOptions(catIdx){
-  const cat = state.randomCategories?.[catIdx];
-  if(!cat) return;
-  const html = `
-    <div style="font-size:12.5px;color:var(--t2);margin-bottom:10px;line-height:1.7">
-      "<b style="color:var(--t1)">${esc(cat.label)}</b>" 에 옵션 일괄 추가. <b>콤마(,)</b> 또는 <b>줄바꿈</b>으로 구분하면 각각 별도 옵션으로 추가됩니다.
-    </div>
-    <textarea id="_rcBulkTa" class="ta" style="min-height:180px;font-family:var(--mono);font-size:12.5px;line-height:1.6" placeholder="예:&#10;cat girl, fox girl, wolf girl&#10;rabbit girl&#10;2::angel::, 2::fallen angel::&#10;&#10;(가중치 표기 2::tag:: 도 자동 인식)"></textarea>
-    <div style="margin-top:8px;font-size:11.5px;color:var(--t3);line-height:1.5">
-      ℹ 가중치 표기 <code style="background:var(--card);padding:1px 4px;border-radius:3px;font-family:var(--mono)">2::tag::</code> 자동 파싱 — 가중치 분리됨.
-    </div>
-  `;
-  $('confirmTitle').innerHTML = `📋 옵션 일괄 추가 <span class="en">Bulk Add</span>`;
-  $('confirmBody').innerHTML = html;
-  $('confirmOk').innerHTML = '추가 <span class="en">Add</span>';
-  $('confirmOk').style.display = '';
-  $('confirmCancel').innerHTML = '취소 <span class="en">Cancel</span>';
-  $('confirmModal').classList.add('open');
-  setTimeout(() => $('_rcBulkTa')?.focus(), 50);
-  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
-  $('confirmOk').onclick = () => {
-    const text = $('_rcBulkTa')?.value || '';
-    if(!text.trim()){ toast('입력이 비어있습니다', 'warning'); return; }
-    // 콤마 + 줄바꿈으로 split — 단, ::가중치, 옵션:: 안 콤마는 보호
-    // 가중치 패턴: -?\d+(?:\.\d+)?::...::
-    // 간단하게 줄 단위 split 후 각 줄에서 가중치 보존하면서 콤마 split
-    const lines = text.split('\n');
-    const added = [];
-    for(const line of lines){
-      const tokens = parseFreePromptTokens(line);   // 가중치 안 콤마 보호 됨 — Batch 2 의 pure 함수
-      for(const tok of tokens){
-        if(!tok) continue;
-        // 가중치 표기 추출
-        const wm = tok.match(/^(-?\d+(?:\.\d+)?)::([\s\S]*?)::$/);
-        if(wm){
-          added.push({text: wm[2].trim().slice(0, 500), weight: parseFloat(wm[1]) || 1.0});
-        } else {
-          added.push({text: tok.trim().slice(0, 500), weight: 1.0});
-        }
-      }
-    }
-    if(!added.length){ toast('파싱된 옵션이 없습니다', 'warning'); return; }
-    cat.options = cat.options || [];
-    cat.options.push(...added);
-    _saveRandomCategoriesDebounced();
-    rcRender();
-    toast(`📋 ${added.length}개 옵션 추가됨 — "${cat.label}"`, 'success');
-    $('confirmModal').classList.remove('open');
-  };
-}
-
-// 📦 카테고리 접기/펼치기 — 개별 + 일괄
-function rcToggleCollapse(catIdx){
-  const c = state.randomCategories?.[catIdx];
-  if(!c) return;
-  c.collapsed = !c.collapsed;
-  _saveRandomCategoriesDebounced();
-  rcRender();
-}
-function rcCollapseAll(){
-  const cats = state.randomCategories || [];
-  if(!cats.length) return;
-  const allCollapsed = cats.every(c => c.collapsed);
-  const next = !allCollapsed;
-  for(const c of cats) c.collapsed = next;
-  _saveRandomCategoriesDebounced();
-  rcRender();
-  toast(next ? `📦 ${cats.length}개 카테고리 모두 접음` : `📂 ${cats.length}개 카테고리 모두 펼침`, 'info');
-}
-
-// ＋ 단일 옵션 추가 — 큰 모달 (prompt() 모바일 한계 회피)
-function rcOpenAddOptionModal(catIdx){
-  const cat = state.randomCategories?.[catIdx];
-  if(!cat) return;
-  const html = `
-    <div style="font-size:12.5px;color:var(--t2);margin-bottom:10px;line-height:1.6">
-      "<b style="color:var(--t1)">${esc(cat.label)}</b>" 에 추가할 옵션 텍스트. Enter 로 추가 후 입력칸이 비워져 연속 추가 가능합니다.
-    </div>
-    <div style="display:flex;gap:6px">
-      <input type="text" id="_rcAddOptInp" class="inp" style="flex:1;font-family:var(--mono);font-size:13px" placeholder="예: cat girl   /   2::angel::   /   tears, crying" spellcheck="false" autofocus>
-      <button type="button" id="_rcAddOptBtn" class="btn primary" style="flex-shrink:0;padding:8px 14px">추가</button>
-    </div>
-    <div style="margin-top:8px;font-size:11.5px;color:var(--t3);line-height:1.55">
-      ℹ 콤마(,)로 여러 옵션 한 번에 입력하려면 <b>📋 일괄 추가</b> 사용 (⋯ 메뉴).<br>
-      가중치 표기 <code style="background:var(--card);padding:1px 4px;border-radius:3px;font-family:var(--mono)">2::tag::</code> 자동 파싱됨.
-    </div>
-    <div style="margin-top:6px;font-size:11px;color:var(--t3)" id="_rcAddOptCount">옵션 ${(cat.options||[]).length}개</div>
-  `;
-  $('confirmTitle').innerHTML = `＋ 옵션 추가 <span class="en">Add Option</span>`;
-  $('confirmBody').innerHTML = html;
-  $('confirmOk').style.display = 'none';
-  $('confirmCancel').innerHTML = '닫기 <span class="en">Close</span>';
-  $('confirmModal').classList.add('open');
-  setTimeout(() => $('_rcAddOptInp')?.focus(), 50);
-  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
-  const addOne = () => {
-    const inp = $('_rcAddOptInp');
-    if(!inp) return;
-    const v = (inp.value || '').trim();
-    if(!v) return;
-    // 가중치 자동 파싱
-    const wm = v.match(/^(-?\d+(?:\.\d+)?)::([\s\S]*?)::$/);
-    cat.options = cat.options || [];
-    if(wm){
-      cat.options.push({text: wm[2].trim().slice(0,500), weight: parseFloat(wm[1])||1.0});
-    } else {
-      cat.options.push({text: v.slice(0,500), weight: 1.0});
-    }
-    _saveRandomCategoriesDebounced();
-    rcRender();
-    inp.value = '';
-    inp.focus();
-    const cnt = $('_rcAddOptCount');
-    if(cnt) cnt.textContent = `옵션 ${cat.options.length}개`;
-  };
-  $('_rcAddOptBtn').onclick = addOne;
-  $('_rcAddOptInp').onkeydown = e => {
-    if(e.key === 'Enter'){ e.preventDefault(); addOne(); }
-  };
-}
-
-// 📝 카테고리 노트 편집 — 큰 textarea 모달 (500자, 모바일 친화)
-// 📂 그룹 탭 바 렌더링 — 여러 그룹 탭 + 추가 버튼.
-function _renderRcGroupsBar(){
-  const bar = $('rcGroupsBar');
-  if(!bar) return;
-  _ensureRcGroups();
-  const groups = state.rcGroups || [];
-  const active = state.rcActiveGroupIdx || 0;
-  bar.innerHTML = groups.map((g, i) => {
-    const cls = i === active ? 'rcg-tab act' : 'rcg-tab';
-    const enabledN = (g.categories || []).filter(c => c.enabled).length;
-    return `<div class="${cls}" role="tab" aria-selected="${i===active}" data-gidx="${i}" title="클릭=전환 · ⋯ 메뉴=이름변경·복제·삭제">`
-      + `<span class="rcg-tab-label" data-act="rcg-switch" data-gidx="${i}">${esc(g.name)}</span>`
-      + `<span class="rcg-count">${enabledN}/${g.categories.length}</span>`
-      + `<button class="rcg-tab-menu" data-act="rcg-menu" data-gidx="${i}" title="이 그룹 메뉴 (이름변경·복제·삭제)" aria-label="그룹 메뉴">⋯</button>`
-      + `</div>`;
-  }).join('') + `<button class="rcg-add" data-act="rcg-add" title="새 그룹 추가">＋ 새 그룹</button>`;
-}
-
-// 📂 카테고리 그룹 라벨 — 카드 헤더 chip (rcEditGroup 은 카드 안의 group 필드, 위 그룹과 별개).
-function rcEditGroup(catIdx){
-  const c = state.randomCategories?.[catIdx];
-  if(!c) return;
-  const cats = state.randomCategories || [];
-  const existing = [...new Set(cats.map(x => x.group).filter(Boolean))].sort();
-  let msg = `"${c.label}" 의 그룹명을 입력 (비우면 그룹 해제)`;
-  if(existing.length) msg += `\n\n기존 그룹: ${existing.join(', ')}`;
-  const val = prompt(msg, c.group || '');
-  if(val === null) return;
-  c.group = String(val).trim().slice(0, 40);
-  _saveRandomCategoriesDebounced();
-  rcRender();
-  if(c.group) toast(`📂 '${c.group}' 그룹으로 이동`, 'success');
-  else toast(`📦 그룹 해제`, 'info');
-}
-
-// 📂 그룹 해제(dissolve) — 그 그룹 카테고리들의 group 만 비움 (카테고리 자체는 유지). undo 제공.
-function rcDissolveGroup(group){
-  if(!group) return;
-  const cats = state.randomCategories || [];
-  const members = cats.filter(c => c.group === group);
-  if(!members.length) return;
-  if(!confirm(`'${group}' 그룹을 해제할까요?\n카테고리 ${members.length}개는 그대로 남고 묶음만 풀립니다.`)) return;
-  const snap = members.map(c => ({c, prev: c.group}));
-  members.forEach(c => { c.group = ''; });
-  _saveRandomCategoriesDebounced();
-  rcRender();
-  toastUndo(`📦 '${group}' 그룹 해제 (${members.length}개)`, () => {
-    snap.forEach(({c, prev}) => { c.group = prev; });
-    _saveRandomCategoriesDebounced();
-    rcRender();
-  });
-}
-
-function rcEditNote(catIdx){
-  const c = state.randomCategories?.[catIdx];
-  if(!c) return;
-  const cur = c.note || '';
-  const html = `
-    <div style="font-size:12.5px;color:var(--t2);margin-bottom:10px;line-height:1.6">
-      "<b style="color:var(--t1)">${esc(c.label)}</b>" 카테고리의 사용자 메모. 무슨 태그인지, 어떻게 쓰는지 자유 작성.
-      <br><span style="font-size:11px;color:var(--t3)">비우고 저장하면 노트 제거됨.</span>
-    </div>
-    <textarea id="_rcNoteTa" class="ta" style="min-height:140px;font-size:13px;line-height:1.6" placeholder="예: 03/01 angel/fallen angel 가중치 2 부여 (그냥은 느낌 안 나옴)&#10;예: 본인 취향 아니어도 다양성 테스트용" maxlength="500">${esc(cur)}</textarea>
-    <div style="margin-top:6px;font-size:11px;color:var(--t3);text-align:right" id="_rcNoteCount">${cur.length} / 500</div>
-  `;
-  $('confirmTitle').innerHTML = `📝 카테고리 노트 <span class="en">Note</span>`;
-  $('confirmBody').innerHTML = html;
-  $('confirmOk').innerHTML = '저장 <span class="en">Save</span>';
-  $('confirmOk').style.display = '';
-  $('confirmCancel').innerHTML = '취소 <span class="en">Cancel</span>';
-  $('confirmModal').classList.add('open');
-  setTimeout(() => $('_rcNoteTa')?.focus(), 50);
-  const ta = $('_rcNoteTa');
-  if(ta){
-    ta.oninput = () => {
-      const cnt = $('_rcNoteCount');
-      if(cnt) cnt.textContent = `${ta.value.length} / 500`;
-    };
-  }
-  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
-  $('confirmOk').onclick = () => {
-    const v = ($('_rcNoteTa')?.value || '').slice(0, 500);
-    c.note = v;
-    _saveRandomCategoriesDebounced();
-    rcRender();
-    $('confirmModal').classList.remove('open');
-    toast(v.trim() ? `📝 노트 저장됨 (${v.length}자)` : '🗑 노트 제거됨', 'info');
-  };
-}
-
-// 📚 프리셋에서 옵션 추가 — 카테고리 선택 → 항목 다중 선택
-function rcAddFromPreset(catIdx){
-  const cat = state.randomCategories?.[catIdx];
-  if(!cat) return;
-  const presetCats = (typeof PRESET_TYPES !== 'undefined' ? PRESET_TYPES : []).filter(t => (state.presets?.[t.id] || []).length > 0);
-  if(!presetCats.length){
-    toast('등록된 프리셋이 없습니다 — 프리셋 탭에서 먼저 추가하세요', 'warning');
-    return;
-  }
-  // 1단계: 프리셋 카테고리 선택
-  const html = `
-    <div style="font-size:12.5px;color:var(--t2);margin-bottom:12px;line-height:1.6">
-      "<b style="color:var(--t1)">${esc(cat.label)}</b>"에 옵션으로 추가할 프리셋 카테고리를 선택하세요.
-    </div>
-    <div style="display:flex;flex-direction:column;gap:5px;max-height:50vh;overflow-y:auto">
-      ${presetCats.map(t => `
-        <button type="button" data-preset-cat="${esc(t.id)}" class="btn ghost" style="justify-content:flex-start;padding:8px 12px;text-align:left">
-          ${t.ico} ${esc(t.label)} <span style="margin-left:auto;color:var(--t3);font-family:var(--mono);font-size:11px">${state.presets[t.id].length}개</span>
-        </button>
-      `).join('')}
-    </div>
-  `;
-  $('confirmTitle').innerHTML = '📚 프리셋 카테고리 선택 <span class="en">Step 1/2</span>';
-  $('confirmBody').innerHTML = html;
-  $('confirmOk').style.display = 'none';
-  $('confirmCancel').innerHTML = '취소 <span class="en">Cancel</span>';
-  $('confirmModal').classList.add('open');
-  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
-  $('confirmBody').querySelectorAll('[data-preset-cat]').forEach(btn => {
-    btn.onclick = () => {
-      const presetCatId = btn.dataset.presetCat;
-      _rcShowPresetPicker(catIdx, presetCatId);
-    };
-  });
-}
-function _rcShowPresetPicker(catIdx, presetCatId){
-  const cat = state.randomCategories?.[catIdx];
-  if(!cat) return;
-  const presets = state.presets?.[presetCatId] || [];
-  const def = PRESET_TYPES.find(t => t.id === presetCatId);
-  if(!presets.length){ toast('프리셋이 비어있습니다', 'warning'); return; }
-  const html = `
-    <div style="font-size:12.5px;color:var(--t2);margin-bottom:8px;line-height:1.6">
-      <b style="color:var(--t1)">${esc(def?.label || presetCatId)}</b> 에서 옵션으로 추가할 프리셋을 체크하세요. (그룹별 정리 · 썸네일 · 다중 선택)
-    </div>
-    <div style="display:flex;gap:6px;margin-bottom:8px;font-size:11.5px;align-items:center">
-      <button type="button" id="_rcPpSelAll" class="btn ghost" style="padding:4px 10px">☑ 보이는 것 전체</button>
-      <button type="button" id="_rcPpSelNone" class="btn ghost" style="padding:4px 10px">☐ 해제</button>
-      <span style="margin-left:auto;color:var(--acc);font-weight:700" id="_rcPpCount">0개 선택됨</span>
-    </div>
-    <input type="text" id="_rcPpSearch" class="inp" placeholder="🔍 프리셋 이름·내용 검색 (한글 초성 가능)" style="width:100%;margin-bottom:6px" autocomplete="off" spellcheck="false">
-    <div id="_rcPpList" style="display:flex;flex-direction:column;gap:2px;max-height:48vh;overflow-y:auto;background:var(--card);padding:6px;border:1px solid var(--b1);border-radius:5px">
-      ${_rcRenderPresetPickerRows(presets)}
-      <div id="_rcPpEmpty" style="display:none;text-align:center;color:var(--t3);font-size:11.5px;padding:16px">🔍 검색 결과 없음</div>
-    </div>
-    <div style="margin-top:8px;display:flex;gap:6px;align-items:center;font-size:11px;color:var(--t3)">
-      <label style="display:flex;align-items:center;gap:5px;cursor:pointer">
-        <input type="checkbox" id="_rcPpUseName"> 옵션 텍스트로 <b>프리셋 이름</b> 사용 (기본: 프리셋 내용)
-      </label>
-    </div>
-  `;
-  $('confirmTitle').innerHTML = `📚 ${def?.ico||'•'} ${esc(def?.label||presetCatId)} <span class="en">Step 2/2</span>`;
-  $('confirmBody').innerHTML = html;
-  $('confirmOk').innerHTML = '추가 <span class="en">Add</span>';
-  $('confirmOk').style.display = '';
-  $('confirmCancel').innerHTML = '취소 <span class="en">Cancel</span>';
-  const updateCount = () => {
-    const n = $('confirmBody').querySelectorAll('._rcPpCheck:checked').length;
-    const cnt = $('_rcPpCount'); if(cnt) cnt.textContent = `${n}개 선택됨`;
-  };
-  $('confirmBody').querySelectorAll('._rcPpCheck').forEach(cb => cb.addEventListener('change', updateCount));
-  // 📂 그룹 헤더 클릭 = 그룹 전체 토글 (보이는 행만)
-  $('confirmBody').querySelectorAll('[data-rcpp-group]').forEach(hdr => {
-    hdr.addEventListener('click', () => {
-      const g = hdr.dataset.rcppGroup;
-      const rows = [...$('confirmBody').querySelectorAll(`label[data-rcpp-g="${CSS.escape(g)}"]`)].filter(r => r.style.display !== 'none');
-      const allOn = rows.every(r => r.querySelector('._rcPpCheck')?.checked);
-      rows.forEach(r => { const c = r.querySelector('._rcPpCheck'); if(c) c.checked = !allOn; });
-      updateCount();
-    });
-  });
-  $('_rcPpSelAll').onclick = () => {
-    $('confirmBody').querySelectorAll('._rcPpCheck').forEach(cb => {
-      const row = cb.closest('label');
-      if(row && row.style.display !== 'none') cb.checked = true;
-    });
-    updateCount();
-  };
-  $('_rcPpSelNone').onclick = () => {
-    $('confirmBody').querySelectorAll('._rcPpCheck').forEach(cb => cb.checked = false);
-    updateCount();
-  };
-  $('_rcPpSearch').oninput = e => {
-    const q = (e.target.value || '').trim();
-    let visible = 0;
-    $('confirmBody').querySelectorAll('label[data-preset-name]').forEach(row => {
-      const hay = row.dataset.search || '';
-      const hit = !q || (typeof koMatch === 'function' ? koMatch(hay, q).match : hay.toLowerCase().includes(q.toLowerCase()));
-      row.style.display = hit ? '' : 'none';
-      if(hit) visible++;
-    });
-    // 그룹 헤더 — 그 그룹에 보이는 행 없으면 숨김
-    $('confirmBody').querySelectorAll('[data-rcpp-group]').forEach(hdr => {
-      const g = hdr.dataset.rcppGroup;
-      const any = [...$('confirmBody').querySelectorAll(`label[data-rcpp-g="${CSS.escape(g)}"]`)].some(r => r.style.display !== 'none');
-      hdr.style.display = any ? '' : 'none';
-    });
-    const empty = $('_rcPpEmpty'); if(empty) empty.style.display = visible ? 'none' : '';
-  };
-  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
-  $('confirmOk').onclick = () => {
-    const useName = $('_rcPpUseName')?.checked === true;
-    const checks = [...$('confirmBody').querySelectorAll('._rcPpCheck:checked')];
-    if(!checks.length){ toast('선택된 프리셋이 없습니다', 'warning'); return; }
-    let added = 0;
-    for(const cb of checks){
-      const idx = parseInt(cb.dataset.idx, 10);
-      const p = presets[idx];
-      if(!p) continue;
-      const text = useName ? (p.name || '') : (p.text || p.name || '');
-      cat.options = cat.options || [];
-      cat.options.push({text: String(text).slice(0, 500), weight: 1.0});
-      added++;
-    }
-    if(added){
-      _saveRandomCategoriesDebounced();
-      rcRender();
-      toast(`📚 ${added}개 옵션 추가됨 — "${cat.label}"`, 'success');
-    }
-    $('confirmModal').classList.remove('open');
-  };
-}
-
-// 📚 프리셋 피커 행 렌더 — 그룹별(작품/시리즈) 묶음 + 썸네일 + 검색용 data 속성.
-function _rcRenderPresetPickerRows(presets){
-  // 원본 인덱스 보존하며 그룹화
-  const withIdx = presets.map((p, i) => ({p, i}));
-  const byGroup = new Map();
-  for(const it of withIdx){
-    const g = (typeof getCharGroup === 'function' ? getCharGroup(it.p.name || '') : '') || '';
-    if(!byGroup.has(g)) byGroup.set(g, []);
-    byGroup.get(g).push(it);
-  }
-  const groups = [...byGroup.keys()].sort((a,b) => { if(!a) return 1; if(!b) return -1; return a.localeCompare(b,'ko'); });
-  const multiGroup = groups.filter(g => g).length >= 1 && byGroup.size > 1;
-  const row = ({p, i}, g) => {
-    const thumb = p.thumb
-      ? `<div style="width:34px;height:34px;flex-shrink:0;border-radius:5px;background:#1a130a center/cover no-repeat;background-image:url('${esc(p.thumb)}')"></div>`
-      : `<div style="width:34px;height:34px;flex-shrink:0;border-radius:5px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--t3)">👤</div>`;
-    const hay = ((p.name||'') + ' ' + (p.text||'')).trim();
-    return `<label class="chk" data-preset-name="${esc((p.name||'').toLowerCase())}" data-search="${esc(hay)}" data-rcpp-g="${esc(g||'')}" style="display:flex;align-items:center;gap:8px;padding:5px 7px;cursor:pointer;border-radius:4px;font-size:11.5px;line-height:1.35">
-      <input type="checkbox" class="_rcPpCheck" data-idx="${i}" style="flex-shrink:0">
-      ${thumb}
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:600;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name || '(이름 없음)')}</div>
-        <div style="font-size:10px;color:var(--t3);font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((p.text || '').slice(0, 80))}</div>
-      </div>
-    </label>`;
-  };
-  let out = '';
-  for(const g of groups){
-    const items = byGroup.get(g);
-    if(multiGroup){
-      const gName = g || '기타';
-      out += `<div data-rcpp-group="${esc(g||'')}" style="display:flex;align-items:center;gap:6px;padding:6px 7px;margin-top:3px;background:var(--card2);border-radius:4px;cursor:pointer;font-weight:700;font-size:11.5px;color:var(--acc)" title="그룹 전체 체크/해제">📚 ${esc(gName)} <span style="color:var(--t3);font-weight:500;font-family:var(--mono)">${items.length}</span></div>`;
-    }
-    out += items.map(it => row(it, g)).join('');
-  }
-  return out;
-}
-
-// 📖 태그 도감에서 옵션 추가 — 단부루 인덱스 또는 사용자 태그 도감
-function rcAddFromTagdex(catIdx){
-  const cat = state.randomCategories?.[catIdx];
-  if(!cat) return;
-  // 도감 소스: state.galleryTagIndex (사용자 갤러리 추출) 우선, 없으면 danbooru
-  const userTags = Array.isArray(state.galleryTagIndex) ? state.galleryTagIndex : [];
-  const dbTags = (typeof window.DANBOORU_TAGS !== 'undefined' && Array.isArray(window.DANBOORU_TAGS)) ? window.DANBOORU_TAGS : [];
-  // 갤러리 인덱스가 비어있으면 danbooru 사용
-  const source = userTags.length ? userTags : dbTags;
-  if(!source.length){
-    toast('태그 도감이 비어있습니다 — 갤러리 이미지를 만들거나 단부루 사전이 로드될 때까지 기다리세요', 'warning');
-    return;
-  }
-  const sourceLabel = userTags.length ? '📋 갤러리 태그 인덱스' : '📚 단부루 태그 사전';
-  // 정규화: {tag, count?, kana?, kor?} 형태로
-  const items = source.slice(0, 5000).map(t => {
-    if(typeof t === 'string') return {tag: t, label: t};
-    return {
-      tag: String(t.tag || t.name || t.value || ''),
-      label: String(t.tag || t.name || t.value || ''),
-      sub: String(t.kor || t.kana || t.ko || '').slice(0, 50),
-      count: t.count != null ? Number(t.count) : null,
-    };
-  }).filter(x => x.tag);
-  const html = `
-    <div style="font-size:12.5px;color:var(--t2);margin-bottom:8px;line-height:1.6">
-      "<b style="color:var(--t1)">${esc(cat.label)}</b>" 에 옵션으로 추가할 태그를 선택하세요. <span style="color:var(--t3);font-size:11px">(소스: ${sourceLabel} · ${items.length.toLocaleString()}개)</span>
-    </div>
-    <div style="display:flex;gap:6px;margin-bottom:8px;font-size:11.5px;align-items:center">
-      <input type="text" id="_rcTdxSearch" class="inp" placeholder="🔍 태그 검색 (영문 또는 한글)" style="flex:1">
-      <span style="color:var(--t3)" id="_rcTdxCount">0개 선택됨</span>
-    </div>
-    <div id="_rcTdxList" style="display:flex;flex-direction:column;gap:2px;max-height:45vh;overflow-y:auto;background:var(--card);padding:6px;border:1px solid var(--b1);border-radius:5px;font-size:11.5px">
-      <div style="color:var(--t3);text-align:center;padding:10px;font-size:11px">검색어를 입력하세요 (최소 2자)</div>
-    </div>
-  `;
-  $('confirmTitle').innerHTML = `📖 태그 도감에서 추가 <span class="en">From Tagdex</span>`;
-  $('confirmBody').innerHTML = html;
-  $('confirmOk').innerHTML = '추가 <span class="en">Add</span>';
-  $('confirmOk').style.display = '';
-  $('confirmCancel').innerHTML = '취소 <span class="en">Cancel</span>';
-  $('confirmModal').classList.add('open');
-  setTimeout(() => $('_rcTdxSearch')?.focus(), 50);
-
-  const selected = new Set();
-  const updateCount = () => {
-    const cnt = $('_rcTdxCount'); if(cnt) cnt.textContent = `${selected.size}개 선택됨`;
-  };
-  const renderList = () => {
-    const q = ($('_rcTdxSearch')?.value || '').toLowerCase().trim();
-    const list = $('_rcTdxList');
-    if(!list) return;
-    if(q.length < 2){
-      list.innerHTML = '<div style="color:var(--t3);text-align:center;padding:10px;font-size:11px">검색어를 입력하세요 (최소 2자)</div>';
-      return;
-    }
-    const filtered = items.filter(it => {
-      const t = (it.tag || '').toLowerCase();
-      const s = (it.sub || '').toLowerCase();
-      return t.includes(q) || s.includes(q);
-    }).slice(0, 200);
-    if(!filtered.length){
-      list.innerHTML = `<div style="color:var(--t3);text-align:center;padding:10px;font-size:11px">"${esc(q)}" 검색 결과 없음</div>`;
-      return;
-    }
-    list.innerHTML = filtered.map((it, i) => {
-      const isSel = selected.has(it.tag);
-      return `
-        <label class="chk" style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;border-radius:3px;background:${isSel?'rgba(162,90,31,.10)':'transparent'}">
-          <input type="checkbox" data-tag="${esc(it.tag)}" ${isSel?'checked':''} style="margin:0;flex-shrink:0">
-          <span style="font-family:var(--mono);color:var(--t1);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(it.tag)}</span>
-          ${it.sub ? `<span style="color:var(--t3);font-size:10.5px;flex-shrink:0">${esc(it.sub)}</span>` : ''}
-          ${it.count ? `<span style="color:var(--t3);font-family:var(--mono);font-size:10px;flex-shrink:0">${it.count.toLocaleString()}</span>` : ''}
-        </label>
-      `;
-    }).join('');
-    list.querySelectorAll('input[type=checkbox]').forEach(cb => {
-      cb.addEventListener('change', () => {
-        const tag = cb.dataset.tag;
-        if(cb.checked) selected.add(tag); else selected.delete(tag);
-        updateCount();
-      });
-    });
-  };
-  const searchInp = $('_rcTdxSearch');
-  if(searchInp){
-    let debounceId = null;
-    searchInp.oninput = () => {
-      if(debounceId) clearTimeout(debounceId);
-      debounceId = setTimeout(renderList, 150);
-    };
-  }
-  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
-  $('confirmOk').onclick = () => {
-    if(selected.size === 0){ toast('선택된 태그가 없습니다', 'warning'); return; }
-    cat.options = cat.options || [];
-    for(const tag of selected){
-      cat.options.push({text: tag, weight: 1.0});
-    }
-    _saveRandomCategoriesDebounced();
-    rcRender();
-    toast(`📖 ${selected.size}개 태그 추가됨 — "${cat.label}"`, 'success');
-    $('confirmModal').classList.remove('open');
-  };
-}
-// 🎴 캐릭터 프리셋 적용 — 빌더의 활성 카테고리들을 ||A|B|C|| 텍스트로 컴파일.
-//    1. 현재 캐릭터 슬롯 (state.characters) 중 하나의 action/prompt 에 추가
-//    2. 또는 새 캐릭터 프리셋(state.presets.character)으로 저장
-function rcApplyToCharacter(){
-  const cats = (state.randomCategories || []).filter(c => c.enabled && (c.options?.length || 0) > 0);
-  if(!cats.length){
-    toast('활성 카테고리가 없습니다 — 카테고리를 만들고 옵션을 추가하세요', 'warning');
-    return;
-  }
-  const compiled = compileCategoriesToText(cats);
-  if(!compiled){ toast('컴파일 결과가 비어있습니다', 'warning'); return; }
-  // 모달로 옵션 선택
-  const charSlots = (state.characters || []).map((c, i) => ({
-    idx: i,
-    label: c.name || `#${i+1} (이름 없음)`,
-    enabled: c.enabled !== false,
-  }));
-  const html = `
-    <div style="font-size:12.5px;color:var(--t2);margin-bottom:12px;line-height:1.7">
-      현재 빌더에 등록된 <b style="color:var(--t1)">${cats.length}개 카테고리</b>를 <code style="background:var(--card);padding:1px 5px;border-radius:3px;font-family:var(--mono)">||A|B|C||</code> 텍스트로 변환합니다.
-      <br>매 생성마다 랜덤 옵션이 선택되는 캐릭터 프리셋이 됩니다.
-    </div>
-    <fieldset style="border:1.5px solid var(--b1);border-radius:6px;padding:8px 12px 10px;margin-bottom:12px">
-      <legend style="font-weight:700;color:var(--acc);padding:0 6px;font-size:12.5px">📝 컴파일 결과 미리보기</legend>
-      <div style="font-family:var(--mono);font-size:11px;line-height:1.55;color:var(--t1);background:var(--card);padding:6px 8px;border-radius:4px;max-height:120px;overflow-y:auto;white-space:pre-wrap;word-break:break-word">${esc(compiled)}</div>
-      <div style="font-size:10.5px;color:var(--t3);margin-top:5px;text-align:right">${compiled.length.toLocaleString()} 글자</div>
-    </fieldset>
-    <fieldset style="border:1.5px solid var(--b1);border-radius:6px;padding:8px 12px 10px;margin-bottom:10px">
-      <legend style="font-weight:700;color:var(--acc);padding:0 6px;font-size:12.5px">📍 어디에 적용할까요?</legend>
-      <div style="display:flex;flex-direction:column;gap:5px;font-size:12.5px">
-        ${charSlots.length ? `
-          <div style="font-size:11px;color:var(--t3);margin-bottom:3px">현재 캐릭터 슬롯 (action·의상 필드에 콤마로 이어붙임)</div>
-          ${charSlots.map(s => `
-            <label class="chk" style="display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer">
-              <input type="radio" name="rc-apply-target" value="char:${s.idx}">
-              <span>🎴 캐릭터 슬롯 ${s.label}${s.enabled?'':' (비활성)'}</span>
-            </label>
-          `).join('')}
-          <div style="height:1px;background:var(--b1);margin:5px 0"></div>
-        ` : ''}
-        <label class="chk" style="display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer">
-          <input type="radio" name="rc-apply-target" value="new-preset" ${charSlots.length?'':'checked'}>
-          <span>💾 새 캐릭터 프리셋 저장 (이름 입력)</span>
-        </label>
-        <label class="chk" style="display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer">
-          <input type="radio" name="rc-apply-target" value="prompt-textarea">
-          <span>📝 메인 프롬프트 textarea 끝에 추가</span>
-        </label>
-        <label class="chk" style="display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer">
-          <input type="radio" name="rc-apply-target" value="clipboard">
-          <span>📋 클립보드에 복사만 (수동 붙여넣기)</span>
-        </label>
-      </div>
-    </fieldset>
-    <div style="font-size:11px;color:var(--t3);line-height:1.55">
-      ℹ 첫 번째 슬롯이 기본 선택됩니다. "새 프리셋" 선택 시 다음 단계에서 이름을 입력합니다.
-    </div>
-  `;
-  $('confirmTitle').innerHTML = '🎴 캐릭터에 적용 <span class="en">Apply</span>';
-  $('confirmBody').innerHTML = html;
-  $('confirmOk').innerHTML = '적용 <span class="en">Apply</span>';
-  $('confirmOk').style.display = '';
-  $('confirmCancel').innerHTML = '취소 <span class="en">Cancel</span>';
-  $('confirmModal').classList.add('open');
-  // 기본 선택: 첫 캐릭터 슬롯 또는 새 프리셋
-  setTimeout(() => {
-    const firstRadio = document.querySelector('input[name="rc-apply-target"]');
-    if(firstRadio) firstRadio.checked = true;
-  }, 30);
-  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
-  $('confirmOk').onclick = async () => {
-    const target = document.querySelector('input[name="rc-apply-target"]:checked')?.value;
-    if(!target){ toast('적용 대상을 선택하세요', 'warning'); return; }
-    $('confirmModal').classList.remove('open');
-    await _rcDoApply(target, compiled);
-  };
-}
-
-async function _rcDoApply(target, compiled){
-  // 🎴 적용은 일회성 복사 — 빌더는 더 이상 자동 주입하지 않으므로 중복 경고 불필요.
-  if(target === 'clipboard'){
-    try {
-      await navigator.clipboard.writeText(compiled);
-      toast('📋 클립보드에 복사됨 — 원하는 곳에 붙여넣으세요', 'success');
-    } catch(e){
-      // 폴백
-      try {
-        const ta = document.createElement('textarea');
-        ta.value = compiled; ta.style.position = 'fixed'; ta.style.top = '-100px';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        ta.remove();
-        toast('📋 클립보드에 복사됨', 'success');
-      } catch(e2){ toast(`클립보드 복사 실패 — ${e2.message||e2}\n주소창 자물쇠 → 권한에서 클립보드 허용 후 다시 시도하세요`, 'error'); }
-    }
-    return;
-  }
-  if(target === 'prompt-textarea'){
-    const ta = $('prompt');
-    if(!ta){ toast('프롬프트 입력칸을 찾지 못함', 'error'); return; }
-    const cur = (ta.value || '').trim();
-    ta.value = cur ? `${cur}, ${compiled}` : compiled;
-    saveSettingsDebounced();
-    toast('📝 메인 프롬프트 끝에 추가됨', 'success');
-    return;
-  }
-  if(target === 'new-preset'){
-    const name = window.prompt('새 캐릭터 프리셋 이름 (작품_캐릭명 형식 추천):', `랜덤_${new Date().toISOString().slice(0,10)}`);
-    if(!name || !name.trim()) return;
-    const preset = {
-      name: name.trim(),
-      text: compiled,
-      thumb: null,
-    };
-    try {
-      await DB.presetPut('character', preset);
-      await loadPresetsFromDB();
-      toast(`💾 새 캐릭터 프리셋 "${name.trim()}" 저장됨`, 'success');
-    } catch(e){
-      toast(`프리셋 저장 실패 — ${e.message||e}\n저장 공간이 부족할 수 있어요. 설정 → 갤러리 정리 후 다시 시도하세요`, 'error');
-    }
-    return;
-  }
-  // 캐릭터 슬롯에 적용
-  const m = target.match(/^char:(\d+)$/);
-  if(m){
-    const idx = parseInt(m[1], 10);
-    const c = state.characters?.[idx];
-    if(!c){ toast('캐릭터 슬롯을 찾지 못함', 'error'); return; }
-    const cur = (c.action || '').trim();
-    c.action = cur ? `${cur}, ${compiled}` : compiled;
-    renderCharacters();
-    saveSettingsDebounced();
-    toast(`🎴 슬롯 #${idx+1} 액션 필드에 추가됨`, 'success');
-    return;
-  }
-}
-
-function rcClearAllLocks(){
-  let count = 0;
-  for(const c of (state.randomCategories || [])){
-    if(c.locked){ c.locked = false; c.lockedOptionIdx = null; count++; }
-  }
-  if(count){
-    _saveRandomCategoriesDebounced();
-    rcRender();
-    toast(`🔓 ${count}개 카테고리의 옵션 고정 해제`, 'info');
-  } else {
-    toast('고정된 옵션이 없습니다', 'info');
-  }
-}
-
-
-// 📥 텍스트에서 가져오기 — # 라벨 + ||A|B|C|| 패턴 자동 파싱
-function rcImportFromText(){
-  // 큰 모달로 받기 — window.prompt 는 줄바꿈/긴 텍스트 못 다룸
-  rcOpenImportModal();
-}
-
-function rcOpenImportModal(){
-  const html = `
-    <div style="font-size:12.5px;color:var(--t2);margin-bottom:10px;line-height:1.7">
-      프롬프트 전체를 통째로 붙여넣으세요. <b style="color:var(--t1)">||A|B|C||</b> 또는 <b style="color:var(--t1)">{A|B|C}</b> 패턴이 있는 줄을 자동으로 카테고리로 분리합니다.<br>
-      <span style="font-size:11px;color:var(--t3)">힌트: <code style="background:var(--card);padding:1px 4px;border-radius:3px;font-family:var(--mono)"># 라벨명</code> 주석 줄이 있으면 그 라벨을 그대로 사용. 일반 태그 줄(고정 프롬프트)은 무시.</span>
-    </div>
-    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-      <button type="button" class="btn ghost" id="_rcImportFromPromptBtn" style="font-size:12px;padding:5px 10px;border-color:rgba(58,99,152,.4);color:var(--blue)" title="현재 편집 중인 프롬프트(긍정) 텍스트를 그대로 가져옴">📋 현재 프롬프트에서</button>
-      <button type="button" class="btn ghost" id="_rcImportClearTaBtn" style="font-size:12px;padding:5px 10px" title="입력란 비우기">🗑 비우기</button>
-    </div>
-    <textarea id="_rcImportTa" class="ta" style="min-height:200px;font-family:var(--mono);font-size:12px;line-height:1.6" placeholder="여기에 ||simple background|location|indoors|outdoors||,&#10;||horse girl|cat girl|fox girl||,&#10;{missionary|cowgirl position|doggystyle},&#10;...&#10;식으로 통째로 붙여넣기" autofocus></textarea>
-    <div style="margin-top:10px;display:flex;gap:8px;align-items:center;font-size:11.5px;color:var(--t3);flex-wrap:wrap">
-      <label style="display:flex;align-items:center;gap:5px;cursor:pointer">
-        <input type="checkbox" id="_rcImportAutoLabel" checked> 카테고리 라벨 자동 추측
-      </label>
-      <label style="display:flex;align-items:center;gap:5px;cursor:pointer">
-        <input type="checkbox" id="_rcImportReplace"> 기존 카테고리 모두 교체
-      </label>
-    </div>
-  `;
-  $('confirmTitle').innerHTML = '📥 카테고리 가져오기 <span class="en">Import</span>';
-  $('confirmBody').innerHTML = html;
-  $('confirmOk').innerHTML = '가져오기 <span class="en">Import</span>';
-  $('confirmOk').style.display = '';
-  $('confirmCancel').innerHTML = '취소 <span class="en">Cancel</span>';
-  $('confirmModal').classList.add('open');
-  setTimeout(() => $('_rcImportTa')?.focus(), 50);
-  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
-  $('_rcImportFromPromptBtn').onclick = () => {
-    const ta = $('_rcImportTa');
-    const cur = ($('prompt')?.value || '').trim();
-    if(!cur){ toast('현재 프롬프트가 비어있어요', 'warning'); return; }
-    ta.value = cur;
-    ta.focus();
-    toast('📋 프롬프트 복사됨 — ||A|B|C|| 패턴이 있으면 가져오기 클릭', 'info');
-  };
-  $('_rcImportClearTaBtn').onclick = () => { $('_rcImportTa').value = ''; $('_rcImportTa').focus(); };
-  $('confirmOk').onclick = () => {
-    const text = $('_rcImportTa')?.value || '';
-    const autoLabel = $('_rcImportAutoLabel')?.checked !== false;
-    const replace = $('_rcImportReplace')?.checked === true;
-    rcDoImport(text, {autoLabel, replace});
-    $('confirmModal').classList.remove('open');
-  };
-}
-
-function rcDoImport(text, opts){
-  if(!text || !text.trim()){ toast('붙여넣은 텍스트가 없습니다', 'warning'); return; }
-  const autoLabel = opts?.autoLabel !== false;
-  const replace = opts?.replace === true;
-  // 정규화: 비표준 공백(non-breaking 등)·전각 파이프 등 표준화 → 패턴 인식률 향상
-  //   - U+00A0(NBSP) → 일반 공백
-  //   - U+FF5C(전각 |) → ASCII |
-  //   - U+2502(BOX VERT) → ASCII | (모바일 자판 잘못된 입력 보호)
-  //   - {A|B|C} 대체 표기 → ||A|B|C|| 표준 표기로 변환 (NAI/SD wildcards 호환)
-  const normalized = text
-    .replace(/ /g, ' ')
-    .replace(/[｜│]/g, '|')
-    .replace(/\{([^{}]+\|[^{}]+)\}/g, '||$1||');   // {A|B|C} → ||A|B|C||
-  const lines = normalized.split('\n');
-  let pendingLabel = null;
-  const added = [];
-  for(const raw of lines){
-    const line = raw.trim();
-    if(!line) continue;
-    // # 주석 (또는 // 주석) 으로 라벨 지정
-    const labelMatch = line.match(/^(?:#|\/\/)\s*(.+?)\s*,?\s*$/);
-    if(labelMatch && !line.includes('||')){
-      pendingLabel = labelMatch[1].trim();
-      continue;
-    }
-    // 한 줄에 ||...|| 패턴이 여러 개일 수도 있음 (드물지만 처리)
-    const patterns = [...line.matchAll(/\|\|([^|]*(?:\|[^|]*)*?)\|\|/g)];
-    for(const m of patterns){
-      const inner = m[1];
-      const options = inner.split('|').map(o => {
-        const trimmed = o.trim();
-        // 가중치 표기 추출: "2::angel::" → text="angel", weight=2
-        const wm = trimmed.match(/^(-?\d+(?:\.\d+)?)::([\s\S]*?)::$/);
-        if(wm){
-          return {text: wm[2].trim(), weight: parseFloat(wm[1]) || 1.0};
-        }
-        return {text: trimmed, weight: 1.0};
-      }).filter(o => o.text);   // 빈 옵션 제거 (||A|B|C| || 형식의 trailing 공백)
-      if(options.length < 2) continue;   // 옵션 2개 미만은 카테고리로 의미 없음
-      // 카테고리 라벨 결정: 사용자 주석 > 휴리스틱 추측 > 기본값
-      let label = pendingLabel;
-      if(!label && autoLabel){
-        label = guessCategoryLabel(options);
-      }
-      if(!label) label = `카테고리 ${added.length + 1}`;
-      const cat = _normalizeRandomCategory({
-        label,
-        enabled: true,
-        options,
-      });
-      if(cat) added.push(cat);
-      pendingLabel = null;
-    }
-  }
-  if(!added.length){
-    toast('인식 가능한 패턴이 없습니다 — ||A|B|C|| 또는 {A|B|C} 형식이어야 해요 (각 그룹 옵션 ≥ 2개)', 'warning', {timeoutMs: 8000});
-    return;
-  }
-  // 기존 교체 vs 추가 — _rcSetCategories 로 활성 그룹까지 동시 갱신 (직접 reassign 시 _ensureRcGroups 가 덮어씀)
-  const snap = state.randomCategories ? state.randomCategories.slice() : [];
-  if(replace){
-    _rcSetCategories(added);
-  } else {
-    _rcSetCategories((state.randomCategories || []).concat(added));
-  }
-  _saveRandomCategoriesDebounced();
-  rcRender();
-  toastUndo(`📥 ${added.length}개 카테고리 ${replace?'교체':'추가'}됨 ${autoLabel?'(라벨 자동 추측)':''}`, () => {
-    _rcSetCategories(snap);
-    _saveRandomCategoriesDebounced();
-    rcRender();
-  });
-  return;
-}
-
-
-// ═══════════════════════════════════════════════════════════
-// 🃏 WILDCARDS — UI (프롬프트 헤더 🃏 버튼으로 토글, __name__ 삽입·관리·가져오기)
 // ═══════════════════════════════════════════════════════════
 const MAX_WILDCARD_IMPORT_BYTES = 20 * 1024 * 1024;
 let _wcEditIdx = -1;
@@ -23737,161 +21715,6 @@ function wireWildcardEvents(){
   $('wildcardEditModal')?.addEventListener('click', e => { if(e.target.id === 'wildcardEditModal') _closeWildcardEditor(); });
 }
 
-function rcWireEvents(){
-  $('randomBuilderTab')?.addEventListener('click', () => rcToggleBuilder());
-  $('rcCloseBtn')?.addEventListener('click', () => rcToggleBuilder(false));
-  $('rcAddBtn')?.addEventListener('click', () => rcAddCategory());
-  $('rcEmptyAddBtn')?.addEventListener('click', () => rcAddCategory());
-  $('rcEmptyLoadBtn')?.addEventListener('click', openRcpModal);
-  $('rcEmptyImportBtn')?.addEventListener('click', () => rcImportFromText());
-  $('rcPresetsBtn')?.addEventListener('click', openRcpModal);
-  // 📂 그룹 탭 바 — 클릭 위임 (전환·메뉴·추가)
-  $('rcGroupsBar')?.addEventListener('click', e => {
-    const t = e.target;
-    const act = t.dataset?.act || t.closest('[data-act]')?.dataset?.act;
-    const gidx = parseInt(t.dataset?.gidx || t.closest('[data-gidx]')?.dataset?.gidx, 10);
-    if(act === 'rcg-add'){
-      const name = prompt('새 그룹 이름:', `그룹 ${(state.rcGroups?.length || 0)+1}`);
-      if(name === null) return;
-      rcAddGroup(name);
-    } else if(act === 'rcg-switch' && Number.isFinite(gidx)){
-      rcSwitchGroup(gidx);
-    } else if(act === 'rcg-menu' && Number.isFinite(gidx)){
-      e.stopPropagation();
-      const g = state.rcGroups?.[gidx];
-      if(!g) return;
-      // 간단 메뉴 — confirm 으로 분기 (별도 popover 없이)
-      const choice = prompt(`'${g.name}' 그룹 작업:\n\n1 = 이름 변경\n2 = 복제\n3 = 삭제 (카테고리 ${g.categories.length}개 함께)\n\n번호 입력 (취소=닫기):`, '1');
-      if(choice === '1'){
-        const n = prompt('새 그룹 이름:', g.name);
-        if(n) rcRenameGroup(gidx, n);
-      } else if(choice === '2'){
-        rcDuplicateGroup(gidx);
-      } else if(choice === '3'){
-        rcDeleteGroup(gidx);
-      }
-    } else if(Number.isFinite(gidx) && t.classList.contains('rcg-tab')){
-      // 탭 자체 클릭 (라벨/카운트 영역)
-      rcSwitchGroup(gidx);
-    }
-  });
-  $('rcpCloseBtn')?.addEventListener('click', () => $('rcPresetsModal').classList.remove('open'));
-  $('rcpAddBtn')?.addEventListener('click', () => {
-    const p = rcpSaveCurrent($('rcpNewName').value);
-    if(p){
-      $('rcpNewName').value = '';
-      _renderRcpList();
-      toast(`💾 '${p.name}' 빌더 프리셋 저장됨`, 'success');
-    }
-  });
-  $('rcpList')?.addEventListener('click', e => {
-    const item = e.target.closest('.rcp-item');
-    if(!item) return;
-    const pid = item.dataset.pid;
-    const act = e.target.closest('[data-act]')?.dataset.act;
-    if(act === 'rcp-apply'){
-      if(rcpApply(pid)) $('rcPresetsModal').classList.remove('open');
-    } else if(act === 'rcp-del'){
-      if(rcpDelete(pid)) _renderRcpList();
-    }
-  });
-  $('rcImportBtn')?.addEventListener('click', () => rcImportFromText());
-  $('rcCollapseAllBtn')?.addEventListener('click', () => rcCollapseAll());
-  $('rcApplyToCharBtn')?.addEventListener('click', () => rcApplyToCharacter());
-  $('rcExportWildcardsBtn')?.addEventListener('click', () => rcExportAllToWildcards());
-  $('rcClearLocksBtn')?.addEventListener('click', () => rcClearAllLocks());
-
-  // 🔍 검색 + 필터 (debounce 80ms)
-  const searchInp = $('rcSearchInp');
-  const filterSel = $('rcFilterSel');
-  const clearBtn = $('rcSearchClearBtn');
-  if(searchInp){
-    let debId = null;
-    searchInp.addEventListener('input', () => {
-      _rcSearch.query = searchInp.value || '';
-      if(debId) clearTimeout(debId);
-      debId = setTimeout(rcRender, 80);
-    });
-    // Esc 키 — 검색·필터 일괄 초기화 (input focus 중)
-    searchInp.addEventListener('keydown', e => {
-      if(e.key === 'Escape'){
-        e.preventDefault();
-        e.stopPropagation();
-        _rcSearch.query = ''; _rcSearch.filter = 'all';
-        searchInp.value = '';
-        if(filterSel) filterSel.value = 'all';
-        rcRender();
-        searchInp.blur();
-      }
-    });
-  }
-  if(filterSel){
-    filterSel.addEventListener('change', () => {
-      _rcSearch.filter = filterSel.value || 'all';
-      rcRender();
-    });
-  }
-  if(clearBtn){
-    clearBtn.addEventListener('click', () => {
-      _rcSearch.query = ''; _rcSearch.filter = 'all';
-      if(searchInp) searchInp.value = '';
-      if(filterSel) filterSel.value = 'all';
-      rcRender();
-    });
-  }
-
-  // 🪄 드래그 정렬 — 카드(상위) + 옵션(자식). HTML5 drag&drop API.
-  _rcInstallDragSort($('rcCategoryList'));
-
-  // 카드 목록 이벤트 위임
-  const list = $('rcCategoryList');
-  if(!list) return;
-  list.addEventListener('click', e => {
-    const btn = e.target.closest('[data-act]');
-    if(!btn) return;
-    const act = btn.dataset.act;
-    const catIdx = parseInt(btn.dataset.catIdx, 10);
-    const optIdx = parseInt(btn.dataset.optIdx, 10);
-    if(act === 'rc-group-dissolve'){ rcDissolveGroup(btn.dataset.group); return; }
-    if(act === 'toggle-enabled') rcToggleEnabled(catIdx);
-    else if(act === 'toggle-collapse') rcToggleCollapse(catIdx);
-    else if(act === 'edit-note') rcEditNote(catIdx);
-    else if(act === 'edit-group') rcEditGroup(catIdx);
-    else if(act === 'more-menu') rcOpenMoreMenu(catIdx, btn);
-    else if(act === 'add-opt') rcOpenAddOptionModal(catIdx);
-    else if(act === 'add-empty') rcAddOption(catIdx, '');
-    else if(act === 'add-from-preset') rcAddFromPreset(catIdx);
-    else if(act === 'add-from-tagdex') rcAddFromTagdex(catIdx);
-    else if(act === 'cat-to-wildcard') rcCategoryToWildcard(catIdx);
-    else if(act === 'del-opt') rcDelOption(catIdx, optIdx);
-    else if(act === 'weight-up') rcAdjustOptWeight(catIdx, optIdx, +0.2);
-    else if(act === 'weight-down') rcAdjustOptWeight(catIdx, optIdx, -0.2);
-    else if(act === 'lock-opt') rcLockOption(catIdx, optIdx);
-    else if(act === 'move-up') rcMoveCategory(catIdx, -1);
-    else if(act === 'move-down') rcMoveCategory(catIdx, +1);
-    else if(act === 'del-cat'){
-      const cat = state.randomCategories?.[catIdx];
-      if(!cat) return;
-      confirmDialog(`"${cat.label}" 카테고리를 삭제할까요?\n옵션 ${cat.options?.length||0}개도 함께 사라집니다 (6초 안에 실행 취소 가능).`, () => rcDelCategory(catIdx));
-    }
-  });
-  // 텍스트 입력 (라벨 / 옵션) — input 이벤트로 즉시 저장
-  list.addEventListener('input', e => {
-    const t = e.target;
-    if(!t.dataset.act) return;
-    const catIdx = parseInt(t.dataset.catIdx, 10);
-    if(t.dataset.act === 'edit-label'){
-      rcSetCatField(catIdx, 'label', t.value);
-      // 카운트 라벨도 즉시 반영 (재렌더는 비용 큼 — DOM 직접 수정)
-    } else if(t.dataset.act === 'edit-opt'){
-      const optIdx = parseInt(t.dataset.optIdx, 10);
-      rcSetOptText(catIdx, optIdx, t.value);
-      // 빈 옵션 표시 즉시 갱신
-      t.classList.toggle('placeholder', !t.value.trim());
-    }
-  });
-}
-
 function showShortcutsHelp(){
   const groups = [
     {title: '🌐 전역', items: [
@@ -23908,7 +21731,6 @@ function showShortcutsHelp(){
       ['기본', 'info/success 0.5초, warning 1.5초, error 무한 (수동 닫기)'],
     ]},
     {title: '🎲 동적 선택 (||A|B|C||)', items: [
-      ['모드바 🎲', '랜덤 카테고리 빌더 열기/닫기 — GUI 로 카테고리 관리'],
       ['빌더 검색 + Esc', '검색·필터 일괄 초기화 (input focus 중)'],
       ['빌더 ⋮⋮ 드래그', '카드/옵션 순서 변경 (데스크탑)'],
       ['빌더 ⋯ 메뉴', '노트·일괄 추가·복제·export·이동 (자주 안 쓰는 액션)'],
@@ -24212,7 +22034,6 @@ async function init(){
   document.body.dataset.mview = 'edit';
   $$('.mn-btn').forEach(b => b.classList.toggle('act', b.dataset.mview === 'edit'));
   wireEvents();
-  rcWireEvents();   // 🎲 랜덤 빌더 이벤트 바인딩
   wireWildcardEvents();   // 🃏 와일드카드 이벤트 바인딩
   setupPromptAutocomplete();
   // 🛡 비필수 기능 로더 격리 — 하나가 실패(손상 레코드·일시적 IDB 오류)해도
@@ -24227,8 +22048,6 @@ async function init(){
   await _bootStep('albums', loadAlbums);
   await _bootStep('galleryTagIndex', loadGalleryTagIndex);
   await _bootStep('workflows', loadWorkflows);
-  await _bootStep('randomCategories', loadRandomCategories);
-  await _bootStep('randomBuilderPresets', loadRandomBuilderPresets);
   await _bootStep('templates', tplLoadTemplates);
   await _bootStep('wildcards', loadWildcards);
   await _bootStep('personas', loadPersonas);
