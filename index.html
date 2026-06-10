@@ -1011,9 +1011,6 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 #comicMakerModal .cm-autogen-btn{flex:1;padding:8px 10px;font-size:12.5px}
 #comicMakerModal .cm-autogen-prog{font-family:var(--mono);font-size:11px;color:var(--acc);font-weight:700;min-width:60px;text-align:right}
 /* 🗨 F3: 대사 자동 생성 (Gemini) */
-#comicMakerModal .cm-autogen-dialog{margin-top:6px;padding:8px 10px;background:var(--card);border:1.5px dashed var(--b1);border-radius:5px;display:flex;flex-direction:column;gap:6px}
-#comicMakerModal .cm-autogen-keyrow{display:flex;gap:6px}
-#comicMakerModal .cm-autogen-key{flex:1;font-size:12px;padding:6px 8px;font-family:var(--mono)}
 #comicMakerModal .cm-autogen-eye{width:32px;height:32px;border:1.5px solid var(--b1);background:var(--bg);color:var(--t1);border-radius:4px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
 #comicMakerModal .cm-autogen-eye:hover{border-color:var(--acc);color:var(--acc)}
 #comicMakerModal .cm-autogen-tone{font-size:12px;padding:6px 8px}
@@ -3881,7 +3878,7 @@ coffee shop, latte art"></textarea>
             <label class="cm-autogen-label">🎭 톤·스타일 (선택)</label>
             <input type="text" class="te-inp cm-autogen-tone" id="cmAutoDialogTone" placeholder="예: 일상 코미디 · 시리어스 액션 · 감성 드라마">
             <label class="cm-autogen-label" style="display:flex;align-items:center;gap:6px">
-              🎬 칸별 장면 (한 줄 = 한 칸 · 필수)
+              🎬 칸별 장면 (한 줄 = 한 칸 · <span id="cmAutoScenesHint">필수</span>)
               <button class="cm-autogen-keylink" id="cmAutoScenesAiBtn" type="button" style="margin-left:auto" title="🪄 컨셉 한 줄 → Gemini 가 칸 수만큼 장면 자동 작성">🪄 AI 작성</button>
             </label>
             <input type="text" class="te-inp cm-autogen-tone" id="cmAutoScenesConcept" placeholder="컨셉 한 줄 (선택 — 예: '방과 후 친구와 산책', '회의실 위기' )">
@@ -4325,6 +4322,23 @@ function countRandomCombinations(text){
   return list.reduce((acc, x) => acc * Math.max(1, x.options.length), 1);
 }
 
+// 가중치 기반 랜덤 선택 — js/pure/randomChoice.mjs 인라인 미러 (lint 동기화 검사 대상).
+function pickWeightedOption(options, rng){
+  if(!Array.isArray(options) || options.length === 0) return null;
+  const random = (typeof rng === 'function') ? rng : Math.random;
+  const total = options.reduce((s, o) => s + Math.max(0, Number(o?.weight) || 0), 0);
+  if(total <= 0){
+    return options[Math.floor(random() * options.length)];
+  }
+  const target = random() * total;
+  let acc = 0;
+  for(const o of options){
+    acc += Math.max(0, Number(o?.weight) || 0);
+    if(target < acc) return o;
+  }
+  return options[options.length - 1];
+}
+
 // 🎥 카메라 앵글 토큰 — 단독 옵션이면 경고 (다른 체위·표정과 모순 자주 발생).
 const CAMERA_ANGLE_TOKENS = [
   /^from above$/i, /^from below$/i, /^from side$/i, /^from front$/i,
@@ -4342,21 +4356,6 @@ function hasCameraAngle(optionText){
     const body = (m ? m[1] : tok).trim();
     return CAMERA_ANGLE_TOKENS.some(re => re.test(body));
   });
-}
-function pickWeightedOption(options, rng){
-  if(!Array.isArray(options) || options.length === 0) return null;
-  const random = (typeof rng === 'function') ? rng : Math.random;
-  const total = options.reduce((s, o) => s + Math.max(0, Number(o?.weight) || 0), 0);
-  if(total <= 0){
-    return options[Math.floor(random() * options.length)];
-  }
-  const target = random() * total;
-  let acc = 0;
-  for(const o of options){
-    acc += Math.max(0, Number(o?.weight) || 0);
-    if(target < acc) return o;
-  }
-  return options[options.length - 1];
 }
 
 // 📚 카테고리 자동 분류 휴리스틱 — 임포트 시 옵션 내용을 분석해 라벨 자동 추측.
@@ -4478,7 +4477,6 @@ window.addEventListener('appinstalled', () => {
 });
 
 // 📱 모바일 화면 강제 미리보기 (데스크탑 테스트용)
-let _mobilePreviewOn = false;
 // ⛶ 전체화면 토글 (Fullscreen API)
 // 안드로이드 Chrome/Samsung Internet: 시스템 네비·상태바 모두 숨김
 // iOS Safari: standalone 모드일 때만 의미 있음 (Fullscreen API 제한적)
@@ -4564,22 +4562,6 @@ function _updateOrientLockBtn(state){
   } else {
     btn.textContent = '🔓'; btn.classList.remove('act');
     btn.title = '🔓 회전 자유 — 누르면 세로 고정'; btn.setAttribute('aria-pressed','false');
-  }
-}
-
-function toggleMobilePreview(){
-  _mobilePreviewOn = !_mobilePreviewOn;
-  const meta = document.querySelector('meta[name="viewport"]');
-  const btn = $('mobilePreviewBtn');
-  if(_mobilePreviewOn){
-    meta.content = 'width=420,user-scalable=yes,initial-scale=1';
-    if(btn) btn.innerHTML = '🖥 원래대로 (Reset)';
-    toast('📱 모바일 폭 420px로 강제 적용됨', 'info');
-  } else {
-    // 🐛 fix: 원래 viewport(maximum-scale=5, 핀치줌 허용)로 정확히 복원 — 이전엔 user-scalable=no 로 핀치줌 영구 비활성(접근성 회귀)
-    meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=5, viewport-fit=cover';
-    if(btn) btn.innerHTML = '📱 모바일 화면 미리보기';
-    toast('🖥 원래 데스크탑 뷰로 복귀', 'info');
   }
 }
 
@@ -4715,8 +4697,9 @@ function showInstallInstructions(){
         → <code style="font-family:var(--mono);background:var(--card);padding:1px 5px;border-radius:3px">http://localhost:8000/index.html</code> 접속
       </div>`;
   }
-  // 🐛 fix: diagnoseInstallability() 가 dead code 였음 — 안내 모달 하단에 진단 링크 노출.
-  html += `<div style="margin-top:14px;text-align:right">
+  // 하단 액션 — beforeinstallprompt 가 잡혀있으면 원클릭 설치 버튼 노출.
+  html += `<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;align-items:center">
+    ${_deferredInstallPrompt ? '<button type="button" id="_pwaInstallNowBtn" class="btn primary" style="font-size:12.5px">📲 지금 설치</button>' : ''}
     <button type="button" id="_diagInstallBtn" class="btn ghost" style="font-size:12px">🔍 설치 진단 보기</button>
   </div>`;
   $('confirmTitle').innerHTML = '📱 앱으로 설치 안내 <span class="en">Install</span>';
@@ -4727,6 +4710,8 @@ function showInstallInstructions(){
   $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
   const diagBtn = document.getElementById('_diagInstallBtn');
   if(diagBtn) diagBtn.onclick = () => diagnoseInstallability();
+  const installBtn = document.getElementById('_pwaInstallNowBtn');
+  if(installBtn) installBtn.onclick = () => { $('confirmModal').classList.remove('open'); triggerPwaInstall(); };
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -5246,7 +5231,6 @@ const state = {
   presets: {},  // {character:[], outfit:[], ...} — populated from PRESET_TYPES at init
   userAlbums: [],         // [{id, name, ts, color?}]
   albumMembership: {},    // {imgId: [albumId, ...]}
-  weights: [],            // [{w: 1.5, tag: 'rain, night'}, ...] — ⚖ 가중치 관리
   galleryTagIndex: [],    // [{tag, count}] — 📋 갤러리 이미지에서 추출한 태그
   outputDirHandle: null,  // 📂 File System Access API 핸들 (Chrome/Edge)
   outputDirName: '',      // 표시용 폴더명
@@ -6943,22 +6927,6 @@ function dedupePromptTags(text){
 }
 
 // 품질 자동 추가 (NAI 가이드: 프롬프트 가장 앞에 위치)
-function getQualityPrefix(){
-  if(!$('autoQuality')?.checked) return '';
-  const tier = $('qualityTier')?.value || 'standard';
-  switch(tier){
-    case 'full':      return 'masterpiece, best quality, amazing quality, very aesthetic, absurdres';
-    case 'aesthetic': return 'very aesthetic, absurdres';
-    case 'custom':    return ($('qualityCustom')?.value||'').trim();
-    case 'standard':
-    default:          return 'masterpiece, best quality, very aesthetic, absurdres';
-  }
-}
-function getRatingTag(){
-  const act = document.querySelector('.rating-btn.act');
-  return act?.dataset?.rating || '';
-}
-
 function currentPromptOpts(){
   const model = $('model').value;
   const mi = modelInfo(model);
@@ -7520,12 +7488,13 @@ function renderCharacters(){
     list.querySelectorAll('textarea[data-act="appearance"],textarea[data-act="action"],textarea[data-act="neg"]')
       .forEach(ta => attachAcToTextarea(ta));
   }
-  // 🧑 페르소나 select 옵션 채움 — 캐릭터별 dropdown 동기화
+  // 🧑 페르소나 select 옵션 채움 — 캐릭터별 dropdown 동기화 (+ ➕ 새로 만들기 단축)
   const personas = state.personas || [];
   list.querySelectorAll('.char-persona-select').forEach((sel, i) => {
     const cur = state.characters[i]?.persona || '';
     sel.innerHTML = '<option value="">(없음 — 페르소나 선택)</option>' + personas.map(p =>
-      `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+      `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')
+      + '<option value="__new__">➕ 새 페르소나 만들기...</option>';
     if(cur && personas.find(p => p.id === cur)) sel.value = cur;
   });
 }
@@ -8293,18 +8262,6 @@ async function importPresetFile(file, opts){
     console.error('Import error:', e);
   }
   return result;
-}
-
-async function exportPresetFile(){
-  // 기존 빠른 export — 호환용 (모든 프리셋만)
-  const out = {
-    _meta: {app:'NAI Studio', exported: new Date().toISOString(), version:1},
-    presets_charquick: state.presets.character || [],
-    presets_outfit:    state.presets.outfit    || [],
-  };
-  for(const t of PRESET_TYPES){ out[t.id] = state.presets[t.id] || []; }
-  downloadJSON(out, `nai_presets_${dateStamp()}.json`);
-  toast('프리셋 내보냄', 'success');
 }
 
 function dateStamp(){
@@ -9236,54 +9193,6 @@ function addPromptToGalleryTagIndex(promptText){
 }
 
 // ═══════════════════════════════════════════════════════════
-// ⚖ WEIGHTS MANAGER — 수치 가중치 ::태그:: 관리
-// ═══════════════════════════════════════════════════════════
-function renderWeights(){
-  const wrap = $('weightList');
-  if(!wrap) return;
-  if(state.weights.length === 0){
-    wrap.innerHTML = '<div class="weight-empty">아직 가중치 항목이 없습니다 · 아래 빠른 추가 버튼이나 자유 입력의 🪄 자동 분류로 추가하세요</div>';
-    return;
-  }
-  wrap.innerHTML = state.weights.map((w, i) => {
-    const cls = w.w < 0 ? 'neg' : w.w > 1 ? 'up' : '';
-    return `<div class="weight-row" data-idx="${i}">
-      <button class="w-btn" data-act="dec" data-idx="${i}" title="-0.1">−</button>
-      <input type="number" class="w-num ${cls}" step="0.1" value="${w.w}" data-idx="${i}" data-act="num">
-      <button class="w-btn" data-act="inc" data-idx="${i}" title="+0.1">+</button>
-      <span class="w-sep">::</span>
-      <input type="text" class="w-tag" value="${esc(w.tag)}" placeholder="rain, night ..." data-idx="${i}" data-act="tag">
-      <span class="w-sep">::</span>
-      <button class="w-del" data-idx="${i}" data-act="del" title="삭제">✕</button>
-    </div>`;
-  }).join('');
-}
-
-function addWeight(weight, tag){
-  state.weights.push({w: parseFloat(weight) || 1.5, tag: tag || ''});
-  renderWeights();
-  $('weightDetails')?.setAttribute('open', '');
-  saveSettingsDebounced();
-  // 마지막 행의 태그 입력에 포커스
-  setTimeout(() => {
-    const inps = document.querySelectorAll('#weightList .w-tag');
-    inps[inps.length - 1]?.focus();
-  }, 50);
-}
-
-function getWeightsString(){
-  return state.weights
-    .filter(w => (w.tag||'').trim())
-    .map(w => {
-      const t = w.tag.trim();
-      // 태그가 숫자로 끝나면 NAI 가이드대로 끝에 공백 필수
-      const safe = /\d$/.test(t) ? t + ' ' : t;
-      return `${w.w}::${safe}::`;
-    })
-    .join(', ');
-}
-
-// ═══════════════════════════════════════════════════════════
 // FREE-PROMPT AUTO CLASSIFIER — 자유 입력을 구역별 슬롯으로 자동 분리
 // ═══════════════════════════════════════════════════════════
 let _tagCatLookup = null;
@@ -9364,109 +9273,6 @@ function parseFreePromptTokens(text){
   return tokens;
 }
 
-async function autoClassifyFreePrompt(){
-  const raw = $('prompt').value.trim();
-  if(!raw){ toast('자유 입력이 비어있습니다', 'warning'); return; }
-  const tokens = parseFreePromptTokens(raw);
-  const groups = {};   // slotId → [tag,...]
-  const weightExtract = [];  // {w, tag} — ⚖ 가중치 영역으로 이동
-  const unsorted = []; // 분류 못 한 / 액션 / 잘못된 가중치
-  const W_REGEX = /^([-]?\d+\.?\d*)::([\s\S]+?)::\s*$/;
-  for(const tok of tokens){
-    // 가중치 패턴: `숫자::내용::` → ⚖ 가중치 관리 영역으로 추출
-    if(/::/.test(tok)){
-      const m = tok.match(W_REGEX);
-      if(m){
-        weightExtract.push({w: parseFloat(m[1]), tag: m[2].trim()});
-      } else {
-        unsorted.push(tok);  // 깨진 가중치는 그대로
-      }
-      continue;
-    }
-    const slot = classifyTagToSlot(tok);
-    if(slot){
-      (groups[slot] = groups[slot] || []).push(tok);
-    } else {
-      unsorted.push(tok);
-    }
-  }
-  if(Object.keys(groups).length === 0 && weightExtract.length === 0){
-    toast('분류 가능한 태그를 찾지 못했습니다', 'warning');
-    return;
-  }
-  // 사용자에게 미리보기 확인
-  const slotLabels = {
-    sp_people:'👥 인원', sp_artist:'🎨 작가', sp_style:'🖌 스타일·매체',
-    sp_composition:'🎬 구도·앵글', sp_background:'🏞 배경·장소',
-    sp_appearance:'💇 외형·신체', sp_outfit:'👗 의상',
-    sp_pose:'🤸 자세·표정', sp_misc:'✨ 분위기·기타'
-  };
-  const summaryLines = [];
-  for(const [s,arr] of Object.entries(groups)){
-    summaryLines.push(`${slotLabels[s]||s} (${arr.length}): ${arr.slice(0,4).join(', ')}${arr.length>4?` … +${arr.length-4}`:''}`);
-  }
-  if(weightExtract.length){
-    summaryLines.push(`⚖ 가중치 (${weightExtract.length}): ${weightExtract.slice(0,3).map(w => `${w.w}::${w.tag.slice(0,20)}::`).join(', ')}${weightExtract.length>3?` … +${weightExtract.length-3}`:''}`);
-  }
-  const summary = summaryLines.join('\n');
-  const totalMoved = Object.values(groups).reduce((a,b)=>a+b.length, 0);
-  const html = `
-    <div style="font-size:13px;color:var(--t2);margin-bottom:10px;line-height:1.6">
-      <b style="color:var(--green)">${totalMoved}개</b> 태그 → 구역별 슬롯<br>
-      ${weightExtract.length ? `<b style="color:var(--blue)">${weightExtract.length}개</b> 가중치 → ⚖ 가중치 관리<br>` : ''}
-      <b style="color:var(--yellow)">${unsorted.length}개</b>는 자유 입력에 남음 (액션·미식별)
-    </div>
-    <div style="background:var(--card);padding:12px 14px;border-radius:6px;font-family:var(--mono);font-size:12px;white-space:pre-line;line-height:1.7;color:var(--t1);border:1px solid var(--b1);max-height:40vh;overflow-y:auto">${esc(summary)}</div>
-    <label class="chk" style="margin-top:10px;padding:5px 0"><input type="checkbox" id="afp_append" checked>기존 구역별 입력에 추가 (꺼두면 덮어씀)</label>`;
-  $('confirmTitle').innerHTML = '🪄 자유 입력 자동 분류 <span class="en">Auto-Classify</span>';
-  $('confirmBody').innerHTML = html;
-  $('confirmOk').innerHTML = '적용 <span class="en">Apply</span>';
-  $('confirmOk').style.display = '';
-  $('confirmCancel').innerHTML = '취소 <span class="en">Cancel</span>';
-  $('confirmModal').classList.add('open');
-  $('confirmCancel').onclick = () => $('confirmModal').classList.remove('open');
-  $('confirmOk').onclick = () => {
-    const append = $('afp_append').checked;
-    // 구역별 슬롯에 적용
-    for(const [slot, arr] of Object.entries(groups)){
-      const el = $(slot);
-      if(!el) continue;
-      const tagText = arr.join(', ');
-      if(append){
-        appendToTextarea(slot, tagText);
-      } else {
-        el.value = tagText;
-        el.dispatchEvent(new Event('input'));
-      }
-    }
-    // ⚖ 가중치 관리에 추가
-    if(weightExtract.length){
-      if(!append) state.weights = [];
-      for(const w of weightExtract) state.weights.push({w: w.w, tag: w.tag});
-      renderWeights();
-      $('weightDetails')?.setAttribute('open', '');
-    }
-    $('prompt').value = unsorted.join(', ');
-    $('prompt').dispatchEvent(new Event('input'));
-    refreshPromptStats();
-    $('structDetails')?.setAttribute('open', '');
-    $('confirmModal').classList.remove('open');
-    saveSettingsDebounced();
-    toast(`✨ ${totalMoved}개 분류 · ${weightExtract.length}개 가중치 · ${unsorted.length}개 남김`, 'success');
-  };
-}
-
-// 프리셋 타입 → 구역별 슬롯 매핑 (가이드라인 순서대로)
-const PRESET_TO_SLOT = {
-  outfit:      'sp_outfit',
-  pose:        'sp_pose',
-  composition: 'sp_composition',
-  background:  'sp_background',
-  situation:   'sp_misc',
-  expression:  'sp_pose',
-  mood:        'sp_misc',
-  people:      'sp_people',
-};
 // 태그 도감 카테고리 → 구역별 슬롯 매핑
 const TAGCAT_TO_SLOT = {
   people:     'sp_people',
@@ -13316,7 +13122,11 @@ async function openPreviewPopup(){
   toast(`🪟 미리보기 창이 열렸어요 — 새 이미지가 생성되면 자동 표시${tip}`, 'success', {timeoutMs: 4500});
 }
 // 본창 종료 시 팝업도 정리 (선택 — 일부 브라우저 차단할 수 있어 best-effort)
-window.addEventListener('beforeunload', () => { try { _popoutCh?.close(); } catch(_){} });
+window.addEventListener('beforeunload', () => {
+  try { _popoutCh?.close(); } catch(_){}
+  // 메인 앱이 닫히면 떠있는 팝업 미리보기 창도 함께 정리 (orphan 창 방지)
+  _popoutClose();
+});
 
 async function _saveImageWithSideEffects(blob, fname, label, prompt, meta){
   // 🎴 캐릭터 IP별 자동 분류 모드 — 저장 직전 매번 적절한 세션으로 전환
@@ -14596,7 +14406,10 @@ async function setBaseImage(file){
   }
   const b64 = dataURL.split(',')[1];
   state.baseImage = { blob, dataURL, w, h, b64 };
-  $('imgDropInner').innerHTML = `<img src="${dataURL}" alt="베이스 이미지" style="max-height:140px"><div class="hint">${ow}×${oh} → ${w}×${h}</div>`;
+  // backslash-u0020: Chrome 프리로드 스캐너가 거대 HTML 청크 경계에서 script 안의
+  //   img src 템플릿 리터럴을 마크업으로 오인해 /${dataURL} 404 fetch 하는 것 방지.
+  //   JS 런타임에선 공백으로 복원되어 출력 HTML 동일. (같은 패턴 4곳 모두 적용)
+  $('imgDropInner').innerHTML = `<img\u0020src="${dataURL}" alt="베이스 이미지" style="max-height:140px"><div class="hint">${ow}×${oh} → ${w}×${h}</div>`;
   $('imgActions').style.display = '';
   state.inpaintMask = null;
   refreshResInfo();
@@ -15307,13 +15120,6 @@ function _teShapeFlash(ctx, x, y, w, h, p){
     else ctx.lineTo(px, py);
   }
   ctx.closePath();
-}
-
-// 🦔 우니 플래시 (urchin_flash) — 플래시와 동일 모양이지만 중앙을 진하게 채움.
-//    렌더러에서 fill = border 강제로 검은 성게 모양. 내부 텍스트는 흰색 권장.
-function _teShapeUrchinFlash(ctx, x, y, w, h){
-  // 동일 path — 렌더러가 채움 색을 border 와 동일하게 설정해서 솔리드 검정으로 보이게.
-  _teShapeFlash(ctx, x, y, w, h);
 }
 
 // 💗 하트 말풍선 (heart) — 애정·설렘. 꼬리 없음 (또는 작은 하트 꼬리).
@@ -16360,6 +16166,9 @@ function _cmUpdateStatus(){
   const pageLabel = pageCount > 1 ? `📄${_cmState.currentPageIdx+1}/${pageCount} · ` : '';
   el.textContent = `${pageLabel}${filled} / ${total} 칸`;
   el.style.color = filled === total ? 'var(--green)' : filled > 0 ? 'var(--acc)' : 'var(--t3)';
+  // 🗨 장면 입력 힌트 — 현재 레이아웃 칸 수 동기화 ("4칸 — 4줄 입력")
+  const hint = $('cmAutoScenesHint');
+  if(hint) hint.textContent = `현재 ${total}칸 → ${total}줄`;
 }
 
 // 슬롯 이미지 위치 nudge — 기본 5%, Shift 키 있으면 20%
@@ -17951,9 +17760,6 @@ ${lines}
 async function _cmLoadGeminiKey(){
   try { return (await DB.getFlag?.('cm_gemini_key')) || ''; } catch(_){ return ''; }
 }
-async function _cmSaveGeminiKey(key){
-  try { await DB.setFlag?.('cm_gemini_key', key || ''); } catch(_){}
-}
 
 // 🤖 F2: AI 자동 생성 ─────────────────────────────────────────────
 let _cmAutoAbort = null;
@@ -18061,8 +17867,6 @@ async function _cmAutoMakeDialogues(targets){
     toast(`🗨 대사 생성 실패 — ${e?.message?.slice(0,80) || e}`, 'error');
     return;
   }
-  // 키 영속화 (성공 시에만 — 잘못된 키 저장 방지)
-  await _cmSaveGeminiKey(apiKey);
   // 텍스트 편집기로 넘기기 — meta.autoBubbles 에 (panelIdx → text) 매핑
   const autoBubbles = pageTargets.map((t, i) => ({
     panelIdx: t.slotIdx,
@@ -21044,6 +20848,17 @@ function wireCharacterEvents(){
     else if(act === 'action')     state.characters[idx].action     = t.value;
     else if(act === 'neg')        state.characters[idx].neg        = t.value;
     else if(act === 'persona-pick'){
+      if(t.value === '__new__'){
+        // ➕ 새 페르소나 — 모달 열고 캐릭터 이름 프리필. select 는 원래 값으로 복귀.
+        t.value = state.characters[idx].persona || '';
+        if(typeof _personaOpenModal === 'function'){
+          _personaOpenModal();
+          const charName = (state.characters[idx].name || '').replace(/^.*?_/, '');   // "블아_아스나" → "아스나"
+          const nameInp = document.getElementById('personaName');
+          if(nameInp && charName) nameInp.value = charName;
+        }
+        return;
+      }
       state.characters[idx].persona = t.value || '';
       const p = (state.personas||[]).find(x => x.id === t.value);
       toast(p ? `🧑 ${p.name} 연결됨 — 만화 자동 대사에 사용` : '🧑 페르소나 연결 해제', 'info');
@@ -21425,7 +21240,7 @@ function wireGenerationAndPresetEvents(){
     const w = Math.round(img.naturalWidth / 64) * 64;
     const h = Math.round(img.naturalHeight / 64) * 64;
     state.directorImage = { blob: f, dataURL, b64, w, h };
-    $('directorImgInner').innerHTML = `<img src="${dataURL}" alt="디렉터 참조 이미지" decoding="async" style="max-height:140px">`;
+    $('directorImgInner').innerHTML = `<img\u0020src="${dataURL}" alt="디렉터 참조 이미지" decoding="async" style="max-height:140px">`;
   });
   $('directorAction').addEventListener('change', () => {
     $('emotionOpts').style.display = $('directorAction').value === 'emotion' ? '' : 'none';
@@ -21671,13 +21486,13 @@ function wireGenerationAndPresetEvents(){
   setupImageDrop('presetThumbDrop', 'presetThumbFile', async f => {
     const dataURL = await blobToCompressedThumb(f, 240);
     _editingPreset.thumb = dataURL;
-    $('presetThumbInner').innerHTML = `<img src="${dataURL}" alt="프리셋 썸네일" decoding="async" style="max-height:120px">`;
+    $('presetThumbInner').innerHTML = `<img\u0020src="${dataURL}" alt="프리셋 썸네일" decoding="async" style="max-height:120px">`;
   });
   $('pickGalleryThumb').addEventListener('click', () => {
     if(!_editingPreset){ toast('프리셋 편집 중이 아닙니다', 'warning'); return; }
     openGalleryThumbPicker(dataURL => {
       _editingPreset.thumb = dataURL;
-      $('presetThumbInner').innerHTML = `<img src="${dataURL}" alt="프리셋 썸네일" decoding="async" style="max-height:120px">`;
+      $('presetThumbInner').innerHTML = `<img\u0020src="${dataURL}" alt="프리셋 썸네일" decoding="async" style="max-height:120px">`;
       toast('갤러리 이미지로 썸네일 지정됨', 'success');
     });
   });
