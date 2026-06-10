@@ -1020,6 +1020,16 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 #comicMakerModal .cm-stage-hint{font-size:11px;color:rgba(255,248,236,.55);text-align:center;line-height:1.6;max-width:540px;padding:0 8px}
 #comicMakerModal .cm-panel{width:360px;flex-shrink:0;overflow-y:auto;padding-right:4px;display:flex;flex-direction:column;gap:10px}
 #comicMakerModal .cm-quick .te-section-title{color:var(--acc)}
+.tpl-nl-card summary::-webkit-details-marker{display:none}
+.tpl-nl-card[open] .tpl-nl-caret{transform:rotate(90deg)}
+.tpl-nl-card .tpl-nl-caret{display:inline-block;transition:transform .15s;color:var(--acc)}
+/* ⋯ 프리셋 더보기 드롭다운 */
+.preset-more-menu{position:absolute;top:calc(100% + 4px);right:0;z-index:40;min-width:185px;background:var(--panel);border:1.5px solid var(--b1);border-radius:8px;box-shadow:0 6px 22px rgba(74,52,20,.18);padding:5px;display:flex;flex-direction:column;gap:2px}
+.preset-more-menu .pmm-item{display:flex;align-items:center;gap:7px;width:100%;text-align:left;background:transparent;border:none;color:var(--t1);font-size:12.5px;font-family:inherit;padding:8px 10px;border-radius:5px;cursor:pointer;word-break:keep-all}
+.preset-more-menu .pmm-item:hover{background:var(--card)}
+.preset-more-menu .pmm-item.danger{color:var(--red)}
+.preset-more-menu .pmm-item.danger:hover{background:rgba(181,67,56,.08)}
+.preset-more-menu .pmm-sep{height:1px;background:var(--b1);margin:3px 6px}
 /* ☑ 프리셋 일괄 선택 모드 */
 .preset-grid.select-mode .p-item,.preset-grid.select-mode .pp-card{cursor:pointer;user-select:none}
 .preset-grid.select-mode .p-item .pact,.preset-grid.select-mode .pp-card .pp-acts{display:none}
@@ -2635,11 +2645,17 @@ mark{
             <span class="gz-ind" id="presetZoomInd" title="현재 크기">M</span>
             <button class="iconbtn" id="presetZoomIn" title="크게 보기 (+)">+</button>
           </div>
-          <button class="btn ghost" id="presetShowPsubBtn" title="프롬프트 본문 미리보기 표시/숨김" aria-pressed="false">👁 본문 표시 <span class="en" style="opacity:.6">Text</span></button>
-          <button class="btn ghost" id="presetExpandAll" title="모든 프리셋의 미리보기를 펼치거나 접습니다">⤢ 전체 펼침 <span class="en">Expand All</span></button>
-          <button class="btn ghost" id="presetGroupsToggle" title="📚 그룹 모두 접기·펼치기 (캐릭터·의상·상황·인원 카테고리)" style="border-color:rgba(162,90,31,.4);color:var(--acc)">📚 그룹 일괄 <span class="en">Groups</span></button>
-          <button class="btn ghost" id="autoClassifyBtn" title="이름 접두사로 자동 재분류 (의상·헤어·페티쉬 → 의상 / 콤보·노출·자위·백합 → 상황 / 포커스·구도 → 구도 / 하렘·남녀 → 인원 등)" style="border-color:rgba(162,90,31,.4)">🪄 자동 분류 <span class="en">Auto-classify</span></button>
-          <button class="btn ghost" id="bulkClearThumbsBtn" title="현재 카테고리에 표시된 프리셋들의 미리보기 이미지를 일괄 삭제합니다 (프리셋 자체·텍스트는 유지). 검색·즐겨찾기 필터가 적용된 목록에만 영향." style="border-color:rgba(181,67,56,.35);color:var(--red)">🖼 미리보기 일괄삭제 <span class="en">Clear Thumbs</span></button>
+          <div class="preset-more-wrap" style="position:relative">
+            <button class="btn ghost" id="presetMoreBtn" title="보기 옵션·유지보수 도구" aria-haspopup="true" aria-expanded="false">⋯ 더보기</button>
+            <div class="preset-more-menu" id="presetMoreMenu" style="display:none">
+              <button class="pmm-item" id="presetShowPsubBtn" title="프롬프트 본문 미리보기 표시/숨김" aria-pressed="false">👁 본문 표시</button>
+              <button class="pmm-item" id="presetExpandAll" title="모든 프리셋의 미리보기를 펼치거나 접습니다">⤢ 전체 펼침</button>
+              <button class="pmm-item" id="presetGroupsToggle" title="📚 그룹 모두 접기·펼치기">📚 그룹 일괄 접기</button>
+              <div class="pmm-sep"></div>
+              <button class="pmm-item" id="autoClassifyBtn" title="이름 접두사로 자동 재분류">🪄 자동 분류</button>
+              <button class="pmm-item danger" id="bulkClearThumbsBtn" title="표시된 프리셋들의 미리보기 이미지 일괄 삭제 (텍스트는 유지)">🖼 미리보기 일괄삭제</button>
+            </div>
+          </div>
           <div class="tb-grow"></div>
           <span id="presetInfo" style="font-size:12px;color:var(--t3);font-family:var(--mono)"></span>
           <button class="btn ghost" id="previewGenBtn" title="🎯 일괄 생성 — 현재 프롬프트에 시나리오를 결합하고 캐릭터별로 한 장씩 자동 생성" style="border-color:rgba(58,99,152,.4);color:var(--blue)">🎯 일괄 생성 <span class="en" style="opacity:.6">Batch</span></button>
@@ -2660,17 +2676,19 @@ mark{
       <!-- TEMPLATES PANE — 🎨 프리셋 조합 템플릿 -->
       <div class="main-pane" data-pane="templates">
         <div class="tpl-body">
-          <div class="set-card">
-            <h3>🪄 자연어 → 템플릿 <span class="en">Natural Language</span></h3>
-            <div style="font-size:11.5px;color:var(--t3);margin-bottom:6px;line-height:1.5">
-              자연어로 문장을 입력하면 그 문장에 해당하는 프리셋을 자동으로 매칭해서 조합을 만듭니다.<br>
+          <details class="set-card tpl-nl-card">
+            <summary style="cursor:pointer;font-size:14px;font-weight:700;color:var(--t1);list-style:none;display:flex;align-items:center;gap:7px">
+              <span class="tpl-nl-caret" aria-hidden="true">▸</span>🪄 자연어 → 템플릿 <span class="en" style="font-size:11px;color:var(--t3);font-weight:500">Natural Language</span>
+              <span style="margin-left:auto;font-size:11px;color:var(--t3);font-weight:400">문장으로 프리셋 자동 매칭</span>
+            </summary>
+            <div style="font-size:11.5px;color:var(--t3);margin:10px 0 6px;line-height:1.5">
               예: "유니가 카페에서 책을 읽음", "푸리나 의상 OL정장 포즈 달리기"
             </div>
             <div style="display:flex;gap:6px;align-items:stretch">
               <textarea id="tplNlInput" class="ta tiny" placeholder="문장 입력…" style="flex:1;min-height:54px;font-size:13px"></textarea>
               <button class="btn ghost" id="tplNlBtn" type="button" title="문장 분석 → 매칭되는 프리셋을 현재 조합에 채움" style="padding:8px 12px;font-size:13px;border-color:rgba(58,99,152,.4);color:var(--blue);flex-shrink:0">🪄 분석</button>
             </div>
-          </div>
+          </details>
           <div class="set-card">
             <h3>🎨 템플릿 — 프리셋 랜덤 조합 <span class="en">Templates</span></h3>
             <div style="font-size:12px;color:var(--t3);margin-bottom:10px;line-height:1.55">
@@ -19819,6 +19837,27 @@ function wireGenerationAndPresetEvents(){
   });
   $('addPresetBtn').addEventListener('click', () => openPresetEdit(state.presetType, null));
   // ☑ 일괄 선택 모드 wire
+  // ⋯ 더보기 드롭다운 — 토글 + 항목 클릭/바깥 클릭 시 닫힘
+  $('presetMoreBtn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = $('presetMoreMenu');
+    const open = menu.style.display !== 'none';
+    menu.style.display = open ? 'none' : '';
+    $('presetMoreBtn').setAttribute('aria-expanded', String(!open));
+  });
+  document.addEventListener('click', (e) => {
+    const menu = $('presetMoreMenu');
+    if(menu && menu.style.display !== 'none' && !e.target.closest('.preset-more-wrap')){
+      menu.style.display = 'none';
+      $('presetMoreBtn')?.setAttribute('aria-expanded', 'false');
+    }
+  });
+  $('presetMoreMenu')?.addEventListener('click', (e) => {
+    if(e.target.closest('.pmm-item')){
+      $('presetMoreMenu').style.display = 'none';
+      $('presetMoreBtn')?.setAttribute('aria-expanded', 'false');
+    }
+  });
   $('presetSelectModeBtn')?.addEventListener('click', () => {
     _presetSelectMode = !_presetSelectMode;
     if(!_presetSelectMode) _presetSelected.clear();
