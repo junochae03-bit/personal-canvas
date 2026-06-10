@@ -26,33 +26,52 @@ const page = await browser.newPage({ viewport: {width: 1280, height: 900} });
 page.on('pageerror', e => logErr('pageerror', e.message || String(e)));
 page.on('console', m => { if(m.type() === 'error') logErr('console', m.text()); });
 
-// 1) 부트
+// 1) 부트 — 실제 인터랙티브 도달 시간만 측정 (고정 settle 대기는 측정 제외)
 await timed('boot', async () => {
   await page.goto(URL, {waitUntil: 'networkidle', timeout: 20000});
   await page.waitForSelector('#prompt', {timeout: 10000});
-  await page.waitForTimeout(800);
 });
+await page.waitForTimeout(800);   // 비동기 부트 잔여 settle (측정 외)
 
-// 2) 메인 탭 순회 (preview/gallery/presets/templates/tags/settings)
-for(const pane of ['gallery','presets','templates','tags','settings','preview']){
+// 2) 메인 탭 순회 (preview/gallery/presets/templates/tags/settings/comic)
+for(const pane of ['gallery','presets','templates','tags','settings','comic','preview']){
   await timed('pane:'+pane, async () => {
     await page.evaluate(p => window.setMainPane && window.setMainPane(p), pane);
     await page.waitForTimeout(250);
   });
 }
 
-// 3) RC 빌더 열기 + 카테고리 추가 + 적용 토글
-await timed('rc-builder', async () => {
+// 3) 🃏 와일드카드 패널 열기/추가/닫기
+await timed('wildcards', async () => {
   await page.evaluate(() => window.setMainPane && window.setMainPane('edit'));
-  await page.evaluate(() => window.rcToggleBuilder && window.rcToggleBuilder(true));
+  await page.evaluate(() => window.wildcardToggle && window.wildcardToggle(true));
   await page.waitForTimeout(200);
-  await page.evaluate(() => window.rcAddCategory && window.rcAddCategory('test'));
-  await page.waitForTimeout(150);
-  // 적용 토글
-  await page.evaluate(() => { const t = document.getElementById('rcEnableToggle'); if(t){ t.checked = true; t.dispatchEvent(new Event('change')); } });
-  await page.waitForTimeout(150);
-  await page.evaluate(() => window.rcToggleBuilder && window.rcToggleBuilder(false));
+  await page.evaluate(() => window.wildcardToggle && window.wildcardToggle(false));
 });
+
+// 3b) 🎞 만화 페이지 — init + 페이지 추가/삭제 (F1 페이지 모델 회귀 점검)
+await timed('comic', async () => {
+  await page.evaluate(() => window.setMainPane && window.setMainPane('comic'));
+  await page.waitForTimeout(500);
+  await page.evaluate(() => {
+    const add = document.querySelector('#cmPageNav [data-cm-page-act="add"]');
+    add && add.click();
+  });
+  await page.waitForTimeout(200);
+  await page.evaluate(() => window.setMainPane && window.setMainPane('preview'));
+});
+
+// 3c) ♿ 접근성 라벨 패스 검증 — label/aria 없는 가시 컨트롤 잔여 수
+const a11yLeft = await page.evaluate(() => {
+  return Array.from(document.querySelectorAll('input:not([type=hidden]):not([type=file]),textarea,select')).filter(i => {
+    if(i.getAttribute('aria-label') || i.getAttribute('aria-hidden') === 'true') return false;
+    if(i.id && document.querySelector(`label[for="${i.id}"]`)) return false;
+    if(i.closest('label') || i.placeholder || i.title) return false;
+    return true;
+  }).length;
+});
+if(a11yLeft > 5) errors.push(`[a11y] 라벨 없는 컨트롤 ${a11yLeft}개 (허용 5)`);
+
 
 // 4) 캐릭터 추가/제거
 await timed('characters', async () => {
@@ -104,5 +123,6 @@ errors.slice(0, 40).forEach(e => console.log('  ✗', e));
 console.log('느린 작업(>1.5s):', slow.length);
 slow.forEach(s => console.log('  🐢', s));
 console.log('메모리 점검:', leakInfo);
+console.log('♿ 라벨 없는 컨트롤:', a11yLeft);
 console.log('===========================');
 process.exit(errors.length ? 1 : 0);

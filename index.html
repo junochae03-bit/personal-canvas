@@ -18679,6 +18679,51 @@ function applyUiScale(percent){
 // ═══════════════════════════════════════════════════════════
 // EVENT WIRING
 // ═══════════════════════════════════════════════════════════
+
+// ♿ 접근성 라벨 패스 — 시각 라벨은 있지만 프로그램적 연결이 없는 정적 컨트롤에
+//   aria-label 일괄 부여. (재렌더되는 동적 요소는 각 렌더러가 직접 처리)
+function _a11yLabelPass(){
+  const MAP = {
+    // 메인 폼
+    model: 'NAI 모델 선택', ucPreset: '네거티브 프리셋 강도',
+    resPreset: '해상도 프리셋', resAspect: '화면 비율',
+    customW: '커스텀 가로 해상도', customH: '커스텀 세로 해상도',
+    steps: '샘플링 스텝 수', cfgScale: '프롬프트 가이던스 (CFG)',
+    cfgRescale: 'CFG 리스케일', sampler: '샘플러', noiseSchedule: '노이즈 스케줄',
+    genCount: '생성 매수', genDelay: '생성 간 대기 시간(초)',
+    i2iStrength: 'I2I 변형 강도', i2iNoise: 'I2I 노이즈',
+    // 디렉터/감정
+    directorAction: '디렉터 액션 종류', emotionType: '감정 종류',
+    // 갤러리/앨범/템플릿
+    targetSession: '저장할 세션', targetAlbum: '저장할 앨범', tplAlbumFilter: '템플릿 앨범 필터',
+    // 프리셋/와일드카드
+    presetPersonaSel: '연결할 페르소나', wcEditLock: '와일드카드 고정 후보',
+    // XYZ 플롯
+    xyz_x_param: 'X축 파라미터', xyz_y_param: 'Y축 파라미터', xyz_z_param: 'Z축 파라미터',
+    // 확대 편집
+    expandPromptTa: '프롬프트 (확대 편집)', expandNegTa: '네거티브 (확대 편집)',
+    // 일괄 생성
+    pgPreset: '일괄 생성 캐릭터 프리셋', pgGroupFilter: '캐릭터 그룹 필터',
+    pgSceneChar: '시나리오 캐릭터', pgSceneCatFilter: '시나리오 카테고리 필터',
+    // 텍스트 편집기
+    teFont: '글꼴', teSize: '글자 크기', teWeight: '글자 굵기', teColor: '글자 색',
+    teStrokeColor: '외곽선 색', teBubbleFill: '말풍선 채움색', teBubbleBorder: '말풍선 테두리색',
+    teBubbleOpacity: '말풍선 불투명도', teAlign: '텍스트 정렬', teRot: '회전 각도',
+    tpCornerRadius: '모서리 둥글기', tpSpikeCount: '가시 개수', tpSpikeDepth: '가시 깊이',
+    tpWaveCount: '물결 수', tpWaveAmp: '물결 진폭', tpLobeCount: '구름 봉우리 수', tpTailWidth: '꼬리 두께',
+    // 만화
+    cmCustomRatio: '만화 페이지 비율',
+  };
+  for(const [id, label] of Object.entries(MAP)){
+    const el = document.getElementById(id);
+    if(el && !el.getAttribute('aria-label')) el.setAttribute('aria-label', label);
+  }
+  // display:none 파일 입력 — 보조기기 트리에서 제외 (버튼이 트리거)
+  document.querySelectorAll('input[type=file]').forEach(f => {
+    if(!f.getAttribute('aria-label')) f.setAttribute('aria-hidden', 'true');
+  });
+}
+
 function wireEvents(){
   // 🔧 영역별 이벤트 바인딩 함수로 분할 — wireEvents 자체는 디스패처
   wireTopbarAndFormEvents();   // API key, fullscreen, mode bar, tabs, sections, form changes, sliders, seed, workflows, seed history, clear/dedupe/lock prompts and negs
@@ -22034,6 +22079,7 @@ async function init(){
   document.body.dataset.mview = 'edit';
   $$('.mn-btn').forEach(b => b.classList.toggle('act', b.dataset.mview === 'edit'));
   wireEvents();
+  _a11yLabelPass();   // ♿ 정적 컨트롤 aria-label 일괄
   wireWildcardEvents();   // 🃏 와일드카드 이벤트 바인딩
   setupPromptAutocomplete();
   // 🛡 비필수 기능 로더 격리 — 하나가 실패(손상 레코드·일시적 IDB 오류)해도
