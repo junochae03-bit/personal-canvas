@@ -2329,6 +2329,10 @@ mark{
             <button class="iconbtn sec-util-btn" id="openTagsBtn" title="📖 태그 도감 열기">📖</button>
             <button class="iconbtn sec-util-btn" id="openGuideBtn" title="📘 NAI 4.5 가이드">📘</button>
             <button class="iconbtn sec-util-btn" id="wildcardBtn" title="🃏 와일드카드 — 프롬프트에 __이름__ 을 넣으면 생성마다 목록에서 한 줄 무작위 치환" aria-pressed="false">🃏</button>
+            <span class="ph-wrap" style="position:relative;display:inline-flex">
+              <button class="iconbtn sec-util-btn" id="promptHistoryBtn" title="📋 프롬프트 히스토리 — 생성했던 최근 프롬프트 30개, 클릭으로 복원">📋</button>
+              <div class="preset-more-menu ph-menu" id="promptHistoryMenu" style="display:none;left:auto;right:0;min-width:300px;max-width:380px;max-height:340px;overflow-y:auto"></div>
+            </span>
           </span>
           <span class="caret">▾</span>
         </div>
@@ -4919,6 +4923,7 @@ const state = {
   outputDirHandle: null,  // 📂 File System Access API 핸들 (Chrome/Edge)
   outputDirName: '',      // 표시용 폴더명
   seedHistory: [],        // ⏱ [{seed, ts, fav, note}] — 최근 시드 + 즐겨찾기 (최대 100)
+  promptHistory: [],      // 📋 [{text, ts}] — 생성 시 자동 기록된 최근 프롬프트 (최대 30)
   seedBlocklist: [],      // 👎 별로 표시한 시드들 — randomSeed() 시 자동 회피 (최대 1000)
   seedBlocklistAuto: false,  // 👎 시드 자동 제외 옵션
   workflows: [],          // 💾 [{id, name, ts, thumb, data}] — 워크플로우 스냅샷 슬롯
@@ -9963,6 +9968,14 @@ async function startGeneration(){
     state.queue = buildQueue();
   }
   if(!state.queue.length){ toast('생성할 항목이 없습니다', 'warning'); return; }
+  recordPromptHistory($('prompt').value);   // 📋 프롬프트 히스토리 자동 기록
+  // 🔔 알림 권한 — 처음 한 번만 부드럽게 요청 (거부해도 다시 안 물음)
+  try {
+    if('Notification' in window && Notification.permission === 'default' && !state._notifAsked){
+      state._notifAsked = true;
+      Notification.requestPermission().catch(()=>{});
+    }
+  } catch(_){}
   // 📁 갤러리 저장 위치 — 세션 선택 적용 (생성 직전 1회)
   await applyTargetSession();
   // 🔢 자동 라벨 카운터 — 갤러리에 이미 있는 max(name#N) 으로 seed → 파일명 중복 방지.
@@ -10050,7 +10063,41 @@ async function startGeneration(){
   const errs = state.queue.filter(q => q.status === 'err').length;
   if(state.queue.length){
     toast(`완료: ${state.queue.length - errs}개 성공${errs ? `, ${errs}개 실패` : ''}`, errs ? 'warning' : 'success');
+    notifyGenerationDone(state.queue.length - errs, errs);   // 🔔 백그라운드 탭 알림
   }
+}
+
+
+// 🔔 백그라운드 완료 알림 — 탭이 안 보일 때 타이틀 점멸 + (권한 시) 브라우저 알림.
+//   탭으로 돌아오면 타이틀 자동 복원.
+let _titleFlashTimer = null;
+const _origTitle = document.title;
+function notifyGenerationDone(okCount, errCount){
+  if(!document.hidden) return;   // 보고 있으면 토스트로 충분
+  // 타이틀 점멸
+  let on = false;
+  clearInterval(_titleFlashTimer);
+  _titleFlashTimer = setInterval(() => {
+    on = !on;
+    document.title = on ? `✅ ${okCount}장 완료 — NAI Studio` : _origTitle;
+  }, 1200);
+  const restore = () => {
+    if(document.hidden) return;
+    clearInterval(_titleFlashTimer);
+    document.title = _origTitle;
+    document.removeEventListener('visibilitychange', restore);
+  };
+  document.addEventListener('visibilitychange', restore);
+  // 브라우저 알림 (권한 있을 때만 — 요청은 첫 생성 시작 시 1회)
+  try {
+    if('Notification' in window && Notification.permission === 'granted'){
+      const n = new Notification('NAI Studio — 생성 완료', {
+        body: `${okCount}장 성공${errCount ? ` · ${errCount}장 실패` : ''}`,
+        tag: 'nai-gen-done',
+      });
+      n.onclick = () => { try { window.focus(); n.close(); } catch(_){} };
+    }
+  } catch(_){}
 }
 
 function stopGeneration(){
@@ -10214,6 +10261,18 @@ async function runOne(q, apiKey){
   recordSeedHistory(q.seed);
   // state.abortCtrl 이 없으면 signal 없이 호출 (naiGenerate 가 자체 timeout 적용)
   return await naiGenerate(apiKey, body, state.abortCtrl?.signal);
+}
+
+
+// 📋 프롬프트 히스토리 — 생성 시작마다 자동 기록 (중복은 상단 이동, 30 한도)
+function recordPromptHistory(text){
+  const t = String(text || '').trim();
+  if(!t || t.length < 3) return;
+  if(!Array.isArray(state.promptHistory)) state.promptHistory = [];
+  const idx = state.promptHistory.findIndex(p => p.text === t);
+  if(idx >= 0) state.promptHistory.splice(idx, 1);
+  state.promptHistory.unshift({text: t, ts: Date.now()});
+  if(state.promptHistory.length > 30) state.promptHistory.length = 30;
 }
 
 // ⏱ 시드 히스토리 — 생성 시 자동 기록
@@ -18256,6 +18315,7 @@ async function saveSettings(){
     mode: state.mode,
     presetType: state.presetType,
     seedHistory: state.seedHistory,
+    promptHistory: state.promptHistory,
   };
   await DB.appSet(payload);
 }
@@ -18389,6 +18449,7 @@ async function loadSettings(){
   applyUiScale(80);
   setTheme('default');
   if(Array.isArray(s.seedHistory)) state.seedHistory = s.seedHistory;
+  if(Array.isArray(s.promptHistory)) state.promptHistory = s.promptHistory;
   // 🐛 마이그레이션 완료 표식 즉시 영속화 — 사용자 편집(저장 트리거) 없이 탭을 닫아도
   //    다음 부트에서 v2/v3 마이그레이션이 재실행되지 않도록. saveSettings 가 migration_*_done:true 기록.
   if(state._needMigrationV2Mark || state._needMigrationV3Mark){
@@ -18869,6 +18930,49 @@ async function refreshEmptyPreview(){
     }).join('');
     box.style.display = '';
   } catch(e){ _swallow(e, 'pe:recent'); }
+}
+
+
+// ⚖ Ctrl+↑/↓ 가중치 단축키 — 커서가 위치한 콤마 구간 태그의 가중치를 ±0.1.
+//   "tag" ↔ "1.1::tag::" ↔ "0.9::tag::" (NAI 캡슐 문법). 범위 0.1~2.0, 1.0 이면 캡슐 제거.
+function _weightHotkey(ta, dir){
+  const v = ta.value;
+  const pos = ta.selectionStart;
+  // 커서가 속한 콤마 구간 찾기
+  let s = v.lastIndexOf(',', pos - 1) + 1;
+  let e = v.indexOf(',', pos);
+  if(e < 0) e = v.length;
+  const seg = v.slice(s, e);
+  const lead = seg.match(/^\s*/)[0].length;
+  const trail = seg.match(/\s*$/)[0].length;
+  const core = seg.slice(lead, seg.length - trail);
+  if(!core) return;
+  // 기존 캡슐 파싱
+  const m = core.match(/^(-?\d+(?:\.\d+)?)::([\s\S]+?)::$/);
+  let w = m ? parseFloat(m[1]) : 1.0;
+  const tag = m ? m[2] : core;
+  w = Math.round((w + dir * 0.1) * 10) / 10;
+  w = Math.max(0.1, Math.min(2.0, w));
+  // NAI 가이드: 태그가 숫자로 끝나면 캡슐 안에서 끝 공백 필수
+  const safeTag = /\d$/.test(tag) ? tag + ' ' : tag;
+  const replaced = (Math.abs(w - 1.0) < 0.001) ? tag.trim() : `${w}::${safeTag.trim()}${/\d$/.test(tag.trim()) ? ' ' : ''}::`;
+  const before = v.slice(0, s) + seg.slice(0, lead);
+  const after = seg.slice(seg.length - trail) + v.slice(e);
+  ta.value = before + replaced + after;
+  // 커서를 교체된 구간 끝으로
+  const np = before.length + replaced.length;
+  ta.setSelectionRange(np, np);
+  ta.dispatchEvent(new Event('input', {bubbles: true}));
+}
+function attachWeightHotkey(ta){
+  if(!ta || ta._whInit) return;
+  ta._whInit = true;
+  ta.addEventListener('keydown', (e) => {
+    if((e.ctrlKey || e.metaKey) && (e.key === 'ArrowUp' || e.key === 'ArrowDown')){
+      e.preventDefault();
+      _weightHotkey(ta, e.key === 'ArrowUp' ? 1 : -1);
+    }
+  });
 }
 
 function wireEvents(){
@@ -21876,6 +21980,42 @@ function wireWildcardEvents(){
     }
   });
   $('wildcardBtn')?.addEventListener('click', () => wildcardToggle());
+  // 📋 프롬프트 히스토리 드롭다운
+  $('promptHistoryBtn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = $('promptHistoryMenu');
+    const open = menu.style.display !== 'none';
+    if(open){ menu.style.display = 'none'; return; }
+    const hist = state.promptHistory || [];
+    if(!hist.length){
+      menu.innerHTML = '<div style="padding:14px;text-align:center;color:var(--t3);font-size:12px;font-style:italic">생성하면 프롬프트가 자동 기록됩니다</div>';
+    } else {
+      menu.innerHTML = hist.map((p, i) => {
+        const ago = Math.round((Date.now() - p.ts) / 60000);
+        const when = ago < 1 ? '방금' : ago < 60 ? `${ago}분 전` : ago < 1440 ? `${Math.round(ago/60)}시간 전` : `${Math.round(ago/1440)}일 전`;
+        return `<button class="pmm-item" data-ph-idx="${i}" title="${esc(p.text)}" style="flex-direction:column;align-items:flex-start;gap:2px">
+          <span style="font-size:12px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-all">${esc(p.text)}</span>
+          <span style="font-size:10px;color:var(--t3);font-family:var(--mono)">${when}</span>
+        </button>`;
+      }).join('');
+    }
+    menu.style.display = '';
+  });
+  $('promptHistoryMenu')?.addEventListener('click', (e) => {
+    const item = e.target.closest('[data-ph-idx]');
+    if(!item) return;
+    const p = (state.promptHistory || [])[parseInt(item.dataset.phIdx, 10)];
+    if(p){
+      $('prompt').value = p.text;
+      $('prompt').dispatchEvent(new Event('input', {bubbles: true}));
+      toast('📋 프롬프트 복원됨', 'success');
+    }
+    $('promptHistoryMenu').style.display = 'none';
+  });
+  document.addEventListener('click', (e) => {
+    const menu = $('promptHistoryMenu');
+    if(menu && menu.style.display !== 'none' && !e.target.closest('.ph-wrap')) menu.style.display = 'none';
+  });
   $('wildcardCloseBtn')?.addEventListener('click', () => wildcardToggle(false));
   $('wildcardNewBtn')?.addEventListener('click', newWildcard);
   $('wildcardDemoBtn')?.addEventListener('click', wildcardDemo);
@@ -22259,6 +22399,8 @@ async function init(){
   $('apiKey')?.addEventListener('input', () => refreshEmptyPreview());
   $('prompt')?.addEventListener('input', debounce(() => refreshEmptyPreview(), 400));
   refreshEmptyPreview();   // 🧭 온보딩 단계 + 최근 생성
+  // ⚖ Ctrl+↑/↓ 가중치 단축키 — 프롬프트·네거티브·확대 편집
+  ['prompt','negPrompt','expandPromptTa','expandNegTa'].forEach(id => attachWeightHotkey($(id)));
   wireWildcardEvents();   // 🃏 와일드카드 이벤트 바인딩
   setupPromptAutocomplete();
   // 🛡 비필수 기능 로더 격리 — 하나가 실패(손상 레코드·일시적 IDB 오류)해도
