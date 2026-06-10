@@ -12,7 +12,7 @@
 <!-- SRI(integrity) 는 release.yml 워크플로(workflow_dispatch) 에서 npm run sri 로 주입. -->
 <!-- ⚠ frame-ancestors / X-Frame-Options 는 HTTP 헤더 전용 — GitHub Pages 정적 호스팅에선 적용 불가.
      iframe 임베드 방어가 필요하면 JS 프레임 버스터를 별도로 고려. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://image.novelai.net https://api.novelai.net https://generativelanguage.googleapis.com; worker-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://image.novelai.net https://api.novelai.net; worker-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="theme-color" content="#a25a1f">
 <title>NAI Studio</title>
 
@@ -994,33 +994,12 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 #comicMakerModal .cm-stage-hint{font-size:11px;color:rgba(255,248,236,.55);text-align:center;line-height:1.6;max-width:540px;padding:0 8px}
 #comicMakerModal .cm-panel{width:360px;flex-shrink:0;overflow-y:auto;padding-right:4px;display:flex;flex-direction:column;gap:10px}
 #comicMakerModal .cm-quick .te-section-title{color:var(--acc)}
-/* 🤖 F2: AI 자동 생성 섹션 */
-#comicMakerModal .cm-autogen .te-section-title{color:var(--acc);display:flex;align-items:center;gap:6px}
-#comicMakerModal .cm-autogen-toggle{margin-left:auto;background:transparent;border:1.5px solid var(--b1);color:var(--t2);font-size:11px;padding:2px 8px;border-radius:11px;cursor:pointer;font-family:inherit;transition:all .12s}
-#comicMakerModal .cm-autogen-toggle:hover{border-color:var(--acc);color:var(--acc)}
-#comicMakerModal .cm-autogen-toggle.open{background:var(--acc);color:#fff8ec;border-color:var(--acc)}
-#comicMakerModal .cm-autogen-body{padding:8px 10px;background:var(--bg);border:1.5px solid var(--b1);border-radius:6px;display:flex;flex-direction:column;gap:7px;margin-top:6px}
-#comicMakerModal .cm-autogen-help{font-size:11px;color:var(--t3);line-height:1.5}
-#comicMakerModal .cm-autogen-label{font-size:11px;color:var(--t2);font-weight:600;margin-top:3px}
-#comicMakerModal .cm-autogen-base,#comicMakerModal .cm-autogen-scenes{width:100%;font-size:12px;padding:6px 8px;background:var(--card);color:var(--t1);border:1.5px solid var(--b1);border-radius:4px;font-family:inherit;resize:vertical;line-height:1.5}
-#comicMakerModal .cm-autogen-base:focus,#comicMakerModal .cm-autogen-scenes:focus{border-color:var(--acc);outline:none}
-#comicMakerModal .cm-autogen-opts{display:flex;flex-wrap:wrap;gap:9px;padding:2px 0}
-#comicMakerModal .cm-autogen-opt{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--t2);cursor:pointer;user-select:none}
-#comicMakerModal .cm-autogen-opt input{margin:0;cursor:pointer}
-#comicMakerModal .cm-autogen-actions{display:flex;align-items:center;gap:8px;margin-top:4px}
-#comicMakerModal .cm-autogen-btn{flex:1;padding:8px 10px;font-size:12.5px}
-#comicMakerModal .cm-autogen-prog{font-family:var(--mono);font-size:11px;color:var(--acc);font-weight:700;min-width:60px;text-align:right}
-/* 🗨 F3: 대사 자동 생성 (Gemini) */
-#comicMakerModal .cm-autogen-eye{width:32px;height:32px;border:1.5px solid var(--b1);background:var(--bg);color:var(--t1);border-radius:4px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
-#comicMakerModal .cm-autogen-eye:hover{border-color:var(--acc);color:var(--acc)}
-#comicMakerModal .cm-autogen-tone{font-size:12px;padding:6px 8px}
-#comicMakerModal .cm-autogen-keynote{display:flex;align-items:center;gap:8px;padding:6px 9px;background:var(--card);border:1.5px solid var(--b1);border-radius:5px;font-size:11.5px;color:var(--t2)}
-#comicMakerModal .cm-autogen-keynote.ok{border-color:rgba(85,138,52,.35);color:var(--green,#5a8a34)}
-#comicMakerModal .cm-autogen-keynote.warn{border-color:rgba(181,67,56,.35);color:var(--red,#b54338)}
-#comicMakerModal .cm-autogen-keylink{margin-left:auto;background:var(--bg);border:1.5px solid var(--b1);color:var(--t1);font-size:11px;padding:3px 9px;border-radius:11px;cursor:pointer;font-family:inherit;transition:all .12s}
-#comicMakerModal .cm-autogen-keylink:hover{border-color:var(--acc);color:var(--acc)}
-#comicMakerModal .cm-autogen-personarow{display:flex;gap:6px;align-items:center}
-#comicMakerModal .cm-autogen-persona{flex:1;font-size:12px;padding:6px 8px}
+/* ☑ 프리셋 일괄 선택 모드 */
+.preset-grid.select-mode .p-item,.preset-grid.select-mode .pp-card{cursor:pointer;user-select:none}
+.preset-grid.select-mode .p-item .pact,.preset-grid.select-mode .pp-card .pp-acts{display:none}
+.preset-grid.select-mode .p-item.bulk-sel,.preset-grid.select-mode .pp-card.bulk-sel{outline:3px solid var(--red);outline-offset:-1px;background:rgba(181,67,56,.07)}
+.preset-grid.select-mode .p-item.bulk-sel::after,.preset-grid.select-mode .pp-card.bulk-sel::after{content:'✓';position:absolute;top:6px;right:6px;width:22px;height:22px;background:var(--red);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;z-index:3}
+.preset-grid.select-mode .p-item,.preset-grid.select-mode .pp-card{position:relative}
 /* 페르소나 모달 — 목록 카드 */
 #personaModal .pm-card{padding:8px 10px;background:var(--card);border:1.5px solid var(--b1);border-radius:5px;display:flex;flex-direction:column;gap:4px;transition:border-color .12s}
 #personaModal .pm-card:hover{border-color:var(--b2)}
@@ -2585,8 +2564,6 @@ mark{
             <button class="iconbtn sec-util-btn" id="openTagsBtn" title="📖 태그 도감 열기">📖</button>
             <button class="iconbtn sec-util-btn" id="openGuideBtn" title="📘 NAI 4.5 가이드">📘</button>
             <button class="iconbtn sec-util-btn" id="wildcardBtn" title="🃏 와일드카드 — 프롬프트에 __이름__ 을 넣으면 생성마다 목록에서 한 줄 무작위 치환" aria-pressed="false">🃏</button>
-            <button class="iconbtn sec-util-btn" id="aiKoToTagsBtn" title="🌐 한국어 → NAI 영문 태그 — 한글로 컨셉 적고 Gemini 로 태그 변환">🌐</button>
-            <button class="iconbtn sec-util-btn" id="aiEnrichBtn" title="✨ 프롬프트 풍성화 — 짧은 태그를 NAI 스타일로 확장">✨</button>
           </span>
           <span class="caret">▾</span>
         </div>
@@ -2650,7 +2627,6 @@ mark{
             <div class="row" style="gap:6px;flex-wrap:wrap">
               <button class="btn ghost" id="openWorkflowBtnNeg" style="padding:4px 10px;font-size:11.5px;border-color:rgba(162,90,31,.4);color:var(--acc)" title="현재 상태(프롬프트+캐릭터+파라미터) 저장·복원">💾 워크플로우 <span class="en" style="opacity:.6">Snap</span></button>
               <button class="btn ghost" id="lockNegBtn" style="padding:4px 10px;font-size:11.5px" title="네거티브 수정 잠금 (다시 누르면 해제)" aria-pressed="false">🔓 잠금</button>
-              <button class="btn ghost" id="aiNegSuggestBtn" style="padding:4px 10px;font-size:11.5px;border-color:rgba(214,160,80,.4);color:var(--acc)" title="🛡 Gemini 가 현재 프롬프트 분석 후 네거티브 자동 추천 (기존 네거티브 끝에 append)">🛡 AI 추천</button>
               <button class="btn ghost" id="dedupeNegBtn" style="padding:4px 10px;font-size:11.5px" title="콤마 구분 중복 태그 정리">🧹 중복 정리</button>
               <button class="btn ghost" id="clearNegBtn" style="padding:4px 10px;font-size:11.5px">비우기</button>
             </div>
@@ -2665,7 +2641,6 @@ mark{
           <div class="row" style="margin-bottom:8px;gap:14px;flex-wrap:wrap">
             <label class="chk"><input type="checkbox" id="useCoords" checked>좌표 사용 <span class="en">Use Coordinates</span></label>
             <label class="chk" title="ON 이면 썸네일 탭 랜덤(🎲)이 ⭐ 즐겨찾기한 캐릭터 프리셋 중에서만 뽑습니다. 그룹별 랜덤은 '🎴 둘러보기'에서."><input type="checkbox" id="charRandFav">⭐ 즐겨찾기 랜덤 <span class="en">Fav only</span></label>
-            <label class="chk" title="🗨 ON 이면 만화 자동 생성 시 — 각 캐릭터에 설정한 페르소나 말투로 대사를 Gemini 가 자동 작성하고 말풍선까지 자동 배치"><input type="checkbox" id="autoDialogToggle">🗨 자동 대사 <span class="en">Auto Dialog</span></label>
           </div>
           <div id="charList"></div>
           <button class="add-char" id="addCharBtn">＋ 캐릭터 추가 <span class="en">Add Character</span></button>
@@ -2949,7 +2924,16 @@ mark{
           <div class="tb-grow"></div>
           <span id="presetInfo" style="font-size:12px;color:var(--t3);font-family:var(--mono)"></span>
           <button class="btn ghost" id="previewGenBtn" title="🎯 일괄 생성 — 현재 프롬프트에 시나리오를 결합하고 캐릭터별로 한 장씩 자동 생성" style="border-color:rgba(58,99,152,.4);color:var(--blue)">🎯 일괄 생성 <span class="en" style="opacity:.6">Batch</span></button>
+          <button class="btn ghost" id="presetSelectModeBtn" title="☑ 일괄 선택 모드 — 카드를 탭해서 여러 개 고른 뒤 한 번에 삭제" aria-pressed="false">☑ 선택 <span class="en">Select</span></button>
           <button class="btn ghost" id="addPresetBtn">＋ 추가 <span class="en">Add</span></button>
+        </div>
+        <div id="presetBulkBar" style="display:none;padding:8px 14px;background:rgba(181,67,56,.07);border-bottom:1.5px solid rgba(181,67,56,.25);align-items:center;gap:9px;flex-wrap:wrap">
+          <span id="presetBulkCount" style="font-size:12.5px;font-weight:700;color:var(--red)">0개 선택</span>
+          <span style="font-size:11px;color:var(--t3)">카드를 탭하면 선택/해제</span>
+          <div class="tb-grow" style="flex:1"></div>
+          <button class="btn ghost" id="presetBulkAll" style="font-size:12px;padding:5px 11px">☑ 전체 선택</button>
+          <button class="btn danger" id="presetBulkDelBtn" style="font-size:12px;padding:5px 11px">🗑 선택 삭제</button>
+          <button class="btn ghost" id="presetBulkCancel" style="font-size:12px;padding:5px 11px">취소</button>
         </div>
         <div class="preset-grid" id="presetGrid"></div>
       </div>
@@ -3095,24 +3079,6 @@ mark{
               </div>
               <div id="apiKeyStatusSettings" class="desc" style="font-family:var(--mono);font-size:11.5px"></div>
             </div>
-            <div class="set-row" style="flex-direction:column;align-items:stretch;gap:8px">
-              <div class="label">🗨 Gemini API 키 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Dialogue Generator</span>
-                <div class="desc">만화 자동 대사 생성용 (선택). <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--acc);text-decoration:underline">aistudio.google.com</a> 에서 무료 발급. 한 번 입력하면 로컬에 저장됨.</div>
-              </div>
-              <div style="display:flex;gap:6px;align-items:center">
-                <input id="geminiKeySettings" class="inp pw" type="password" aria-label="Gemini API 키" placeholder="AIza..." autocomplete="off" spellcheck="false" style="flex:1;min-width:0">
-                <button class="iconbtn" id="toggleGeminiKeySettings" title="키 보이기/숨기기" type="button">👁</button>
-                <button class="btn ghost" id="testGeminiKeyBtn" type="button" title="🧪 Gemini API 연결 테스트 — 키가 유효한지 즉시 확인">🧪 테스트</button>
-              </div>
-              <div style="display:flex;gap:6px;align-items:center;font-size:11.5px;color:var(--t3)">
-                <span>모델:</span>
-                <select id="geminiModelSel" class="inp" style="flex:1;font-size:12px;padding:4px 8px">
-                  <option value="gemini-2.5-flash">gemini-2.5-flash (기본, 빠르고 안정)</option>
-                  <option value="gemini-2.5-pro">gemini-2.5-pro (고성능, 느림)</option>
-                </select>
-              </div>
-              <div id="geminiKeyStatusSettings" class="desc" style="font-family:var(--mono);font-size:11.5px"></div>
-            </div>
             <div class="set-row">
               <div class="label">API 키 PIN 보호 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">PIN Lock</span>
                 <div class="desc">활성화 시 4~12자리 PIN으로 API 키를 추가 암호화. 매 세션마다 PIN 입력 필요.</div>
@@ -3192,7 +3158,6 @@ mark{
     <button class="iconbtn lb-act-btn" id="lbI2I" title="→ I2I로 보내기 (Send to I2I)"><span class="lb-act-ico">→I</span><span class="lb-act-lbl">I2I</span></button>
     <button class="iconbtn lb-act-btn" id="lbVibe" title="→ Vibe 참조로 사용 (Send to Vibe)"><span class="lb-act-ico">→V</span><span class="lb-act-lbl">Vibe</span></button>
     <button class="iconbtn lb-act-btn" id="lbExtractTags" title="📋 이 이미지의 태그를 도감에 추출"><span class="lb-act-ico">📋</span><span class="lb-act-lbl">태그</span></button>
-    <button class="iconbtn lb-act-btn" id="lbAiImageToTags" title="🔍 Gemini Vision — 이미지를 보고 NAI 영문 태그 자동 추출 → 프롬프트에 적용" style="border-color:rgba(214,160,80,.4);color:var(--acc)"><span class="lb-act-ico">🔍</span><span class="lb-act-lbl">i2p</span></button>
     <div style="height:1px;background:var(--b1);margin:2px 0"></div>
     <button class="iconbtn lb-act-btn" id="lbInfoBtn" title="ℹ 상세정보 펼치기/접기 (메타·프롬프트)" aria-pressed="false"><span class="lb-act-ico">ℹ</span><span class="lb-act-lbl">정보</span></button>
     <button class="iconbtn lb-act-btn" id="lbLike" title="❤️ 좋아요 — 마음에 든 결과물 표시 + 통계 집계 + ❤️🎲 시드 풀에 추가" aria-pressed="false"><span class="lb-act-ico">♡</span><span class="lb-act-lbl">좋아요</span></button>
@@ -3244,8 +3209,7 @@ mark{
       <!-- 🧑 페르소나 연결 — 캐릭터 프리셋에만 노출 -->
       <div class="field" id="presetPersonaField" style="margin-top:10px;display:none">
         <span class="lbl" style="display:flex;align-items:center;gap:6px">
-          🧑 페르소나 <span class="en">Persona</span> <span style="color:var(--t3);font-size:11px;font-weight:400">만화 자동 대사 연동</span>
-          <button class="btn ghost" id="presetPersonaAiBtn" type="button" style="margin-left:auto;font-size:11px;padding:3px 9px" title="이름·외형 → Gemini 로 페르소나 자동 생성">🪄 AI 생성</button>
+          🧑 페르소나 <span class="en">Persona</span> <span style="color:var(--t3);font-size:11px;font-weight:400">성격·말투 메모</span>
         </span>
         <div style="display:flex;gap:6px;align-items:center">
           <select class="inp" id="presetPersonaSel" style="flex:1;font-size:12px;padding:6px 8px"><option value="">(없음)</option></select>
@@ -3276,14 +3240,7 @@ mark{
         <input type="text" class="inp" id="wcEditName" spellcheck="false" autocomplete="off" placeholder="gl">
       </div>
       <div class="field" style="margin-bottom:6px">
-        <span class="lbl" style="display:flex;align-items:center;gap:6px">
-          후보 — 한 줄에 하나 <span class="en">Candidates (one per line)</span>
-          <span style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:400;color:var(--t3)">
-            🪄 AI 작성
-            <input type="number" class="inp" id="wcAiCount" min="3" max="30" step="1" value="10" style="width:48px;font-size:11px;padding:2px 4px">
-            <button class="btn ghost" id="wcAiGenBtn" type="button" style="font-size:11px;padding:3px 8px" title="Gemini 로 이름·라벨 기반 후보 자동 작성">생성</button>
-          </span>
-        </span>
+        <span class="lbl">후보 — 한 줄에 하나 <span class="en">Candidates (one per line)</span></span>
         <textarea class="ta" id="wcEditText" style="min-height:200px;font-family:var(--mono);font-size:12px" placeholder="business suit, formal wear&#10;casual hoodie, jeans&#10;3| 자주 뽑고 싶은 줄 (가중치 3)"></textarea>
       </div>
       <div class="wc-hint" style="margin-bottom:10px">가중치를 주려면 줄 앞에 <code>3| </code> 처럼 입력하세요(기본 1). <code>1.5::tag::</code> 캡슐은 그대로 두면 됩니다.</div>
@@ -3859,43 +3816,6 @@ coffee shop, latte art"></textarea>
             <button class="btn ghost cm-quick-btn" id="cmShuffleFill" title="현재 채워진 칸들의 순서를 무작위 셔플">🔀 셔플</button>
           </div>
         </div>
-        <!-- 🗨 대사 자동 생성 — Gemini 가 칸별 장면을 보고 페르소나 말투로 대사 작성 -->
-        <div class="te-section cm-autogen">
-          <div class="te-section-title">🗨 대사 자동 생성 <span class="en">Dialogue AI</span>
-            <button class="cm-autogen-toggle open" id="cmAutoToggle" type="button" title="접기/펴기">▴</button>
-          </div>
-          <div class="cm-autogen-body" id="cmAutoBody">
-            <div class="cm-autogen-help">칸별 장면을 한 줄씩 입력하면 Gemini 가 각 컷의 대사를 작성해 텍스트 편집기의 말풍선으로 배치합니다.<br>🧑 <b>페르소나</b> 선택 시 그 캐릭터의 성격·말투로 대사가 나옵니다.</div>
-            <div class="cm-autogen-keynote" id="cmAutoKeyNote">
-              <span id="cmAutoKeyStatus">🔑 Gemini 키 확인 중...</span>
-              <button class="cm-autogen-keylink" id="cmAutoKeyToSettings" type="button" title="설정 페이지로 이동">⚙ 설정</button>
-            </div>
-            <label class="cm-autogen-label">🧑 페르소나 (선택)</label>
-            <div class="cm-autogen-personarow">
-              <select class="inp cm-autogen-persona" id="cmAutoPersonaSelect"><option value="">(없음)</option></select>
-              <button class="cm-autogen-eye" id="cmAutoPersonaMgr" type="button" title="페르소나 관리">⚙</button>
-            </div>
-            <label class="cm-autogen-label">🎭 톤·스타일 (선택)</label>
-            <input type="text" class="te-inp cm-autogen-tone" id="cmAutoDialogTone" placeholder="예: 일상 코미디 · 시리어스 액션 · 감성 드라마">
-            <label class="cm-autogen-label" style="display:flex;align-items:center;gap:6px">
-              🎬 칸별 장면 (한 줄 = 한 칸 · <span id="cmAutoScenesHint">필수</span>)
-              <button class="cm-autogen-keylink" id="cmAutoScenesAiBtn" type="button" style="margin-left:auto" title="🪄 컨셉 한 줄 → Gemini 가 칸 수만큼 장면 자동 작성">🪄 AI 작성</button>
-            </label>
-            <input type="text" class="te-inp cm-autogen-tone" id="cmAutoScenesConcept" placeholder="컨셉 한 줄 (선택 — 예: '방과 후 친구와 산책', '회의실 위기' )">
-            <textarea class="te-inp cm-autogen-scenes" id="cmAutoScenes" rows="4" placeholder="1. 교실에서 책 펴는 모습&#10;2. 창밖 바라보는 옆얼굴&#10;3. 친구와 웃는 클로즈업&#10;4. 가방 메고 일어서는 뒷모습"></textarea>
-            <div class="cm-autogen-opts">
-              <label class="cm-autogen-opt" title="현재 페이지만 — OFF 면 모든 페이지 일괄">
-                <input type="checkbox" id="cmAutoThisPage" checked>
-                <span>📄 이 페이지만</span>
-              </label>
-            </div>
-            <div class="cm-autogen-actions">
-              <button class="btn primary cm-autogen-btn" id="cmAutoStart" type="button">▶ 대사 생성</button>
-              <button class="btn ghost cm-autogen-btn" id="cmAutoStop" type="button" style="display:none">⏹ 중단</button>
-              <span class="cm-autogen-prog" id="cmAutoProg"></span>
-            </div>
-          </div>
-        </div>
         <div class="te-section">
           <div class="te-section-title">📐 페이지 레이아웃 <span class="en">Layout</span>
             <button class="cm-custom-toggle" id="cmCustomToggle" type="button" title="🔧 직접 칸 배분 — 행·열 수 조정 + 캔버스에서 경계선 드래그로 크기 조절">🔧 직접 편집</button>
@@ -3965,7 +3885,7 @@ coffee shop, latte art"></textarea>
     <h3 id="personaTitle">🧑 캐릭터 페르소나 <span class="en">Personas</span></h3>
     <div class="modal-body" style="display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1;min-height:0">
       <div style="font-size:11.5px;color:var(--t3);line-height:1.5">
-        만화 자동 대사 생성 시 캐릭터의 성격·말투·배경을 Gemini 에 알려주면 대사가 일관성 있게 나옵니다.
+        캐릭터의 성격·말투·배경을 메모해 두는 프리셋입니다. 캐릭터 프리셋과 연결해 함께 관리하세요.
       </div>
       <div id="personaList" style="display:flex;flex-direction:column;gap:8px"></div>
       <div id="personaForm" style="border:1.5px solid var(--b1);border-radius:6px;padding:10px;background:var(--card);display:flex;flex-direction:column;gap:8px">
@@ -3975,14 +3895,9 @@ coffee shop, latte art"></textarea>
         </div>
         <input type="hidden" id="personaEditId">
         <input type="text" class="inp" id="personaName" placeholder="이름 (예: 리나, 미키) — 필수" maxlength="40">
-        <div style="display:flex;gap:6px;align-items:stretch">
-          <input type="text" class="inp" id="personaAiHint" placeholder="컨셉 힌트 (선택 — 예: 차분한 도서부장, 츤데레 부잣집 아가씨)" style="flex:1;min-width:0">
-          <button class="btn ghost" id="personaAiGenBtn" type="button" title="🪄 Gemini 로 성격·말투·배경 자동 작성" style="font-size:11px;padding:6px 10px;white-space:nowrap">🪄 AI 작성</button>
-        </div>
         <textarea class="inp" id="personaPersonality" placeholder="성격 (예: 활발하고 호기심 많음, 가끔 덜렁댐)" rows="2" style="resize:vertical"></textarea>
         <textarea class="inp" id="personaSpeech" placeholder="말투 (예: 반말, 어미 -야/-지. 종종 '아하!' 사용)" rows="2" style="resize:vertical"></textarea>
         <textarea class="inp" id="personaBackground" placeholder="배경 (예: 도쿄 출신 17세 고등학생, 미술부)" rows="2" style="resize:vertical"></textarea>
-        <div id="personaAiNote" class="desc" style="font-size:10.5px;color:var(--t3);font-style:italic;display:none"></div>
         <button class="btn primary" id="personaSaveBtn" type="button">💾 저장</button>
       </div>
     </div>
@@ -7442,7 +7357,7 @@ function renderCharacters(){
           <button class="char-act-btn ${c.enabled?'act':''}" data-act="toggle" data-idx="${i}" title="이 캐릭터 슬롯 활성/비활성 토글"><span class="cab-ico">${c.enabled?'✓':'⭕'}</span><span class="cab-lbl"> ${c.enabled?'활성':'비활성'}</span> <span class="en" style="opacity:.55;font-weight:400">${c.enabled?'On':'Off'}</span></button>
           <button class="char-act-btn ${c.randPerGen?'act':''}" data-act="rand-pergen" data-idx="${i}" title="🎲 매 대기열 추가·생성마다 이 슬롯을 무작위 교체 (⭐즐겨찾기·📂그룹고정·후보풀 설정 모두 존중)"><span class="cab-ico">🎲</span><span class="cab-lbl"> 매번 랜덤</span> <span class="en" style="opacity:.55;font-weight:400">${c.randPerGen?'On':'Off'}</span></button>
           <button class="char-act-btn edit" data-act="expand" data-idx="${i}" title="외형·액션·네거티브 textarea 펼치기/접기"><span class="cab-ico">✏</span><span class="cab-lbl"> 프롬프트</span> <span class="en" style="opacity:.55;font-weight:400">Edit</span></button>
-          <button class="char-act-btn ${c.persona?'act':''}" data-act="persona-mgr" data-idx="${i}" title="🧑 페르소나 관리 — 이 캐릭터의 성격·말투 (만화 자동 대사에 사용)"><span class="cab-ico">🧑</span><span class="cab-lbl"> ${c.persona?'페르소나':'페르소나'}</span> <span class="en" style="opacity:.55;font-weight:400">Persona</span></button>
+          <button class="char-act-btn ${c.persona?'act':''}" data-act="persona-mgr" data-idx="${i}" title="🧑 페르소나 관리 — 이 캐릭터의 성격·말투 메모"><span class="cab-ico">🧑</span><span class="cab-lbl"> ${c.persona?'페르소나':'페르소나'}</span> <span class="en" style="opacity:.55;font-weight:400">Persona</span></button>
           <button class="char-act-btn" data-act="clear-char-all" data-idx="${i}" title="🧹 텍스트만 비움 — 슬롯 카드는 그대로 (실행 취소 6초)"><span class="cab-ico">🧹</span><span class="cab-lbl"> 텍스트 비우기</span> <span class="en" style="opacity:.55;font-weight:400">Clear text</span></button>
           <button class="char-act-btn del" data-act="del" data-idx="${i}" title="🗑 슬롯 카드 자체 삭제 — 카드가 사라짐 (텍스트만 지우려면 옆 🧹 텍스트 비우기 사용)"><span class="cab-ico del-ico">🗑</span><span class="cab-lbl del-lbl"> 슬롯 삭제</span></button>
         </div>
@@ -7463,7 +7378,7 @@ function renderCharacters(){
         </div>
         <button class="char-quick-btn" data-act="quickadd" data-idx="${i}">🪄 빠른 추가 — 액션·프리셋 찾기 <span class="en" style="opacity:.6">Quick Add</span></button>
 
-        <div class="char-section-label">🧑 페르소나 <span class="en">Persona</span> <span style="font-size:10.5px;color:var(--t3);font-weight:400;margin-left:6px">만화 자동 대사용</span></div>
+        <div class="char-section-label">🧑 페르소나 <span class="en">Persona</span> <span style="font-size:10.5px;color:var(--t3);font-weight:400;margin-left:6px">성격·말투 메모</span></div>
         <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
           <select class="ta tiny char-persona-select" data-act="persona-pick" data-idx="${i}" style="flex:1;font-size:12px;padding:6px 8px"><option value="">(없음 — 페르소나 선택)</option></select>
           <button class="char-act-btn" data-act="persona-mgr" data-idx="${i}" type="button" title="🧑 페르소나 추가/편집" style="font-size:11px;padding:4px 9px">⚙</button>
@@ -10940,7 +10855,7 @@ async function saveWildcards(){
 }
 const _saveWildcardsDebounced = debounce(saveWildcards, 400);
 
-// 🎭 페르소나 (캐릭터 성격·말투·배경) — Gemini 대사 자동 생성에 컨텍스트로 주입.
+// 🎭 페르소나 (캐릭터 성격·말투·배경) — 캐릭터별 설정 메모. 캐릭터 프리셋과 연결 가능.
 //    데이터: {id, name, personality, speech, background, createdAt}
 function _normalizePersona(p){
   if(!p || typeof p !== 'object') return null;
@@ -14649,7 +14564,7 @@ async function openTextEditModal(item){
   if(document.fonts?.ready){
     document.fonts.ready.then(() => { if(_teState) _teRender(); }).catch(e => _swallow(e, 'te:fontsReady'));
   }
-  // 🗨 F3: 만화 컷에서 자동 대사가 함께 넘어왔으면 panel 좌표에 맞춰 말풍선 자동 배치.
+  // 🗨 만화 컷 핸드오프 — 채워진 칸마다 placeholder 말풍선을 panel 좌표에 자동 배치.
   const autoBubbles = item?.meta?.autoBubbles;
   const panelRects = item?.meta?.comic?.panelRects;
   if(Array.isArray(autoBubbles) && autoBubbles.length && Array.isArray(panelRects) && panelRects.length){
@@ -16166,9 +16081,6 @@ function _cmUpdateStatus(){
   const pageLabel = pageCount > 1 ? `📄${_cmState.currentPageIdx+1}/${pageCount} · ` : '';
   el.textContent = `${pageLabel}${filled} / ${total} 칸`;
   el.style.color = filled === total ? 'var(--green)' : filled > 0 ? 'var(--acc)' : 'var(--t3)';
-  // 🗨 장면 입력 힌트 — 현재 레이아웃 칸 수 동기화 ("4칸 — 4줄 입력")
-  const hint = $('cmAutoScenesHint');
-  if(hint) hint.textContent = `현재 ${total}칸 → ${total}줄`;
 }
 
 // 슬롯 이미지 위치 nudge — 기본 5%, Shift 키 있으면 20%
@@ -16611,8 +16523,6 @@ async function _cmInit(){
   _cmSetLayout(CM_LAYOUTS[0].id);
   _cmUpdateUndoBtn();
   _cmRenderPageNav();   // 📚 F1: 페이지 네비 첫 표시
-  if(typeof _personaRefreshSelect === 'function') _personaRefreshSelect();   // 🧑 페르소나 select 동기화
-  if(typeof _cmAutoRefreshKeyStatus === 'function') _cmAutoRefreshKeyStatus();   // 🗨 Gemini 키 상태 표시
   // 📱 디바이스별 안내 텍스트 (터치/마우스)
   const hint = $('cmStageHint');
   if(hint){
@@ -16768,8 +16678,6 @@ function _cmRenderPageNav(){
 
 async function _cmCloseModal(){
   if(_cmState){
-    // 🤖 F2: 자동 생성 진행 중이면 즉시 중단
-    if(typeof _cmAutoStop === 'function') _cmAutoStop();
     // 🪙 닫기 전 스타일 영속화 즉시 (debounce flush) — 모달 닫고 다시 열어도 설정 유지
     try {
       await DB.setFlag?.('cm_style', {
@@ -16828,8 +16736,9 @@ async function _cmComposite(pageIdx){
 }
 
 // 🅣 만화 → 텍스트 편집기 직결 — 갤러리 중간 저장 없이 현재 합성본을 편집기 배경으로.
-//   편집기에서 말풍선 얹고 저장하면 그게 최종 결과물(mode:textedit, comic 메타 보존).
-async function _cmToTextEditor(opts){
+//   채워진 칸마다 빈 말풍선을 자동 배치 → 사용자는 더블클릭으로 대사만 입력.
+//   편집기에서 저장하면 그게 최종 결과물(mode:textedit, comic 메타 보존).
+async function _cmToTextEditor(){
   if(!_cmState) return;
   const filledCount = _cmState.slots.filter(s => s?.img).length;
   if(filledCount === 0){ toast('빈 칸만 있어요 — 이미지를 먼저 채워주세요', 'warning'); return; }
@@ -16838,8 +16747,10 @@ async function _cmToTextEditor(opts){
   const userName = (($('cmSaveName')?.value) || '').trim().slice(0, 40);
   const layoutLabel = (_cmGetLayout(_cmState.layoutId)?.name || _cmState.layoutId);
   const baseLabel = userName || `만화_${layoutLabel}_${_cmDateStamp()}`;
-  // 합성본을 편집기 item 으로 — id 없음(중간 저장 X). meta 에 comic 정보 + panel 좌표 보존.
-  //   🗨 F3: panels 좌표(x,y,w,h)와 autoBubbles 가 있으면 텍스트 편집기가 자동 배치.
+  // 채워진 칸마다 placeholder 말풍선 1개씩 (panelIdx 기준 좌표 매핑은 편집기가 처리)
+  const autoBubbles = _cmState.slots
+    .map((s, i) => (s?.img ? { panelIdx: i, text: '대사 입력' } : null))
+    .filter(Boolean);
   const item = {
     id: null,
     blob,
@@ -16855,16 +16766,13 @@ async function _cmToTextEditor(opts){
         panelRects: _cmState.layout.panels.map(p => ({x:p.x, y:p.y, w:p.w, h:p.h})),
       },
       w: _cmState.layout.w, h: _cmState.layout.h,
-      autoBubbles: Array.isArray(opts?.autoBubbles) ? opts.autoBubbles : null,
+      autoBubbles,
     },
   };
   await _cmCloseModal();
   if(typeof openTextEditModal === 'function'){
     await openTextEditModal(item);
-    const note = item.meta.autoBubbles?.length
-      ? `🗨 대사 ${item.meta.autoBubbles.length}개 자동 배치됨 — 위치·크기 조정 가능`
-      : '🅣 말풍선·대사를 얹고 저장하세요';
-    toast(note, 'info', {timeoutMs: 4500});
+    toast(`🗨 칸마다 말풍선 ${autoBubbles.length}개 자동 배치 — 더블클릭으로 대사 입력`, 'info', {timeoutMs: 4500});
   } else {
     toast('편집기를 열 수 없습니다', 'error');
   }
@@ -16994,11 +16902,9 @@ function _personaCloseModal(){
 function _personaResetForm(){
   document.getElementById('personaEditId').value = '';
   document.getElementById('personaName').value = '';
-  const hint = document.getElementById('personaAiHint'); if(hint) hint.value = '';
   document.getElementById('personaPersonality').value = '';
   document.getElementById('personaSpeech').value = '';
   document.getElementById('personaBackground').value = '';
-  const note = document.getElementById('personaAiNote'); if(note){ note.style.display = 'none'; note.textContent = ''; }
   document.getElementById('personaFormTitle').textContent = '➕ 새 페르소나';
   document.getElementById('personaCancelEdit').style.display = 'none';
   document.getElementById('personaSaveBtn').textContent = '💾 저장';
@@ -17089,803 +16995,6 @@ async function _personaDelete(id){
     toast(`🗑 "${p.name}" 삭제됨`, 'info');
   }, '🧑 페르소나 삭제');
 }
-// 만화 자동 대사 박스의 페르소나 select 옵션 동기화
-function _personaRefreshSelect(){
-  const sel = document.getElementById('cmAutoPersonaSelect');
-  if(!sel) return;
-  const cur = sel.value;
-  const list = state.personas || [];
-  sel.innerHTML = '<option value="">(없음)</option>' + list.map(p =>
-    `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
-  // 이전 선택 복원 (해당 id 가 살아있을 때만)
-  if(cur && list.find(p => p.id === cur)) sel.value = cur;
-}
-
-// 🤖 Gemini 공통 헬퍼 ─────────────────────────────────────────────
-//    텍스트 → 텍스트: _geminiCallText(apiKey, systemPrompt, opts?)
-//    이미지+텍스트 (vision) → 텍스트: _geminiCallVision(apiKey, blob, systemPrompt, opts?)
-//    모델 정책: gemini-2.5 시리즈만 사용. 그 외는 deprecated 로 자동 무효화.
-const _GEMINI_DEFAULT_MODEL = 'gemini-2.5-flash';
-const _GEMINI_PREFERRED_ORDER = [
-  'gemini-2.5-flash',
-  'gemini-2.5-pro',
-];
-// 2.5 시리즈만 허용 — allowlist 방식 (그 외 전부 무효, 새 모델명이 와도 안전).
-const _geminiIsAllowed = (m) => typeof m === 'string' && /^gemini-2\.5-/.test(m);
-const _geminiIsDeprecated = (m) => !_geminiIsAllowed(m);
-const _geminiBase = (model) => `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
-
-// 사용자 키로 사용 가능한 모델 목록 조회 (캐시 1시간)
-let _geminiAvailableCache = null;
-async function _geminiListAvailable(apiKey){
-  if(!apiKey) throw new Error('Gemini key missing');
-  if(_geminiAvailableCache && (Date.now() - _geminiAvailableCache.ts) < 3600_000){
-    return _geminiAvailableCache.list;
-  }
-  const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}&pageSize=100`;
-  const res = await fetch(url);
-  if(!res.ok){
-    const errText = await res.text().catch(()=>'');
-    let detail = errText.slice(0,200);
-    try { const j = JSON.parse(errText); if(j?.error?.message) detail = j.error.message; } catch(_){}
-    throw new Error(`ListModels ${res.status} — ${detail}`);
-  }
-  const data = await res.json();
-  // generateContent 지원 + deprecated 제외
-  const list = (data?.models || [])
-    .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
-    .map(m => String(m.name||'').replace(/^models\//, ''))
-    .filter(m => m && !_geminiIsDeprecated(m));
-  _geminiAvailableCache = { ts: Date.now(), list };
-  return list;
-}
-
-async function _geminiResolveModel(apiKey){
-  // saved 값이 deprecated 면 자동 초기화
-  try {
-    const saved = await DB.getFlag?.('gemini_model');
-    if(saved && !_geminiIsDeprecated(saved)) return saved;
-    if(saved && _geminiIsDeprecated(saved)){
-      console.warn('[gemini] saved model deprecated → reset:', saved);
-      try { await DB.setFlag?.('gemini_model', ''); } catch(_){}
-    }
-  } catch(_){}
-  if(!apiKey) return _GEMINI_DEFAULT_MODEL;
-  try {
-    const avail = await _geminiListAvailable(apiKey);
-    if(!avail.length) return _GEMINI_DEFAULT_MODEL;
-    for(const pref of _GEMINI_PREFERRED_ORDER){
-      const hit = avail.find(m => m === pref || m.startsWith(pref));
-      if(hit){
-        try { await DB.setFlag?.('gemini_model', hit); } catch(_){}
-        console.log('[gemini] auto-pick model:', hit);
-        return hit;
-      }
-    }
-    const fallback = avail[0];
-    try { await DB.setFlag?.('gemini_model', fallback); } catch(_){}
-    return fallback;
-  } catch(e){
-    console.warn('[gemini] ListModels failed, using default', e?.message);
-    return _GEMINI_DEFAULT_MODEL;
-  }
-}
-
-// 모델 호출 — 404 면 ListModels 로 자동 재선택
-async function _geminiFetchSmart(apiKey, body){
-  let model = await _geminiResolveModel(apiKey);
-  let url = `${_geminiBase(model)}?key=${encodeURIComponent(apiKey)}`;
-  let res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body });
-  if(res.ok) return res;
-  if(res.status !== 404){
-    const errText = await res.text().catch(()=>'');
-    let detail = errText.slice(0,200);
-    try { const j = JSON.parse(errText); if(j?.error?.message) detail = j.error.message; } catch(_){}
-    throw new Error(`Gemini ${res.status} — ${detail}`);
-  }
-  // 404 → 캐시 무효화 후 ListModels 재조회·교체
-  console.warn('[gemini] 404 on', model, '— retry via ListModels');
-  _geminiAvailableCache = null;
-  try { await DB.setFlag?.('gemini_model', ''); } catch(_){}
-  const newModel = await _geminiResolveModel(apiKey);
-  if(newModel === model){
-    throw new Error(`Gemini 404 — ${model} 미지원. 설정에서 다른 모델 선택`);
-  }
-  url = `${_geminiBase(newModel)}?key=${encodeURIComponent(apiKey)}`;
-  res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body });
-  if(res.ok){ console.log('[gemini] fallback success →', newModel); return res; }
-  const errText = await res.text().catch(()=>'');
-  let detail = errText.slice(0,200);
-  try { const j = JSON.parse(errText); if(j?.error?.message) detail = j.error.message; } catch(_){}
-  throw new Error(`Gemini ${res.status} (after fallback) — ${detail}`);
-}
-
-async function _geminiCallText(apiKey, systemPrompt, opts){
-  if(!apiKey) throw new Error('Gemini key missing');
-  const body = JSON.stringify({
-    contents: [{ parts:[{ text: systemPrompt }] }],
-    generationConfig: {
-      temperature: opts?.temperature ?? 0.85,
-      maxOutputTokens: opts?.maxOutputTokens ?? 800,
-      topP: opts?.topP ?? 0.95,
-    },
-  });
-  const res = await _geminiFetchSmart(apiKey, body);
-  const data = await res.json();
-  const txt = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if(!txt){
-    const block = data?.promptFeedback?.blockReason;
-    if(block) throw new Error(`Gemini 응답 차단 (safety): ${block}`);
-    throw new Error('Gemini 빈 응답 — 다시 시도 또는 프롬프트 수정');
-  }
-  return txt.trim();
-}
-
-async function _blobToBase64(blob){
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => {
-      const str = String(r.result || '');
-      const comma = str.indexOf(',');
-      res(comma >= 0 ? str.slice(comma + 1) : str);
-    };
-    r.onerror = rej;
-    r.readAsDataURL(blob);
-  });
-}
-
-async function _geminiCallVision(apiKey, blob, systemPrompt, opts){
-  if(!apiKey) throw new Error('Gemini key missing');
-  if(!blob) throw new Error('blob 없음');
-  const mime = blob.type || 'image/png';
-  const b64 = await _blobToBase64(blob);
-  const body = JSON.stringify({
-    contents: [{ parts:[
-      { inline_data: { mime_type: mime, data: b64 } },
-      { text: systemPrompt },
-    ]}],
-    generationConfig: {
-      temperature: opts?.temperature ?? 0.6,
-      maxOutputTokens: opts?.maxOutputTokens ?? 800,
-      topP: opts?.topP ?? 0.95,
-    },
-  });
-  const res = await _geminiFetchWithFallback(apiKey, body);
-  const data = await res.json();
-  const txt = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if(!txt){
-    const block = data?.promptFeedback?.blockReason;
-    if(block) throw new Error(`Gemini vision 응답 차단 (safety): ${block}`);
-    throw new Error('Gemini vision 빈 응답');
-  }
-  return txt.trim();
-}
-
-// 🌐 한국어 컨셉 → NAI 영문 태그
-async function _geminiKoreanToTags(apiKey, korean){
-  const sys = `사용자가 한국어로 묘사한 그림 컨셉을 NovelAI 용 영문 Danbooru 태그로 변환하세요.
-
-입력: ${korean}
-
-규칙:
-- 콤마로 구분된 영문 태그만 출력 (한국어·번역·설명 X)
-- 핵심 요소 (인물·옷·배경·앵글·조명·표정) 우선
-- 25~40 태그
-- "masterpiece, best quality" 같은 quality 태그는 맨 앞에
-- 마지막 줄에 한 줄로 모두 출력`;
-  const out = await _geminiCallText(apiKey, sys, { temperature: 0.6, maxOutputTokens: 600 });
-  // 첫 줄 (또는 통째로) — 영문 태그 라인
-  const lines = out.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  return lines[lines.length - 1] || out;
-}
-
-// ✨ 프롬프트 풍성화 — 짧은 태그를 NAI 스타일로 확장
-async function _geminiEnrichPrompt(apiKey, current){
-  const sys = `다음 NovelAI 프롬프트를 풍부하게 확장하세요.
-
-현재 프롬프트:
-${current}
-
-규칙:
-- 기존 태그는 유지·재배치만 (의미 변경 X)
-- 빠진 디테일(조명·표정·배경·앵글·재질·소품)을 NAI/Danbooru 스타일 영문 태그로 추가
-- 총 30~50 태그 사이
-- 콤마 구분 한 줄
-- 한국어·설명·따옴표 없이 태그만`;
-  const out = await _geminiCallText(apiKey, sys, { temperature: 0.7, maxOutputTokens: 800 });
-  const lines = out.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  return lines[lines.length - 1] || out;
-}
-
-// 🛡 네거티브 추천 — 현재 프롬프트 분석 후 자주 깨지는 요소 차단
-async function _geminiSuggestNegative(apiKey, currentPrompt, existingNeg){
-  const sys = `NovelAI 생성을 위한 네거티브 프롬프트를 추천하세요.
-
-현재 프롬프트:
-${currentPrompt || '(비어있음)'}
-
-이미 있는 네거티브:
-${existingNeg || '(없음)'}
-
-규칙:
-- 콤마 구분 영문 태그만 출력
-- 기본 품질 차단 ("lowres, bad anatomy, bad hands, watermark, text" 등)
-- 현재 프롬프트에서 흔히 깨지는 요소 추가 (예: 손가락, 눈, 인체 비율)
-- 이미 있는 네거티브와 중복 X
-- 20~35 태그 한 줄`;
-  const out = await _geminiCallText(apiKey, sys, { temperature: 0.5, maxOutputTokens: 600 });
-  const lines = out.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  return lines[lines.length - 1] || out;
-}
-
-// 🔍 이미지 → NAI 태그 (vision)
-async function _geminiImageToTags(apiKey, blob){
-  const sys = `이 이미지를 NovelAI 용 Danbooru 영문 태그로 묘사하세요.
-
-규칙:
-- 콤마 구분 영문 태그만 출력 (한국어·문장 X)
-- 인물(나이·성별·머리·복장·표정)·배경·앵글·조명·재질 모두 포함
-- 25~40 태그 한 줄
-- "masterpiece, best quality" 처럼 quality 태그도 포함`;
-  const out = await _geminiCallVision(apiKey, blob, sys, { temperature: 0.4, maxOutputTokens: 800 });
-  const lines = out.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  return lines[lines.length - 1] || out;
-}
-
-// 🤖 Gemini 다활용 UI 래퍼 ──────────────────────────────────────
-async function _aiEnsureKey(){
-  const apiKey = (await _cmLoadGeminiKey()) || '';
-  if(!apiKey){ toast('Gemini 키 미설정 — 설정에서 입력하세요', 'warning'); return null; }
-  return apiKey;
-}
-
-// 🌐 한국어 → 영문 NAI 태그 — 프롬프트 박스 내용 분석.
-//    영문이 이미 많으면 풍성화 동작이 더 자연스러우니 사용자 가이드.
-async function _aiKoreanToTags(){
-  const apiKey = await _aiEnsureKey(); if(!apiKey) return;
-  const inp = $('prompt'); if(!inp) return;
-  const cur = (inp.value || '').trim();
-  // 한국어 컨셉을 별도 prompt 로 받기 (현재 박스 내용이 한국어면 그걸 사용)
-  const isKorean = /[가-힯]/.test(cur);
-  const concept = isKorean ? cur : (window.prompt('한국어로 컨셉을 입력하세요 (예: 비 오는 거리의 우산 든 소녀)', '') || '').trim();
-  if(!concept){ toast('한국어 컨셉을 입력해 주세요', 'info'); return; }
-  const btn = $('aiKoToTagsBtn'); const orig = btn?.textContent;
-  if(btn){ btn.disabled = true; btn.textContent = '🌐 변환 중...'; }
-  try {
-    const tags = await _geminiKoreanToTags(apiKey, concept);
-    inp.value = tags;
-    inp.dispatchEvent(new Event('input', { bubbles: true }));
-    toast('🌐 한국어 → NAI 태그 변환 완료', 'success');
-  } catch(e){
-    _swallow(e, 'ai:koToTags');
-    toast('변환 실패 — ' + (e?.message?.slice(0,80) || e), 'error');
-  } finally {
-    if(btn){ btn.disabled = false; btn.textContent = orig || '🌐'; }
-  }
-}
-
-// ✨ 프롬프트 풍성화 — 현재 프롬프트의 영문 태그를 NAI 스타일로 확장
-async function _aiEnrichPrompt(){
-  const apiKey = await _aiEnsureKey(); if(!apiKey) return;
-  const inp = $('prompt'); if(!inp) return;
-  const cur = (inp.value || '').trim();
-  if(!cur){ toast('프롬프트가 비어있어요 — 시드 태그를 먼저 입력하세요', 'warning'); return; }
-  const btn = $('aiEnrichBtn'); const orig = btn?.textContent;
-  if(btn){ btn.disabled = true; btn.textContent = '✨ 확장 중...'; }
-  try {
-    const enriched = await _geminiEnrichPrompt(apiKey, cur);
-    inp.value = enriched;
-    inp.dispatchEvent(new Event('input', { bubbles: true }));
-    toast('✨ 프롬프트 풍성화 완료', 'success');
-  } catch(e){
-    _swallow(e, 'ai:enrich');
-    toast('풍성화 실패 — ' + (e?.message?.slice(0,80) || e), 'error');
-  } finally {
-    if(btn){ btn.disabled = false; btn.textContent = orig || '✨'; }
-  }
-}
-
-// 🛡 네거티브 자동 추천 — 현재 프롬프트 분석 → 네거티브 끝에 append
-async function _aiSuggestNegative(){
-  const apiKey = await _aiEnsureKey(); if(!apiKey) return;
-  const neg = $('negPrompt'); if(!neg) return;
-  const cur = ($('prompt')?.value || '').trim();
-  if(!cur){ toast('먼저 프롬프트를 입력하세요 (분석 대상 필요)', 'warning'); return; }
-  const btn = $('aiNegSuggestBtn'); const orig = btn?.innerHTML;
-  if(btn){ btn.disabled = true; btn.textContent = '🛡 분석 중...'; }
-  try {
-    const suggested = await _geminiSuggestNegative(apiKey, cur, neg.value || '');
-    const cleaned = suggested.replace(/^[,\s]+|[,\s]+$/g, '');
-    if(!cleaned){ toast('추천 결과가 비어있어요', 'warning'); return; }
-    const existing = (neg.value || '').trim();
-    neg.value = existing ? `${existing}, ${cleaned}` : cleaned;
-    neg.dispatchEvent(new Event('input', { bubbles: true }));
-    toast('🛡 네거티브 추천 완료 — 끝에 추가됨', 'success');
-  } catch(e){
-    _swallow(e, 'ai:negSuggest');
-    toast('추천 실패 — ' + (e?.message?.slice(0,80) || e), 'error');
-  } finally {
-    if(btn){ btn.disabled = false; btn.innerHTML = orig || '🛡 AI 추천'; }
-  }
-}
-
-// 🔍 라이트박스 이미지 → NAI 태그 (Vision)
-async function _aiImageToTags(){
-  const apiKey = await _aiEnsureKey(); if(!apiKey) return;
-  const cur = window._lbCurrent;
-  const blob = cur?.blob;
-  if(!blob){ toast('이미지가 없어요', 'warning'); return; }
-  const btn = $('lbAiImageToTags');
-  if(btn){ btn.disabled = true; }
-  toast('🔍 Gemini Vision 분석 중...', 'info');
-  try {
-    const tags = await _geminiImageToTags(apiKey, blob);
-    if(!tags){ toast('태그 추출 실패 — 빈 응답', 'warning'); return; }
-    // 프롬프트 박스에 적용 옵션 — confirm 으로
-    confirmDialog(
-      `Gemini 추출 태그 (${tags.length}자):\n\n${tags.slice(0, 300)}${tags.length>300?'...':''}\n\n프롬프트 박스에 덮어쓸까요?`,
-      () => {
-        const inp = $('prompt');
-        if(inp){
-          inp.value = tags;
-          inp.dispatchEvent(new Event('input', { bubbles: true }));
-          toast('🔍 프롬프트 박스에 적용됨', 'success');
-        }
-      },
-      '🔍 이미지 → NAI 태그'
-    );
-  } catch(e){
-    _swallow(e, 'ai:i2p');
-    toast('Vision 호출 실패 — ' + (e?.message?.slice(0,80) || e), 'error');
-  } finally {
-    if(btn){ btn.disabled = false; }
-  }
-}
-
-// 🤖 Gemini 다활용 ─────────────────────────────────────────────────
-
-// 🪄 와일드카드 자동 작성 — 이름·라벨로 NAI 태그 후보 N개 생성
-async function _wcCallGemini(apiKey, name, label, count){
-  if(!apiKey) throw new Error('Gemini key missing');
-  if(!name) throw new Error('이름 필수');
-  const labelHint = label ? `\n설명: ${label}` : '';
-  const systemPrompt = `NovelAI 와일드카드 "${name}" 의 후보 ${count}개를 작성하세요.${labelHint}
-
-규칙:
-- 각 후보는 한 줄, 영문 NAI 태그 (Danbooru 스타일)
-- 콤마로 구분된 태그 1~4개 ("rainy street, wet ground, reflection" 식)
-- 번호·따옴표·줄 앞 기호 X
-- 다양성 — 비슷한 후보 반복 X
-- 이름이 한국어/추상 개념이면 적절히 영문 NAI 태그로 해석
-
-정확히 ${count}줄, 줄바꿈 구분:`;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${encodeURIComponent(apiKey)}`;
-  const res = await fetch(url, {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      contents:[{ parts:[{ text: systemPrompt }] }],
-      generationConfig:{ temperature: 0.9, maxOutputTokens: 1200, topP: 0.95 },
-    }),
-  });
-  if(!res.ok){
-    const errText = await res.text().catch(()=>'');
-    throw new Error(`Gemini ${res.status}: ${errText.slice(0,200)}`);
-  }
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  const raw = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  return raw.map(l => l.replace(/^\d+[\.\)]\s*/, '').replace(/^["'「『]|["'」』]$/g, '').trim()).filter(Boolean).slice(0, count);
-}
-
-async function _wcAiGenerate(){
-  const apiKey = (await _cmLoadGeminiKey()) || '';
-  if(!apiKey){ toast('Gemini 키 미설정 — 설정에서 입력하세요', 'warning'); return; }
-  const name = ($('wcEditName')?.value || '').trim();
-  if(!name){ toast('이름을 먼저 입력하세요 (예: weather, location)', 'warning'); return; }
-  const label = ($('wcEditLabel')?.value || '').trim();
-  const count = Math.max(3, Math.min(30, parseInt($('wcAiCount')?.value, 10) || 10));
-  const btn = $('wcAiGenBtn');
-  const orig = btn?.textContent;
-  if(btn){ btn.disabled = true; btn.textContent = '생성 중...'; }
-  try {
-    const options = await _wcCallGemini(apiKey, name, label, count);
-    if(options.length === 0){ toast('생성 결과가 비어있어요', 'warning'); return; }
-    const ta = $('wcEditText');
-    if(ta){
-      const existing = (ta.value || '').trim();
-      ta.value = (existing ? existing + '\n' : '') + options.join('\n');
-    }
-    toast(`🪄 와일드카드 후보 ${options.length}개 추가 — 검토 후 저장`, 'success');
-  } catch(e){
-    _swallow(e, 'wc:ai');
-    toast('와일드카드 자동 작성 실패 — ' + (e?.message?.slice(0,80) || e), 'error');
-  } finally {
-    if(btn){ btn.disabled = false; btn.textContent = orig || '생성'; }
-  }
-}
-
-// 🪄 페르소나 자동 작성 — Gemini 에 이름·힌트 주고 성격·말투·배경 받기
-async function _personaCallGemini(apiKey, name, hint){
-  if(!apiKey) throw new Error('Gemini key missing');
-  if(!name) throw new Error('이름 필수');
-  const systemPrompt = `다음 만화 캐릭터의 페르소나를 작성하세요.
-
-이름: ${name}
-컨셉 힌트: ${hint || '(없음 — 자유롭게 창작)'}
-
-규칙:
-- 한국어로 작성
-- 각 필드는 한 줄 (줄바꿈 X)
-- personality: 성격 (40자 이내, 구체적 — "활발 호기심 많음, 가끔 덜렁댐" 식)
-- speech: 말투 (60자 이내, 어미·습관어 구체적 — "반말, 어미 '-야/-지', 종종 '아하!' 외침")
-- background: 배경 (80자 이내, 나이·직업·환경)
-
-순수 JSON 만 출력하세요 (코드블럭·설명 X):
-{"personality":"...","speech":"...","background":"..."}`;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${encodeURIComponent(apiKey)}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({
-      contents: [{ parts:[{ text: systemPrompt }] }],
-      generationConfig: { temperature: 0.9, maxOutputTokens: 600, topP: 0.95 },
-    }),
-  });
-  if(!res.ok){
-    const errText = await res.text().catch(()=>'');
-    throw new Error(`Gemini ${res.status}: ${errText.slice(0,200)}`);
-  }
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  // 코드블럭 wrapper 제거 + JSON 파싱
-  const cleaned = text.replace(/```json\s*|\s*```/g, '').trim();
-  // 첫 { 부터 마지막 } 까지만 추출
-  const start = cleaned.indexOf('{');
-  const end   = cleaned.lastIndexOf('}');
-  if(start < 0 || end < 0) throw new Error('Gemini 응답 파싱 실패');
-  let parsed;
-  try { parsed = JSON.parse(cleaned.slice(start, end+1)); }
-  catch(e){ throw new Error('Gemini JSON 파싱 실패: ' + (e.message||e)); }
-  return {
-    personality: String(parsed.personality || '').trim().slice(0, 200),
-    speech:      String(parsed.speech      || '').trim().slice(0, 200),
-    background:  String(parsed.background  || '').trim().slice(0, 200),
-  };
-}
-
-// 🪄 캐릭터 프리셋 → 페르소나 자동 생성 + 연결
-async function _presetPersonaAiGen(){
-  const apiKey = (await _cmLoadGeminiKey()) || '';
-  if(!apiKey){ toast('Gemini 키 미설정 — 설정에서 입력', 'warning'); return; }
-  const name = ($('presetName')?.value || '').trim();
-  if(!name){ toast('프리셋 이름을 먼저 입력하세요', 'warning'); return; }
-  const text = ($('presetText')?.value || '').trim();
-  // 프리셋 이름·외형 텍스트를 힌트로 페르소나 자동 생성
-  const hint = text ? `외형 프롬프트: ${text.slice(0, 200)}` : '';
-  const btn = $('presetPersonaAiBtn');
-  const orig = btn?.textContent;
-  if(btn){ btn.disabled = true; btn.textContent = '생성 중...'; }
-  try {
-    const out = await _personaCallGemini(apiKey, name, hint);
-    // 같은 이름의 페르소나가 있으면 재사용, 없으면 새로 생성
-    if(!Array.isArray(state.personas)) state.personas = [];
-    let p = state.personas.find(x => x.name === name);
-    if(p){
-      p.personality = out.personality;
-      p.speech      = out.speech;
-      p.background  = out.background;
-    } else {
-      p = {
-        id: 'p_' + Math.random().toString(36).slice(2, 10),
-        name, personality: out.personality, speech: out.speech, background: out.background,
-        fav: false, createdAt: Date.now(),
-      };
-      state.personas.push(p);
-    }
-    await savePersonas();
-    // select 갱신 + 연결
-    const sel = $('presetPersonaSel');
-    if(sel){
-      sel.innerHTML = '<option value="">(없음)</option>' + state.personas.map(x =>
-        `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
-      sel.value = p.id;
-      const note = $('presetPersonaNote');
-      if(note) note.textContent = `✓ "${p.name}" 생성·연결 완료 — 저장 후 캐릭터 카드에 자동 적용`;
-    }
-    // 다른 곳도 동기화
-    if(typeof _personaRefreshSelect === 'function') _personaRefreshSelect();
-    if(typeof renderCharacters === 'function') renderCharacters();
-    if(typeof renderPresetTabs === 'function') renderPresetTabs();
-    toast(`🪄 "${name}" 페르소나 생성·연결 완료`, 'success');
-  } catch(e){
-    _swallow(e, 'preset:persona:ai');
-    toast('페르소나 생성 실패 — ' + (e?.message?.slice(0, 80) || e), 'error');
-  } finally {
-    if(btn){ btn.disabled = false; btn.textContent = orig || '🪄 AI 생성'; }
-  }
-}
-
-async function _personaAiGenerate(){
-  const apiKey = (await _cmLoadGeminiKey()) || '';
-  if(!apiKey){ toast('Gemini 키 미설정 — 설정에서 입력하세요', 'warning'); return; }
-  const name = (document.getElementById('personaName').value || '').trim();
-  if(!name){ toast('이름을 먼저 입력하세요', 'warning'); return; }
-  const hint = (document.getElementById('personaAiHint').value || '').trim();
-  const btn = document.getElementById('personaAiGenBtn');
-  const note = document.getElementById('personaAiNote');
-  const orig = btn?.textContent;
-  if(btn){ btn.disabled = true; btn.textContent = '🪄 생성 중...'; }
-  if(note){ note.style.display = ''; note.textContent = 'Gemini 호출 중...'; }
-  try {
-    const out = await _personaCallGemini(apiKey, name, hint);
-    document.getElementById('personaPersonality').value = out.personality;
-    document.getElementById('personaSpeech').value = out.speech;
-    document.getElementById('personaBackground').value = out.background;
-    if(note){ note.textContent = '✓ 검토 후 💾 저장 (필요시 직접 수정)'; }
-    toast('🪄 페르소나 자동 작성 완료', 'success');
-  } catch(e){
-    _swallow(e, 'persona:ai');
-    if(note){ note.textContent = '⚠ ' + (e?.message?.slice(0,100) || e); }
-    toast('자동 작성 실패 — ' + (e?.message?.slice(0,80) || e), 'error');
-  } finally {
-    if(btn){ btn.disabled = false; btn.textContent = orig || '🪄 AI 작성'; }
-  }
-}
-
-// 🎬 만화 장면 자동 작성 (Gemini) — 컨셉 한 줄 → 칸 수만큼 장면 텍스트
-async function _cmCallGeminiForScenes(apiKey, concept, panelCount, persona, tone){
-  if(!apiKey) throw new Error('Gemini key missing');
-  const personaBlock = (persona && persona.name)
-    ? `\n주인공: ${persona.name}${persona.personality?` (성격: ${persona.personality})`:''}${persona.background?` (배경: ${persona.background})`:''}`
-    : '';
-  const toneNote = tone ? `\n톤: ${tone}` : '';
-  const systemPrompt = `만화 한 페이지의 ${panelCount}컷 장면을 작성하세요.
-
-컨셉: ${concept}${personaBlock}${toneNote}
-
-규칙:
-- 컷마다 한 줄, 30자 이내
-- 번호·따옴표·줄 앞 기호 X
-- 구체적인 액션·표정·앵글 묘사 ("교실 책상에 엎드린 옆얼굴 클로즈업", "창밖 바라보는 뒷모습 미디엄샷" 식)
-- 컷이 연결되어 자연스러운 흐름
-
-정확히 ${panelCount}줄, 줄바꿈 구분:`;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${encodeURIComponent(apiKey)}`;
-  const res = await fetch(url, {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({
-      contents: [{ parts:[{ text: systemPrompt }] }],
-      generationConfig: { temperature: 0.85, maxOutputTokens: 600, topP: 0.95 },
-    }),
-  });
-  if(!res.ok){
-    const errText = await res.text().catch(()=>'');
-    throw new Error(`Gemini ${res.status}: ${errText.slice(0,200)}`);
-  }
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  const raw = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  const cleaned = raw.map(l => l.replace(/^\d+[\.\)]\s*/, '').replace(/^["'「『]|["'」』]$/g, '').trim());
-  // 정확히 panelCount 만큼 — 부족하면 padding, 초과는 자름
-  const out = [];
-  for(let i = 0; i < panelCount; i++) out.push(cleaned[i] || '');
-  return out;
-}
-
-async function _cmAutoGenScenes(){
-  if(!_cmState) return;
-  const apiKey = (await _cmLoadGeminiKey()) || '';
-  if(!apiKey){ toast('Gemini 키 미설정 — 설정에서 입력하세요', 'warning'); return; }
-  const concept = ($('cmAutoScenesConcept')?.value || '').trim();
-  if(!concept){ toast('컨셉을 한 줄 입력해 주세요', 'warning'); return; }
-  const panelCount = _cmState.slots.length;
-  if(panelCount === 0){ toast('레이아웃이 비어있어요', 'warning'); return; }
-  // 🧑 페르소나 — 만화 페이지 select 우선, 없으면 NAI 캐릭터 카드의 페르소나 폴백 (사용자가 자동 대사 토글 ON 시)
-  let personaId = ($('cmAutoPersonaSelect')?.value || '').trim();
-  if(!personaId && $('autoDialogToggle')?.checked){
-    const c = (state.characters || []).find(c => c?.enabled && c?.persona);
-    if(c) personaId = c.persona;
-  }
-  const persona = personaId ? (state.personas || []).find(p => p.id === personaId) : null;
-  const tone = ($('cmAutoDialogTone')?.value || '').trim();
-  const btn = $('cmAutoScenesAiBtn');
-  const orig = btn?.textContent;
-  if(btn){ btn.disabled = true; btn.textContent = '🪄 생성 중...'; }
-  try {
-    const scenes = await _cmCallGeminiForScenes(apiKey, concept, panelCount, persona, tone);
-    if($('cmAutoScenes')) $('cmAutoScenes').value = scenes.join('\n');
-    toast(`🎬 ${panelCount}컷 장면 작성 완료 — 검토 후 ▶ 대사 생성`, 'success');
-  } catch(e){
-    _swallow(e, 'cm:scenes:ai');
-    toast('장면 작성 실패 — ' + (e?.message?.slice(0,80) || e), 'error');
-  } finally {
-    if(btn){ btn.disabled = false; btn.textContent = orig || '🪄 AI 작성'; }
-  }
-}
-
-// 🗨 F3: Gemini 대사 생성 ─────────────────────────────────────────
-//   장면 리스트 → 각 컷별 대사 1~2줄 배열 반환.
-//   브라우저에서 Gemini REST 직접 호출 (CORS 허용된 엔드포인트).
-async function _cmCallGeminiForDialogue(apiKey, scenes, tone, persona){
-  if(!apiKey) throw new Error('Gemini key missing');
-  const lines = scenes.map((s, i) => `${i+1}. ${s || '(장면 설명 없음)'}`).join('\n');
-  const toneNote = tone ? `\n- 톤·스타일: ${tone}` : '';
-  // 🧑 페르소나 컨텍스트 — 있으면 캐릭터 성격·말투·배경을 시스템 프롬프트에 주입
-  let personaBlock = '';
-  if(persona && persona.name){
-    const parts = [];
-    if(persona.personality) parts.push(`성격: ${persona.personality}`);
-    if(persona.speech)      parts.push(`말투: ${persona.speech}`);
-    if(persona.background)  parts.push(`배경: ${persona.background}`);
-    personaBlock = `\n\n주인공 캐릭터: ${persona.name}\n${parts.join('\n')}\n위 캐릭터의 성격·말투에 맞게 대사를 작성하세요.`;
-  }
-  const systemPrompt = `당신은 만화 대사 작가입니다. 아래 ${scenes.length}개의 만화 컷 장면에 어울리는 짧은 한국어 대사 또는 효과음을 각 컷마다 한 줄씩 만들어 주세요.
-
-규칙:
-- 한 줄에 최대 25자
-- 줄바꿈/번호 매김/따옴표 없이 순수 대사 텍스트만
-- 대사가 어색한 컷 (배경·풍경 등) 은 짧은 의성어·내레이션 ("쓰…", "(고요하다)" 등)
-- 반드시 ${scenes.length}줄 출력 (각 컷에 정확히 한 줄)${toneNote}${personaBlock}
-
-장면:
-${lines}
-
-각 컷 대사 (${scenes.length}줄, 줄바꿈 구분):`;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${encodeURIComponent(apiKey)}`;
-  const body = {
-    contents: [{ parts: [{ text: systemPrompt }] }],
-    generationConfig: { temperature: 0.85, maxOutputTokens: 800, topP: 0.95 },
-    // safetySettings: 만화 컨텍스트라 기본값 — 401/403 시 사용자에게 안내
-  };
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(body),
-  });
-  if(!res.ok){
-    const errText = await res.text().catch(()=>'');
-    throw new Error(`Gemini ${res.status}: ${errText.slice(0,200)}`);
-  }
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  // 응답 파싱 — 줄 단위 split, 빈 줄 제거, 번호·따옴표 제거
-  const raw = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  const cleaned = raw.map(l => l.replace(/^\d+[\.\)]\s*/, '').replace(/^["'「『]|["'」』]$/g, '').trim());
-  // 부족하면 빈 문자열로 padding, 초과는 자름
-  const out = [];
-  for(let i = 0; i < scenes.length; i++) out.push(cleaned[i] || '');
-  return out;
-}
-
-async function _cmLoadGeminiKey(){
-  try { return (await DB.getFlag?.('cm_gemini_key')) || ''; } catch(_){ return ''; }
-}
-
-// 🤖 F2: AI 자동 생성 ─────────────────────────────────────────────
-let _cmAutoAbort = null;
-
-function _cmAutoRunning(){ return !!_cmAutoAbort; }
-
-function _cmAutoUpdateUi(){
-  const startBtn = $('cmAutoStart'); const stopBtn = $('cmAutoStop');
-  if(startBtn) startBtn.style.display = _cmAutoRunning() ? 'none' : '';
-  if(stopBtn) stopBtn.style.display = _cmAutoRunning() ? '' : 'none';
-}
-
-function _cmAutoCollectTargets(){
-  // 채워진 칸만 대상 — 대사는 이미지 있는 칸에만 의미.
-  // (pageIdx, slotIdx, sceneLine) 리스트.
-  if(!_cmState) return [];
-  const thisPage  = $('cmAutoThisPage')?.checked !== false;
-  const scenes = ($('cmAutoScenes')?.value || '').split(/\r?\n/).map(l => l.trim());
-  const out = [];
-  const pageIdxList = thisPage ? [_cmState.currentPageIdx] : _cmState.pages.map((_, i) => i);
-  let sceneCursor = 0;
-  for(const pi of pageIdxList){
-    const page = _cmState.pages[pi];
-    for(let si = 0; si < page.slots.length; si++){
-      const slot = page.slots[si];
-      if(!slot?.img) continue;   // 채워진 칸만
-      const line = scenes[sceneCursor++] || '';
-      out.push({ pageIdx: pi, slotIdx: si, scene: line });
-    }
-  }
-  return out;
-}
-
-// 🗨 대사 자동 생성 — 칸별 장면 → Gemini → 텍스트 편집기 말풍선
-async function _cmAutoStart(){
-  if(!_cmState || _cmAutoRunning()) return;
-  // 칸 채워져 있는지 확인 — 빈 만화는 대사 무의미
-  const filled = _cmState.slots.filter(s => s?.img).length;
-  if(filled === 0){ toast('만화 칸이 비어있어요 — 먼저 이미지를 채워주세요', 'warning'); return; }
-  // 타겟 수집 — 현재 페이지 옵션 따라
-  const targets = _cmAutoCollectTargets();
-  if(targets.length === 0){ toast('대상 칸이 없어요', 'info'); return; }
-  // 장면 입력 검증
-  const scenes = ($('cmAutoScenes')?.value || '').split(/\r?\n/).map(l => l.trim());
-  if(!scenes.some(Boolean)){
-    toast('🎬 칸별 장면이 비어있어요 — 한 줄에 한 칸씩 입력하세요', 'warning');
-    return;
-  }
-  _cmAutoAbort = new AbortController();
-  _cmAutoUpdateUi();
-  if($('cmAutoProg')) $('cmAutoProg').textContent = `Gemini 호출 중...`;
-  try {
-    await _cmAutoMakeDialogues(targets);
-  } finally {
-    _cmAutoAbort = null;
-    _cmAutoUpdateUi();
-    if($('cmAutoProg')) $('cmAutoProg').textContent = '';
-  }
-}
-
-// 🗨 F3: 대사 박스 안의 키 상태 라벨 갱신 — 설정 페이지에 키 저장되어 있으면 '저장됨' 표시.
-async function _cmAutoRefreshKeyStatus(){
-  const lbl = $('cmAutoKeyStatus');
-  const box = $('cmAutoKeyNote');
-  if(!lbl || !box) return;
-  const saved = (await _cmLoadGeminiKey()) || '';
-  if(saved){
-    lbl.textContent = '✓ Gemini 키 저장됨 — 바로 사용 가능';
-    box.classList.add('ok'); box.classList.remove('warn');
-  } else {
-    lbl.textContent = '⚠ Gemini 키 미설정 — 우측 설정 버튼으로 입력';
-    box.classList.add('warn'); box.classList.remove('ok');
-  }
-}
-
-// 🗨 대사 생성 → 현재 페이지를 텍스트 편집기로 넘기며 말풍선 자동 배치
-async function _cmAutoMakeDialogues(targets){
-  if(!_cmState) return;
-  const apiKey = (await _cmLoadGeminiKey()) || '';
-  if(!apiKey){ toast('Gemini API 키 미설정 — 설정 페이지에서 입력하세요', 'warning'); return; }
-  // 현재 페이지의 타겟만 추출 (편집기는 한 페이지씩 처리)
-  const curIdx = _cmState.currentPageIdx;
-  const pageTargets = targets.filter(t => t.pageIdx === curIdx);
-  if(pageTargets.length === 0){
-    toast('현재 페이지에 대사 생성할 컷이 없어요', 'info');
-    return;
-  }
-  toast(`🗨 ${pageTargets.length}컷 대사 Gemini 호출 중...`, 'info');
-  const tone = ($('cmAutoDialogTone')?.value || '').trim();
-  // 🃏 와일드카드 expanded 결과를 우선 사용 — Gemini 는 __name__ 토큰을 모름
-  const scenes = pageTargets.map(t => t.sceneExpanded || t.scene);
-  // 🧑 선택된 페르소나 — Gemini 에 캐릭터 성격·말투·배경 주입
-  // 🧑 페르소나 — 만화 페이지 select 우선, 없으면 NAI 캐릭터 카드의 페르소나 폴백 (사용자가 자동 대사 토글 ON 시)
-  let personaId = ($('cmAutoPersonaSelect')?.value || '').trim();
-  if(!personaId && $('autoDialogToggle')?.checked){
-    const c = (state.characters || []).find(c => c?.enabled && c?.persona);
-    if(c) personaId = c.persona;
-  }
-  const persona = personaId ? (state.personas || []).find(p => p.id === personaId) : null;
-  let dialogues;
-  try {
-    dialogues = await _cmCallGeminiForDialogue(apiKey, scenes, tone, persona);
-  } catch(e){
-    _swallow(e, 'cm:gemini');
-    toast(`🗨 대사 생성 실패 — ${e?.message?.slice(0,80) || e}`, 'error');
-    return;
-  }
-  // 텍스트 편집기로 넘기기 — meta.autoBubbles 에 (panelIdx → text) 매핑
-  const autoBubbles = pageTargets.map((t, i) => ({
-    panelIdx: t.slotIdx,
-    text: dialogues[i] || '',
-  })).filter(b => b.text);
-  if(autoBubbles.length === 0){
-    toast('생성된 대사가 모두 비어있어요', 'warning');
-    return;
-  }
-  await _cmToTextEditor({ autoBubbles });
-}
-
-function _cmAutoStop(){
-  if(!_cmAutoAbort) return;
-  try { _cmAutoAbort.abort(); } catch(_){}
-  _cmAutoAbort = null;
-  _cmAutoUpdateUi();
-}
-
 // 저장 후 라이트박스에서 텍스트 편집기를 열고 싶을 때 사용 — 저장 결과 id 를 받음.
 async function _cmSaveNew(opts){
   if(!_cmState) return null;
@@ -17968,27 +17077,10 @@ function _cmWireOnce(){
   $('cmSaveNew')?.addEventListener('click', () => _cmState && _cmSaveNew());
   $('cmSaveAllZip')?.addEventListener('click', () => _cmState && _cmSaveAllAsZip());
   $('cmAddBubbles')?.addEventListener('click', () => _cmState && _cmToTextEditor());
-  // 🤖 F2: AI 자동 생성 — 토글 / 시작 / 중단
-  $('cmAutoToggle')?.addEventListener('click', () => {
-    const body = $('cmAutoBody'); const btn = $('cmAutoToggle');
-    if(!body || !btn) return;
-    const open = body.style.display !== 'none';
-    body.style.display = open ? 'none' : '';
-    btn.classList.toggle('open', !open);
-    btn.textContent = open ? '▾' : '▴';
-  });
-  $('cmAutoStart')?.addEventListener('click', () => _cmAutoStart());
-  $('cmAutoStop')?.addEventListener('click', () => _cmAutoStop());
-  // 🎬 장면 자동 작성
-  $('cmAutoScenesAiBtn')?.addEventListener('click', () => _cmAutoGenScenes());
-  // 🧑 페르소나 — 관리 버튼 + select 첫 렌더
-  $('cmAutoPersonaMgr')?.addEventListener('click', () => _personaOpenModal());
-  _personaRefreshSelect();
+  // 🧑 페르소나 모달 wire
   document.getElementById('personaCloseBtn')?.addEventListener('click', () => _personaCloseModal());
   document.getElementById('personaSaveBtn')?.addEventListener('click', () => _personaSave());
   document.getElementById('personaCancelEdit')?.addEventListener('click', () => _personaResetForm());
-  // 🪄 페르소나 AI 자동 작성
-  document.getElementById('personaAiGenBtn')?.addEventListener('click', () => _personaAiGenerate());
   document.getElementById('personaList')?.addEventListener('click', (e) => {
     const b = e.target.closest('[data-persona-act]'); if(!b) return;
     const id = b.dataset.personaId; const act = b.dataset.personaAct;
@@ -18002,17 +17094,6 @@ function _cmWireOnce(){
   // 페르소나 모달 ESC/배경 클릭 닫기
   document.getElementById('personaModal')?.addEventListener('click', (e) => {
     if(e.target.id === 'personaModal') _personaCloseModal();
-  });
-  // ⚙ 설정 페이지로 — Gemini 키 입력 영역
-  $('cmAutoKeyToSettings')?.addEventListener('click', () => {
-    if(typeof setMainPane === 'function') setMainPane('settings');
-    setTimeout(() => {
-      const inp = $('geminiKeySettings');
-      if(inp){
-        inp.scrollIntoView({block:'center', behavior:'smooth'});
-        inp.focus();
-      }
-    }, 250);
   });
   // 📚 F1: 페이지 네비 클릭 핸들러 (event delegation)
   $('cmPageNav')?.addEventListener('click', (e) => {
@@ -19141,8 +18222,70 @@ function setMainPane(pane){
   }
 }
 
+// ☑ 프리셋 일괄 선택 모드 — 카드 클릭 = 선택 토글, 일괄 삭제.
+let _presetSelectMode = false;
+const _presetSelected = new Set();   // 일반: "type:name" / 페르소나: "persona:id"
+
+function _presetBulkUpdateBar(){
+  const bar = $('presetBulkBar');
+  if(!bar) return;
+  bar.style.display = _presetSelectMode ? 'flex' : 'none';
+  const cnt = $('presetBulkCount');
+  if(cnt) cnt.textContent = `${_presetSelected.size}개 선택`;
+  const grid = $('presetGrid');
+  if(grid) grid.classList.toggle('select-mode', _presetSelectMode);
+  const btn = $('presetSelectModeBtn');
+  if(btn){
+    btn.classList.toggle('act', _presetSelectMode);
+    btn.setAttribute('aria-pressed', String(_presetSelectMode));
+  }
+}
+
+function _presetBulkExit(){
+  _presetSelectMode = false;
+  _presetSelected.clear();
+  _presetBulkUpdateBar();
+  renderPresets();
+}
+
+async function _presetBulkDelete(){
+  if(_presetSelected.size === 0){ toast('선택된 프리셋이 없어요', 'info'); return; }
+  const n = _presetSelected.size;
+  confirmDialog(`선택한 ${n}개 프리셋을 삭제할까요? (되돌릴 수 없음)`, async () => {
+    let deleted = 0;
+    for(const key of _presetSelected){
+      const sep = key.indexOf(':');
+      const type = key.slice(0, sep);
+      const ident = key.slice(sep + 1);
+      try {
+        if(type === 'persona'){
+          state.personas = (state.personas || []).filter(p => p.id !== ident);
+          // 캐릭터 카드의 dangling persona 참조 정리
+          (state.characters || []).forEach(c => { if(c?.persona === ident) c.persona = ''; });
+        } else {
+          await DB.presetDelete(type, ident);
+        }
+        deleted++;
+      } catch(e){ _swallow(e, 'preset:bulkDel'); }
+    }
+    if([..._presetSelected].some(k => k.startsWith('persona:'))){
+      await savePersonas();
+      if(typeof renderCharacters === 'function') renderCharacters();
+    }
+    _presetSelected.clear();
+    _presetSelectMode = false;
+    await loadPresetsFromDB();
+    _presetBulkUpdateBar();
+    renderPresetTabs();
+    renderPresets();
+    toast(`🗑 ${deleted}개 프리셋 삭제됨`, 'success');
+  }, '🗑 프리셋 일괄 삭제');
+}
+
 function setPresetType(t){
   state.presetType = t;
+  // 카테고리 전환 시 선택 초기화 (혼합 삭제 사고 방지)
+  if(_presetSelected.size){ _presetSelected.clear(); _presetBulkUpdateBar(); }
   $$('.preset-tab').forEach(b => b.classList.toggle('act', b.dataset.ptype === t));
   renderPresets();
 }
@@ -19666,7 +18809,6 @@ async function saveSettings(){
     smeaDynCheck: $('smeaDynCheck').checked,
     useCoords: $('useCoords').checked,
     charRandFav: $('charRandFav')?.checked,
-    autoDialogToggle: $('autoDialogToggle')?.checked,
     genCount: $('genCount').value,
     genDelay: $('genDelay').value,
     continueOnError: $('continueOnError').checked,
@@ -19731,7 +18873,6 @@ async function loadSettings(){
   apply('smeaDynCheck', s.smeaDynCheck);
   apply('useCoords', s.useCoords ?? true);
   apply('charRandFav', s.charRandFav);
-  apply('autoDialogToggle', s.autoDialogToggle);
   apply('genCount', s.genCount);
   apply('genDelay', s.genDelay);
   apply('continueOnError', s.continueOnError ?? true);
@@ -20304,102 +19445,6 @@ function wireTopbarAndFormEvents(){
     });
   }
 
-  // 🗨 설정 탭의 Gemini API 키 — DB.setFlag('cm_gemini_key') 영속화
-  if($('geminiKeySettings')){
-    // 부팅 시 저장된 키 prefill
-    (async () => {
-      try {
-        const saved = (await DB.getFlag?.('cm_gemini_key')) || '';
-        if(saved){
-          $('geminiKeySettings').value = saved;
-          if($('geminiKeyStatusSettings')) $('geminiKeyStatusSettings').textContent = `✓ 저장됨 (${saved.length}자)`;
-        }
-      } catch(e){
-        console.error('[gemini-key] prefill failed', e);
-      }
-    })();
-    const persist = async (val) => {
-      const cleaned = (val || '').replace(/[\s​‌‍﻿]/g, '').trim();
-      try { await DB.setFlag?.('cm_gemini_key', cleaned); }
-      catch(e){ console.error('[gemini-key] save failed', e); }
-      if($('geminiKeyStatusSettings')){
-        $('geminiKeyStatusSettings').textContent = cleaned ? `✓ 저장됨 (${cleaned.length}자)` : '';
-      }
-      // 만화 페이지의 키 상태 라벨도 동기화 (열려있을 때)
-      if(typeof _cmAutoRefreshKeyStatus === 'function') _cmAutoRefreshKeyStatus();
-    };
-    $('geminiKeySettings').addEventListener('input', e => persist(e.target.value));
-    $('geminiKeySettings').addEventListener('paste', e => setTimeout(() => persist(e.target.value), 10));
-    $('toggleGeminiKeySettings')?.addEventListener('click', () => {
-      const i = $('geminiKeySettings');
-      i.type = (i.type === 'password') ? 'text' : 'password';
-    });
-    // 모델 선택 — DB.setFlag('gemini_model'). 2.5 외 저장값은 기본으로 정정.
-    (async () => {
-      const sel = $('geminiModelSel');
-      if(!sel) return;
-      let saved = (await DB.getFlag?.('gemini_model')) || _GEMINI_DEFAULT_MODEL;
-      if(typeof _geminiIsDeprecated === 'function' && _geminiIsDeprecated(saved)){
-        saved = _GEMINI_DEFAULT_MODEL;
-        try { await DB.setFlag?.('gemini_model', saved); } catch(_){}
-      }
-      sel.value = saved;
-      if(!sel.value) sel.value = _GEMINI_DEFAULT_MODEL;   // select 에 없는 옵션값 방어
-      sel.addEventListener('change', async () => {
-        try { await DB.setFlag?.('gemini_model', sel.value); } catch(_){}
-        toast(`🤖 모델 변경 — ${sel.value}`, 'info');
-      });
-    })();
-    // 🧪 연결 테스트 — 즉시 ping 으로 키 유효성 확인
-    $('testGeminiKeyBtn')?.addEventListener('click', async () => {
-      const status = $('geminiKeyStatusSettings');
-      const btn = $('testGeminiKeyBtn');
-      const orig = btn?.textContent;
-      // 입력 박스 값 우선 (저장 전이라도 테스트 가능), 없으면 IDB
-      let key = ($('geminiKeySettings')?.value || '').replace(/[\s​‌‍﻿]/g, '').trim();
-      if(!key){ try { key = (await DB.getFlag?.('cm_gemini_key')) || ''; } catch(_){} }
-      if(!key){ if(status) status.textContent = '⚠ 키 입력 후 테스트'; return; }
-      if(btn){ btn.disabled = true; btn.textContent = '🧪 호출 중...'; }
-      if(status) status.textContent = `🧪 Gemini API 호출 중...`;
-      try {
-        // 최소 호출 — "OK" 한 단어만 받기
-        const out = await _geminiCallText(key, '"OK" 한 단어만 응답하세요.', { temperature: 0, maxOutputTokens: 10 });
-        if(status){
-          status.innerHTML = `✓ 연결 성공 — 응답: "${esc((out||'').slice(0,30))}" (키 ${key.length}자)`;
-          status.style.color = 'var(--green, #5a8a34)';
-        }
-        toast('🧪 Gemini 키 정상 — 모든 기능 사용 가능', 'success');
-      } catch(e){
-        const msg = (e?.message || String(e)).slice(0, 200);
-        const isFetchFail = /Failed to fetch|NetworkError|net::|TypeError/i.test(msg);
-        // 진단 정보 수집
-        const origin = location.origin;
-        const online = navigator.onLine;
-        const swActive = navigator.serviceWorker?.controller ? 'active' : 'none';
-        if(status){
-          let html = `✗ 실패: ${esc(msg)}<br>`;
-          html += `<span style="font-family:var(--mono);font-size:10px;color:var(--t3)">origin: ${esc(origin)} · online: ${online} · sw: ${swActive} · 키 ${key.length}자</span>`;
-          if(isFetchFail){
-            html += `<br><span style="font-size:11px;color:var(--yellow,#d6a050)">⚠ "Failed to fetch" — 흔한 원인:</span>`;
-            html += `<ul style="font-size:11px;margin:2px 0 0 16px;padding:0;line-height:1.5">`;
-            html += `<li>광고 차단·개인정보 확장(uBlock·Brave Shield) — googleapis.com 차단됨</li>`;
-            html += `<li>회사/학교/통신사 방화벽 차단 — 다른 네트워크(모바일 데이터/wifi) 시도</li>`;
-            html += `<li>VPN/프록시 — 일시 해제 후 재시도</li>`;
-            html += `<li>시크릿 모드 / 다른 브라우저 — 캐시·확장 영향 배제</li>`;
-            html += `<li>키가 새로 발급되어 활성화 대기 중 — 1~2분 후 재시도</li>`;
-            html += `</ul>`;
-          }
-          status.innerHTML = html;
-          status.style.color = 'var(--red, #b54338)';
-        }
-        toast('🧪 ' + (isFetchFail ? 'fetch 실패 — 확장/방화벽 차단 의심' : 'Gemini 실패 — ') + msg.slice(0,60), 'error', { timeoutMs: 10000 });
-        console.error('[gemini-test]', e, { origin, online, swActive });
-      } finally {
-        if(btn){ btn.disabled = false; btn.textContent = orig || '🧪 테스트'; }
-      }
-    });
-  }
-
   $('refreshAnlas').addEventListener('click', refreshAnlas);
   // ⛶ 전체화면 토글 — 시스템 네비/상태바 숨김 (브라우저 모두 + 비-설치 환경 호환)
   $('fullscreenBtn').addEventListener('click', toggleFullscreen);
@@ -20861,7 +19906,7 @@ function wireCharacterEvents(){
       }
       state.characters[idx].persona = t.value || '';
       const p = (state.personas||[]).find(x => x.id === t.value);
-      toast(p ? `🧑 ${p.name} 연결됨 — 만화 자동 대사에 사용` : '🧑 페르소나 연결 해제', 'info');
+      toast(p ? `🧑 ${p.name} 연결됨` : '🧑 페르소나 연결 해제', 'info');
     }
     // 옛 호환: prompt 필드 직접 편집 (legacy)
     else if(act === 'prompt')     state.characters[idx].prompt     = t.value;
@@ -21341,9 +20386,39 @@ function wireGenerationAndPresetEvents(){
     toast('프롬프트 적용됨', 'success');
   });
   $('addPresetBtn').addEventListener('click', () => openPresetEdit(state.presetType, null));
+  // ☑ 일괄 선택 모드 wire
+  $('presetSelectModeBtn')?.addEventListener('click', () => {
+    _presetSelectMode = !_presetSelectMode;
+    if(!_presetSelectMode) _presetSelected.clear();
+    _presetBulkUpdateBar();
+    renderPresets();
+    if(_presetSelectMode) toast('☑ 선택 모드 — 카드를 탭해서 고르고 🗑 선택 삭제', 'info');
+  });
+  $('presetBulkAll')?.addEventListener('click', () => {
+    // 현재 그리드에 보이는 카드 전부 선택
+    document.querySelectorAll('#presetGrid .p-item[data-key], #presetGrid .pp-card[data-pp-id]').forEach(card => {
+      const key = card.dataset.key || ('persona:' + card.dataset.ppId);
+      _presetSelected.add(key);
+      card.classList.add('bulk-sel');
+    });
+    _presetBulkUpdateBar();
+  });
+  $('presetBulkDelBtn')?.addEventListener('click', () => _presetBulkDelete());
+  $('presetBulkCancel')?.addEventListener('click', () => _presetBulkExit());
   // (옛 상단바 import/export 버튼 이벤트는 제거됨 — 모든 백업은 설정 탭에서 처리)
 
   $('presetGrid').addEventListener('click', async e => {
+    // ☑ 일괄 선택 모드 — 카드 클릭 = 선택 토글 (다른 모든 동작 차단)
+    if(_presetSelectMode){
+      const card = e.target.closest('.p-item[data-key], .pp-card[data-pp-id]');
+      if(!card) return;
+      e.preventDefault(); e.stopPropagation();
+      const key = card.dataset.key || ('persona:' + card.dataset.ppId);
+      if(_presetSelected.has(key)){ _presetSelected.delete(key); card.classList.remove('bulk-sel'); }
+      else { _presetSelected.add(key); card.classList.add('bulk-sel'); }
+      _presetBulkUpdateBar();
+      return;
+    }
     // 🧑 페르소나 카드 — 별도 흐름
     if(state.presetType === 'persona'){
       const ppBtn = e.target.closest('[data-pp-act]');
@@ -21456,8 +20531,6 @@ function wireGenerationAndPresetEvents(){
   // Preset modal
   $('presetCancel').addEventListener('click', () => $('presetModal').classList.remove('open'));
   $('presetSave').addEventListener('click', savePresetEdit);
-  // 🪄 캐릭터 프리셋 → 페르소나 AI 자동 생성
-  $('presetPersonaAiBtn')?.addEventListener('click', () => _presetPersonaAiGen());
   $('presetPersonaEditBtn')?.addEventListener('click', () => {
     const pid = $('presetPersonaSel')?.value;
     if(typeof _personaOpenModal === 'function'){
@@ -24612,11 +23685,6 @@ function wireWildcardEvents(){
     }
   });
   $('wildcardBtn')?.addEventListener('click', () => wildcardToggle());
-  // 🤖 Gemini 다활용 — 프롬프트 보조 + 네거티브 추천 + 이미지→태그 (라이트박스)
-  $('aiKoToTagsBtn')?.addEventListener('click', () => _aiKoreanToTags());
-  $('aiEnrichBtn')?.addEventListener('click', () => _aiEnrichPrompt());
-  $('aiNegSuggestBtn')?.addEventListener('click', () => _aiSuggestNegative());
-  $('lbAiImageToTags')?.addEventListener('click', () => _aiImageToTags());
   $('wildcardCloseBtn')?.addEventListener('click', () => wildcardToggle(false));
   $('wildcardNewBtn')?.addEventListener('click', newWildcard);
   $('wildcardDemoBtn')?.addEventListener('click', wildcardDemo);
@@ -24666,7 +23734,6 @@ function wireWildcardEvents(){
   $('wcEditCancel')?.addEventListener('click', _closeWildcardEditor);
   $('wcEditSave')?.addEventListener('click', saveWildcardEditor);
   $('wcEditDelete')?.addEventListener('click', deleteWildcardEditor);
-  $('wcAiGenBtn')?.addEventListener('click', () => _wcAiGenerate());
   $('wildcardEditModal')?.addEventListener('click', e => { if(e.target.id === 'wildcardEditModal') _closeWildcardEditor(); });
 }
 
