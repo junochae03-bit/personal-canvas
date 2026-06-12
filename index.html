@@ -2140,6 +2140,16 @@ mark{
 .wc-sel-bar .wc-sel-count{font-size:11.5px;font-weight:700;color:var(--blue);font-family:var(--mono);margin-right:auto}
 .wc-chip.wc-selectable.selected{border-color:var(--blue);background:rgba(58,99,152,.12)}
 .wc-chip.wc-selectable.selected .wc-chip-ins{color:var(--blue);font-weight:600}
+/* 🃏 그룹화 — 라벨 【】 기준 접이식 그룹 */
+.wc-chips.wc-grouped{flex-direction:column;align-items:stretch;gap:8px}
+.wc-group{display:flex;flex-direction:column}
+.wc-group-hdr{display:flex;align-items:center;gap:9px;padding:7px 11px;background:rgba(162,90,31,.08);border:1.5px solid rgba(162,90,31,.25);border-radius:6px;font-size:12.5px;font-weight:700;color:var(--acc);cursor:pointer;user-select:none;transition:background .12s}
+.wc-group-hdr:hover{background:rgba(162,90,31,.15)}
+.wc-group-hdr .wc-group-mark{font-size:10px;color:var(--acc);width:13px;text-align:center;font-weight:700}
+.wc-group-hdr .wc-group-name{flex:1}
+.wc-group-hdr .wc-group-count{font-family:var(--mono);font-size:11px;font-weight:700;background:var(--card2);color:var(--t2);padding:2px 9px;border-radius:11px}
+.wc-chips-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+@media(max-width:760px){ .wc-group-hdr{min-height:38px} }
 
 /* ═══════════════════════════════════════════════════════════
    🎀 DESIGN REFRESH — 한눈에 들어오는 정돈 레이어 (최종 오버라이드)
@@ -21640,6 +21650,16 @@ function wildcardToggle(force){
 
 let _wcSelectMode = false;
 const _wcSelected = new Set();   // 선택된 와일드카드 이름
+// 🃏 라벨 【】 기준 접이식 그룹
+const _WC_GROUP_ORDER = ['행위','반응','연출','외형','씬','슬롯','콤보'];
+const _collapsedWildcardGroups = new Set();
+let _wcGroupsInit = false;   // 최초 1회만 "콤보 외 전부 접힘" 기본값 적용
+function _wcGroupOf(w){
+  const label = (w.label && w.label.trim()) || '';
+  const m = label.match(/^【([^】]+)】\s*(.*)$/);
+  if(m) return { group: m[1].trim(), title: (m[2].trim() || w.name) };
+  return { group: '기타', title: (label || w.name) };
+}
 
 function renderWildcards(){
   const wrap = $('wildcardChips');
@@ -21666,10 +21686,28 @@ function renderWildcards(){
         + `<button type="button" class="btn small ghost" data-act="wc-sel-done">완료</button>`;
     }
   }
-  wrap.innerHTML = list.map((w, i) => {
+  // 🃏 라벨 【】 기준 그룹핑 — 원본 인덱스(i)를 함께 보관해 편집 정합 유지
+  const groups = new Map();   // group → [{w, i, title}]
+  list.forEach((w, i) => {
+    const { group, title } = _wcGroupOf(w);
+    if(!groups.has(group)) groups.set(group, []);
+    groups.get(group).push({ w, i, title });
+  });
+  // 그룹 순서: 정의된 우선순위 → 미지의 그룹 → '기타' 맨 끝
+  const present = [...groups.keys()];
+  const ordered = [
+    ..._WC_GROUP_ORDER.filter(g => groups.has(g)),
+    ...present.filter(g => !_WC_GROUP_ORDER.includes(g) && g !== '기타'),
+    ...(groups.has('기타') ? ['기타'] : []),
+  ];
+  // 최초 1회: 콤보 외 전부 접힘 (사용자 기본값)
+  if(!_wcGroupsInit){
+    _wcGroupsInit = true;
+    for(const g of ordered) if(g !== '콤보') _collapsedWildcardGroups.add(g);
+  }
+  const chipHtml = ({ w, i, title }) => {
     const cnt = w.options?.length || 0;
     const lock = w.locked ? ' 🔒' : '';
-    const title = (w.label && w.label.trim()) ? w.label.trim() : w.name;   // 제목 우선, 없으면 토큰명
     const titleHtml = `<span class="wc-title">${esc(title)}</span><span class="wc-token">__${esc(w.name)}__</span>`;
     if(_wcSelectMode){
       const sel = _wcSelected.has(w.name);
@@ -21678,9 +21716,21 @@ function renderWildcards(){
         + `</span>`;
     }
     return `<span class="wc-chip${w.locked ? ' locked' : ''}">`
-      + `<button type="button" class="wc-chip-ins" data-act="insert" data-name="${esc(w.name)}" title="삽입: __${esc(w.name)}__ (프롬프트·캐릭터 외형/액션 중 마지막 포커스 위치)">🃏 ${titleHtml} <span class="wc-cnt">${cnt}</span>${lock}</button>`
+      + `<button type="button" class="wc-chip-ins" data-act="insert" data-name="${esc(w.name)}" title="삽입: __${esc(w.name)}__ (프롬프트·캐릭터 외형/액션 중 마지막 포커스 위치)">${titleHtml} <span class="wc-cnt">${cnt}</span>${lock}</button>`
       + `<button type="button" class="wc-chip-edit" data-act="edit" data-idx="${i}" title="${esc(title)} 편집">⚙</button>`
       + `</span>`;
+  };
+  wrap.classList.add('wc-grouped');
+  wrap.innerHTML = ordered.map(g => {
+    const items = groups.get(g);
+    const collapsed = _collapsedWildcardGroups.has(g);
+    const rows = collapsed ? '' : `<div class="wc-chips-row">${items.map(chipHtml).join('')}</div>`;
+    return `<div class="wc-group">`
+      + `<div class="wc-group-hdr" data-act="wc-toggle-group" data-grp="${esc(g)}">`
+      + `<span class="wc-group-mark">${collapsed ? '▶' : '▼'}</span>`
+      + `<span class="wc-group-name">${esc(g)}</span>`
+      + `<span class="wc-group-count">${items.length}</span>`
+      + `</div>${rows}</div>`;
   }).join('');
 }
 
@@ -22027,6 +22077,14 @@ function wireWildcardEvents(){
     if(files.length) await _importWildcardFiles(files);
   });
   $('wildcardChips')?.addEventListener('click', e => {
+    const grpEl = e.target.closest('[data-act="wc-toggle-group"]');
+    if(grpEl){
+      const g = grpEl.dataset.grp;
+      if(_collapsedWildcardGroups.has(g)) _collapsedWildcardGroups.delete(g);
+      else _collapsedWildcardGroups.add(g);
+      renderWildcards();
+      return;
+    }
     const btn = e.target.closest('[data-act]');
     if(!btn) return;
     const act = btn.dataset.act;
