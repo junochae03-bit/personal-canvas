@@ -21723,7 +21723,7 @@ function wildcardToggle(force){
 let _wcSelectMode = false;
 const _wcSelected = new Set();   // 선택된 와일드카드 이름
 // 🃏 라벨 【】 기준 접이식 그룹
-const _WC_GROUP_ORDER = ['행위','반응','연출','외형','씬','슬롯','콤보'];
+const _WC_GROUP_ORDER = ['★ 즐겨찾기','행위','반응','연출','외형','씬','슬롯','콤보'];
 const _collapsedWildcardGroups = new Set();
 let _wcGroupsInit = false;   // 최초 1회만 "콤보 외 전부 접힘" 기본값 적용
 function _wcGroupOf(w){
@@ -21879,7 +21879,36 @@ function wildcardDemo(){
   const sample = expandRandomChoices(expandWildcards(txt, _resolveWildcard));
   let msg = `🎲 예시 확장:\n${sample.slice(0, 160)}${sample.length > 160 ? '…' : ''}`;
   if(unknown.length) msg += `\n⚠ 알 수 없는 와일드카드: ${unknown.join(', ')}`;
-  toast(msg, unknown.length ? 'warning' : 'success');
+  // ★ 마음에 드는 확장 결과를 즐겨찾기 와일드카드로 즉시 보관 (편집 모달 자동 진입)
+  toast(msg, unknown.length ? 'warning' : 'success', {
+    label: '★ 즐겨찾기 저장',
+    onClick: () => _quickFavWildcard(sample),
+    timeoutMs: 5000,
+  });
+}
+
+// ★ 즐겨찾기로 저장 — 데모 확장 결과를 1옵션짜리 와일드카드로 추가하고 편집 모달 진입.
+//   라벨 접두 【★ 즐겨찾기】 로 그룹 ORDER 맨 앞에 자동 묶임. 본문/라벨은 모달에서 마지막 손질.
+async function _quickFavWildcard(text){
+  const body = (text || '').trim();
+  if(!body){ toast('저장할 결과가 없습니다', 'info'); return; }
+  if(!Array.isArray(state.wildcards)) state.wildcards = [];
+  const exist = new Set(state.wildcards.map(w => w.name));
+  let suffix = Date.now().toString(36).slice(-5);
+  let safety = 0;
+  while(exist.has('fav_' + suffix) && safety++ < 20){
+    suffix = (Math.random() * 1e9 | 0).toString(36).slice(-5);
+  }
+  const name = 'fav_' + suffix;
+  const auto = body.replace(/\s+/g, ' ').slice(0, 30);
+  const label = `【★ 즐겨찾기】 ${auto}`;
+  state.wildcards.push({ name, label, options: [{text: body, weight: 1}], locked: false, lockedIdx: 0 });
+  try { await saveWildcards(); } catch(e){ _swallow(e, 'fav:save'); }
+  // ★ 즐겨찾기 그룹은 보통 접혀있을 수 있으므로 자동 펼침 — 사용자가 새 항목 바로 보이도록
+  _collapsedWildcardGroups.delete('★ 즐겨찾기');
+  renderWildcards();
+  openWildcardEditor(state.wildcards.length - 1);
+  toast('★ 즐겨찾기 저장 — 라벨·본문을 마지막으로 다듬어 저장하세요', 'success');
 }
 
 function openWildcardEditor(idx){
