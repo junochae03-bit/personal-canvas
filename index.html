@@ -2897,6 +2897,22 @@ mark{
           </div>
 
           <div class="set-card">
+            <h3>표시 <span class="en">Display</span></h3>
+            <div class="set-row">
+              <div class="label">알람 무시 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Mute Toasts</span>
+                <div class="desc">모든 알람(성공·정보·경고·에러)을 숨김. 콘솔에는 기록됨.</div>
+              </div>
+              <button class="btn ghost" id="toastMuteToggleBtn" type="button" aria-pressed="false">🔔 알람 켜짐 <span class="en">On</span></button>
+            </div>
+            <div class="set-row">
+              <div class="label">모바일 세로 고정 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Portrait Lock</span>
+                <div class="desc">기기를 가로로 돌려도 화면을 세로로 유지 (CSS 회전). PWA 설치 시 더 안정적.</div>
+              </div>
+              <button class="btn ghost" id="portraitLockToggleBtn" type="button" aria-pressed="false">🔓 자유 회전 <span class="en">Free</span></button>
+            </div>
+          </div>
+
+          <div class="set-card">
             <h3>정보 <span class="en">About</span></h3>
             <div class="set-row">
               <div class="label">NAI Studio</div>
@@ -4972,10 +4988,34 @@ const dataURLtoBlob = url => fetch(url).then(r => {
  * @param {'info'|'success'|'warning'|'error'} [kind]
  * @param {{label:string, onClick:()=>void, timeoutMs?:number}} [action]
  */
-const TOAST_TTL = {info: 500, success: 500, warning: 1500, error: 0, action: 3000};
+// 🔔 모든 알람 0.5초 (사용자 요청) — 에러 포함 전 종류 통일.
+//   * 닫기 버튼은 항상 노출 + 호버 시 일시정지 유지 → 놓쳐도 다시 보기 가능
+const TOAST_TTL = {info: 500, success: 500, warning: 500, error: 500, action: 500};
 const _toastState = {collapsed: false, pinned: false};
 
+// 🔕 알람 무시 / 📱 세로 고정 — localStorage 영속 (간단·즉시)
+const _LS_TOAST_MUTED = 'nai_toast_muted';
+const _LS_PORTRAIT_LOCK = 'nai_portrait_lock';
+function isToastMuted(){
+  try { return localStorage.getItem(_LS_TOAST_MUTED) === '1'; } catch(_){ return false; }
+}
+function setToastMuted(on){
+  try { localStorage.setItem(_LS_TOAST_MUTED, on ? '1' : '0'); } catch(_){}
+}
+function isPortraitLocked(){
+  try { return localStorage.getItem(_LS_PORTRAIT_LOCK) === '1'; } catch(_){ return false; }
+}
+function setPortraitLocked(on){
+  try { localStorage.setItem(_LS_PORTRAIT_LOCK, on ? '1' : '0'); } catch(_){}
+  document.body.classList.toggle('force-portrait', on);
+}
+
 function toast(msg, kind, action){
+  // 🔕 알람 무시 — 콘솔에는 흔적 남기되 UI는 표시 안 함
+  if(isToastMuted()){
+    try { console.debug(`[toast:muted:${kind||'info'}]`, msg); } catch(_){}
+    return;
+  }
   kind = kind || 'info';
   const el = document.createElement('div');
   el.className = 'toast ' + (kind==='error'?'err':kind==='success'?'ok':kind==='warning'?'warn':'');
@@ -5089,7 +5129,7 @@ function updateToastBoxHeader(){
     <span style="color:var(--t2);font-weight:600">🔔 ${items.length}</span>
     <span style="display:flex;gap:4px;align-items:center;font-family:var(--mono)">${badges.join(' ')}</span>
     <div style="flex:1"></div>
-    ${items.length > 1 ? `<button type="button" data-act="close-all" title="모두 닫기" aria-label="모든 알림 닫기" style="background:transparent;border:1px solid var(--b1);color:var(--t2);cursor:pointer;padding:2px 8px;border-radius:4px;font-size:11px;font-family:inherit">🗑 모두 닫기</button>` : ''}
+    <button type="button" data-act="close-all" title="모두 닫기 (일괄 삭제)" aria-label="모든 알림 닫기" style="background:transparent;border:1px solid var(--b1);color:var(--t2);cursor:pointer;padding:2px 8px;border-radius:4px;font-size:11px;font-family:inherit">🗑 모두 닫기</button>
   `;
   header.querySelector('[data-act="toggle"]').onclick = () => {
     _toastState.collapsed = !_toastState.collapsed;
@@ -19065,6 +19105,38 @@ function wireTopbarAndFormEvents(){
   $('fullscreenBtn').addEventListener('click', toggleFullscreen);
   // 🔒 화면 회전 잠금 — PWA standalone fullscreen 일 때만 진짜 잠금. 일반 브라우저는 안내.
   $('orientLockBtn')?.addEventListener('click', toggleOrientationLock);
+  // 🔕 알람 무시 토글 + 📱 모바일 세로 고정 토글 — 설정 카드
+  const _updMuteBtn = () => {
+    const b = $('toastMuteToggleBtn'); if(!b) return;
+    const on = isToastMuted();
+    b.setAttribute('aria-pressed', String(on));
+    b.classList.toggle('act', on);
+    b.innerHTML = on ? '🔕 알람 무시 중 <span class="en">Muted</span>' : '🔔 알람 켜짐 <span class="en">On</span>';
+  };
+  const _updPortraitBtn = () => {
+    const b = $('portraitLockToggleBtn'); if(!b) return;
+    const on = isPortraitLocked();
+    b.setAttribute('aria-pressed', String(on));
+    b.classList.toggle('act', on);
+    b.innerHTML = on ? '🔒 세로 고정 <span class="en">Locked</span>' : '🔓 자유 회전 <span class="en">Free</span>';
+  };
+  $('toastMuteToggleBtn')?.addEventListener('click', () => {
+    const next = !isToastMuted();
+    setToastMuted(next);
+    _updMuteBtn();
+    // 무시 OFF 로 돌릴 때만 토스트로 피드백 (켜는 순간엔 표시 안 함)
+    if(!next){ try { toast('🔔 알람 다시 켜짐', 'success'); } catch(_){} }
+  });
+  $('portraitLockToggleBtn')?.addEventListener('click', () => {
+    const next = !isPortraitLocked();
+    setPortraitLocked(next);   // body 클래스도 같이 토글
+    _updPortraitBtn();
+    try { toast(next ? '🔒 세로 고정 켜짐' : '🔓 자유 회전', 'info'); } catch(_){}
+  });
+  // 부팅 시 영속 상태 복원 — 세로 고정은 즉시 body 클래스 적용
+  if(isPortraitLocked()) document.body.classList.add('force-portrait');
+  _updMuteBtn();
+  _updPortraitBtn();
   // 부팅 시 저장된 잠금 상태 복원 — 네이티브 lock 시도, 실패 시 CSS 회전 자동 적용
   (async () => {
     try {

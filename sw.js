@@ -12,7 +12,7 @@
 //     ETag/Content-Length 변경을 감지하면 NEW_VERSION_AVAILABLE 메시지를
 //     보내서 사용자에게 새로고침을 안내.
 
-const CACHE_NAME = 'nai-studio-08f5d347';
+const CACHE_NAME = 'nai-studio-64a12135';
 const CORE = [
   './',
   './index.html',
