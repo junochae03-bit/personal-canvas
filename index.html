@@ -2922,6 +2922,12 @@ mark{
               </div>
               <button class="btn ghost" id="portraitLockToggleBtn" type="button" aria-pressed="false">🔓 자유 회전 <span class="en">Free</span></button>
             </div>
+            <div class="set-row">
+              <div class="label">화면 자동 잠금 방지 <span class="en" style="color:var(--t3);font-weight:500;font-size:.85em">Keep Awake</span>
+                <div class="desc">앱을 사용하는 동안 화면이 꺼지지 않게 유지 (Wake Lock). 일괄 생성·만화 작업 중에 유용. 다른 앱으로 전환하면 자동 해제됨.</div>
+              </div>
+              <button class="btn ghost" id="wakeLockToggleBtn" type="button" aria-pressed="false">🌙 자동 꺼짐 <span class="en">Off</span></button>
+            </div>
           </div>
 
           <div class="set-card">
@@ -10036,9 +10042,11 @@ function validateForGeneration(){
 //   ⚠ 완전한 OS 백그라운드(다른 앱 전환·화면 끄기)는 브라우저(특히 iOS)가 페이지를 동결시켜 불가.
 //      앱을 열어 둔 동안 화면 꺼짐 방지(Wake Lock) + 탭 전환 시 스로틀 완화(무음 오디오)까지가 한계.
 let _wakeLock = null;
-let _wakeLockWant = false;
+let _wakeLockWant = false;      // 생성 중 자동 획득
+let _wakeLockUserOn = false;    // 🔆 사용자 설정 — 항상 화면 켜둠
+const _LS_WAKE_LOCK = 'nai_wake_lock';
+function isWakeLockUserOn(){ return _wakeLockUserOn; }
 async function _acquireWakeLock(){
-  _wakeLockWant = true;
   if(!('wakeLock' in navigator) || _wakeLock) return;
   try {
     _wakeLock = await navigator.wakeLock.request('screen');
@@ -10046,12 +10054,23 @@ async function _acquireWakeLock(){
   } catch(e){ _swallow(e, 'wakeLock:acquire'); }
 }
 async function _releaseWakeLock(){
-  _wakeLockWant = false;
   if(_wakeLock){ try { await _wakeLock.release(); } catch(_){} _wakeLock = null; }
 }
-// Wake Lock 은 탭이 숨겨지면 자동 해제됨 → 다시 보일 때 생성 중이면 재획득
+async function setWakeLockUserOn(on){
+  _wakeLockUserOn = !!on;
+  try { localStorage.setItem(_LS_WAKE_LOCK, on ? '1' : '0'); } catch(e){ _swallow(e, 'lsSet:wakeLock'); }
+  if(_wakeLockUserOn){ await _acquireWakeLock(); }
+  else if(!_wakeLockWant){ await _releaseWakeLock(); }
+}
+// 부팅 시 사용자 설정 복원 — DOMContentLoaded 후 안전하게 시도
+function _bootWakeLockSetting(){
+  try { _wakeLockUserOn = localStorage.getItem(_LS_WAKE_LOCK) === '1'; } catch(_){}
+  if(_wakeLockUserOn) _acquireWakeLock();
+}
+// Wake Lock 은 탭이 숨겨지면 자동 해제됨 → 다시 보일 때 사용자 설정 ON 또는 생성 중이면 재획득
 document.addEventListener('visibilitychange', () => {
-  if(document.visibilityState === 'visible' && _wakeLockWant && state.running) _acquireWakeLock();
+  if(document.visibilityState !== 'visible') return;
+  if(_wakeLockUserOn || (_wakeLockWant && state.running)) _acquireWakeLock();
 });
 // 무음 오디오 — 일부 브라우저(데스크탑)에서 백그라운드 탭 타이머 스로틀을 완화
 let _kaCtx = null, _kaNode = null;
@@ -10075,8 +10094,13 @@ function _stopKeepAliveAudio(){
   try { if(_kaNode){ _kaNode.stop(); _kaNode.disconnect(); _kaNode = null; } } catch(_){}
   try { if(_kaCtx){ _kaCtx.close(); _kaCtx = null; } } catch(_){}
 }
-function _genKeepAliveStart(){ _acquireWakeLock(); _startKeepAliveAudio(); }
-function _genKeepAliveStop(){ _releaseWakeLock(); _stopKeepAliveAudio(); }
+function _genKeepAliveStart(){ _wakeLockWant = true; _acquireWakeLock(); _startKeepAliveAudio(); }
+function _genKeepAliveStop(){
+  _wakeLockWant = false;
+  // 사용자 설정으로 항상 켜둠이 아니면 해제
+  if(!_wakeLockUserOn) _releaseWakeLock();
+  _stopKeepAliveAudio();
+}
 
 async function startGeneration(){
   if(state.running){ stopGeneration(); return; }
@@ -19243,10 +19267,30 @@ function wireTopbarAndFormEvents(){
     _updPortraitBtn();
     try { toast(next ? '🔒 세로 고정 켜짐' : '🔓 자유 회전', 'info'); } catch(_){}
   });
+  // 🔆 화면 자동 잠금 방지 (Wake Lock) — 사용자 토글
+  const _updWakeLockBtn = () => {
+    const b = $('wakeLockToggleBtn'); if(!b) return;
+    const on = isWakeLockUserOn();
+    b.setAttribute('aria-pressed', String(on));
+    b.classList.toggle('act', on);
+    b.innerHTML = on ? '🔆 화면 켜둠 <span class="en">On</span>' : '🌙 자동 꺼짐 <span class="en">Off</span>';
+  };
+  $('wakeLockToggleBtn')?.addEventListener('click', async () => {
+    if(!('wakeLock' in navigator)){
+      try { toast('이 브라우저는 Wake Lock 지원 안 함', 'warning'); } catch(_){}
+      return;
+    }
+    const next = !isWakeLockUserOn();
+    await setWakeLockUserOn(next);
+    _updWakeLockBtn();
+    try { toast(next ? '🔆 화면 잠금 방지 켜짐' : '🌙 자동 꺼짐 복귀', 'info'); } catch(_){}
+  });
   // 부팅 시 영속 상태 복원 — 세로 고정은 즉시 body 클래스 적용
   if(isPortraitLocked()) document.body.classList.add('force-portrait');
+  _bootWakeLockSetting();
   _updMuteBtn();
   _updPortraitBtn();
+  _updWakeLockBtn();
   // 부팅 시 저장된 잠금 상태 복원 — 네이티브 lock 시도, 실패 시 CSS 회전 자동 적용
   (async () => {
     try {
