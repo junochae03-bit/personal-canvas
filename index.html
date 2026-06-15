@@ -416,6 +416,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 /* GALLERY — 갤러리 */
 .gallery-bar{padding:13px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--b1);background:var(--panel);flex-shrink:0;flex-wrap:wrap;box-shadow:var(--shadow)}
+/* 📥 외부 이미지 드래그 중 — 갤러리 페인 전체에 점선 강조 */
+.main-pane[data-pane="gallery"].gal-drag{outline:3px dashed var(--acc);outline-offset:-6px;background:color-mix(in srgb, var(--acc) 6%, var(--bg))}
 /* gb-v2: 3-row gallery toolbar — 검색 / 필터 / 액션 그룹 분리 */
 .gallery-bar.gb-v2{flex-direction:column;align-items:stretch;gap:8px;padding:10px 14px}
 .gb-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
@@ -2679,6 +2681,8 @@ mark{
               <button class="btn ghost" id="galAlbumsCollapseAll" type="button" style="display:none" title="모든 앨범 한 번에 접기">📁 앨범 접기</button>
               <button class="btn ghost" id="manageAlbumsBtn" title="앨범 만들기·이름변경·삭제" style="border-color:rgba(162,90,31,.4)">📁 앨범 관리</button>
               <button class="btn ghost" id="newSessionBtn">＋ 새 세션</button>
+              <button class="btn ghost" id="galImportBtn" title="외부 PNG/JPG/WebP 이미지를 갤러리에 등록 (NAI PNG는 EXIF 자동 추출). 그리드에 드래그해도 됩니다" style="border-color:rgba(58,99,152,.4);color:var(--blue)">📥 외부 이미지</button>
+              <input type="file" id="galImportFile" accept="image/*" multiple hidden>
               <button class="btn danger" id="clearGalBtn">⚠ 전체 삭제</button>
             </div>
           </div>
@@ -6598,6 +6602,71 @@ function applyParsedMetaToForm(rawMeta, opts){
   refreshCost();
   saveSettingsDebounced();
   return restored;
+}
+
+// 📥 외부 이미지 → 갤러리에 등록 (PNG/JPG/WebP). PNG면 EXIF에서 NAI 메타 자동 추출(V4 nested 포함).
+//   "📥 가져온 이미지" 라는 전용 세션으로 누적. currentSessionId 는 작업 후 원상 복귀해서
+//   다음 생성이 임포트 세션에 섞이지 않도록 보호.
+async function importImagesToGallery(filesInput){
+  const all = [...(filesInput || [])];
+  if(!all.length) return;
+  const valid = all.filter(f => f && /^image\//.test(f.type) && f.size > 0 && f.size <= MAX_IMPORT_IMAGE_BYTES);
+  if(!valid.length){ toast('가져올 이미지가 없습니다 — PNG/JPG/WebP, 60MB 이하만 허용', 'warning'); return; }
+  const skipped = all.length - valid.length;
+  if(skipped > 0) toast(`${skipped}개는 이미지가 아니거나 너무 커서 건너뜀`, 'warning');
+
+  const sessions = await DB.getSessions();
+  const IMPORT_LABEL = '📥 가져온 이미지';
+  let importSid = sessions.find(s => s.label === IMPORT_LABEL)?.id;
+  const prevSid = DB.currentSessionId;
+  let ok = 0, withMeta = 0;
+  try {
+    if(!importSid) importSid = await DB.newSession(IMPORT_LABEL);
+    DB.currentSessionId = importSid;
+    for(const f of valid){
+      let meta = null;
+      let promptForSave = '';
+      if(/png$/i.test(f.type)){
+        try {
+          const raw = await readPngMetadata(f);
+          if(raw?.parsed){
+            meta = raw.parsed;
+            // 🐛 NAI V4 평탄화 — nested base_caption 을 top-level prompt/neg 로 끌어올려
+            //   갤러리 검색·통계·라벨이 모두 meta.prompt/meta.neg 를 직접 보도록.
+            if(!meta.prompt){
+              const v = meta.v4_prompt?.caption?.base_caption ?? meta.v4_prompt?.base_caption;
+              if(typeof v === 'string' && v) meta.prompt = v;
+            }
+            if(!meta.neg && !meta.uc){
+              const v = meta.v4_negative_prompt?.caption?.base_caption ?? meta.v4_negative_prompt?.base_caption;
+              if(typeof v === 'string' && v) meta.neg = v;
+            }
+            if(meta.prompt) promptForSave = String(meta.prompt);
+            if(Object.keys(meta).length) withMeta++;
+          }
+        } catch(e){ _swallow(e, 'import:exif'); }
+      }
+      meta = { ...(meta || {}), mode: 'import', importedAt: Date.now(), originalName: f.name };
+      const rawLabel = String(f.name || '').replace(/\.[A-Za-z0-9]+$/, '').trim().slice(0, 60) || '가져온 이미지';
+      const ext = (f.type.split('/')[1] || 'png').toLowerCase().replace('jpeg', 'jpg');
+      const fname = rawLabel.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_') + '.' + ext;
+      try {
+        await DB.saveImage(f, fname, rawLabel, promptForSave, meta);
+        ok++;
+      } catch(e){
+        console.warn('[import]', e);
+        toast(`"${f.name}" 저장 실패 — ${e?.message || e}`, 'error');
+      }
+    }
+  } finally {
+    // 다음 생성이 임포트 세션에 섞이지 않도록 원래 세션 복원 (없었으면 null 유지 → 다음 생성 시 새 세션)
+    DB.currentSessionId = prevSid;
+  }
+  if(typeof refreshGallerySize === 'function') await refreshGallerySize();
+  if(typeof loadGallery === 'function') await loadGallery();
+  toast(`📥 ${ok}장 가져옴${withMeta ? ` · 메타 추출 ${withMeta}장` : ''} — 갤러리의 "${IMPORT_LABEL}" 세션 확인`, 'success');
+  // 갤러리 탭이 활성 아니면 살짝 안내
+  if(state.mainPane !== 'gallery') toast('갤러리 탭에서 확인하세요', 'info');
 }
 
 async function importPngExifToForm(file){
@@ -20376,6 +20445,31 @@ function wireGalleryEvents(){
     DB.currentSessionId = null;  // next save creates new
     toast('새 세션 시작', 'info');
   });
+  // 📥 외부 이미지 → 갤러리 등록 — 버튼 + 드래그 드롭 둘 다.
+  $('galImportBtn')?.addEventListener('click', () => $('galImportFile')?.click());
+  $('galImportFile')?.addEventListener('change', async e => {
+    const files = [...(e.target.files || [])];
+    e.target.value = '';
+    if(files.length) await importImagesToGallery(files);
+  });
+  // 그리드/페인 어디든 이미지 드롭 → 임포트
+  const galPane = document.querySelector('.main-pane[data-pane="gallery"]');
+  if(galPane){
+    galPane.addEventListener('dragover', e => {
+      if(e.dataTransfer?.types?.includes('Files')){ e.preventDefault(); galPane.classList.add('gal-drag'); }
+    });
+    galPane.addEventListener('dragleave', e => {
+      // 자식 진입 시 dragleave 가 부모에 와도 무시 — relatedTarget 이 페인 안이면 유지
+      if(!e.relatedTarget || !galPane.contains(e.relatedTarget)) galPane.classList.remove('gal-drag');
+    });
+    galPane.addEventListener('drop', async e => {
+      galPane.classList.remove('gal-drag');
+      const files = [...(e.dataTransfer?.files || [])].filter(f => /^image\//.test(f.type));
+      if(!files.length) return;
+      e.preventDefault();
+      await importImagesToGallery(files);
+    });
+  }
   $('galleryView').addEventListener('click', e => {
     const b = e.target.closest('button[data-gv]');
     if(!b) return;
