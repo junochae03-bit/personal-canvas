@@ -2549,10 +2549,10 @@ mark{
           </div>
           <div class="field" style="margin-bottom:7px">
             <span class="lbl">출력 파일명 패턴 <span class="en">Filename Pattern</span></span>
-            <input type="text" id="fnamePattern" class="inp mono" placeholder="nai_{date}_{seed}" value="">
+            <input type="text" id="fnamePattern" class="inp mono" placeholder="비우면: 2026-06-15 캐릭터#1.png" value="">
             <div style="font-size:10.5px;color:var(--t3);margin-top:3px;line-height:1.5">
               치환: <code style="color:var(--acc);font-family:var(--mono)">{seed} {model} {date} {time} {index} {label} {prompt}</code><br>
-              비우고 이미지 이름이 있으면 <b style="color:var(--blue)">이미지 이름</b>으로 파일 저장. 둘 다 없으면 <code style="font-family:var(--mono)">nai_{시각}.png</code>
+              비우면 <b style="color:var(--blue)">날짜 + 라벨#N</b> 형식 (예: <code style="font-family:var(--mono)">2026-06-15 블아_노조미#1.png</code>). 라벨도 없으면 <code style="font-family:var(--mono)">2026-06-15 nai_시각.png</code>
             </div>
           </div>
           <button class="btn ghost" id="openXyzBtn" style="width:100%;justify-content:center;padding:8px;margin-bottom:8px;border-color:rgba(162,90,31,.4)" title="X·Y·Z 축의 파라미터를 변화시켜 비교 그리드 생성">🧪 XYZ 비교 그리드 <span class="en">XYZ Plot</span></button>
@@ -12398,16 +12398,29 @@ async function runDirector(apiKey, snap){
 
 function makeFilename(q){
   const safe = s => String(s||'').replace(/[\\\/:*?"<>|]/g,'_').slice(0,80);
-  const defaultName = () => `nai_${Date.now()}.png`;
+  // 📅 ISO 날짜(YYYY-MM-DD) — 파일 시스템·시간 정렬 친화
+  const isoDate = () => {
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  };
+  const defaultName = () => {
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    return `${isoDate()} nai_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.png`;
+  };
   try {
     // 📸 스냅샷이 있으면 그 시점의 파일명 패턴 사용 (사용자 변경 영향 없음)
     const pattern = q.snapshot ? q.snapshot.fnamePattern : (($('fnamePattern')?.value || '').trim());
-    // 📁 라벨 우선 — 패턴이 비어있고 의미있는 라벨이면 라벨로 파일명
+    // 📁 라벨 우선 — 패턴이 비어있고 의미있는 라벨이면 "YYYY-MM-DD 라벨#N.png" 형식
     //    (의미있음 = userLabel 입력 또는 캐릭터 프리셋 자동 라벨; 단순 큐 인덱스는 제외)
     if(!pattern){
       if(q._labelIsName && q.label){
-        let out = safe(q.label).replace(/_+/g,'_').replace(/^_+|_+$/g,'');
-        if(out){
+        let lbl = safe(q.label).replace(/_+/g,'_').replace(/^_+|_+$/g,'');
+        if(lbl){
+          // 캐릭터 자동 라벨은 이미 "이름#N" 포함. 사용자 라벨이면 큐 인덱스 자동 추가.
+          if(!/#\d+/.test(lbl)) lbl += `#${(state.queueIdx||0)+1}`;
+          let out = `${isoDate()} ${lbl}`;
           if(!/\.(png|jpe?g)$/i.test(out)) out += '.png';
           return out;
         }
