@@ -10163,6 +10163,15 @@ async function startGeneration(){
   state.paused = false;
   state.abortCtrl = new AbortController();
   _genKeepAliveStart();   // 🔋 화면 꺼짐 방지 + 백그라운드 스로틀 완화
+  // 🔆 일괄 출력일 때 사용자에게 자동 안내 (이미 토글 ON이면 중복 안내 생략)
+  const _qLen = state.queue.length;
+  if(_qLen >= 3 && !isWakeLockUserOn()){
+    if('wakeLock' in navigator){
+      toast(`🔆 일괄 ${_qLen}장 — 화면 잠금 자동 방지 (잠들어도 안 끊김)`, 'info');
+    } else {
+      toast('🌙 이 브라우저는 Wake Lock 미지원 — 화면이 꺼지면 생성이 지연될 수 있어요\n💡 PWA로 설치하면 더 안정적', 'warning');
+    }
+  }
   $('genBtn').innerHTML = '⏹ 중단 <span class="en">Stop</span>';
   $('genBtn').classList.add('stop');
   if($('genQueueAddBtn')) $('genQueueAddBtn').style.display = '';   // 대기열 추가 버튼 노출
