@@ -32,6 +32,25 @@ export function pickFirst(obj, ...keys){
 }
 
 /**
+ * 중첩 경로(여러 후보) 중 null/빈문자 아닌 첫 문자열 값.
+ * 사용 예: pickNestedString(meta, ['v4_negative_prompt','caption','base_caption'])
+ * NAI V4 페이로드는 prompt/negative 가 nested object(caption.base_caption) 에 있어 top-level pick 으로는 못 찾음.
+ */
+export function pickNestedString(root, ...paths){
+  if(!root || typeof root !== 'object') return null;
+  for(const path of paths){
+    if(!Array.isArray(path)) continue;
+    let v = root;
+    for(const k of path){
+      v = (v && typeof v === 'object') ? v[k] : null;
+      if(v == null) break;
+    }
+    if(typeof v === 'string' && v !== '') return v;
+  }
+  return null;
+}
+
+/**
  * 단일 캐릭터 객체 정제 — 모든 문자열은 slice로 길이 제한, pos는 [0,1] 클램프.
  * pool 배열도 재귀적으로 정제 (단, 중첩 캐릭터는 허용 안 함).
  */
@@ -85,6 +104,16 @@ export function extractNaiFields(parsed){
   };
   setStr('prompt', STR_LIMITS.prompt, 'prompt');
   setStr('neg', STR_LIMITS.prompt, 'neg', 'uc', 'negative_prompt');
+  // 🐛 NAI V4 fallback — top-level 키가 없거나 비었으면 v4_(negative_)prompt 의 nested base_caption 탐색.
+  //   V4 모델 PNG는 prompt/uc 가 객체 안에 있어 top-level pickFirst 로는 못 찾는다.
+  if(!out.prompt){
+    const v = pickNestedString(parsed, ['v4_prompt','caption','base_caption'], ['v4_prompt','base_caption']);
+    if(v != null) out.prompt = String(v).slice(0, STR_LIMITS.prompt);
+  }
+  if(!out.neg){
+    const v = pickNestedString(parsed, ['v4_negative_prompt','caption','base_caption'], ['v4_negative_prompt','base_caption']);
+    if(v != null) out.neg = String(v).slice(0, STR_LIMITS.prompt);
+  }
   setNum('seed', 'seed');
   setStr('model', 64, 'model');
   setNum('steps', 'steps');

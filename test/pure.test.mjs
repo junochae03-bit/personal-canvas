@@ -331,6 +331,30 @@ test('extractNaiFields: A1111 호환 (negative_prompt/width)', () => {
   assert.equal(v.width, 768);
 });
 
+test('extractNaiFields: NAI V4 nested (v4_negative_prompt.caption.base_caption)', () => {
+  // 🐛 V4 모델 PNG는 prompt/uc가 객체 안에 있음 — top-level 없을 때 nested 폴백 동작 확인
+  const v = extractNaiFields({
+    v4_prompt: {caption: {base_caption: '1girl, masterpiece'}},
+    v4_negative_prompt: {caption: {base_caption: 'lowres, bad anatomy'}},
+    seed: 12345,
+  });
+  assert.equal(v.prompt, '1girl, masterpiece');
+  assert.equal(v.neg, 'lowres, bad anatomy');
+  assert.equal(v.seed, 12345);
+});
+
+test('extractNaiFields: top-level 이 있으면 nested 보다 우선', () => {
+  // 둘 다 있으면 top-level (NAI 호환성용 legacy 키) 우선 — 명시적 의도
+  const v = extractNaiFields({
+    prompt: 'TOP',
+    neg: 'TOP_NEG',
+    v4_prompt: {caption: {base_caption: 'NESTED'}},
+    v4_negative_prompt: {caption: {base_caption: 'NESTED_NEG'}},
+  });
+  assert.equal(v.prompt, 'TOP');
+  assert.equal(v.neg, 'TOP_NEG');
+});
+
 test('extractNaiFields: characters 자동 정제', () => {
   const v = extractNaiFields({
     prompt: 'P',

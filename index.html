@@ -6507,8 +6507,21 @@ function applyParsedMetaToForm(rawMeta, opts){
     }
     return null;
   };
-  const prompt    = pick('prompt');
-  const neg       = pick('neg', 'uc', 'negative_prompt');
+  // 🐛 NAI V4 호환 — 네거티브가 v4_negative_prompt.caption.base_caption 에 nested 로 들어가는 경우 fallback.
+  //   탐색 순서: top-level neg/uc/negative_prompt → v4_negative_prompt 의 caption.base_caption / base_caption → 빈값.
+  //   동일 패턴으로 v4_prompt 의 base_caption 도 prompt 폴백에 활용 (외부 NAI V4 PNG 호환).
+  const pickNested = (root, ...paths) => {
+    for(const p of paths){
+      let v = root;
+      for(const k of p) v = (v && typeof v === 'object') ? v[k] : null;
+      if(typeof v === 'string' && v !== '') return v;
+    }
+    return null;
+  };
+  const prompt    = pick('prompt')
+    ?? pickNested(m, ['v4_prompt','caption','base_caption'], ['v4_prompt','base_caption']);
+  const neg       = pick('neg', 'uc', 'negative_prompt')
+    ?? pickNested(m, ['v4_negative_prompt','caption','base_caption'], ['v4_negative_prompt','base_caption']);
   const seed      = pick('seed');
   const model     = pick('model');
   const steps     = pick('steps');
