@@ -12922,7 +12922,9 @@ function populateSessionFilter(sessions){
   if(sorted.length){
     opts.push('<optgroup label="📂 세션">');
     for(const s of sorted){
-      const label = `${esc(s.label || '세션')}${fmt(s.ts)} · ${(s.count||0).toLocaleString()}장`;
+      // 🧹 자동 생성 세션의 끝 `_` 제거 (표시만)
+      const cleanName = (s.label || '세션').replace(/_+$/, '') || '세션';
+      const label = `${esc(cleanName)}${fmt(s.ts)} · ${(s.count||0).toLocaleString()}장`;
       opts.push(`<option value="ses:${s.id}">${label}</option>`);
     }
     opts.push('</optgroup>');
@@ -13171,7 +13173,10 @@ async function loadGallery(){
         const allExp = sessionImgIds.length > 0 && sessionImgIds.every(id => _expandedGallery.has(id));
         // 🆔 imgIds를 버튼 data 속성에 인코딩 — 가상 스크롤로 DOM에 없는 항목도 토글 대상에 포함
         const imgIdsAttr = sessionImgIds.join(',');
-        tokens.push(`<div class="session-sep"><span class="ses-dot"></span><span>${esc(ses.label)}</span><span class="ses-meta">${countInSession}장</span><span class="ses-line"></span>
+        // 🧹 자동 생성된 캐릭터 세션 라벨(`푸리나_`) 끝의 `_`를 표시 시 정리 — 데이터는 그대로 유지
+        const displayLabel = (ses.label || '').replace(/_+$/, '') || '(이름 없음)';
+        tokens.push(`<div class="session-sep"><span class="ses-dot"></span><span>${esc(displayLabel)}</span><span class="ses-meta">${countInSession}장</span><span class="ses-line"></span>
+          <button class="btn ghost" data-act="ren-ses" data-sid="${item.sesId}" data-label="${esc(ses.label || '')}" style="padding:4px 10px;font-size:11.5px;border-color:rgba(162,90,31,.4);color:var(--acc)" title="이 세션 이름 바꾸기">✏ 이름 <span class="en">Rename</span></button>
           <button class="btn ghost" data-act="ses-toggle" data-sid="${item.sesId}" data-imgids="${imgIdsAttr}" style="padding:4px 10px;font-size:11.5px" title="이 세션의 모든 이미지를 펼치거나 접습니다">${allExp?'⤡ 세션 접기':'⤢ 세션 펼침'} <span class="en">${allExp?'Collapse':'Expand'}</span></button>
           <button class="btn ghost" data-act="download-ses" data-sid="${item.sesId}" style="padding:4px 10px;font-size:11.5px;border-color:rgba(58,99,152,.4);color:var(--blue)" title="이 세션의 모든 이미지를 ZIP으로 다운로드">⬇ 일괄 <span class="en">DL</span></button>
           <button class="btn ghost" data-act="del-ses" data-sid="${item.sesId}" style="padding:4px 10px;font-size:11.5px">세션 삭제 <span class="en">Delete</span></button></div>`);
@@ -20936,6 +20941,33 @@ function wireGalleryEvents(){
       const sid = parseInt(dlSesBtn.dataset.sid);
       downloadSessionAsZip(sid);
       e.stopPropagation();
+      return;
+    }
+    // ✏ 세션 이름 변경 — prompt 로 받아 DB.SES 직접 업데이트, 라벨 끝 `_` 자동 제거
+    const renSesBtn = e.target.closest('[data-act="ren-ses"]');
+    if(renSesBtn){
+      e.stopPropagation();
+      const sid = parseInt(renSesBtn.dataset.sid);
+      const cur = (renSesBtn.dataset.label || '').replace(/_+$/, '');
+      const next = prompt('세션 이름:', cur);
+      if(next == null) return;
+      const trimmed = String(next).trim().slice(0, 60);
+      if(!trimmed){ toast('빈 이름은 사용할 수 없습니다', 'warning'); return; }
+      try {
+        const tx = DB.tx([DB.SES], 'readwrite');
+        const store = tx.objectStore(DB.SES);
+        const getReq = store.get(sid);
+        getReq.onsuccess = () => {
+          const rec = getReq.result;
+          if(!rec){ toast('세션을 찾을 수 없습니다', 'error'); return; }
+          rec.label = trimmed;
+          store.put(rec);
+        };
+        await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = e => rej(e); });
+        toast(`✏ 세션 이름 변경: ${trimmed}`, 'success');
+        await loadGallery();
+        await refreshGallerySize();
+      } catch(err){ console.warn('[ren-ses]', err); toast('이름 변경 실패', 'error'); }
       return;
     }
     const dlAlbBtn = e.target.closest('[data-act="download-album"]');
