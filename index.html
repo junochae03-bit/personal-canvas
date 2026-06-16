@@ -12902,12 +12902,6 @@ function renderGalleryItemHtml(img, sesId){
   return `<div class="g-item${cls}" data-id="${img.id}" data-sid="${sesId}" data-url="${url}">
     <div class="g-thumb">
       <img src="${url}" loading="lazy" decoding="async" alt="${esc(label)}">
-      <button class="g-album-btn" data-act="album" title="앨범에 추가/제거">📁</button>
-      <button class="g-exif-btn" data-act="exif" title="↻ EXIF로 폼 복원 (프롬프트·시드·모델 등)">↻</button>
-      <button class="g-textedit" data-act="textedit" title="🅣 텍스트·말풍선 편집">🅣</button>
-      <button class="open-lb" data-act="lb" title="크게 보기 (Lightbox)">🔍</button>
-      <button class="g-like" data-act="like" title="❤️ 좋아요 (통계 집계)" aria-pressed="${liked}">${liked?'❤':'♡'}</button>
-      <button class="g-dislike" data-act="dislike" title="👎 별로 (자주 실패 분석)" aria-pressed="${disliked}">👎</button>
     </div>
     <div class="g-head" title="펼치기/접기">
       <span class="expand-mark">▶</span>
@@ -13462,21 +13456,11 @@ function setupGalleryDoubleTapLike(){
     if(_selectionMode) return;   // 선택 모드 중엔 더블탭 무시 (탭으로 다중선택 우선)
     const id = parseInt(item.dataset.id, 10);
     if(isNaN(id)) return;
-    const likeBtn = item.querySelector('[data-act="like"]');
-    const wasOn = likeBtn?.getAttribute('aria-pressed') === 'true';
+    const wasOn = item.classList.contains('liked');
     const next = !wasOn;
     try { await DB.setImageLike(id, next); } catch(e){ _swallow(e, 'dtap:like'); return; }
-    if(likeBtn){
-      likeBtn.setAttribute('aria-pressed', String(next));
-      likeBtn.textContent = next ? '❤' : '♡';
-    }
     item.classList.toggle('liked', next);
-    // 반대(👎) 해제
-    if(next){
-      item.classList.remove('disliked');
-      const db2 = item.querySelector('[data-act="dislike"]');
-      if(db2) db2.setAttribute('aria-pressed', 'false');
-    }
+    if(next) item.classList.remove('disliked');
     // ❤️ 펑 — 켤 때만 (해제 시엔 부드러운 색만)
     if(next){
       const thumb = item.querySelector('.g-thumb');
@@ -21248,7 +21232,8 @@ function wireGalleryEvents(){
       return;
     }
     // 펼친 상태에서 이미지 또는 "크게 보기" 버튼 클릭 → 라이트박스
-    const isImg = e.target.tagName === 'IMG' || e.target.closest('[data-act="lb"]');
+    // 🔍 카드 썸네일(g-thumb) 클릭 → 라이트박스. img 자체는 pointer-events:none 이라 g-thumb 가 클릭을 받음
+    const isImg = e.target.tagName === 'IMG' || e.target.closest('[data-act="lb"]') || e.target.closest('.g-thumb');
     if(item.classList.contains('expanded') && isImg){
       openLightbox(id, sid);
       return;
