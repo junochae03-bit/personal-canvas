@@ -1391,12 +1391,15 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     content:'ℹ 세부정보 (탭하면 접기) ▾';
     margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--b1);
   }
-  #lightbox .lb-actions{flex-direction:row;flex-wrap:wrap;top:auto;bottom:calc(6px + env(safe-area-inset-bottom,0));right:6px;left:6px;background:rgba(20,14,4,.62);border-radius:10px;padding:4px;gap:3px;justify-content:center}
-  #lightbox .lb-act-btn{min-width:42px;padding:4px 4px;gap:1px}
-  #lightbox .lb-act-btn .lb-act-ico{font-size:14px}
-  #lightbox .lb-act-btn .lb-act-lbl{font-size:9px}
+  #lightbox .lb-actions{flex-direction:row;flex-wrap:wrap;top:auto;bottom:calc(6px + env(safe-area-inset-bottom,0));right:6px;left:6px;background:rgba(20,14,4,.62);border-radius:12px;padding:6px;gap:5px;justify-content:center}
+  /* 🔘 버튼 키움 — 터치 타깃 확대 (8개는 2줄로 wrap, 줄당 4개) */
+  #lightbox .lb-act-btn{flex:1 1 calc(25% - 5px);min-width:0;max-width:calc(25% - 5px);min-height:50px;padding:7px 4px;gap:3px}
+  #lightbox .lb-act-btn .lb-act-ico{font-size:18px}
+  #lightbox .lb-act-btn .lb-act-lbl{font-size:10.5px}
   #lightbox .lb-actions > div[style*="height:1px"]{display:none}
   .lb-counter{top:6px;font-size:10.5px;padding:4px 10px}
+  /* ✅ 다운로드 완료 깜빡 — 초록 강조 */
+  #lightbox #lbDownload.lb-done{background:rgba(93,138,48,.28);border-color:var(--green);color:var(--green)}
 
   /* 📱 라이트박스 v2 — 핵심 액션 1줄 + ⋯ 더보기 시트 (이미지 영역 최대화) */
   #lightbox #lbMoreToggle{display:flex;color:var(--acc);border-color:rgba(214,160,80,.5)}
@@ -21212,6 +21215,16 @@ function wireLightboxEvents(){
     a.href = url;
     a.download = _lbCurrent.fname || `nai_${_lbCurrent.id}.png`;
     a.click();
+    // ✅ 다운로드 피드백 — 모바일에서 받았는지 헷갈리지 않게 토스트 + 버튼 ✓ 깜빡
+    try { toast(`⬇ 저장됨: ${a.download}`, 'success'); } catch(_){}
+    const btn = $('lbDownload');
+    const ico = btn?.querySelector('.lb-act-ico');
+    const lbl = btn?.querySelector('.lb-act-lbl');
+    if(ico && lbl){
+      const oi = ico.textContent, ol = lbl.textContent;
+      ico.textContent = '✓'; lbl.textContent = '완료'; btn.classList.add('lb-done');
+      setTimeout(() => { ico.textContent = oi; lbl.textContent = ol; btn.classList.remove('lb-done'); }, 1400);
+    }
     // 🐛 fix: 1초 후 revoke 는 사용자가 다운로드 다이얼로그 늦게 확인하면 URL 죽음 (특히 Safari)
     //   대신 페이지 visibility change(블러)일 때 revoke — 다이얼로그가 떴다 닫혔다는 신호
     const cleanup = () => {
