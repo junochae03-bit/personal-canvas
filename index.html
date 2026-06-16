@@ -2674,8 +2674,8 @@ mark{
               <!-- 세션 옵션들은 loadGallery에서 동적 채움 -->
             </select>
             <select id="gallerySort" class="inp gb-sel" title="정렬 방식 — 앨범 보기에서는 무시">
-              <option value="session">📂 세션별 (기본)</option>
-              <option value="new">🕒 최신순</option>
+              <option value="new">🕒 최신순 (기본)</option>
+              <option value="session">📂 세션별</option>
               <option value="old">⏳ 오래된순</option>
               <option value="liked">❤️ 좋아요 우선</option>
               <option value="seed_asc">🌱 시드 ↑</option>
@@ -2689,13 +2689,13 @@ mark{
             <button class="gb-chip gb-chip-stats" id="galStatsBtn" type="button" title="📊 통계 — 좋아요 많은 시드·프롬·모델">📊 통계</button>
             <button class="btn danger gb-emptytrash" id="galEmptyTrashBtn" type="button" title="휴지통의 모든 이미지를 즉시 영구 삭제 (복원 불가)" style="display:none">휴지통 비우기</button>
           </div>
-          <!-- Row 3: 뷰 모드 + 액션 -->
+          <!-- Row 3: 보기 프리셋 + 액션 -->
           <div class="gb-row gb-actions-row">
-            <div class="gv-toggle" id="galleryView" title="보기 모드 (View mode)">
-              <button data-gv="detail" class="act">상세 <span class="en">Detail</span></button>
-              <button data-gv="compact">간단 <span class="en">Compact</span></button>
-              <button data-gv="album">앨범 <span class="en">Albums</span></button>
-              <button data-gv="vault" title="❤️ 좋아요한 이미지만 평평하게 (세션·세션헤더 무시, 최신순)">📌 보관함</button>
+            <div class="gv-toggle" id="galleryView" title="보기 프리셋 — 클릭으로 정렬·필터 자동 설정">
+              <button data-gv="recent" class="act" title="모든 이미지를 최신순 평면 그리드로 (기본)">🕒 최신순 <span class="en">Recent</span></button>
+              <button data-gv="session" title="📂 세션별로 그룹화해서 표시 (세션 헤더 노출)">📂 세션별 <span class="en">Sessions</span></button>
+              <button data-gv="liked" title="❤️ 좋아요한 이미지만 최신순 평면 (보관함)">❤️ 좋아요 <span class="en">Liked</span></button>
+              <button data-gv="album" title="👥 캐릭터·사용자 앨범별 그룹">👥 캐릭터 <span class="en">By Character</span></button>
             </div>
             <button class="btn ghost gb-select" id="galSelectModeBtn" title="선택 모드 — 여러 이미지 일괄 삭제·앨범 이동 (모바일: 길게 누르기로도 진입)">☑ 선택</button>
             <button class="btn ghost gb-comic" id="comicMakerBtn" title="🎞 만화 칸 만들기 — 페이지 레이아웃 + 갤러리 이미지 채우기">🎞 만화</button>
@@ -13039,7 +13039,7 @@ async function loadGallery(){
   }
   // 🔀 정렬 — 앨범 보기는 자체 그룹화라서 적용 안 함, 그 외 detail/compact/vault 만 적용.
   //   📌 vault 는 자동 'new' (최신순). 그 외에는 select 값 또는 'session'.
-  const sortKey = isVault ? 'new' : ($('gallerySort')?.value || state._gallerySort || 'session');
+  const sortKey = isVault ? 'new' : ($('gallerySort')?.value || state._gallerySort || 'new');
   if(sortKey !== 'session' && viewMode !== 'album'){
     const cmp = {
       new:     (a,b) => (b.ts||0) - (a.ts||0),
@@ -20503,7 +20503,7 @@ function wireGalleryEvents(){
   // 🔀 정렬 변경 + 영속화 (localStorage)
   const sortSel = $('gallerySort');
   if(sortSel){
-    try { sortSel.value = localStorage.getItem('nai_gal_sort') || 'session'; } catch(_){}
+    try { sortSel.value = localStorage.getItem('nai_gal_sort') || 'new'; } catch(_){}
     state._gallerySort = sortSel.value;
     sortSel.addEventListener('change', () => {
       state._gallerySort = sortSel.value;
@@ -20590,21 +20590,49 @@ function wireGalleryEvents(){
       await importImagesToGallery(files);
     });
   }
+  // 📂 갤러리 프리셋 4종 ↔ 내부 viewMode/sortKey 매핑
+  //   recent  → viewMode=detail + sort=new (평면 최신순; 기본)
+  //   session → viewMode=detail + sort=session (세션 그룹화)
+  //   liked   → viewMode=vault (좋아요만 평면 — likeOnly 자동 + sort=new)
+  //   album   → viewMode=album (캐릭터·사용자 앨범)
+  function _presetToView(p){ return p === 'session' ? 'detail' : p === 'liked' ? 'vault' : p === 'album' ? 'album' : 'detail'; }
+  function _presetToSort(p){ return p === 'session' ? 'session' : 'new'; }
+  function _migrateLegacyGv(v){
+    if(v === 'detail' || v === 'compact') return 'recent';
+    if(v === 'vault') return 'liked';
+    if(['recent','session','liked','album'].includes(v)) return v;
+    return 'recent';
+  }
+  function _applyGalleryPreset(preset, opts){
+    const grid = $('galleryGrid');
+    const view = _presetToView(preset);
+    const sort = _presetToSort(preset);
+    $$('#galleryView button').forEach(x => x.classList.toggle('act', x.dataset.gv === preset));
+    grid.classList.remove('compact');   // compact 모드 폐지 (줌 컨트롤로 대체)
+    grid.dataset.view = view;
+    grid.dataset.preset = preset;
+    try { localStorage.setItem('nai_gv', preset); } catch(e){ _swallow(e, 'lsSet:galView'); }
+    // 정렬 셀렉트와 동기화 (사용자가 동일 페이지에서 정렬 셀렉트 보면 일관)
+    const sortSel = $('gallerySort');
+    if(sortSel && sortSel.value !== sort){
+      sortSel.value = sort;
+      state._gallerySort = sort;
+      try { localStorage.setItem('nai_gal_sort', sort); } catch(e){ _swallow(e, 'lsSet:galSort'); }
+    }
+    // 📁 앨범 전체 펼침/접기 — album view에서만 노출
+    const showAlb = (preset === 'album') ? '' : 'none';
+    if($('galAlbumsExpandAll')) $('galAlbumsExpandAll').style.display = showAlb;
+    if($('galAlbumsCollapseAll')) $('galAlbumsCollapseAll').style.display = showAlb;
+    if(!opts?.skipReload) loadGallery();
+  }
   $('galleryView').addEventListener('click', e => {
     const b = e.target.closest('button[data-gv]');
     if(!b) return;
-    $$('#galleryView button').forEach(x => x.classList.toggle('act', x === b));
-    const mode = b.dataset.gv;
-    const grid = $('galleryGrid');
-    grid.classList.toggle('compact', mode === 'compact');
-    grid.dataset.view = mode;
-    try { localStorage.setItem('nai_gv', mode); } catch(e){ _swallow(e, 'lsSet:galView'); }
-    // 📁 앨범 전체 펼침/접기 — album view에서만 노출
-    const showAlb = (mode === 'album') ? '' : 'none';
-    if($('galAlbumsExpandAll')) $('galAlbumsExpandAll').style.display = showAlb;
-    if($('galAlbumsCollapseAll')) $('galAlbumsCollapseAll').style.display = showAlb;
-    loadGallery();
+    _applyGalleryPreset(b.dataset.gv);
   });
+  // 부팅 복원·외부 진입점에서 접근 가능하도록 window 노출
+  window._applyGalleryPreset = _applyGalleryPreset;
+  window._migrateLegacyGv = _migrateLegacyGv;
   $('galExpandAll').addEventListener('click', () => {
     const grid = $('galleryGrid');
     const allMode = grid.classList.toggle('all-expanded');
@@ -22872,15 +22900,16 @@ async function init(){
   await _bootStep('gallerySize', refreshGallerySize);
   try { renderVibeList(); } catch(e){ console.error('[init:vibeList]', e); }
 
-  // 갤러리 뷰 모드 복원
-  const savedGv = localStorage.getItem('nai_gv') || 'detail';
-  $$('#galleryView button').forEach(x => x.classList.toggle('act', x.dataset.gv === savedGv));
-  $('galleryGrid').classList.toggle('compact', savedGv === 'compact');
-  $('galleryGrid').dataset.view = savedGv;
-  // 📁 앨범 펼침/접기 버튼 초기 표시 (album view면 노출)
-  const _initAlbDisp = (savedGv === 'album') ? '' : 'none';
-  if($('galAlbumsExpandAll')) $('galAlbumsExpandAll').style.display = _initAlbDisp;
-  if($('galAlbumsCollapseAll')) $('galAlbumsCollapseAll').style.display = _initAlbDisp;
+  // 갤러리 보기 프리셋 복원 — 레거시 detail/compact/vault 자동 마이그레이션
+  const _legacyGv = (() => { try { return localStorage.getItem('nai_gv'); } catch(_){ return null; } })();
+  const savedPreset = (typeof window._migrateLegacyGv === 'function') ? window._migrateLegacyGv(_legacyGv) : 'recent';
+  if(typeof window._applyGalleryPreset === 'function'){
+    window._applyGalleryPreset(savedPreset, {skipReload: true});
+  } else {
+    // 폴백 (안전망) — 함수 미정의 환경
+    $('galleryGrid').dataset.view = 'detail';
+    $('galleryGrid').dataset.preset = 'recent';
+  }
   // 🔍 갤러리·프리셋 줌 복원
   applyGalZoom();
   applyPreZoom();
