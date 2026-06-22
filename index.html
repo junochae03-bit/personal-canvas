@@ -13657,8 +13657,12 @@ function handleGalleryItemSelectClick(e, item){
 let _lbCurrent = null;
 let _lbList = [];      // [{id, sid}] — 현재 갤러리에서 탐색 가능한 이미지 목록
 let _lbIdx = -1;
+let _lbJustOpened = false;   // 🛡 라이트박스 막 열린 직후 — 배경 click 닫기 무시 (빠른 더블탭 보호)
 
 async function openLightbox(imgId, sessionId){
+  // 🛡 빠른 더블 클릭 시 두 번째 click 이 라이트박스 배경으로 떨어져 닫히는 사고 방지 — 280ms 동안 닫기 무시
+  _lbJustOpened = true;
+  setTimeout(() => { _lbJustOpened = false; }, 280);
   // 🐛 fix: 전체 이미지 순서(_galImgOrder)를 탐색 리스트로 사용 — 가상 스크롤로 DOM 에 없는 항목도 포함.
   //   (이전엔 .g-item DOM 쿼리라 렌더된 청크만 nav 가능 + 카운터가 거짓)
   if(Array.isArray(_galImgOrder) && _galImgOrder.length){
@@ -20992,9 +20996,6 @@ function wireGalleryEvents(){
   });
   $('purgeGalBtn').addEventListener('click', () => $('clearGalBtn').click());
   $('galleryGrid').addEventListener('click', async e => {
-    // 💞 더블탭 좋아요와 충돌 방지 — 두 번째 클릭(detail>=2)은 setupGalleryDoubleTapLike 가 처리.
-    //   버튼 클릭은 detail 무관 처리.
-    if(e.detail >= 2 && !e.target.closest('button,a,input,select,textarea')) return;
     // 🗂 앨범 헤더 토글 (펼치기/접기) — 내부 버튼 클릭은 제외
     const albumHdr = e.target.closest('[data-act="toggle-album"]');
     if(albumHdr && !e.target.closest('button, [data-no-toggle]')){
@@ -21226,26 +21227,8 @@ function wireGalleryEvents(){
       } catch(err){ _swallow(err, 'gallery:textedit'); toast('편집기 열기 실패', 'error'); }
       return;
     }
-    // 컴팩트 모드에서는 즉시 라이트박스
-    if($('galleryGrid').classList.contains('compact')){
-      openLightbox(id, sid);
-      return;
-    }
-    // 펼친 상태에서 이미지 또는 "크게 보기" 버튼 클릭 → 라이트박스
-    // 🔍 카드 썸네일(g-thumb) 클릭 → 라이트박스. img 자체는 pointer-events:none 이라 g-thumb 가 클릭을 받음
-    const isImg = e.target.tagName === 'IMG' || e.target.closest('[data-act="lb"]') || e.target.closest('.g-thumb');
-    if(item.classList.contains('expanded') && isImg){
-      openLightbox(id, sid);
-      return;
-    }
-    // 카드 본체 클릭 = 펼침/접힘 (헤더 텍스트는 파일명이므로 건드리지 않음)
-    if(_expandedGallery.has(id)){
-      _expandedGallery.delete(id);
-      item.classList.remove('expanded');
-    } else {
-      _expandedGallery.add(id);
-      item.classList.add('expanded');
-    }
+    // 🔍 카드 클릭 = 즉시 라이트박스 (펼침 단계 폐지 — "두 번 클릭해야 상세 뜸" 문제 해결)
+    openLightbox(id, sid);
   });
 
 }
@@ -21271,6 +21254,7 @@ function wireLightboxEvents(){
   // 배경 클릭 — pure-view 면 UI 복귀, 아니면 라이트박스 닫기
   $('lightbox').addEventListener('click', e => {
     if(e.target !== $('lightbox')) return;
+    if(_lbJustOpened) return;   // 🛡 빠른 더블탭 두 번째 click 무시
     if($('lightbox').classList.contains('pure-view')) exitPureView();
     else closeLightbox();
   });
