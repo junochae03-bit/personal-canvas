@@ -21321,18 +21321,13 @@ function wireLightboxEvents(){
     const dx = e.changedTouches[0].clientX - _lbTouchStartX;
     const dy = e.changedTouches[0].clientY - _lbTouchStartY;
     const dt = Date.now() - _lbTouchStartT;
-    const lbOpen = $('lightbox');
     if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5){
       // 가로 스와이프 → 이전/다음
       e.preventDefault();
       if(dx > 0) lbPrev(); else lbNext();
-    } else if(Math.abs(dy) > 90 && Math.abs(dy) > Math.abs(dx) * 1.5
-              && !lbOpen.classList.contains('lb-more-open')){
-      // 📱 위/아래 스와이프 → 닫기 (더보기 시트 열려있을 땐 제외 — 시트 조작과 충돌 방지)
-      e.preventDefault();
-      closeLightbox();
     } else if(dt < 300 && Math.abs(dx) < 10 && Math.abs(dy) < 10){
       // 짧은 탭 — 닫기 (단, 메타·액션·내비 버튼 클릭은 제외)
+      //   ⚠ 세로 스와이프 닫기는 폐지 — 이미지 드래그하다 자꾸 닫히는 사고가 잦음. 닫기는 X / ESC / 짧은 탭으로.
       if(e.target === $('lbImg') || e.target === $('lightbox')){
         closeLightbox();
       }
