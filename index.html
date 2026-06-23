@@ -2389,8 +2389,6 @@ mark{
             <div class="row" style="gap:6px;flex-wrap:wrap">
               <button class="btn ghost" id="openWorkflowBtn" style="padding:4px 10px;font-size:11.5px;border-color:rgba(162,90,31,.4);color:var(--acc)" title="현재 상태(프롬프트+캐릭터+파라미터)를 통째로 저장하고 나중에 1클릭으로 복원">💾 워크플로우 <span class="en" style="opacity:.6">Snap</span></button>
               <button class="btn ghost" id="lockPromptBtn" style="padding:4px 10px;font-size:11.5px" title="수정 잠금 (다시 누르면 해제)">🔓 잠금</button>
-              <button class="btn ghost" id="dedupePromptBtn" style="padding:4px 10px;font-size:11.5px" title="콤마로 구분된 중복 태그를 한 번에 정리합니다">🧹 중복 정리</button>
-              <button class="btn ghost" id="cleanWeightsBtn" style="padding:4px 10px;font-size:11.5px;border-color:rgba(184,136,32,.4);color:var(--yellow)" title="X.Y::tag:: 가중치 문법을 정리 (V4-5에서 잘못 동작하면 사용). 0.5~1.5 범위로 클램프, 닫는 :: 없는 항목 자동 마감, 극단값 1.5+로 캡">🔧 가중치 정리</button>
               <button class="btn ghost" id="clearPromptBtn" style="padding:4px 10px;font-size:11.5px">비우기</button>
             </div>
           </div>
@@ -2449,7 +2447,6 @@ mark{
             <div class="row" style="gap:6px;flex-wrap:wrap">
               <button class="btn ghost" id="openWorkflowBtnNeg" style="padding:4px 10px;font-size:11.5px;border-color:rgba(162,90,31,.4);color:var(--acc)" title="현재 상태(프롬프트+캐릭터+파라미터) 저장·복원">💾 워크플로우 <span class="en" style="opacity:.6">Snap</span></button>
               <button class="btn ghost" id="lockNegBtn" style="padding:4px 10px;font-size:11.5px" title="네거티브 수정 잠금 (다시 누르면 해제)" aria-pressed="false">🔓 잠금</button>
-              <button class="btn ghost" id="dedupeNegBtn" style="padding:4px 10px;font-size:11.5px" title="콤마 구분 중복 태그 정리">🧹 중복 정리</button>
               <button class="btn ghost" id="clearNegBtn" style="padding:4px 10px;font-size:11.5px">비우기</button>
             </div>
           </div>
@@ -9911,12 +9908,11 @@ function openPresetEdit(type, existing){
     : '📁 클릭/드롭으로 이미지';
   _editingPreset.thumb = existing?.thumb || null;
   $('presetDel').style.display = existing ? '' : 'none';
-  // 🧑 페르소나 — 캐릭터 프리셋(type='character') 에만 노출
+  // 🧑 페르소나 — 사용자 요청으로 영구 숨김 (코드/모달은 유지)
   const pf = $('presetPersonaField');
   if(pf){
-    const isChar = type === 'character';
-    pf.style.display = isChar ? '' : 'none';
-    if(isChar){
+    pf.style.display = 'none';
+    if(false){
       const sel = $('presetPersonaSel');
       const personas = state.personas || [];
       sel.innerHTML = '<option value="">(없음)</option>' + personas.map(p =>
@@ -19664,22 +19660,6 @@ function wireTopbarAndFormEvents(){
       $('prompt').value = prev; refreshPromptStats(); saveSettingsDebounced();
     });
   });
-  // 🧹 중복 정리 — 수동 트리거
-  $('dedupePromptBtn').addEventListener('click', () => {
-    if($('prompt').readOnly){ toast('잠금 해제 후 다시 시도', 'warning'); return; }
-    const before = $('prompt').value;
-    const cleaned = dedupePromptTags(before);
-    if(cleaned === before){
-      toast('중복 없음 — 변경할 게 없습니다', 'info');
-      return;
-    }
-    const removed = parseFreePromptTokens(before).length - parseFreePromptTokens(cleaned).length;
-    $('prompt').value = cleaned;
-    refreshPromptStats();
-    saveSettingsDebounced();
-    toast(`🧹 ${removed}개 중복 태그 제거됨`, 'success');
-  });
-
   // 🔒 프롬프트 잠금 토글
   $('lockPromptBtn').addEventListener('click', () => {
     const ta = $('prompt');
@@ -19709,16 +19689,6 @@ function wireTopbarAndFormEvents(){
     toastUndo('네거티브를 비웠습니다', () => {
       $('negPrompt').value = prev; refreshPromptStats(); saveSettingsDebounced();
     });
-  });
-  $('dedupeNegBtn').addEventListener('click', () => {
-    if($('negPrompt').readOnly){ toast('잠금 해제 후 다시 시도', 'warning'); return; }
-    const before = $('negPrompt').value;
-    const cleaned = dedupePromptTags(before);
-    if(cleaned === before){ toast('중복 없음', 'info'); return; }
-    $('negPrompt').value = cleaned;
-    refreshPromptStats();
-    saveSettingsDebounced();
-    toast('🧹 네거티브 중복 정리됨', 'success');
   });
   $('lockNegBtn').addEventListener('click', () => {
     const ta = $('negPrompt');
