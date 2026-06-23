@@ -414,15 +414,12 @@ body.focus-mode::after{content:'🌙 포커스 모드 · F로 해제';position:f
 .preview-area:hover .preview-actions{opacity:1}
 
 .queue-strip{flex-shrink:0;height:148px;border-top:1.5px solid var(--b1);background:var(--panel);display:flex;flex-direction:column;box-shadow:0 -2px 8px rgba(74,52,20,.05)}
-/* 🧾 사이드바로 옮긴 대기열 — 생성 버튼 위. 더 컴팩트하게 */
-.queue-strip.queue-in-side{height:auto;max-height:172px;box-shadow:none}
-.queue-strip.queue-in-side .queue-hdr{padding:7px 12px;font-size:12px}
+/* 🧾 사이드바로 옮긴 대기열 — 생성 버튼 위. 항상 잘 보이게 강조 */
+.queue-strip.queue-in-side{flex-shrink:0;height:auto;min-height:78px;max-height:180px;box-shadow:none;border-top:1.5px solid var(--b2);background:var(--card)}
+.queue-strip.queue-in-side .queue-hdr{padding:8px 12px;font-size:12.5px;background:rgba(162,90,31,.08)}
 .queue-strip.queue-in-side .queue-list{padding:6px 10px;min-height:34px}
-/* 🔍 인라인 라이트박스 패널 — 미리보기 바로 아래 메타·액션 */
+/* 🔍 인라인 라이트박스 패널 — 미리보기 바로 아래 핵심 액션 (메타는 라이트박스에) */
 .pv-inline{flex-shrink:0;border-top:1.5px solid var(--b1);background:var(--panel);padding:9px 12px;display:flex;flex-direction:column;gap:7px;box-shadow:0 -2px 8px rgba(74,52,20,.05)}
-.pv-inline-meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--t2);line-height:1.5}
-.pv-inline-meta b{color:var(--t1);font-weight:700;margin-right:3px}
-.pv-inline-meta .pv-meta-chip{background:var(--card);border:1.5px solid var(--b1);border-radius:5px;padding:2px 9px;white-space:nowrap}
 .pv-inline-acts{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
 .pv-inline-acts .pv-act{padding:5px 11px;font-size:12px}
 .pv-inline-acts .pv-act[aria-pressed="true"]#pvLike{background:rgba(226,91,111,.16);border-color:#e25b6f;color:#e25b6f}
@@ -903,8 +900,10 @@ body.focus-mode::after{content:'🌙 포커스 모드 · F로 해제';position:f
 #lightbox .lb-act-btn{width:auto;min-width:56px;padding:6px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.1}
 #lightbox .lb-act-btn .lb-act-ico{font-size:15px;line-height:1}
 #lightbox .lb-act-btn .lb-act-lbl{font-size:10px;font-weight:600;opacity:.85;letter-spacing:.2px}
-/* 📱 ⋯ 더보기 토글은 모바일 전용 — 데스크탑 세로 레일에선 숨김 (특이성 #lightbox 로 .lb-act-btn 의 flex 를 이김) */
-#lightbox #lbMoreToggle{display:none}
+/* 📱 ⋯ 더보기 토글 — 모바일·데스크탑 모두 노출 (자주 안 쓰는 보조 액션은 토글로 가려서 깔끔하게) */
+#lightbox #lbMoreToggle{display:flex;color:var(--acc);border-color:rgba(214,160,80,.5)}
+#lightbox:not(.lb-more-open) .lb-actions .lb-2nd{display:none}
+#lightbox.lb-more-open .lb-actions{background:rgba(20,14,4,.06);border-radius:8px;padding:6px}
 /* ⟨⟩ 내비게이션 — 작고 반투명해서 이미지·UI를 가리지 않게 */
 .lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(20,14,4,.32);color:#fff8ec;border:1px solid rgba(255,255,255,.10);width:36px;height:54px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:all .15s;font-weight:300;z-index:5;user-select:none;opacity:.35;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 .lb-nav:hover{background:rgba(20,14,4,.78);border-color:rgba(255,255,255,.35);opacity:1;transform:translateY(-50%) scale(1.08)}
@@ -2634,11 +2633,11 @@ mark{
     <!-- 🧾 대기열 — 편집 탭(사이드바) 하단으로 이동. 생성 버튼 바로 위에서 진행상황 확인 -->
     <div class="queue-strip queue-in-side">
       <div class="queue-hdr">
-        <span>대기열 <span class="en">Queue</span></span>
+        <span>🧾 대기열 <span class="en">Queue</span></span>
         <span id="queueStats" style="font-family:var(--mono);color:var(--t2);font-weight:600">0/0</span>
         <div class="tb-grow"></div>
-        <button class="btn ghost" id="pauseBtn">⏸ 일시정지 <span class="en">Pause</span></button>
-        <button class="btn ghost" id="clearQueueBtn">🗑 비우기 <span class="en">Clear</span></button>
+        <button class="btn ghost" id="pauseBtn" style="padding:3px 8px;font-size:11px">⏸ 일시정지</button>
+        <button class="btn ghost" id="clearQueueBtn" style="padding:3px 8px;font-size:11px">🗑 비우기</button>
       </div>
       <div class="queue-list" id="queueList"></div>
     </div>
@@ -2707,21 +2706,24 @@ mark{
           <div class="pv-history-list" id="pvHistoryList"></div>
         </aside>
         </div>
-        <!-- 🔍 인라인 라이트박스 — 라이트박스 모달을 열지 않아도 메타·액션을 미리보기 바로 아래에서 -->
+        <!-- 🔍 인라인 라이트박스 — 핵심 액션만. 메타는 라이트박스(🔍) 또는 ℹ 정보에서. -->
         <div class="pv-inline" id="pvInline" style="display:none">
-          <div class="pv-inline-meta" id="pvInlineMeta"></div>
           <div class="pv-inline-acts">
-            <button class="btn ghost pv-act" id="pvDownload" type="button" title="다운로드">⬇ 다운로드</button>
+            <button class="btn ghost pv-act" id="pvDownload" type="button" title="다운로드 (D)">⬇ 다운로드</button>
             <button class="btn ghost pv-act" id="pvReuse" type="button" title="모든 파라미터 복원">↻ 복원</button>
-            <button class="btn ghost pv-act" id="pvReseed" type="button" title="시드 재생성 + 즉시 생성">🎲 재생성</button>
-            <button class="btn ghost pv-act" id="pvI2I" type="button" title="그림→그림으로 보내기">→ I2I</button>
-            <button class="btn ghost pv-act" id="pvSimilar" type="button" title="🔁 같은 프롬프트로 다른 시드 4장을 큐에 추가">🔁 비슷하게 ×4</button>
-            <button class="btn ghost pv-act" id="pvVariation" type="button" title="🎨 프롬프트 가중치 미세 흔들기 + 다른 시드 4장을 큐에 추가 (변형 탐색)">🎨 변형 ×4</button>
-            <button class="btn ghost pv-act" id="pvLike" type="button" title="❤️ 좋아요" aria-pressed="false">♡ 좋아요</button>
+            <button class="btn ghost pv-act" id="pvReseed" type="button" title="시드 재생성 + 즉시 생성 (R)">🎲 재생성</button>
+            <button class="btn ghost pv-act" id="pvLike" type="button" title="❤️ 좋아요 (Space)" aria-pressed="false">♡ 좋아요</button>
             <button class="btn ghost pv-act" id="pvDislike" type="button" title="👎 별로" aria-pressed="false">👎 별로</button>
+            <span class="pv-more-wrap" style="position:relative;display:inline-flex">
+              <button class="btn ghost pv-act" id="pvAddMore" type="button" title="🔁 같은 프롬프트로 N장 큐에 추가 (옵션: 변형 = 가중치 미세 흔들기)" aria-haspopup="true" aria-expanded="false">🔁 다시 ×4 ▾</button>
+              <div class="pv-more-menu" id="pvAddMoreMenu" style="display:none;position:absolute;bottom:100%;left:0;margin-bottom:6px;background:var(--panel);border:1.5px solid var(--b2);border-radius:6px;padding:5px;min-width:180px;z-index:30;box-shadow:0 6px 16px rgba(0,0,0,.2)">
+                <button type="button" data-vary="0" style="display:block;width:100%;text-align:left;background:transparent;border:none;padding:7px 10px;font-size:12.5px;cursor:pointer;color:var(--t1);border-radius:4px">🔁 비슷하게 ×4 <span style="color:var(--t3);font-size:11px">시드만 다름</span></button>
+                <button type="button" data-vary="1" style="display:block;width:100%;text-align:left;background:transparent;border:none;padding:7px 10px;font-size:12.5px;cursor:pointer;color:var(--t1);border-radius:4px">🎨 변형 ×4 <span style="color:var(--t3);font-size:11px">가중치 ±0.1 흔들기</span></button>
+              </div>
+            </span>
             <div class="tb-grow"></div>
-            <button class="btn ghost pv-act" id="pvExpand" type="button" title="🔍 전체화면 라이트박스로 확대">🔍 확대</button>
-            <button class="btn ghost pv-act" id="pvPromptToggle" type="button" title="프롬프트 펼치기/접기" aria-pressed="false">📝 프롬프트</button>
+            <button class="btn ghost pv-act" id="pvExpand" type="button" title="🔍 전체화면 라이트박스로 확대 (이미지 클릭과 동일)">🔍 확대</button>
+            <button class="btn ghost pv-act" id="pvPromptToggle" type="button" title="프롬프트 펼치기/접기 (T)" aria-pressed="false">📝 프롬프트</button>
           </div>
           <div class="pv-inline-prompt" id="pvInlinePrompt" style="display:none"></div>
         </div>
@@ -10191,7 +10193,7 @@ function renderQueue(){
   // 🪟 팝업 창에 진행상황 브로드캐스트
   try { _popoutBroadcastProgress(done + err, state.queue.length, state.running); } catch(e){ _swallow(e, 'popout:progress'); }
   if(!state.queue.length){
-    list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--t3);font-size:12.5px">생성 시작 시 진행 상황이 표시됩니다 <span style="opacity:.7">(Generation status will appear here)</span></div>';
+    list.innerHTML = '<div style="text-align:center;padding:10px 8px;color:var(--t3);font-size:11.5px;font-style:italic">대기 항목 없음 — 생성 시작 시 표시</div>';
     return;
   }
   list.innerHTML = state.queue.map((q, i) => {
@@ -13038,17 +13040,7 @@ async function renderPvInline(){
   if(!li){ panel.style.display = 'none'; return; }
   panel.style.display = '';
   const m = li.meta || {};
-  // 메타 칩
-  const chips = [];
-  if(m.model) chips.push(`<span class="pv-meta-chip"><b>모델</b>${esc(String(m.model))}</span>`);
-  if(m.seed != null) chips.push(`<span class="pv-meta-chip"><b>시드</b>${esc(String(m.seed))}</span>`);
-  if(m.steps) chips.push(`<span class="pv-meta-chip"><b>스텝</b>${esc(String(m.steps))}</span>`);
-  if(m.cfg != null) chips.push(`<span class="pv-meta-chip"><b>CFG</b>${esc(String(m.cfg))}</span>`);
-  if(m.sampler) chips.push(`<span class="pv-meta-chip"><b>샘플러</b>${esc(String(m.sampler))}</span>`);
-  if(m.w && m.h) chips.push(`<span class="pv-meta-chip"><b>크기</b>${esc(String(m.w))}×${esc(String(m.h))}</span>`);
-  const meta = document.getElementById('pvInlineMeta');
-  if(meta) meta.innerHTML = chips.join('') || '<span style="color:var(--t3);font-style:italic">메타 정보 없음</span>';
-  // 프롬프트 (펼침 상태 유지)
+  // 프롬프트 (펼침 상태 유지) — 메타는 라이트박스(🔍 확대 → ℹ 정보) 또는 EXIF 에서
   const pr = document.getElementById('pvInlinePrompt');
   if(pr) pr.textContent = m.prompt || '(프롬프트 없음)';
   // 좋아요/별로 — DB에서 최신 상태 읽기 (savedId 있을 때만 활성)
@@ -20548,12 +20540,32 @@ function wireGenerationAndPresetEvents(){
   });
 
   // 🔍 인라인 라이트박스 패널 액션 — 기존 핸들러 재사용
-  $('pvSimilar')?.addEventListener('click', () => enqueueVariants({count: 4, vary: false}));
-  $('pvVariation')?.addEventListener('click', () => enqueueVariants({count: 4, vary: true}));
+  // 🔁 다시 ×4 메뉴 — 비슷하게 / 변형 한 곳에 통합
+  $('pvAddMore')?.addEventListener('click', e => {
+    e.stopPropagation();
+    const menu = $('pvAddMoreMenu');
+    if(!menu) return;
+    const open = menu.style.display !== 'none';
+    menu.style.display = open ? 'none' : 'block';
+    $('pvAddMore').setAttribute('aria-expanded', String(!open));
+  });
+  $('pvAddMoreMenu')?.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-vary]');
+    if(!btn) return;
+    e.stopPropagation();
+    const vary = btn.dataset.vary === '1';
+    $('pvAddMoreMenu').style.display = 'none';
+    $('pvAddMore').setAttribute('aria-expanded', 'false');
+    enqueueVariants({count: 4, vary});
+  });
+  document.addEventListener('click', e => {
+    if(e.target.closest('.pv-more-wrap')) return;
+    const m = $('pvAddMoreMenu'); if(m) m.style.display = 'none';
+    const b = $('pvAddMore'); if(b) b.setAttribute('aria-expanded', 'false');
+  });
   $('pvDownload')?.addEventListener('click', () => $('downloadBtn').click());
   $('pvReuse')?.addEventListener('click', () => $('reuseBtn').click());
   $('pvReseed')?.addEventListener('click', () => $('reseedBtn').click());
-  $('pvI2I')?.addEventListener('click', () => $('sendI2IBtn').click());
   $('pvExpand')?.addEventListener('click', () => $('previewImg').click());
   $('pvPromptToggle')?.addEventListener('click', () => {
     const pr = $('pvInlinePrompt');
@@ -21688,7 +21700,22 @@ function wireGalleryEvents(){
       } catch(err){ _swallow(err, 'gallery:textedit'); toast('편집기 열기 실패', 'error'); }
       return;
     }
-    // 🔍 카드 클릭 = 즉시 라이트박스 (펼침 단계 폐지 — "두 번 클릭해야 상세 뜸" 문제 해결)
+    // 🔍 카드 클릭 — 접힌 상태면 펼치기만, 펼친 상태면 라이트박스로 이동.
+    //   헤더(.g-head)는 항상 펼침/접힘 토글로 동작.
+    const isHeadClick = !!e.target.closest('.g-head');
+    const wasExpanded = item.classList.contains('expanded');
+    if(isHeadClick){
+      if(wasExpanded){ _expandedGallery.delete(id); item.classList.remove('expanded'); }
+      else { _expandedGallery.add(id); item.classList.add('expanded'); }
+      e.stopPropagation();
+      return;
+    }
+    if(!wasExpanded){
+      _expandedGallery.add(id);
+      item.classList.add('expanded');
+      e.stopPropagation();
+      return;
+    }
     openLightbox(id, sid);
   });
 
