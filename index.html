@@ -157,6 +157,10 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 /* SIDEBAR — 사이드바 */
 .sidebar{width:460px;display:flex;flex-direction:column;border-right:1px solid var(--b1);background:var(--panel);flex-shrink:0;resize:horizontal;overflow:hidden;min-width:340px;max-width:720px}
+/* 🌙 포커스 모드 — F 키. 사이드바·메인탭바 숨겨서 미리보기에 몰입 */
+body.focus-mode .sidebar{display:none}
+body.focus-mode .main-tabs{display:none}
+body.focus-mode::after{content:'🌙 포커스 모드 · F로 해제';position:fixed;bottom:14px;right:14px;background:rgba(20,14,4,.78);color:#f5e9d2;padding:6px 12px;font-size:11.5px;border-radius:14px;z-index:9999;pointer-events:none;font-family:var(--mono)}
 .mode-bar{display:flex;border-bottom:1px solid var(--b1);background:var(--card);flex-shrink:0;padding:6px 6px 0;gap:3px}
 .mode-btn{flex:1;padding:9px 4px;background:transparent;border:none;border-radius:5px 5px 0 0;color:var(--t2);font-size:12px;cursor:pointer;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;line-height:1.25;font-family:inherit}
 .mode-btn .en{display:block;font-size:9.5px;color:var(--t3);font-weight:500;margin-top:1px;letter-spacing:.04em}
@@ -378,6 +382,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .pv-h-empty{color:var(--t3);font-size:11px;font-style:italic;text-align:center;padding:8px}
 @media(max-width:768px){.pv-history{width:80px;flex:0 0 80px;padding:5px;gap:4px}.pv-history-title{font-size:10px}}
 .preview-area{flex:1;display:flex;align-items:center;justify-content:center;padding:22px;overflow:hidden;position:relative;background:var(--bg)}
+.preview-area.drop-hot{outline:3px dashed var(--acc);outline-offset:-12px;background:rgba(162,90,31,.06)}
+.preview-area.drop-hot::after{content:'📁 EXIF 추출 — 놓으면 항목 선택 모달';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(20,14,4,.86);color:#f5e9d2;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;pointer-events:none;z-index:10}
 .preview-img{max-width:100%;max-height:100%;object-fit:contain;border:1px solid var(--b1);background:var(--card);box-shadow:0 8px 28px rgba(74,52,20,.18);cursor:zoom-in;border-radius:4px}
 .preview-empty{color:var(--t2);font-size:14px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;line-height:1.6}
 /* 🧭 온보딩 단계 카드 — 빈 미리보기 */
@@ -2403,6 +2409,10 @@ mark{
               <button class="iconbtn sec-util-btn" id="promptHistoryBtn" title="📋 프롬프트 히스토리 — 생성했던 최근 프롬프트 30개, 클릭으로 복원">📋</button>
               <div class="preset-more-menu ph-menu" id="promptHistoryMenu" style="display:none;left:auto;right:0;min-width:300px;max-width:380px;max-height:340px;overflow-y:auto"></div>
             </span>
+            <span class="ph-wrap" style="position:relative;display:inline-flex">
+              <button class="iconbtn sec-util-btn" id="tagSuggestBtn" title="💡 좋아요 기반 태그 추천 — ❤️ 표시한 이미지들에서 현재 프롬프트와 자주 같이 쓰인 태그를 제안 (클릭으로 추가)">💡</button>
+              <div class="preset-more-menu ph-menu" id="tagSuggestMenu" style="display:none;left:auto;right:0;min-width:280px;max-width:380px;max-height:340px;overflow-y:auto"></div>
+            </span>
           </span>
           <span class="caret">▾</span>
         </div>
@@ -2705,6 +2715,8 @@ mark{
             <button class="btn ghost pv-act" id="pvReuse" type="button" title="모든 파라미터 복원">↻ 복원</button>
             <button class="btn ghost pv-act" id="pvReseed" type="button" title="시드 재생성 + 즉시 생성">🎲 재생성</button>
             <button class="btn ghost pv-act" id="pvI2I" type="button" title="그림→그림으로 보내기">→ I2I</button>
+            <button class="btn ghost pv-act" id="pvSimilar" type="button" title="🔁 같은 프롬프트로 다른 시드 4장을 큐에 추가">🔁 비슷하게 ×4</button>
+            <button class="btn ghost pv-act" id="pvVariation" type="button" title="🎨 프롬프트 가중치 미세 흔들기 + 다른 시드 4장을 큐에 추가 (변형 탐색)">🎨 변형 ×4</button>
             <button class="btn ghost pv-act" id="pvLike" type="button" title="❤️ 좋아요" aria-pressed="false">♡ 좋아요</button>
             <button class="btn ghost pv-act" id="pvDislike" type="button" title="👎 별로" aria-pressed="false">👎 별로</button>
             <div class="tb-grow"></div>
@@ -3894,6 +3906,12 @@ coffee shop, latte art"></textarea>
           <span style="font-size:11.5px;color:var(--t3)">— 별로 표시한 시드는 다음 랜덤 시드 생성 시 자동으로 피함 (최대 1000개 기억)</span>
         </label>
       </div>
+      <div style="margin-top:10px;padding:12px;background:var(--card2);border:1px solid var(--b1);border-radius:8px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="likedSeedAutoToggle" style="width:auto"> <b>❤️ 좋아요 시드 자동 가중</b>
+          <span style="font-size:11.5px;color:var(--t3)">— 빈 시드로 생성 시 30% 확률로 좋아요한 시드 풀에서 픽 (검증된 시드 활용)</span>
+        </label>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn ghost" id="statsCloseBtn">닫기 <span class="en">Close</span></button>
@@ -4263,6 +4281,13 @@ function compileCategoriesToText(categories){
 const RAND_SEED_MAX = 0xFFFFFFFF;
 // 👎 시드 자동 제외 옵션 켜져있고 blocklist 에 있으면 최대 10회 재시도.
 const randomSeed = () => {
+  // 🎯 좋아요 시드 가중 — state.likedSeedAuto 켜져있고 풀 캐시가 있으면 likedSeedRate(기본 30%) 확률로 픽
+  if(typeof window !== 'undefined' && window.state?.likedSeedAuto && Array.isArray(window._likedSeedPool) && window._likedSeedPool.length){
+    const rate = Number.isFinite(window.state.likedSeedRate) ? window.state.likedSeedRate : 0.3;
+    if(Math.random() < rate){
+      return window._likedSeedPool[Math.floor(Math.random() * window._likedSeedPool.length)];
+    }
+  }
   let s = Math.floor(Math.random() * RAND_SEED_MAX);
   if(typeof window !== 'undefined' && window.state?.seedBlocklistAuto){
     const blocked = (typeof getSeedBlocklist === 'function') ? getSeedBlocklist() : new Set();
@@ -5069,6 +5094,8 @@ const state = {
   negPromptHistory: [],   // 📋 [{text, ts}] — 생성 시 자동 기록된 최근 네거티브 (최대 30)
   seedBlocklist: [],      // 👎 별로 표시한 시드들 — randomSeed() 시 자동 회피 (최대 1000)
   seedBlocklistAuto: false,  // 👎 시드 자동 제외 옵션
+  likedSeedAuto: false,      // ❤️ 좋아요 시드 자동 가중 픽
+  likedSeedRate: 0.3,        // 좋아요 시드 픽 확률 (0~1)
   workflows: [],          // 💾 [{id, name, ts, thumb, data}] — 워크플로우 스냅샷 슬롯
   wildcards: [],          // 🃏 [{name, options:[{text,weight}], locked, lockedIdx}] — 프롬프트 __name__ 치환
   wildcardPanelOpen: false,   // 🃏 와일드카드 패널 토글 (프롬프트 헤더의 🃏 버튼)
@@ -6794,6 +6821,29 @@ async function applyParsedMetaToForm(rawMeta, opts){
   saveSettingsDebounced();
   return restored;
 }
+
+// 📋 클립보드 paste — Ctrl+V 로 PNG 이미지 받으면 EXIF 선택 모달로 폼 복원
+// 입력란 안에서는 텍스트 paste 가 우선이므로 무시 (이미지 데이터가 있을 때만 가로챔).
+window.addEventListener('paste', async (e) => {
+  const items = e.clipboardData?.items;
+  if(!items || !items.length) return;
+  for(const it of items){
+    if(it.type && it.type.startsWith('image/')){
+      const f = it.getAsFile();
+      if(!f) continue;
+      // 입력란 안 + 텍스트도 같이 있으면 paste 무시 (사용자가 텍스트만 원할 수 있음)
+      const tgt = e.target;
+      if(tgt && tgt.matches?.('input, textarea, [contenteditable=""], [contenteditable=true]')){
+        const hasText = [...items].some(x => x.kind === 'string');
+        if(hasText) return;
+      }
+      e.preventDefault();
+      toast('📋 클립보드 이미지 → EXIF 추출 중…', 'info', {timeoutMs: 1500});
+      try { await importPngExifToForm(f); } catch(err){ toast(`EXIF 추출 실패 — ${err.message||err}`, 'error'); }
+      return;
+    }
+  }
+});
 
 // 📥 외부 이미지 → 갤러리에 등록 (PNG/JPG/WebP). PNG면 EXIF에서 NAI 메타 자동 추출(V4 nested 포함).
 //   "📥 가져온 이미지" 라는 전용 세션으로 누적. currentSessionId 는 작업 후 원상 복귀해서
@@ -10125,7 +10175,19 @@ function renderQueue(){
   const list = $('queueList');
   const done = state.queue.filter(q => q.status === 'done').length;
   const err = state.queue.filter(q => q.status === 'err').length;
-  $('queueStats').textContent = `${done+err}/${state.queue.length}`;
+  // 📊 비용·예상 시간 — 남은 항목(wait+run) × 현재 폼 비용. 평균 생성시간은 state._avgGenMs 기반
+  const remain = state.queue.filter(q => q.status === 'wait' || q.status === 'run').length;
+  let extra = '';
+  if(remain > 0){
+    let costEach = 0;
+    try { const o = currentPromptOpts(); const base = o.w * o.h * o.steps / 2293750; costEach = Math.max(0, Math.ceil(base)); } catch(_){}
+    const totalCost = costEach * remain;
+    const avgMs = Math.max(3000, Math.min(60000, state._avgGenMs || 8000));
+    const etaSec = Math.round((remain * avgMs) / 1000);
+    const etaStr = etaSec >= 60 ? `${Math.floor(etaSec/60)}분 ${etaSec%60}초` : `${etaSec}초`;
+    extra = ` · 💰${totalCost} · ⏱~${etaStr}`;
+  }
+  $('queueStats').textContent = `${done+err}/${state.queue.length}${extra}`;
   // 🪟 팝업 창에 진행상황 브로드캐스트
   try { _popoutBroadcastProgress(done + err, state.queue.length, state.running); } catch(e){ _swallow(e, 'popout:progress'); }
   if(!state.queue.length){
@@ -10379,16 +10441,33 @@ async function startGeneration(){
     }
     renderQueue();
     $('previewStatus').textContent = `생성 중 (${processedCount+1}/${state.queue.length})`;
+    const _genStart = performance.now();
     try {
       const blob = await runOne(q, apiKey);
       if(blob){
         q.status = 'done';
+        // 📊 평균 생성 시간 EMA — 큐 ETA 표시에 사용
+        const ms = performance.now() - _genStart;
+        state._avgGenMs = state._avgGenMs ? Math.round(state._avgGenMs * 0.7 + ms * 0.3) : ms;
         await afterImage(blob, q);
       }
     } catch(e){
       console.error(e);
+      // 🔄 자동 재시도 — 최대 2회. 4xx 클라이언트 오류는 즉시 실패(재시도 무의미)
+      const msg = e.message || String(e);
+      const isClientErr = /\b4\d\d\b/.test(msg) || /invalid|forbidden|unauthorized|payload too large/i.test(msg);
+      q.retryCount = (q.retryCount || 0);
+      if(!isClientErr && q.retryCount < 2){
+        q.retryCount++;
+        q.status = 'wait';
+        processedIds.delete(q.id);   // 다음 루프에서 다시 픽
+        toast(`#${state.queue.indexOf(q)+1} 자동 재시도 (${q.retryCount}/2) — ${msg.slice(0,60)}`, 'warning', {timeoutMs: 4000});
+        await sleep(1500 * q.retryCount);   // 1.5s, 3s 백오프
+        renderQueue();
+        continue;
+      }
       q.status = 'err';
-      q.error = e.message || String(e);
+      q.error = msg;
       toast(`#${state.queue.indexOf(q)+1} 실패: ${q.error}`, 'error');
       if(!continueOnErr){ state.running = false; break; }
     }
@@ -12936,9 +13015,19 @@ async function afterImage(blob, q){
   // Refresh gallery if visible
   if(state.mainPane === 'gallery') await loadGallery();
   await refreshGallerySize();
-  // 🕓 미리보기 탭 우측 히스토리 + 🔍 인라인 라이트박스 갱신
+  // 🕓 미리보기 탭 우측 히스토리 + 🔍 인라인 라이트박스 + 🎯 좋아요 시드 풀 갱신
   try { await refreshPreviewHistory(); } catch(e){ _swallow(e, 'pv:history'); }
   try { await renderPvInline(); } catch(e){ _swallow(e, 'pv:inline'); }
+  try { refreshLikedSeedPool(); } catch(e){ _swallow(e, 'liked:seed:pool'); }
+}
+
+// 🎯 좋아요 시드 풀 캐시 — randomSeed() 가중 픽에 사용. 동기 호출 가능하도록 결과를 window._likedSeedPool 에 저장.
+async function refreshLikedSeedPool(){
+  try {
+    const imgs = await DB.getAllImagesForStats();
+    const pool = [...new Set(imgs.filter(i => i.liked && i.meta?.seed != null).map(i => i.meta.seed))];
+    window._likedSeedPool = pool;
+  } catch(_){ window._likedSeedPool = []; }
 }
 
 // 🔍 인라인 라이트박스 — 미리보기 바로 아래 메타·액션 패널 갱신 (state.lastImage 기준)
@@ -12983,6 +13072,67 @@ async function renderPvInline(){
     disBtn.disabled = sid == null;
     disBtn.setAttribute('aria-pressed', String(disliked));
   }
+}
+
+// 💡 좋아요 기반 태그 추천 — ❤️ 표시한 이미지 prompts 에서 현재 프롬프트와 자주 공출현하는 태그 N개
+//   토큰화 = 콤마 split + 가중치/공백 정리. 현재 프롬프트에 이미 있는 토큰은 제외.
+async function computeLikedTagSuggestions(currentPrompt, topN = 12){
+  const norm = s => String(s||'').trim().toLowerCase().replace(/^\d+(?:\.\d+)?::/, '').replace(/::$/, '').trim();
+  const tokenize = s => String(s||'').split(',').map(norm).filter(t => t && t.length > 1 && t.length < 60);
+  const cur = new Set(tokenize(currentPrompt));
+  let imgs = [];
+  try { imgs = await DB.getAllImagesForStats(); } catch(_){ return []; }
+  const liked = imgs.filter(i => i.liked && (i.meta?.prompt || i.prompt));
+  if(!liked.length) return [];
+  // 현재 프롬프트와 교집합이 큰 좋아요 이미지를 우선 가중 — 컨텍스트가 비슷한 이미지의 태그를 더 신뢰
+  const counts = new Map();
+  for(const i of liked){
+    const toks = tokenize(i.meta?.prompt || i.prompt);
+    if(!toks.length) continue;
+    const overlap = toks.filter(t => cur.has(t)).length;
+    const weight = 1 + overlap;   // 겹치는 태그가 많은 이미지 가중
+    for(const t of new Set(toks)){
+      if(cur.has(t)) continue;
+      counts.set(t, (counts.get(t) || 0) + weight);
+    }
+  }
+  return [...counts.entries()].sort((a,b) => b[1] - a[1]).slice(0, topN).map(([tag, n]) => ({tag, n}));
+}
+
+// 🎨 프롬프트 가중치 미세 흔들기 — X.YY::tag:: 형식만 ±0.1 (0.5~1.5 클램프). 변형 탐색용.
+function jitterPromptWeights(prompt){
+  if(!prompt || typeof prompt !== 'string') return prompt;
+  return prompt.replace(/(\d+(?:\.\d+)?)::([^:]+)::/g, (_, w, tag) => {
+    const orig = parseFloat(w);
+    if(!Number.isFinite(orig)) return _;
+    const delta = (Math.random() - 0.5) * 0.2;   // ±0.1
+    const next = Math.max(0.5, Math.min(1.5, Math.round((orig + delta) * 100) / 100));
+    return `${next}::${tag}::`;
+  });
+}
+
+// 🔁 비슷하게 N장 / 🎨 변형 N장 — 현재 폼 상태를 스냅샷으로 N장 큐 추가 (시드 무작위)
+async function enqueueVariants({count = 4, vary = false} = {}){
+  if(!state.lastImage){ toast('먼저 이미지를 생성하세요', 'warning'); return; }
+  if(state.running){ toast('생성 중에는 추가 불가 — ＋추가 버튼 사용', 'warning'); return; }
+  // 큐 비어있으면 생성 시작 흐름 트리거 가능하도록 빌드
+  for(let i = 0; i < count; i++){
+    const snap = snapshotGenState();
+    if(vary && snap.opts){
+      snap.opts.prompt = jitterPromptWeights(snap.opts.prompt || $('prompt').value);
+    }
+    snap.seedLocked = false;            // 시드 무작위 보장
+    snap.seedRaw = String(randomSeed());  // 미리 픽한 시드를 강제 — runOne 의 seed 흐름과 호환
+    state.queue.push({
+      id: _qSeq++,
+      status: 'wait',
+      label: vary ? `변형 ${i+1}` : `비슷 ${i+1}`,
+      snapshot: snap,
+    });
+  }
+  renderQueue();
+  toast(`${vary ? '🎨 변형' : '🔁 비슷하게'} ${count}장 대기열 추가 — 생성 시작 누르세요`, 'success');
+  // 자동 시작은 안 함 (사용자가 ＋ 더 누르거나 폼 수정 여지)
 }
 
 // 🕓 미리보기 탭 우측 히스토리 — 최신 4장. 클릭 시 메인 이미지 갈아끼움 + 폼 메타 적용.
@@ -20336,6 +20486,18 @@ function wireGenerationAndPresetEvents(){
   });
 
   // Preview actions
+  // 🖼️ 미리보기 영역에 PNG 드롭 → EXIF 선택 모달 자동
+  const _pa = document.querySelector('.preview-area');
+  if(_pa){
+    _pa.addEventListener('dragover', e => { e.preventDefault(); _pa.classList.add('drop-hot'); });
+    _pa.addEventListener('dragleave', () => _pa.classList.remove('drop-hot'));
+    _pa.addEventListener('drop', async e => {
+      e.preventDefault(); _pa.classList.remove('drop-hot');
+      const f = [...(e.dataTransfer?.files || [])].find(x => x.type === 'image/png');
+      if(!f){ toast('PNG 파일만 지원', 'warning'); return; }
+      try { await importPngExifToForm(f); } catch(err){ toast(`EXIF 실패 — ${err.message||err}`, 'error'); }
+    });
+  }
   $('previewImg').addEventListener('click', () => {
     if(state.lastImage){
       $('lbImg').src = state.lastImage.url;
@@ -20386,6 +20548,8 @@ function wireGenerationAndPresetEvents(){
   });
 
   // 🔍 인라인 라이트박스 패널 액션 — 기존 핸들러 재사용
+  $('pvSimilar')?.addEventListener('click', () => enqueueVariants({count: 4, vary: false}));
+  $('pvVariation')?.addEventListener('click', () => enqueueVariants({count: 4, vary: true}));
   $('pvDownload')?.addEventListener('click', () => $('downloadBtn').click());
   $('pvReuse')?.addEventListener('click', () => $('reuseBtn').click());
   $('pvReseed')?.addEventListener('click', () => $('reseedBtn').click());
@@ -20913,6 +21077,21 @@ function wireGalleryEvents(){
     // 모달 열 때마다 동기화
     $('galStatsBtn')?.addEventListener('click', () => {
       blToggle.checked = !!state.seedBlocklistAuto;
+    });
+  }
+  // ❤️ 좋아요 시드 자동 가중 토글
+  const lsToggle = $('likedSeedAutoToggle');
+  if(lsToggle){
+    lsToggle.addEventListener('change', async () => {
+      state.likedSeedAuto = lsToggle.checked;
+      await DB.setFlag('liked_seed_auto', state.likedSeedAuto);
+      if(state.likedSeedAuto) await refreshLikedSeedPool();
+      toast(state.likedSeedAuto
+        ? `❤️ 좋아요 시드 가중 켜짐 — 풀 ${window._likedSeedPool?.length||0}개`
+        : '꺼짐', 'info');
+    });
+    $('galStatsBtn')?.addEventListener('click', () => {
+      lsToggle.checked = !!state.likedSeedAuto;
     });
   }
   $('newSessionBtn').addEventListener('click', async () => {
@@ -22835,6 +23014,40 @@ function wireWildcardEvents(){
   }
   _wireHistoryMenu('promptHistoryBtn', 'promptHistoryMenu', 'promptHistory', 'prompt', '프롬프트');
   _wireHistoryMenu('negHistoryBtn', 'negHistoryMenu', 'negPromptHistory', 'negPrompt', '네거티브');
+  // 💡 좋아요 기반 태그 추천 메뉴
+  $('tagSuggestBtn')?.addEventListener('click', async () => {
+    const btn = $('tagSuggestBtn');
+    const menu = $('tagSuggestMenu');
+    if(!menu) return;
+    document.querySelectorAll('.ph-menu').forEach(m => { if(m !== menu) m.style.display = 'none'; });
+    if(menu.style.display !== 'none'){ menu.style.display = 'none'; return; }
+    menu.innerHTML = '<div style="padding:14px;text-align:center;color:var(--t3);font-size:12px">분석 중…</div>';
+    menu.style.display = '';
+    const sugg = await computeLikedTagSuggestions($('prompt').value || '', 12);
+    if(!sugg.length){
+      menu.innerHTML = '<div style="padding:14px;text-align:center;color:var(--t3);font-size:12px;font-style:italic">❤️ 좋아요 표시한 이미지가 더 있어야 추천됩니다</div>';
+      return;
+    }
+    menu.innerHTML = `<div style="padding:8px 10px;font-size:11px;color:var(--t3);border-bottom:1px solid var(--b1)">❤️ 좋아요한 이미지에서 자주 같이 쓰인 태그 — 클릭으로 프롬프트에 추가</div>` +
+      sugg.map(s => `<button type="button" class="tag-sugg-item" data-tag="${esc(s.tag)}" style="display:flex;justify-content:space-between;align-items:center;width:100%;padding:7px 11px;background:transparent;border:none;border-bottom:1px solid var(--b1);cursor:pointer;font-size:12.5px;color:var(--t1);text-align:left">
+        <span>${esc(s.tag)}</span>
+        <span style="color:var(--t3);font-size:11px;font-family:var(--mono)">×${s.n}</span>
+      </button>`).join('');
+    menu.querySelectorAll('.tag-sugg-item').forEach(btn => {
+      btn.addEventListener('mouseover', () => { btn.style.background = 'var(--card)'; });
+      btn.addEventListener('mouseout', () => { btn.style.background = 'transparent'; });
+      btn.addEventListener('click', () => {
+        const tag = btn.dataset.tag;
+        const ta = $('prompt');
+        if(ta.readOnly){ toast('잠금 해제 후 추가 가능', 'warning'); return; }
+        const cur = ta.value.trim();
+        ta.value = cur ? `${cur}, ${tag}` : tag;
+        refreshPromptStats();
+        saveSettingsDebounced();
+        toast(`💡 추가: ${tag}`, 'success', {timeoutMs: 1500});
+      });
+    });
+  });
   document.addEventListener('click', e => {
     if(e.target.closest('.ph-wrap')) return;
     document.querySelectorAll('.ph-menu').forEach(m => { m.style.display = 'none'; });
@@ -23084,6 +23297,38 @@ function installShortcutHandlers(){
         if(delBtn){ delBtn.click(); return; }
       }
     }
+
+    // 🌙 포커스 모드 — F 키 (어디서나, 입력 중·모달 열림 제외)
+    if(!isTypingTarget(e.target) && !anyModalOpen() && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'f' || e.key === 'F')){
+      e.preventDefault();
+      document.body.classList.toggle('focus-mode');
+      const on = document.body.classList.contains('focus-mode');
+      if(typeof toast === 'function') toast(on ? '🌙 포커스 모드' : '☀ 포커스 모드 해제', 'info', {timeoutMs: 1800});
+      return;
+    }
+
+    // ⌨️ 미리보기 탭 단축키 — 모달 닫힘 + 타이핑 X
+    if(state.mainPane === 'preview' && !anyModalOpen() && !isTypingTarget(e.target)){
+      // ← / → 히스토리 카드 이전/다음
+      if(e.key === 'ArrowLeft' || e.key === 'ArrowRight'){
+        const cards = [...document.querySelectorAll('#pvHistoryList .pv-h-card')];
+        if(!cards.length) return;
+        const cur = cards.findIndex(c => c.classList.contains('act'));
+        const next = e.key === 'ArrowLeft' ? (cur <= 0 ? cards.length - 1 : cur - 1) : (cur < 0 || cur >= cards.length - 1 ? 0 : cur + 1);
+        e.preventDefault();
+        cards[next].click();
+        return;
+      }
+      // 단일 키 액션
+      if(!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey){
+        const map = {' ':'pvLike','d':'downloadBtn','D':'downloadBtn','r':'reseedBtn','R':'reseedBtn','i':'sendI2IBtn','I':'sendI2IBtn'};
+        const id = map[e.key];
+        if(id){ const el = $(id); if(el){ e.preventDefault(); el.click(); return; } }
+        if(e.key === 'p' || e.key === 'P'){ const b = $('pauseBtn'); if(b && !b.disabled){ e.preventDefault(); b.click(); return; } }
+        if(e.key === 'F' || e.key === 'f'){ /* 위 포커스 모드에서 처리됨 */ }
+        if(e.key === 't' || e.key === 'T'){ const b = $('pvPromptToggle'); if(b){ e.preventDefault(); b.click(); return; } }
+      }
+    }
   });
 }
 
@@ -23257,6 +23502,10 @@ async function init(){
     if(Array.isArray(bl)) state.seedBlocklist = bl;
     const auto = await DB.getFlag('seed_blocklist_auto');
     state.seedBlocklistAuto = !!auto;
+    // ❤️ 좋아요 시드 자동 가중 — 부팅 시 캐시 빌드
+    const likedAuto = await DB.getFlag('liked_seed_auto');
+    state.likedSeedAuto = !!likedAuto;
+    if(state.likedSeedAuto) refreshLikedSeedPool().catch(()=>{});
   } catch(_){}
   // 🔄 마이그레이션: 갤러리 ⭐ → ❤️ (한 번만, 옛 사용자의 fav 데이터를 liked 로 승격)
   try {
