@@ -367,6 +367,16 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .main-pane.act{display:flex;flex-direction:column}
 
 /* PREVIEW PANE — 미리보기 영역 */
+/* 🕓 출력물 히스토리 사이드 — 최근 4장 세로 스택, 클릭하면 메인에 갈아끼움 */
+.pv-history{width:124px;flex:0 0 124px;background:var(--card);border-left:1.5px solid var(--b1);display:flex;flex-direction:column;padding:8px;gap:6px;overflow:hidden}
+.pv-history-title{font-size:11px;font-weight:700;color:var(--t3);padding:2px 4px 4px;flex-shrink:0;letter-spacing:.3px}
+.pv-history-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1;min-height:0}
+.pv-h-card{position:relative;background:var(--bg);border:1.5px solid var(--b1);border-radius:5px;overflow:hidden;cursor:pointer;transition:border-color .12s, transform .12s;aspect-ratio:1}
+.pv-h-card:hover{border-color:var(--acc);transform:scale(1.02)}
+.pv-h-card.act{border-color:var(--acc);box-shadow:0 0 0 2px rgba(214,160,80,.4) inset}
+.pv-h-card img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.pv-h-empty{color:var(--t3);font-size:11px;font-style:italic;text-align:center;padding:8px}
+@media(max-width:768px){.pv-history{width:80px;flex:0 0 80px;padding:5px;gap:4px}.pv-history-title{font-size:10px}}
 .preview-area{flex:1;display:flex;align-items:center;justify-content:center;padding:22px;overflow:hidden;position:relative;background:var(--bg)}
 .preview-img{max-width:100%;max-height:100%;object-fit:contain;border:1px solid var(--b1);background:var(--card);box-shadow:0 8px 28px rgba(74,52,20,.18);cursor:zoom-in;border-radius:4px}
 .preview-empty{color:var(--t2);font-size:14px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;line-height:1.6}
@@ -2622,7 +2632,8 @@ mark{
     <div class="main-body">
       <!-- PREVIEW PANE — 미리보기 -->
       <div class="main-pane act" data-pane="preview">
-        <div class="preview-area">
+        <div class="preview-row" style="display:flex;gap:8px;flex:1;min-height:0;overflow:hidden">
+        <div class="preview-area" style="flex:1;min-width:0">
           <div class="preview-empty" id="previewEmpty">
             <div class="big">NAI STUDIO<span class="en">NovelAI 이미지 생성</span></div>
             <div class="pe-steps" id="peSteps">
@@ -2653,6 +2664,12 @@ mark{
             <button class="iconbtn" id="sendI2IBtn" title="그림→그림으로 보내기 (Send to I2I)">→I2I</button>
             <button class="iconbtn" id="popoutPreviewBtn" title="🪟 미리보기를 별도 창으로 — 멀티 모니터에서 작업·진행상황을 따로 모니터링" style="color:var(--acc)">🪟</button>
           </div>
+        </div>
+        <!-- 🕓 출력물 히스토리 — 최근 생성된 4장, 클릭하면 그 이미지로 갈아끼움 -->
+        <aside id="pvHistory" class="pv-history" aria-label="최근 출력물">
+          <div class="pv-history-title">🕓 최근</div>
+          <div class="pv-history-list" id="pvHistoryList"></div>
+        </aside>
         </div>
         <div class="queue-strip">
           <div class="queue-hdr">
@@ -3740,6 +3757,24 @@ coffee shop, latte art"></textarea>
       <button class="btn ghost" id="cmAddBubbles" title="🅣 현재 페이지에 바로 말풍선·대사 얹기 (갤러리 중간 저장 없이 편집기로)">🅣 말풍선 얹기</button>
       <button class="btn ghost" id="cmSaveAllZip" title="📚 모든 페이지를 ZIP 한 파일로 다운로드 (책 단위 저장)">📚 책 ZIP <span class="en">Book</span></button>
       <button class="btn primary" id="cmSaveNew" title="현재 페이지를 갤러리에 새 이미지로 저장 · Ctrl+S">💾 갤러리에 저장 <span class="en">Save</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- 📁 EXIF 선택 모달 — 어떤 필드를 복원할지 체크박스로 선택 -->
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="exifPickTitle" id="exifPickModal">
+  <div class="modal" style="max-width:480px;width:100%;display:flex;flex-direction:column;max-height:88vh">
+    <h3 id="exifPickTitle">📁 EXIF 복원 — 가져올 항목 선택</h3>
+    <div class="modal-body" style="overflow-y:auto;padding:14px 18px">
+      <div id="exifPickList" style="display:flex;flex-direction:column;gap:6px;font-size:13px"></div>
+      <div class="row" style="margin-top:12px;gap:6px;justify-content:flex-end">
+        <button class="btn ghost" id="exifPickAll" type="button" style="padding:5px 10px;font-size:12px">모두 선택</button>
+        <button class="btn ghost" id="exifPickNone" type="button" style="padding:5px 10px;font-size:12px">모두 해제</button>
+      </div>
+    </div>
+    <div class="modal-foot" style="padding:12px 18px;border-top:1.5px solid var(--b1);display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn ghost" id="exifPickCancel" type="button">취소</button>
+      <button class="btn primary" id="exifPickApply" type="button">✅ 적용</button>
     </div>
   </div>
 </div>
@@ -6567,8 +6602,63 @@ function joinPrompts(...parts){
 // 📁 외부 PNG의 NAI EXIF 메타에서 프롬프트·시드·모델·파라미터 일괄 복원
 // 이 앱이 저장한 PNG(내부 포맷)와 NovelAI 공식 포맷 둘 다 인식
 /** 파싱된 NAI 메타·tEXt 폴백을 폼에 일괄 복원. @returns {string[]} 복원된 항목 라벨 배열 */
-function applyParsedMetaToForm(rawMeta, opts){
+// 📁 EXIF 필드 선택 모달 — 가능한 항목을 체크박스로 보여주고 사용자가 선택한 키 Set 반환 (또는 null = 취소)
+function pickExifFields(rawMeta){
+  return new Promise((resolve) => {
+    const m = rawMeta?.parsed || rawMeta || {};
+    const pick = (...keys) => { for(const k of keys){ const v = m[k]; if(v != null && v !== '') return v; } return null; };
+    const pickNested = (root, ...paths) => { for(const p of paths){ let v = root; for(const k of p) v = (v && typeof v === 'object') ? v[k] : null; if(typeof v === 'string' && v !== '') return v; } return null; };
+    // 가능한 항목 — 값이 있는 것만 노출
+    const items = [];
+    const prompt = pick('prompt') ?? pickNested(m, ['v4_prompt','caption','base_caption'], ['v4_prompt','base_caption']);
+    if(prompt != null) items.push({key:'prompt', label:'프롬프트', preview: String(prompt).slice(0,60)});
+    const neg = pick('neg','uc','negative_prompt') ?? pickNested(m, ['v4_negative_prompt','caption','base_caption'], ['v4_negative_prompt','base_caption']);
+    if(neg != null) items.push({key:'neg', label:'네거티브', preview: String(neg).slice(0,60)});
+    if(pick('seed') != null) items.push({key:'seed', label:'시드', preview: String(pick('seed'))});
+    if(pick('model')) items.push({key:'model', label:'모델', preview: String(pick('model'))});
+    if(pick('steps')) items.push({key:'steps', label:'스텝', preview: String(pick('steps'))});
+    if(pick('cfg','scale') != null) items.push({key:'cfg', label:'CFG', preview: String(pick('cfg','scale'))});
+    if(pick('cfg_rescale') != null) items.push({key:'cfg_rescale', label:'CFG Rescale', preview: String(pick('cfg_rescale'))});
+    if(pick('sampler')) items.push({key:'sampler', label:'샘플러', preview: String(pick('sampler'))});
+    if(pick('schedule','noise_schedule')) items.push({key:'schedule', label:'스케줄', preview: String(pick('schedule','noise_schedule'))});
+    if(pick('w','width') && pick('h','height')) items.push({key:'size', label:'크기', preview: `${pick('w','width')}×${pick('h','height')}`});
+    if(Array.isArray(m.characters) && m.characters.length) items.push({key:'characters', label:'캐릭터', preview: `${m.characters.length}명`});
+    if(items.length === 0){ resolve(new Set()); return; }
+    const modal = document.getElementById('exifPickModal');
+    const list = document.getElementById('exifPickList');
+    list.innerHTML = items.map(it => `<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--card);border:1.5px solid var(--b1);border-radius:5px;cursor:pointer">
+        <input type="checkbox" class="exif-pick-cb" data-key="${esc(it.key)}" checked style="width:16px;height:16px;cursor:pointer">
+        <span style="font-weight:700;color:var(--t1);min-width:72px">${esc(it.label)}</span>
+        <span style="color:var(--t3);font-size:11.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(it.preview)}">${esc(it.preview)}</span>
+      </label>`).join('');
+    modal.classList.add('open');
+    const cleanup = () => {
+      modal.classList.remove('open');
+      document.getElementById('exifPickApply').onclick = null;
+      document.getElementById('exifPickCancel').onclick = null;
+      document.getElementById('exifPickAll').onclick = null;
+      document.getElementById('exifPickNone').onclick = null;
+    };
+    document.getElementById('exifPickAll').onclick = () => { list.querySelectorAll('.exif-pick-cb').forEach(cb => cb.checked = true); };
+    document.getElementById('exifPickNone').onclick = () => { list.querySelectorAll('.exif-pick-cb').forEach(cb => cb.checked = false); };
+    document.getElementById('exifPickApply').onclick = () => {
+      const sel = new Set([...list.querySelectorAll('.exif-pick-cb:checked')].map(cb => cb.dataset.key));
+      cleanup(); resolve(sel);
+    };
+    document.getElementById('exifPickCancel').onclick = () => { cleanup(); resolve(null); };
+  });
+}
+
+async function applyParsedMetaToForm(rawMeta, opts){
   if(!rawMeta) return [];
+  // 📁 interactive 모드 — 사용자에게 어떤 필드를 복원할지 모달로 묻기
+  let allowed = null;   // null = 모든 필드 허용 (기존 동작)
+  if(opts?.interactive){
+    allowed = await pickExifFields(rawMeta);
+    if(allowed === null) return [];           // 취소
+    if(allowed.size === 0) return [];          // 가능한 필드 없음 / 모두 해제
+  }
+  const ok = k => !allowed || allowed.has(k);
   const m = rawMeta.parsed || rawMeta || {};
   // 두 포맷 모두 커버하는 안전한 추출기 (NAI 내부 / 공식)
   const pick = (...keys) => {
@@ -6604,31 +6694,33 @@ function applyParsedMetaToForm(rawMeta, opts){
   const h         = pick('h', 'height');
   const altPrompt = rawMeta.Description || rawMeta.parameters;
   const restored = [];
-  if(prompt != null){ $('prompt').value = prompt; restored.push('프롬프트'); }
-  else if(altPrompt){ $('prompt').value = altPrompt; restored.push('프롬프트(tEXt)'); }
-  if(neg != null){ $('negPrompt').value = neg; restored.push('네거티브'); }
-  if(seed != null){
+  if(ok('prompt')){
+    if(prompt != null){ $('prompt').value = prompt; restored.push('프롬프트'); }
+    else if(altPrompt){ $('prompt').value = altPrompt; restored.push('프롬프트(tEXt)'); }
+  }
+  if(ok('neg') && neg != null){ $('negPrompt').value = neg; restored.push('네거티브'); }
+  if(ok('seed') && seed != null){
     $('seed').value = seed;
     state.lastSeed = seed;
     restored.push(`시드(${seed})`);
   }
-  if(model){
+  if(ok('model') && model){
     const opt = [...$('model').options].find(o => o.value === model);
     if(opt){ $('model').value = model; refreshSamplerListByModel(); restored.push('모델'); }
   }
   // 🐛 외부 PNG 메타는 신뢰 불가 — NAI 허용 범위로 clamp (이전엔 그대로 폼에 주입 → API 400 / 거대 해상도)
-  if(steps){ $('steps').value = clamp(parseInt(steps)||28, 1, 50); restored.push(`스텝(${steps})`); }
-  if(cfg != null){ $('cfgScale').value = clamp(parseFloat(cfg)||5, 0, 30); restored.push(`CFG(${cfg})`); }
-  if(cfgResc != null) $('cfgRescale').value = clamp(parseFloat(cfgResc)||0, 0, 1);
-  if(sampler){
+  if(ok('steps') && steps){ $('steps').value = clamp(parseInt(steps)||28, 1, 50); restored.push(`스텝(${steps})`); }
+  if(ok('cfg') && cfg != null){ $('cfgScale').value = clamp(parseFloat(cfg)||5, 0, 30); restored.push(`CFG(${cfg})`); }
+  if(ok('cfg_rescale') && cfgResc != null) $('cfgRescale').value = clamp(parseFloat(cfgResc)||0, 0, 1);
+  if(ok('sampler') && sampler){
     const opt = [...$('sampler').options].find(o => o.value === sampler);
     if(opt){ $('sampler').value = sampler; restored.push('샘플러'); }
   }
-  if(schedule){
+  if(ok('schedule') && schedule){
     const opt = [...$('noiseSchedule').options].find(o => o.value === schedule);
     if(opt) $('noiseSchedule').value = schedule;
   }
-  if(w && h){
+  if(ok('size') && w && h){
     $('resAspect').value = 'custom';
     // 64 배수·범위 clamp (외부 메타 방어 — 거대/비정상 해상도 차단)
     $('customW').value = clamp(Math.round((parseInt(w)||1024)/64)*64, 64, 2048);
@@ -6640,7 +6732,7 @@ function applyParsedMetaToForm(rawMeta, opts){
   // 👤 V4 캐릭터 메타 복원 — 저장된 characters 배열을 state에 주입하고 UI 다시 렌더
   // 외부 PNG/EXIF에서 옴 → 신뢰할 수 없으므로 안전한 필드만 추출
   const chars = m.characters;
-  if(Array.isArray(chars) && chars.length){
+  if(ok('characters') && Array.isArray(chars) && chars.length){
     const sanitized = chars.slice(0, 6).map(c => ({
       enabled: c.enabled !== false,
       name: String(c.name || '').slice(0, 80),
@@ -6744,7 +6836,7 @@ async function importPngExifToForm(file){
       toast('PNG 파일이 아니거나 메타데이터가 없습니다', 'warning');
       return;
     }
-    const restored = applyParsedMetaToForm(raw);
+    const restored = await applyParsedMetaToForm(raw, {interactive:true});
     if(restored.length){
       toast(`✅ EXIF 복원: ${restored.join(' · ')}`, 'success');
     } else {
@@ -6776,7 +6868,7 @@ async function applyExifFromGalleryImage(imgId){
       toast('이 이미지에 NAI 메타데이터가 없습니다', 'warning');
       return;
     }
-    const restored = applyParsedMetaToForm({parsed: meta});
+    const restored = await applyParsedMetaToForm({parsed: meta}, {interactive:true});
     if(restored.length){
       toast(`↻ EXIF 복원: ${restored.join(' · ')}`, 'success');
       // 모바일이면 편집 뷰로 자동 전환
@@ -12811,7 +12903,64 @@ async function afterImage(blob, q){
   // Refresh gallery if visible
   if(state.mainPane === 'gallery') await loadGallery();
   await refreshGallerySize();
+  // 🕓 미리보기 탭 우측 히스토리 갱신
+  try { await refreshPreviewHistory(); } catch(e){ _swallow(e, 'pv:history'); }
 }
+
+// 🕓 미리보기 탭 우측 히스토리 — 최신 4장. 클릭 시 메인 이미지 갈아끼움 + 폼 메타 적용.
+const _pvHistObjUrls = new Map();   // id → objectURL (재진입 시 revoke)
+async function refreshPreviewHistory(){
+  const list = document.getElementById('pvHistoryList');
+  if(!list) return;
+  let imgs = [];
+  try {
+    const fresh = await DB.getSessions();
+    state.gallerySessions = fresh;
+    const all = [];
+    for(const s of fresh){
+      try { const xs = await DB.getSessionImages(s.id, {includeTrashed:false}); for(const x of xs) all.push(x); } catch(_){}
+    }
+    all.sort((a,b)=> (b.createdAt||b.ts||0) - (a.createdAt||a.ts||0));
+    imgs = all.slice(0, 4);
+  } catch(e){ _swallow(e, 'pv:history:load'); }
+  // 이전 URL 해제
+  for(const [id, u] of _pvHistObjUrls){ URL.revokeObjectURL(u); }
+  _pvHistObjUrls.clear();
+  if(imgs.length === 0){
+    list.innerHTML = '<div class="pv-h-empty">생성 시작!</div>';
+    return;
+  }
+  const curId = state.lastImage?.savedId || null;
+  list.innerHTML = imgs.map(img => {
+    const url = URL.createObjectURL(img.blob);
+    _pvHistObjUrls.set(img.id, url);
+    return `<div class="pv-h-card${img.id===curId?' act':''}" data-id="${img.id}" data-sid="${img.sessionId||''}" title="${esc(img.label||'')}\n클릭: 미리보기로 불러오기"><img src="${url}" alt="${esc(img.label||'')}"></div>`;
+  }).join('');
+}
+// 클릭 — 미리보기에 갈아끼우고 메타도 폼에 적용 (라이트박스 진입 대신 즉시 사용)
+document.addEventListener('click', async e => {
+  const card = e.target.closest?.('#pvHistoryList .pv-h-card');
+  if(!card) return;
+  const id = parseInt(card.dataset.id, 10);
+  if(isNaN(id)) return;
+  try {
+    const tx = DB.tx([DB.IMG], 'readonly');
+    const req = tx.objectStore(DB.IMG).get(id);
+    req.onsuccess = () => {
+      const img = req.result;
+      if(!img){ toast('이미지를 찾을 수 없음', 'error'); return; }
+      if(state.lastImage?.url) URL.revokeObjectURL(state.lastImage.url);
+      const url = URL.createObjectURL(img.blob);
+      state.lastImage = {blob: img.blob, url, meta: img.meta || {}, savedId: img.id};
+      $('previewImg').src = url;
+      $('previewImg').style.display = '';
+      $('previewEmpty').style.display = 'none';
+      // 활성 카드 갱신
+      document.querySelectorAll('#pvHistoryList .pv-h-card').forEach(c => c.classList.toggle('act', parseInt(c.dataset.id,10)===id));
+      toast(`🕓 미리보기 불러옴 — ${img.label||img.id}`, 'success');
+    };
+  } catch(err){ _swallow(err, 'pv:history:click'); toast('불러오기 실패', 'error'); }
+});
 
 // ═══════════════════════════════════════════════════════════
 // GALLERY
@@ -13896,8 +14045,8 @@ async function addSeedToBlocklist(seed){
 async function editPromptFromImage(img){
   const meta = img.meta || (await readPngMetadata(img.blob))?.parsed;
   if(!meta){ toast('이 이미지의 메타가 없어 복원 불가', 'error'); return; }
-  // 기존 applyParsedMetaToForm 로 폼 채움
-  applyParsedMetaToForm(meta);
+  // 기존 applyParsedMetaToForm 로 폼 채움 (자동 — 모든 필드, 모달 안 띄움)
+  await applyParsedMetaToForm(meta);
   // toxic 토큰 가져와서 prompt textarea 에서 highlight
   const toxic = await getToxicTokens();
   if(toxic.size){
@@ -18032,6 +18181,7 @@ function setMainPane(pane){
   const mainPaneTarget = (pane === 'edit') ? 'preview' : pane;
   $$('.main-pane').forEach(p => p.classList.toggle('act', p.dataset.pane === mainPaneTarget));
   if(pane === 'gallery') loadGallery();
+  else if(pane === 'preview') refreshPreviewHistory().catch(e => _swallow(e, 'pv:history:pane'));
   else if(pane === 'presets'){ renderPresetTabs(); renderPresets(); }
   else if(pane === 'templates'){ tplRenderCatChips(); tplRenderRoll(); tplRenderSavedList(); }
   else if(pane === 'tags'){ loadDanbooruTags(); renderTagCats(); renderTagBody(); }
@@ -23088,7 +23238,7 @@ async function init(){
         meta = raw?.parsed || raw;
       }
       if(!meta){ toast('이 이미지에 NAI 메타가 없습니다', 'warning'); return; }
-      const restored = applyParsedMetaToForm({parsed: meta});
+      const restored = await applyParsedMetaToForm({parsed: meta}, {interactive:true});
       if(restored.length){
         toast(`📁 EXIF 복원: ${restored.join(' · ')}`, 'success');
         // 모바일이면 편집 뷰로 자동 전환 + 라이트박스 닫기
