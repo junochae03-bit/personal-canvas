@@ -380,7 +380,16 @@ body.focus-mode::after{content:'🌙 포커스 모드 · F로 해제';position:f
 .pv-h-card.act{border-color:var(--acc);box-shadow:0 0 0 2px rgba(214,160,80,.4) inset}
 .pv-h-card img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
 .pv-h-empty{color:var(--t3);font-size:11px;font-style:italic;text-align:center;padding:8px}
-@media(max-width:768px){.pv-history{width:80px;flex:0 0 80px;padding:5px;gap:4px}.pv-history-title{font-size:10px}}
+/* + 더보기 카드 — 회색 배경, 큰 + 기호, 클릭 시 최근 20장 모달 */
+.pv-h-card.pv-h-more{background:rgba(255,255,255,.04);border-style:dashed;border-color:var(--b2);display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:30px;font-weight:300;line-height:1}
+.pv-h-card.pv-h-more:hover{color:var(--acc);border-color:var(--acc);background:rgba(162,90,31,.08)}
+/* 🕓 최근 20장 모달 그리드 */
+.pv-hist-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));gap:8px}
+.pv-hm-card{position:relative;background:var(--bg);border:1.5px solid var(--b1);border-radius:5px;overflow:hidden;cursor:pointer;transition:border-color .12s, transform .12s;aspect-ratio:1}
+.pv-hm-card:hover{border-color:var(--acc);transform:scale(1.02)}
+.pv-hm-card.act{border-color:var(--acc);box-shadow:0 0 0 2px rgba(214,160,80,.4) inset}
+.pv-hm-card img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+@media(max-width:768px){.pv-history{width:80px;flex:0 0 80px;padding:5px;gap:4px}.pv-history-title{font-size:10px}.pv-hist-grid{grid-template-columns:repeat(auto-fill, minmax(96px, 1fr));gap:5px}}
 .preview-area{flex:1;display:flex;align-items:center;justify-content:center;padding:22px;overflow:hidden;position:relative;background:var(--bg)}
 .preview-area.drop-hot{outline:3px dashed var(--acc);outline-offset:-12px;background:rgba(162,90,31,.06)}
 .preview-area.drop-hot::after{content:'📁 EXIF 추출 — 놓으면 항목 선택 모달';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(20,14,4,.86);color:#f5e9d2;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;pointer-events:none;z-index:10}
@@ -510,6 +519,9 @@ body.focus-mode::after{content:'🌙 포커스 모드 · F로 해제';position:f
 .g-item.liked{box-shadow:0 0 0 2px rgba(226,91,111,.55) inset}
 .g-item.disliked{box-shadow:0 0 0 2px rgba(181,67,56,.55) inset;filter:saturate(.85)}
 .g-item.liked.fav{box-shadow:0 0 0 2px #f5b80a inset, 0 0 0 4px rgba(226,91,111,.55) inset}
+/* ⬇ 다운로드 기록 배지 — 우하단, 다운받은 적 있는 이미지에 ⬇N 표시 */
+.g-item .g-dl-badge{position:absolute;bottom:6px;right:6px;background:rgba(20,14,4,.78);color:#9bd17b;border:1px solid rgba(155,209,123,.4);padding:1px 7px;border-radius:10px;font-size:10.5px;font-weight:700;font-family:var(--mono);line-height:1.4;pointer-events:auto;cursor:help;z-index:2;letter-spacing:.3px}
+.g-item.downloaded{outline:1px solid rgba(155,209,123,.25);outline-offset:-1px}
 .gallery-grid.selection-mode .g-item .g-like,
 .gallery-grid.selection-mode .g-item .g-dislike{display:none}
 /* 🐛 터치 기기는 hover 가 없어 ❤/👎 가 opacity:0 으로 안 보여 탭조차 불가 → 항상 표시 */
@@ -3068,6 +3080,7 @@ mark{
     <button class="iconbtn lb-act-btn lb-2nd" id="lbI2I" title="→ I2I로 보내기 (Send to I2I)"><span class="lb-act-ico">→I</span><span class="lb-act-lbl">I2I</span></button>
     <button class="iconbtn lb-act-btn lb-2nd" id="lbVibe" title="→ Vibe 참조로 사용 (Send to Vibe)"><span class="lb-act-ico">→V</span><span class="lb-act-lbl">Vibe</span></button>
     <button class="iconbtn lb-act-btn lb-2nd" id="lbExtractTags" title="📋 이 이미지의 태그를 도감에 추출"><span class="lb-act-ico">📋</span><span class="lb-act-lbl">태그</span></button>
+    <button class="iconbtn lb-act-btn lb-2nd" id="lbSaveTpl" title="📌 와일드카드/랜덤이 적용된 캐릭터 결과를 템플릿으로 저장 — 다른 캐릭터 슬롯에서 불러올 수 있음" style="border-color:rgba(214,160,80,.4);color:var(--acc)"><span class="lb-act-ico">📌</span><span class="lb-act-lbl">템플릿</span></button>
     <div style="height:1px;background:var(--b1);margin:2px 0"></div>
     <button class="iconbtn lb-act-btn lb-primary" id="lbInfoBtn" title="ℹ 상세정보 펼치기/접기 (메타·프롬프트)" aria-pressed="false"><span class="lb-act-ico">ℹ</span><span class="lb-act-lbl">정보</span></button>
     <button class="iconbtn lb-act-btn lb-primary" id="lbLike" title="❤️ 좋아요 — 마음에 든 결과물 표시 + 통계 집계 + ❤️🎲 시드 풀에 추가" aria-pressed="false"><span class="lb-act-ico">♡</span><span class="lb-act-lbl">좋아요</span></button>
@@ -3786,6 +3799,36 @@ coffee shop, latte art"></textarea>
       <button class="btn ghost" id="cmAddBubbles" title="🅣 현재 페이지에 바로 말풍선·대사 얹기 (갤러리 중간 저장 없이 편집기로)">🅣 말풍선 얹기</button>
       <button class="btn ghost" id="cmSaveAllZip" title="📚 모든 페이지를 ZIP 한 파일로 다운로드 (책 단위 저장)">📚 책 ZIP <span class="en">Book</span></button>
       <button class="btn primary" id="cmSaveNew" title="현재 페이지를 갤러리에 새 이미지로 저장 · Ctrl+S">💾 갤러리에 저장 <span class="en">Save</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- 🕓 미리보기 — 최근 20장 모달 (히스토리 사이드 + 카드 클릭) -->
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="pvHistTitle" id="pvHistoryModal">
+  <div class="modal" style="max-width:880px;width:100%;display:flex;flex-direction:column;max-height:88vh">
+    <h3 id="pvHistTitle">🕓 최근 20장 <span class="en">Recent</span></h3>
+    <div class="modal-body" style="overflow-y:auto;padding:14px 18px">
+      <div id="pvHistoryGrid" class="pv-hist-grid"></div>
+    </div>
+    <div class="modal-foot" style="padding:12px 18px;border-top:1.5px solid var(--b1);display:flex;justify-content:flex-end">
+      <button class="btn ghost" id="pvHistoryClose" type="button">닫기 <span class="en">Close</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- 📌 캐릭터 템플릿 저장 모달 — 와일드카드/랜덤이 적용된 결과를 골라 이름 짓고 저장 -->
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="charTplSaveTitle" id="charTplSaveModal">
+  <div class="modal" style="max-width:560px;width:100%;display:flex;flex-direction:column;max-height:88vh">
+    <h3 id="charTplSaveTitle">📌 캐릭터 템플릿 저장 <span class="en">Save Template</span></h3>
+    <div class="modal-body" style="overflow-y:auto;padding:14px 18px">
+      <div style="font-size:11.5px;color:var(--t3);margin-bottom:10px;line-height:1.55">와일드카드(__이름__)·랜덤이 <b>이미 확장된 결과</b>를 저장합니다. 저장된 템플릿은 캐릭터 슬롯의 📌 메뉴에서 불러올 수 있어요.</div>
+      <div id="charTplSavePickList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+      <label style="display:block;font-size:12px;color:var(--t2);font-weight:600;margin-bottom:4px">이름</label>
+      <input type="text" class="inp" id="charTplSaveName" placeholder="예: 미키 (캐주얼) — 필수" maxlength="60">
+    </div>
+    <div class="modal-foot" style="padding:12px 18px;border-top:1.5px solid var(--b1);display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn ghost" id="charTplSaveCancel" type="button">취소</button>
+      <button class="btn primary" id="charTplSaveConfirm" type="button">💾 저장</button>
     </div>
   </div>
 </div>
@@ -5080,6 +5123,7 @@ const state = {
   seedBlocklistAuto: false,  // 👎 시드 자동 제외 옵션
   likedSeedAuto: false,      // ❤️ 좋아요 시드 자동 가중 픽
   likedSeedRate: 0.3,        // 좋아요 시드 픽 확률 (0~1)
+  charTemplates: [],         // 📌 와일드카드/랜덤 확장된 결과 → 캐릭터 템플릿. [{id,name,ts,prompt,appearance,action,neg,fromImg}]
   workflows: [],          // 💾 [{id, name, ts, thumb, data}] — 워크플로우 스냅샷 슬롯
   wildcards: [],          // 🃏 [{name, options:[{text,weight}], locked, lockedIdx}] — 프롬프트 __name__ 치환
   wildcardPanelOpen: false,   // 🃏 와일드카드 패널 토글 (프롬프트 헤더의 🃏 버튼)
@@ -7482,6 +7526,7 @@ function renderCharacters(){
           <button class="char-act-btn ${c.enabled?'act':''}" data-act="toggle" data-idx="${i}" title="이 캐릭터 슬롯 활성/비활성 토글"><span class="cab-ico">${c.enabled?'✓':'⭕'}</span><span class="cab-lbl"> ${c.enabled?'활성':'비활성'}</span> <span class="en" style="opacity:.55;font-weight:400">${c.enabled?'On':'Off'}</span></button>
           <button class="char-act-btn ${c.randPerGen?'act':''}" data-act="rand-pergen" data-idx="${i}" title="🎲 매 대기열 추가·생성마다 이 슬롯을 무작위 교체 (⭐즐겨찾기·📂그룹고정·후보풀 설정 모두 존중)"><span class="cab-ico">🎲</span><span class="cab-lbl"> 매번 랜덤</span> <span class="en" style="opacity:.55;font-weight:400">${c.randPerGen?'On':'Off'}</span></button>
           <button class="char-act-btn edit" data-act="expand" data-idx="${i}" title="외형·액션·네거티브 textarea 펼치기/접기"><span class="cab-ico">✏</span><span class="cab-lbl"> 프롬프트</span> <span class="en" style="opacity:.55;font-weight:400">Edit</span></button>
+          <button class="char-act-btn" data-act="char-tpl-menu" data-idx="${i}" title="📌 저장된 캐릭터 템플릿(와일드카드/랜덤 확장 결과)을 이 슬롯에 불러오기"><span class="cab-ico">📌</span><span class="cab-lbl"> 템플릿</span> <span class="en" style="opacity:.55;font-weight:400">Tpl</span></button>
           <button class="char-act-btn" data-act="clear-char-all" data-idx="${i}" title="🧹 텍스트만 비움 — 슬롯 카드는 그대로 (실행 취소 6초)"><span class="cab-ico">🧹</span><span class="cab-lbl"> 텍스트 비우기</span> <span class="en" style="opacity:.55;font-weight:400">Clear text</span></button>
           <button class="char-act-btn del" data-act="del" data-idx="${i}" title="🗑 슬롯 카드 자체 삭제 — 카드가 사라짐 (텍스트만 지우려면 옆 🧹 텍스트 비우기 사용)"><span class="cab-ico del-ico">🗑</span><span class="cab-lbl del-lbl"> 슬롯 삭제</span></button>
         </div>
@@ -13045,6 +13090,168 @@ async function computeLikedTagSuggestions(currentPrompt, topN = 12){
 }
 
 // 🎨 프롬프트 가중치 미세 흔들기 — X.YY::tag:: 형식만 ±0.1 (0.5~1.5 클램프). 변형 탐색용.
+// 📌 캐릭터 템플릿 — 와일드카드/랜덤 확장된 결과 저장 & 적용
+// 저장된 형태: {id, name, ts, prompt, appearance, action, neg, fromImg}
+//   캐릭터 슬롯 가져오면 appearance/action/neg/prompt 모두 부어넣음
+function _uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+async function saveCharTemplates(){
+  await DB.setFlag('char_templates', state.charTemplates || []);
+}
+
+// 라이트박스 📌 클릭 시 저장 모달 오픈 — 현재 이미지의 meta.characters 또는 단일 prompt 표시
+function openCharTplSaveModal(img){
+  const modal = document.getElementById('charTplSaveModal');
+  const list = document.getElementById('charTplSavePickList');
+  const nameInp = document.getElementById('charTplSaveName');
+  if(!modal || !list || !img) return;
+  const meta = img.meta || {};
+  const chars = Array.isArray(meta.characters) ? meta.characters : [];
+  // 각 캐릭터 + 메인 prompt 모두 선택 가능
+  const items = [];
+  chars.forEach((c, i) => {
+    const label = c.name || `캐릭터 ${i+1}`;
+    items.push({key:`c${i}`, label, appearance:c.appearance||'', action:c.action||'', neg:c.neg||'', prompt:c.prompt||''});
+  });
+  // 메인 prompt 단일 (캐릭터가 없거나 추가 옵션으로)
+  if(meta.prompt){
+    items.push({key:'main', label:'메인 프롬프트', appearance:'', action:'', neg:meta.neg||'', prompt:meta.prompt});
+  }
+  if(!items.length){ toast('이 이미지에 저장할 프롬프트가 없어요', 'warning'); return; }
+  list.innerHTML = items.map((it, idx) => {
+    const preview = (it.appearance || it.prompt || '').slice(0, 60);
+    return `<label style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;background:var(--card);border:1.5px solid var(--b1);border-radius:5px;cursor:pointer">
+      <input type="radio" name="tplPick" value="${idx}" ${idx===0?'checked':''} style="margin-top:3px">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;color:var(--t1);font-size:12.5px">${esc(it.label)}</div>
+        <div style="color:var(--t3);font-size:11px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(preview)}">${esc(preview)}</div>
+      </div>
+    </label>`;
+  }).join('');
+  // 기본 이름 — 첫 항목 이름 또는 빈
+  nameInp.value = items[0].label.startsWith('캐릭터') ? '' : items[0].label;
+  modal.dataset.items = JSON.stringify(items);
+  modal.dataset.imgId = String(img.id || '');
+  modal.classList.add('open');
+  setTimeout(() => nameInp.focus(), 50);
+}
+function closeCharTplSaveModal(){
+  const modal = document.getElementById('charTplSaveModal');
+  if(modal){ modal.classList.remove('open'); delete modal.dataset.items; delete modal.dataset.imgId; }
+}
+async function confirmCharTplSave(){
+  const modal = document.getElementById('charTplSaveModal');
+  if(!modal) return;
+  const items = JSON.parse(modal.dataset.items || '[]');
+  const checked = modal.querySelector('input[name="tplPick"]:checked');
+  if(!checked){ toast('항목을 선택하세요', 'warning'); return; }
+  const it = items[parseInt(checked.value, 10)];
+  if(!it){ toast('선택 오류', 'error'); return; }
+  const name = (document.getElementById('charTplSaveName').value || '').trim().slice(0, 60);
+  if(!name){ toast('이름을 입력하세요', 'warning'); return; }
+  state.charTemplates = state.charTemplates || [];
+  state.charTemplates.unshift({
+    id: _uid(), name, ts: Date.now(),
+    prompt: it.prompt || '', appearance: it.appearance || '',
+    action: it.action || '', neg: it.neg || '',
+    fromImg: parseInt(modal.dataset.imgId, 10) || null,
+  });
+  state.charTemplates = state.charTemplates.slice(0, 100);   // 최대 100개
+  await saveCharTemplates();
+  closeCharTplSaveModal();
+  toast(`📌 템플릿 저장됨: ${name} (총 ${state.charTemplates.length}개)`, 'success');
+}
+
+// 캐릭터 슬롯에 템플릿 적용 — i 인덱스 슬롯에 부어넣고 UI 새로고침
+function applyCharTplToSlot(tplId, charIdx){
+  const tpl = (state.charTemplates || []).find(t => t.id === tplId);
+  if(!tpl){ toast('템플릿을 찾을 수 없음', 'error'); return; }
+  if(!state.characters[charIdx]){ toast('캐릭터 슬롯이 없음', 'error'); return; }
+  const c = state.characters[charIdx];
+  c.appearance = tpl.appearance || '';
+  c.action = tpl.action || '';
+  c.neg = tpl.neg || '';
+  c.prompt = tpl.prompt || '';
+  if(typeof renderCharacters === 'function') renderCharacters();
+  saveSettingsDebounced();
+  toast(`📌 "${tpl.name}" 캐릭터 ${charIdx+1}에 적용됨`, 'success');
+}
+
+// 템플릿 삭제
+async function deleteCharTpl(tplId){
+  state.charTemplates = (state.charTemplates || []).filter(t => t.id !== tplId);
+  await saveCharTemplates();
+}
+
+// 📌 캐릭터 슬롯에 템플릿 적용 popover — 버튼 옆에 떠다니는 목록
+let _charTplPopoverEl = null;
+function closeCharTplPickerPopover(){
+  if(_charTplPopoverEl){ _charTplPopoverEl.remove(); _charTplPopoverEl = null; }
+  document.removeEventListener('click', _charTplOutsideClick);
+}
+function _charTplOutsideClick(e){
+  if(_charTplPopoverEl && !_charTplPopoverEl.contains(e.target) && !e.target.closest?.('[data-act="char-tpl-menu"]')){
+    closeCharTplPickerPopover();
+  }
+}
+function openCharTplPickerPopover(anchorBtn, charIdx){
+  closeCharTplPickerPopover();
+  const tpls = state.charTemplates || [];
+  const pop = document.createElement('div');
+  pop.className = 'char-tpl-popover';
+  pop.dataset.charIdx = String(charIdx);
+  pop.style.cssText = 'position:absolute;background:var(--panel);border:1.5px solid var(--b2);border-radius:6px;padding:5px;min-width:240px;max-width:340px;max-height:340px;overflow-y:auto;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.3)';
+  if(!tpls.length){
+    pop.innerHTML = '<div style="padding:14px;text-align:center;color:var(--t3);font-size:12px;font-style:italic;line-height:1.6">저장된 템플릿이 없어요<br><span style="font-size:11px">미리보기에서 라이트박스(🔍) 열고 📌 템플릿 버튼으로 저장</span></div>';
+  } else {
+    pop.innerHTML = `<div style="padding:6px 10px;font-size:11px;color:var(--t3);border-bottom:1px solid var(--b1)">📌 클릭하면 캐릭터 ${charIdx+1}에 적용</div>` +
+      tpls.map(t => {
+        const preview = (t.appearance || t.prompt || '').slice(0, 50);
+        return `<div class="ctp-row" data-tpl-id="${esc(t.id)}" style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--b1);cursor:pointer">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;color:var(--t1);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.name)}</div>
+            <div style="color:var(--t3);font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(preview)}">${esc(preview)}</div>
+          </div>
+          <button type="button" data-tpl-del="${esc(t.id)}" title="삭제" style="background:transparent;border:none;color:var(--t3);cursor:pointer;padding:3px 6px;font-size:13px">🗑</button>
+        </div>`;
+      }).join('');
+  }
+  document.body.appendChild(pop);
+  // 위치 — anchor 버튼 아래
+  const r = anchorBtn.getBoundingClientRect();
+  let top = r.bottom + 4;
+  let left = r.left;
+  // 오른쪽이 화면 밖으로 나가면 왼쪽으로 정렬
+  const popW = 340;
+  if(left + popW > window.innerWidth - 8) left = Math.max(8, window.innerWidth - popW - 8);
+  // 아래가 화면 밖이면 위로
+  if(top + 200 > window.innerHeight) top = Math.max(8, r.top - 200);
+  pop.style.top = `${top}px`;
+  pop.style.left = `${left}px`;
+  _charTplPopoverEl = pop;
+  setTimeout(() => document.addEventListener('click', _charTplOutsideClick), 0);
+  // 행 클릭 → 적용 / 휴지통 → 삭제
+  pop.addEventListener('click', async e => {
+    const delBtn = e.target.closest('[data-tpl-del]');
+    if(delBtn){
+      e.stopPropagation();
+      const id = delBtn.dataset.tplDel;
+      const t = (state.charTemplates||[]).find(x => x.id === id);
+      if(!t) return;
+      if(!confirm(`"${t.name}" 템플릿을 삭제할까요?`)) return;
+      await deleteCharTpl(id);
+      closeCharTplPickerPopover();
+      openCharTplPickerPopover(anchorBtn, charIdx);   // 다시 열어서 갱신
+      return;
+    }
+    const row = e.target.closest('.ctp-row');
+    if(!row) return;
+    const id = row.dataset.tplId;
+    applyCharTplToSlot(id, charIdx);
+    closeCharTplPickerPopover();
+  });
+}
+
 function jitterPromptWeights(prompt){
   if(!prompt || typeof prompt !== 'string') return prompt;
   return prompt.replace(/(\d+(?:\.\d+)?)::([^:]+)::/g, (_, w, tag) => {
@@ -13080,8 +13287,9 @@ async function enqueueVariants({count = 4, vary = false} = {}){
   // 자동 시작은 안 함 (사용자가 ＋ 더 누르거나 폼 수정 여지)
 }
 
-// 🕓 미리보기 탭 우측 히스토리 — 최신 4장. 클릭 시 메인 이미지 갈아끼움 + 폼 메타 적용.
+// 🕓 미리보기 탭 우측 히스토리 — 컨테이너 높이에 맞춰 자동 채움 + 마지막 회색 + 카드 → 최근 20장 모달
 const _pvHistObjUrls = new Map();   // id → objectURL (재진입 시 revoke)
+let _pvAll20 = [];   // 모달용 최신 20장 캐시
 async function refreshPreviewHistory(){
   const list = document.getElementById('pvHistoryList');
   if(!list) return;
@@ -13094,7 +13302,15 @@ async function refreshPreviewHistory(){
       try { const xs = await DB.getSessionImages(s.id, {includeTrashed:false}); for(const x of xs) all.push(x); } catch(_){}
     }
     all.sort((a,b)=> (b.createdAt||b.ts||0) - (a.createdAt||a.ts||0));
-    imgs = all.slice(0, 4);
+    _pvAll20 = all.slice(0, 20);
+    // 📏 컨테이너 폭(카드 한 변, aspect-ratio:1) 기반으로 N장 자동 계산. gap 6px.
+    const cw = list.clientWidth || 124;
+    const ch = list.clientHeight || 600;
+    const cardH = cw + 6;
+    const maxFit = Math.max(2, Math.floor((ch + 6) / cardH));
+    // 마지막 자리는 + 카드용으로 비움
+    const showN = Math.max(1, Math.min(_pvAll20.length, maxFit - 1));
+    imgs = _pvAll20.slice(0, showN);
   } catch(e){ _swallow(e, 'pv:history:load'); }
   // 이전 URL 해제
   for(const [id, u] of _pvHistObjUrls){ URL.revokeObjectURL(u); }
@@ -13104,15 +13320,49 @@ async function refreshPreviewHistory(){
     return;
   }
   const curId = state.lastImage?.savedId || null;
-  list.innerHTML = imgs.map(img => {
+  let html = imgs.map(img => {
     const url = URL.createObjectURL(img.blob);
     _pvHistObjUrls.set(img.id, url);
     return `<div class="pv-h-card${img.id===curId?' act':''}" data-id="${img.id}" data-sid="${img.sessionId||''}" title="${esc(img.label||'')}\n클릭: 미리보기로 불러오기"><img src="${url}" alt="${esc(img.label||'')}"></div>`;
   }).join('');
+  // + 카드 — 최근 20장 모달 열기 (저장된 이미지가 충분히 있을 때만)
+  if(_pvAll20.length > imgs.length || _pvAll20.length >= 4){
+    html += `<div class="pv-h-card pv-h-more" data-act="pv-more" title="최근 20장 보기">+</div>`;
+  }
+  list.innerHTML = html;
+}
+
+// 🖼 최근 20장 모달 열기 — + 카드 클릭 또는 외부 호출
+function openPvHistoryModal(){
+  const modal = document.getElementById('pvHistoryModal');
+  const grid = document.getElementById('pvHistoryGrid');
+  if(!modal || !grid) return;
+  if(!_pvAll20.length){ toast('아직 생성된 이미지가 없어요', 'info'); return; }
+  // 모달용 별도 objectURL 풀
+  for(const [id, u] of _pvModalUrls){ URL.revokeObjectURL(u); }
+  _pvModalUrls.clear();
+  const curId = state.lastImage?.savedId || null;
+  grid.innerHTML = _pvAll20.map(img => {
+    const url = URL.createObjectURL(img.blob);
+    _pvModalUrls.set(img.id, url);
+    return `<div class="pv-hm-card${img.id===curId?' act':''}" data-id="${img.id}" data-sid="${img.sessionId||''}" title="${esc(img.label||'')} · 클릭으로 불러오기"><img src="${url}" alt="${esc(img.label||'')}"></div>`;
+  }).join('');
+  modal.classList.add('open');
+}
+const _pvModalUrls = new Map();
+function closePvHistoryModal(){
+  const modal = document.getElementById('pvHistoryModal');
+  if(modal) modal.classList.remove('open');
+  for(const [id, u] of _pvModalUrls){ URL.revokeObjectURL(u); }
+  _pvModalUrls.clear();
 }
 // 클릭 — 미리보기에 갈아끼우고 메타도 폼에 적용 (라이트박스 진입 대신 즉시 사용)
 document.addEventListener('click', async e => {
-  const card = e.target.closest?.('#pvHistoryList .pv-h-card');
+  // + 카드 → 모달
+  if(e.target.closest?.('#pvHistoryList .pv-h-more')){ openPvHistoryModal(); return; }
+  // 모달 그리드 카드 → 미리보기 갱신 + 모달 닫기
+  const modalCard = e.target.closest?.('#pvHistoryGrid .pv-hm-card');
+  const card = modalCard || e.target.closest?.('#pvHistoryList .pv-h-card:not(.pv-h-more)');
   if(!card) return;
   const id = parseInt(card.dataset.id, 10);
   if(isNaN(id)) return;
@@ -13131,6 +13381,8 @@ document.addEventListener('click', async e => {
       // 활성 카드 갱신
       document.querySelectorAll('#pvHistoryList .pv-h-card').forEach(c => c.classList.toggle('act', parseInt(c.dataset.id,10)===id));
       try { renderPvInline(); } catch(e){ _swallow(e, 'pv:inline:histclick'); }
+      // 모달에서 클릭됐다면 모달 닫음
+      if(modalCard) closePvHistoryModal();
       toast(`🕓 미리보기 불러옴 — ${img.label||img.id}`, 'success');
     };
   } catch(err){ _swallow(err, 'pv:history:click'); toast('불러오기 실패', 'error'); }
@@ -13238,10 +13490,15 @@ function renderGalleryItemHtml(img, sesId){
   // 자세한 메타는 lightbox(🔍)에서만 — 카드는 깨끗하게
   const liked = !!img.liked;
   const disliked = !!img.disliked;
-  const cls = (expanded?' expanded':'') + (liked?' liked':'') + (disliked?' disliked':'');
+  const cls = (expanded?' expanded':'') + (liked?' liked':'') + (disliked?' disliked':'') + (img.downloaded?' downloaded':'');
+  // ⬇ 다운로드 기록 배지 — 다운받은 적 있으면 횟수 표시 (호버 시 최근 시각 툴팁)
+  const dlBadge = img.downloaded
+    ? `<span class="g-dl-badge" title="✓ 다운받음${img.downloadCount>1?` · ${img.downloadCount}회`:''}${img.downloadedAt?` · ${new Date(img.downloadedAt).toLocaleString()}`:''}">⬇${img.downloadCount>1?`×${img.downloadCount}`:''}</span>`
+    : '';
   return `<div class="g-item${cls}" data-id="${img.id}" data-sid="${sesId}" data-url="${url}">
     <div class="g-thumb">
       <img src="${url}" loading="lazy" decoding="async" alt="${esc(label)}">
+      ${dlBadge}
     </div>
     <div class="g-head" title="펼치기/접기">
       <span class="expand-mark">▶</span>
@@ -20057,6 +20314,7 @@ function wireCharacterEvents(){
     else if(act === 'rand-pergen'){ const ch = state.characters[idx]; if(ch){ ch.randPerGen = !ch.randPerGen; renderCharacters(); saveSettingsDebounced(); toast(`🎲 ${ch.name||'#'+(idx+1)} 매번 랜덤 ${ch.randPerGen?'ON':'OFF'}`, 'info'); } return; }
     else if(act === 'del'){ removeCharacter(idx); saveSettingsDebounced(); }
     else if(act === 'expand'){ const b = $('charList').querySelector(`[data-body="${idx}"]`); b?.classList.toggle('open'); }
+    else if(act === 'char-tpl-menu'){ openCharTplPickerPopover(t, idx); return; }
     else if(act === 'pos'){ openPosGrid(idx, t); }
     else if(act === 'browse'){ openCharBrowser(idx); }
     else if(act === 'pool-prev'){ rotateCharPool(idx, -1); }
@@ -20460,12 +20718,18 @@ function wireGenerationAndPresetEvents(){
       $('lightbox').classList.add('open');
     }
   });
-  $('downloadBtn').addEventListener('click', () => {
+  $('downloadBtn').addEventListener('click', async () => {
     if(!state.lastImage) return;
     const a = document.createElement('a');
     a.href = state.lastImage.url;
     a.download = `nai_${Date.now()}.png`;
     a.click();
+    // 📥 다운로드 기록 — 저장된 이미지면 DB 마킹 (갤러리 배지 / 라이트박스 상태)
+    const sid = state.lastImage.savedId;
+    if(sid != null){
+      try { await DB.setImageDownloaded(sid); } catch(e){ _swallow(e, 'pv:download:record'); }
+      if(state.mainPane === 'gallery') loadGallery();
+    }
   });
   $('reseedBtn').addEventListener('click', () => {
     $('seed').value = randomSeed();
@@ -21824,6 +22088,11 @@ function wireLightboxEvents(){
     closeLightbox();
     toast('✨ Vibe 참조로 추가됨', 'success');
   });
+  // 📌 캐릭터 템플릿 저장 — 와일드카드/랜덤 확장된 결과 저장
+  $('lbSaveTpl')?.addEventListener('click', () => {
+    if(!_lbCurrent) return;
+    openCharTplSaveModal(_lbCurrent);
+  });
   // 📋 태그 추출 → 도감
   $('lbExtractTags').addEventListener('click', async () => {
     if(!_lbCurrent) return;
@@ -22078,6 +22347,20 @@ function wireLightboxEvents(){
 // wireMiscEvents — Inpaint, storage, XYZ, global drop, keyboard shortcuts
 // ───────────────────────────────────────────────────────────
 function wireMiscEvents(){
+  // 🕓 최근 20장 모달 — 닫기 버튼 + 배경 클릭 닫기
+  document.getElementById('pvHistoryClose')?.addEventListener('click', closePvHistoryModal);
+  document.getElementById('pvHistoryModal')?.addEventListener('click', e => {
+    if(e.target.id === 'pvHistoryModal') closePvHistoryModal();
+  });
+  // 📌 캐릭터 템플릿 저장 모달 — 취소/저장/배경 닫기
+  document.getElementById('charTplSaveCancel')?.addEventListener('click', closeCharTplSaveModal);
+  document.getElementById('charTplSaveConfirm')?.addEventListener('click', confirmCharTplSave);
+  document.getElementById('charTplSaveModal')?.addEventListener('click', e => {
+    if(e.target.id === 'charTplSaveModal') closeCharTplSaveModal();
+  });
+  document.getElementById('charTplSaveName')?.addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); confirmCharTplSave(); }
+  });
   // 🎨 템플릿 — 카테고리 칩 / 랜덤 / 적용 / 저장 / 로드 / 삭제
   $('tplCatChips')?.addEventListener('click', e => {
     const b = e.target.closest('[data-tpl-cat]');
@@ -23443,6 +23726,9 @@ async function init(){
     const likedAuto = await DB.getFlag('liked_seed_auto');
     state.likedSeedAuto = !!likedAuto;
     if(state.likedSeedAuto) refreshLikedSeedPool().catch(()=>{});
+    // 📌 캐릭터 템플릿 복원
+    const tpls = await DB.getFlag('char_templates');
+    if(Array.isArray(tpls)) state.charTemplates = tpls;
   } catch(_){}
   // 🔄 마이그레이션: 갤러리 ⭐ → ❤️ (한 번만, 옛 사용자의 fav 데이터를 liked 로 승격)
   try {
