@@ -414,18 +414,14 @@ body.focus-mode::after{content:'🌙 포커스 모드 · F로 해제';position:f
 .preview-area:hover .preview-actions{opacity:1}
 
 .queue-strip{flex-shrink:0;height:148px;border-top:1.5px solid var(--b1);background:var(--panel);display:flex;flex-direction:column;box-shadow:0 -2px 8px rgba(74,52,20,.05)}
-/* 🧾 사이드바로 옮긴 대기열 — 생성 버튼 위. 항상 잘 보이게 강조 */
-.queue-strip.queue-in-side{flex-shrink:0;height:auto;min-height:78px;max-height:180px;box-shadow:none;border-top:1.5px solid var(--b2);background:var(--card)}
-.queue-strip.queue-in-side .queue-hdr{padding:8px 12px;font-size:12.5px;background:rgba(162,90,31,.08)}
-.queue-strip.queue-in-side .queue-list{padding:6px 10px;min-height:34px}
+/* 🧾 미리보기 탭으로 복귀한 대기열 — 기본 .queue-strip 스타일 사용. 다른 탭에선 자동 숨김 */
+.queue-strip.queue-in-preview{flex-shrink:0;height:auto;min-height:84px;max-height:172px}
 /* 🔍 인라인 라이트박스 패널 — 미리보기 바로 아래 핵심 액션 (메타는 라이트박스에) */
 .pv-inline{flex-shrink:0;border-top:1.5px solid var(--b1);background:var(--panel);padding:9px 12px;display:flex;flex-direction:column;gap:7px;box-shadow:0 -2px 8px rgba(74,52,20,.05)}
 .pv-inline-acts{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
 .pv-inline-acts .pv-act{padding:5px 11px;font-size:12px}
-.pv-inline-acts .pv-act[aria-pressed="true"]#pvLike{background:rgba(226,91,111,.16);border-color:#e25b6f;color:#e25b6f}
-.pv-inline-acts .pv-act[aria-pressed="true"]#pvDislike{background:rgba(181,67,56,.16);border-color:#b54338;color:#b54338}
 .pv-inline-prompt{font-size:11.5px;color:var(--t2);line-height:1.6;background:var(--card);border:1.5px solid var(--b1);border-radius:6px;padding:9px 11px;max-height:160px;overflow-y:auto;white-space:pre-wrap;word-break:break-word}
-@media(max-width:768px){.pv-inline{padding:7px 8px;gap:5px}.pv-inline-acts .pv-act{padding:5px 9px;font-size:11px}.queue-strip.queue-in-side{max-height:120px}}
+@media(max-width:768px){.pv-inline{padding:7px 8px;gap:5px}.pv-inline-acts .pv-act{padding:5px 9px;font-size:11px}.queue-strip.queue-in-preview{max-height:120px}}
 .queue-hdr{padding:10px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--b1);font-size:13px;color:var(--t1);font-weight:700}
 .queue-hdr .en{color:var(--t3);font-weight:500;font-size:11px;margin-left:2px}
 .queue-list{flex:1;overflow-y:auto;padding:8px 12px}
@@ -2630,17 +2626,6 @@ mark{
         </div>
       </div>
     </div>
-    <!-- 🧾 대기열 — 편집 탭(사이드바) 하단으로 이동. 생성 버튼 바로 위에서 진행상황 확인 -->
-    <div class="queue-strip queue-in-side">
-      <div class="queue-hdr">
-        <span>🧾 대기열 <span class="en">Queue</span></span>
-        <span id="queueStats" style="font-family:var(--mono);color:var(--t2);font-weight:600">0/0</span>
-        <div class="tb-grow"></div>
-        <button class="btn ghost" id="pauseBtn" style="padding:3px 8px;font-size:11px">⏸ 일시정지</button>
-        <button class="btn ghost" id="clearQueueBtn" style="padding:3px 8px;font-size:11px">🗑 비우기</button>
-      </div>
-      <div class="queue-list" id="queueList"></div>
-    </div>
     <div class="side-foot">
       <div class="gen-info">
         <span id="costEstimate">비용: ~0 Anlas</span>
@@ -2706,26 +2691,24 @@ mark{
           <div class="pv-history-list" id="pvHistoryList"></div>
         </aside>
         </div>
-        <!-- 🔍 인라인 라이트박스 — 핵심 액션만. 메타는 라이트박스(🔍) 또는 ℹ 정보에서. -->
+        <!-- 🔍 인라인 라이트박스 — 다운로드 + 프롬프트 두 개만 (요청). 다른 액션은 라이트박스(🔍 클릭) -->
         <div class="pv-inline" id="pvInline" style="display:none">
           <div class="pv-inline-acts">
             <button class="btn ghost pv-act" id="pvDownload" type="button" title="다운로드 (D)">⬇ 다운로드</button>
-            <button class="btn ghost pv-act" id="pvReuse" type="button" title="모든 파라미터 복원">↻ 복원</button>
-            <button class="btn ghost pv-act" id="pvReseed" type="button" title="시드 재생성 + 즉시 생성 (R)">🎲 재생성</button>
-            <button class="btn ghost pv-act" id="pvLike" type="button" title="❤️ 좋아요 (Space)" aria-pressed="false">♡ 좋아요</button>
-            <button class="btn ghost pv-act" id="pvDislike" type="button" title="👎 별로" aria-pressed="false">👎 별로</button>
-            <span class="pv-more-wrap" style="position:relative;display:inline-flex">
-              <button class="btn ghost pv-act" id="pvAddMore" type="button" title="🔁 같은 프롬프트로 N장 큐에 추가 (옵션: 변형 = 가중치 미세 흔들기)" aria-haspopup="true" aria-expanded="false">🔁 다시 ×4 ▾</button>
-              <div class="pv-more-menu" id="pvAddMoreMenu" style="display:none;position:absolute;bottom:100%;left:0;margin-bottom:6px;background:var(--panel);border:1.5px solid var(--b2);border-radius:6px;padding:5px;min-width:180px;z-index:30;box-shadow:0 6px 16px rgba(0,0,0,.2)">
-                <button type="button" data-vary="0" style="display:block;width:100%;text-align:left;background:transparent;border:none;padding:7px 10px;font-size:12.5px;cursor:pointer;color:var(--t1);border-radius:4px">🔁 비슷하게 ×4 <span style="color:var(--t3);font-size:11px">시드만 다름</span></button>
-                <button type="button" data-vary="1" style="display:block;width:100%;text-align:left;background:transparent;border:none;padding:7px 10px;font-size:12.5px;cursor:pointer;color:var(--t1);border-radius:4px">🎨 변형 ×4 <span style="color:var(--t3);font-size:11px">가중치 ±0.1 흔들기</span></button>
-              </div>
-            </span>
-            <div class="tb-grow"></div>
-            <button class="btn ghost pv-act" id="pvExpand" type="button" title="🔍 전체화면 라이트박스로 확대 (이미지 클릭과 동일)">🔍 확대</button>
             <button class="btn ghost pv-act" id="pvPromptToggle" type="button" title="프롬프트 펼치기/접기 (T)" aria-pressed="false">📝 프롬프트</button>
           </div>
           <div class="pv-inline-prompt" id="pvInlinePrompt" style="display:none"></div>
+        </div>
+        <!-- 🧾 대기열 — 미리보기 탭 하단 (요청으로 사이드바에서 복귀) -->
+        <div class="queue-strip queue-in-preview">
+          <div class="queue-hdr">
+            <span>🧾 대기열 <span class="en">Queue</span></span>
+            <span id="queueStats" style="font-family:var(--mono);color:var(--t2);font-weight:600">0/0</span>
+            <div class="tb-grow"></div>
+            <button class="btn ghost" id="pauseBtn" style="padding:4px 10px;font-size:11.5px">⏸ 일시정지 <span class="en">Pause</span></button>
+            <button class="btn ghost" id="clearQueueBtn" style="padding:4px 10px;font-size:11.5px">🗑 비우기 <span class="en">Clear</span></button>
+          </div>
+          <div class="queue-list" id="queueList"></div>
         </div>
       </div>
 
@@ -4745,7 +4728,6 @@ const PRESET_TYPES = [
   {id:'pose',        label:'포즈',      en:'Pose',         ico:'🤸', target:'char-action'},
   {id:'mood',        label:'분위기',    en:'Mood',         ico:'✨', target:'append'},
   {id:'lighting',    label:'조명',      en:'Lighting',     ico:'💡', target:'append'},
-  {id:'persona',     label:'페르소나',  en:'Persona',      ico:'🧑', target:'persona'},
 ];
 
 // 한국어 이름 접두사 → 카테고리 매핑 (자동 분류용)
@@ -7500,7 +7482,6 @@ function renderCharacters(){
           <button class="char-act-btn ${c.enabled?'act':''}" data-act="toggle" data-idx="${i}" title="이 캐릭터 슬롯 활성/비활성 토글"><span class="cab-ico">${c.enabled?'✓':'⭕'}</span><span class="cab-lbl"> ${c.enabled?'활성':'비활성'}</span> <span class="en" style="opacity:.55;font-weight:400">${c.enabled?'On':'Off'}</span></button>
           <button class="char-act-btn ${c.randPerGen?'act':''}" data-act="rand-pergen" data-idx="${i}" title="🎲 매 대기열 추가·생성마다 이 슬롯을 무작위 교체 (⭐즐겨찾기·📂그룹고정·후보풀 설정 모두 존중)"><span class="cab-ico">🎲</span><span class="cab-lbl"> 매번 랜덤</span> <span class="en" style="opacity:.55;font-weight:400">${c.randPerGen?'On':'Off'}</span></button>
           <button class="char-act-btn edit" data-act="expand" data-idx="${i}" title="외형·액션·네거티브 textarea 펼치기/접기"><span class="cab-ico">✏</span><span class="cab-lbl"> 프롬프트</span> <span class="en" style="opacity:.55;font-weight:400">Edit</span></button>
-          <button class="char-act-btn ${c.persona?'act':''}" data-act="persona-mgr" data-idx="${i}" title="🧑 페르소나 관리 — 이 캐릭터의 성격·말투 메모"><span class="cab-ico">🧑</span><span class="cab-lbl"> ${c.persona?'페르소나':'페르소나'}</span> <span class="en" style="opacity:.55;font-weight:400">Persona</span></button>
           <button class="char-act-btn" data-act="clear-char-all" data-idx="${i}" title="🧹 텍스트만 비움 — 슬롯 카드는 그대로 (실행 취소 6초)"><span class="cab-ico">🧹</span><span class="cab-lbl"> 텍스트 비우기</span> <span class="en" style="opacity:.55;font-weight:400">Clear text</span></button>
           <button class="char-act-btn del" data-act="del" data-idx="${i}" title="🗑 슬롯 카드 자체 삭제 — 카드가 사라짐 (텍스트만 지우려면 옆 🧹 텍스트 비우기 사용)"><span class="cab-ico del-ico">🗑</span><span class="cab-lbl del-lbl"> 슬롯 삭제</span></button>
         </div>
@@ -7520,12 +7501,6 @@ function renderCharacters(){
           <button type="button" class="char-ta-clear" data-act="clear-char-field" data-field="action" data-idx="${i}" title="액션·의상 비우기" aria-label="액션·의상 비우기">✕</button>
         </div>
         <button class="char-quick-btn" data-act="quickadd" data-idx="${i}">🪄 빠른 추가 — 액션·프리셋 찾기 <span class="en" style="opacity:.6">Quick Add</span></button>
-
-        <div class="char-section-label">🧑 페르소나 <span class="en">Persona</span> <span style="font-size:10.5px;color:var(--t3);font-weight:400;margin-left:6px">성격·말투 메모</span></div>
-        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-          <select class="ta tiny char-persona-select" data-act="persona-pick" data-idx="${i}" style="flex:1;font-size:12px;padding:6px 8px"><option value="">(없음 — 페르소나 선택)</option></select>
-          <button class="char-act-btn" data-act="persona-mgr" data-idx="${i}" type="button" title="🧑 페르소나 추가/편집" style="font-size:11px;padding:4px 9px">⚙</button>
-        </div>
 
         <div class="char-section-label">🚫 네거티브 <span class="en">Negative</span>
           <button class="char-tagcodex-btn" data-act="open-char-tagcodex" data-idx="${i}" title="태그 도감에서 이 캐릭터 네거티브로 추가" type="button">📖 도감에서 추가</button>
@@ -13019,7 +12994,7 @@ async function afterImage(blob, q){
   await refreshGallerySize();
   // 🕓 미리보기 탭 우측 히스토리 + 🔍 인라인 라이트박스 + 🎯 좋아요 시드 풀 갱신
   try { await refreshPreviewHistory(); } catch(e){ _swallow(e, 'pv:history'); }
-  try { await renderPvInline(); } catch(e){ _swallow(e, 'pv:inline'); }
+  try { renderPvInline(); } catch(e){ _swallow(e, 'pv:inline'); }
   try { refreshLikedSeedPool(); } catch(e){ _swallow(e, 'liked:seed:pool'); }
 }
 
@@ -13032,38 +13007,16 @@ async function refreshLikedSeedPool(){
   } catch(_){ window._likedSeedPool = []; }
 }
 
-// 🔍 인라인 라이트박스 — 미리보기 바로 아래 메타·액션 패널 갱신 (state.lastImage 기준)
-async function renderPvInline(){
+// 🔍 인라인 라이트박스 — 미리보기 바로 아래 컴팩트 패널 (다운로드 + 프롬프트 토글만)
+function renderPvInline(){
   const panel = document.getElementById('pvInline');
   if(!panel) return;
   const li = state.lastImage;
   if(!li){ panel.style.display = 'none'; return; }
   panel.style.display = '';
-  const m = li.meta || {};
-  // 프롬프트 (펼침 상태 유지) — 메타는 라이트박스(🔍 확대 → ℹ 정보) 또는 EXIF 에서
+  // 프롬프트 (펼침 상태 유지)
   const pr = document.getElementById('pvInlinePrompt');
-  if(pr) pr.textContent = m.prompt || '(프롬프트 없음)';
-  // 좋아요/별로 — DB에서 최신 상태 읽기 (savedId 있을 때만 활성)
-  const likeBtn = document.getElementById('pvLike');
-  const disBtn = document.getElementById('pvDislike');
-  const sid = li.savedId;
-  let liked = false, disliked = false;
-  if(sid != null){
-    try {
-      const tx = DB.tx([DB.IMG], 'readonly');
-      const img = await new Promise((res, rej) => { const r = tx.objectStore(DB.IMG).get(sid); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
-      if(img){ liked = !!img.liked; disliked = !!img.disliked; }
-    } catch(_){}
-  }
-  if(likeBtn){
-    likeBtn.disabled = sid == null;
-    likeBtn.setAttribute('aria-pressed', String(liked));
-    likeBtn.textContent = liked ? '❤️ 좋아요' : '♡ 좋아요';
-  }
-  if(disBtn){
-    disBtn.disabled = sid == null;
-    disBtn.setAttribute('aria-pressed', String(disliked));
-  }
+  if(pr) pr.textContent = (li.meta || {}).prompt || '(프롬프트 없음)';
 }
 
 // 💡 좋아요 기반 태그 추천 — ❤️ 표시한 이미지 prompts 에서 현재 프롬프트와 자주 공출현하는 태그 N개
@@ -13177,7 +13130,7 @@ document.addEventListener('click', async e => {
       $('previewEmpty').style.display = 'none';
       // 활성 카드 갱신
       document.querySelectorAll('#pvHistoryList .pv-h-card').forEach(c => c.classList.toggle('act', parseInt(c.dataset.id,10)===id));
-      renderPvInline().catch(e => _swallow(e, 'pv:inline:histclick'));
+      try { renderPvInline(); } catch(e){ _swallow(e, 'pv:inline:histclick'); }
       toast(`🕓 미리보기 불러옴 — ${img.label||img.id}`, 'success');
     };
   } catch(err){ _swallow(err, 'pv:history:click'); toast('불러오기 실패', 'error'); }
@@ -18404,7 +18357,7 @@ function setMainPane(pane){
   if(pane === 'gallery') loadGallery();
   else if(pane === 'preview'){
     refreshPreviewHistory().catch(e => _swallow(e, 'pv:history:pane'));
-    renderPvInline().catch(e => _swallow(e, 'pv:inline:pane'));
+    try { renderPvInline(); } catch(e){ _swallow(e, 'pv:inline:pane'); }
   }
   else if(pane === 'presets'){ renderPresetTabs(); renderPresets(); }
   else if(pane === 'templates'){ tplRenderCatChips(); tplRenderRoll(); tplRenderSavedList(); }
@@ -20539,34 +20492,8 @@ function wireGenerationAndPresetEvents(){
     toast('I2I로 전송', 'success');
   });
 
-  // 🔍 인라인 라이트박스 패널 액션 — 기존 핸들러 재사용
-  // 🔁 다시 ×4 메뉴 — 비슷하게 / 변형 한 곳에 통합
-  $('pvAddMore')?.addEventListener('click', e => {
-    e.stopPropagation();
-    const menu = $('pvAddMoreMenu');
-    if(!menu) return;
-    const open = menu.style.display !== 'none';
-    menu.style.display = open ? 'none' : 'block';
-    $('pvAddMore').setAttribute('aria-expanded', String(!open));
-  });
-  $('pvAddMoreMenu')?.addEventListener('click', e => {
-    const btn = e.target.closest('button[data-vary]');
-    if(!btn) return;
-    e.stopPropagation();
-    const vary = btn.dataset.vary === '1';
-    $('pvAddMoreMenu').style.display = 'none';
-    $('pvAddMore').setAttribute('aria-expanded', 'false');
-    enqueueVariants({count: 4, vary});
-  });
-  document.addEventListener('click', e => {
-    if(e.target.closest('.pv-more-wrap')) return;
-    const m = $('pvAddMoreMenu'); if(m) m.style.display = 'none';
-    const b = $('pvAddMore'); if(b) b.setAttribute('aria-expanded', 'false');
-  });
+  // 🔍 인라인 라이트박스 패널 — 다운로드 + 프롬프트 두 개만 (요청)
   $('pvDownload')?.addEventListener('click', () => $('downloadBtn').click());
-  $('pvReuse')?.addEventListener('click', () => $('reuseBtn').click());
-  $('pvReseed')?.addEventListener('click', () => $('reseedBtn').click());
-  $('pvExpand')?.addEventListener('click', () => $('previewImg').click());
   $('pvPromptToggle')?.addEventListener('click', () => {
     const pr = $('pvInlinePrompt');
     const btn = $('pvPromptToggle');
@@ -20574,24 +20501,6 @@ function wireGenerationAndPresetEvents(){
     const open = pr.style.display === 'none';
     pr.style.display = open ? '' : 'none';
     btn.setAttribute('aria-pressed', String(open));
-  });
-  $('pvLike')?.addEventListener('click', async () => {
-    const sid = state.lastImage?.savedId;
-    if(sid == null){ toast('저장된 이미지에만 가능', 'warning'); return; }
-    const cur = $('pvLike').getAttribute('aria-pressed') === 'true';
-    await DB.setImageLike(sid, !cur);
-    await renderPvInline();
-    if(state.mainPane === 'gallery') loadGallery();
-    toast(!cur ? '❤️ 좋아요' : '♡ 좋아요 해제', 'info');
-  });
-  $('pvDislike')?.addEventListener('click', async () => {
-    const sid = state.lastImage?.savedId;
-    if(sid == null){ toast('저장된 이미지에만 가능', 'warning'); return; }
-    const cur = $('pvDislike').getAttribute('aria-pressed') === 'true';
-    await DB.setImageDislike(sid, !cur);
-    await renderPvInline();
-    if(state.mainPane === 'gallery') loadGallery();
-    toast(!cur ? '👎 별로 — 통계 반영' : '👎 별로 해제', 'info');
   });
 
   // Image drop
@@ -23348,7 +23257,8 @@ function installShortcutHandlers(){
       }
       // 단일 키 액션
       if(!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey){
-        const map = {' ':'pvLike','d':'downloadBtn','D':'downloadBtn','r':'reseedBtn','R':'reseedBtn','i':'sendI2IBtn','I':'sendI2IBtn'};
+        // 인라인 패널은 다운로드+프롬프트만 — Space/Like 제거. R/D/I 는 기존 미리보기 액션 버튼 매핑 유지
+        const map = {'d':'downloadBtn','D':'downloadBtn','r':'reseedBtn','R':'reseedBtn','i':'sendI2IBtn','I':'sendI2IBtn'};
         const id = map[e.key];
         if(id){ const el = $(id); if(el){ e.preventDefault(); el.click(); return; } }
         if(e.key === 'p' || e.key === 'P'){ const b = $('pauseBtn'); if(b && !b.disabled){ e.preventDefault(); b.click(); return; } }
