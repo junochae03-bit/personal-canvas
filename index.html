@@ -5632,6 +5632,27 @@ const DB = {
       tx.onerror = e => rej(e);
     });
   },
+  // 📥 다운로드 기록 — downloaded(boolean) + downloadCount(횟수) + downloadedAt(최근 시각).
+  async setImageDownloaded(imgId){
+    if(!this.db) return null;
+    return new Promise((res, rej) => {
+      const tx = this.tx([this.IMG], 'readwrite');
+      const store = tx.objectStore(this.IMG);
+      const req = store.get(imgId);
+      let sid = null, count = 0, ts = 0;
+      req.onsuccess = () => {
+        const img = req.result;
+        if(!img){ res(null); return; }
+        img.downloaded = true;
+        img.downloadCount = (img.downloadCount || 0) + 1;
+        img.downloadedAt = Date.now();
+        store.put(img);
+        sid = img.sessionId; count = img.downloadCount; ts = img.downloadedAt;
+      };
+      tx.oncomplete = () => { if(sid != null) this._invalidateImgCache(sid); res({count, ts}); };
+      tx.onerror = e => rej(e);
+    });
+  },
   // 📊 통계용 — 전체 이미지 (휴지통 제외).
   async getAllImagesForStats(){
     if(!this.db) return [];
@@ -13706,12 +13727,15 @@ async function showLightboxAt(idx){
   if(prevImg){ prevImg.src = url; prevImg.dataset.url = url; }
   // ❤️ 좋아요 / 👎 별로 버튼 상태 동기화 + ✏️ 수정 버튼 노출 (👎 일 때만)
   _refreshLbLikeDislikeUI();
+  // 📥 다운로드 상태 — 받은 적 있으면 '✓ 받음 · n회'
+  _refreshLbDownloadUI();
   // 메타데이터 — EXIF 외 추가 필드들 풍부하게 표시
   const m = img.meta || (await readPngMetadata(img.blob))?.parsed || {};
   const lines = [];
   if(img.label) lines.push(`<b>라벨</b> · ${esc(img.label)}`);
   if(img.liked) lines.push(`<b style="color:#e25b6f">❤️ 좋아요</b>`);
   if(img.disliked) lines.push(`<b style="color:#b54338">👎 별로</b>`);
+  if(img.downloaded) lines.push(`<b style="color:var(--green)">📥 받음</b> · ${img.downloadCount||1}회${img.downloadedAt?` · 최근 ${new Date(img.downloadedAt).toLocaleString()}`:''}`);
   if(img.deletedAt) lines.push(`<b style="color:var(--red)">🗑 휴지통</b> · ${new Date(img.deletedAt).toLocaleString()} (7일 후 영구 삭제)`);
   // 라이트박스 액션: 휴지통 이미지면 복원 버튼 노출 + 🗑 라벨이 '영구 삭제' 의미
   const restoreBtn = $('lbRestore');
@@ -13820,6 +13844,28 @@ function _refreshLbLikeDislikeUI(){
   }
   const editBtn = $('lbEditPrompt');
   if(editBtn) editBtn.style.display = img.disliked ? '' : 'none';
+}
+
+// 📥 라이트박스 다운로드 버튼 상태 — 받은 적 있는 이미지면 '✓ 받음 · n회' 영구 표시
+function _refreshLbDownloadUI(){
+  const img = _lbCurrent;
+  const btn = $('lbDownload');
+  if(!img || !btn) return;
+  const ico = btn.querySelector('.lb-act-ico');
+  const lbl = btn.querySelector('.lb-act-lbl');
+  if(!ico || !lbl) return;
+  if(img.downloaded){
+    const n = img.downloadCount || 1;
+    ico.textContent = '✓';
+    lbl.textContent = n > 1 ? `받음 ${n}회` : '받음';
+    btn.classList.add('lb-done');
+    btn.title = `다운로드 완료${n>1?` · ${n}회 받음`:''}${img.downloadedAt?` · 최근 ${new Date(img.downloadedAt).toLocaleString()}`:''} (다시 받기 가능)`;
+  } else {
+    ico.textContent = '⬇';
+    lbl.textContent = '다운';
+    btn.classList.remove('lb-done');
+    btn.title = '⬇ 다운로드';
+  }
 }
 
 // 👎 누른 현재 이미지의 toxic 토큰 분석 결과를 토스트로 안내.
@@ -21342,23 +21388,23 @@ function wireLightboxEvents(){
     if(_lbWasDragged) return;   // 🛡 드래그 직후 합성 click 무시
     closeLightbox();
   });
-  $('lbDownload').addEventListener('click', () => {
+  $('lbDownload').addEventListener('click', async () => {
     if(!_lbCurrent) return;
     const url = URL.createObjectURL(_lbCurrent.blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = _lbCurrent.fname || `nai_${_lbCurrent.id}.png`;
     a.click();
-    // ✅ 다운로드 피드백 — 모바일에서 받았는지 헷갈리지 않게 토스트 + 버튼 ✓ 깜빡
-    try { toast(`⬇ 저장됨: ${a.download}`, 'success'); } catch(_){}
-    const btn = $('lbDownload');
-    const ico = btn?.querySelector('.lb-act-ico');
-    const lbl = btn?.querySelector('.lb-act-lbl');
-    if(ico && lbl){
-      const oi = ico.textContent, ol = lbl.textContent;
-      ico.textContent = '✓'; lbl.textContent = '완료'; btn.classList.add('lb-done');
-      setTimeout(() => { ico.textContent = oi; lbl.textContent = ol; btn.classList.remove('lb-done'); }, 1400);
-    }
+    // 📥 DB 에 다운로드 기록 — downloaded(true) + count++ + downloadedAt(now)
+    let count = (_lbCurrent.downloadCount || 0) + 1;
+    try {
+      const r = await DB.setImageDownloaded(_lbCurrent.id);
+      if(r){ count = r.count; _lbCurrent.downloadCount = r.count; _lbCurrent.downloadedAt = r.ts; }
+      _lbCurrent.downloaded = true;
+    } catch(e){ _swallow(e, 'lb:download:record'); }
+    // ✅ 토스트 + 영구 상태 갱신 (✓ 받음 · n회)
+    try { toast(`⬇ 저장됨: ${a.download}${count>1?` (${count}회째)`:''}`, 'success'); } catch(_){}
+    _refreshLbDownloadUI();
     // 🐛 fix: 1초 후 revoke 는 사용자가 다운로드 다이얼로그 늦게 확인하면 URL 죽음 (특히 Safari)
     //   대신 페이지 visibility change(블러)일 때 revoke — 다이얼로그가 떴다 닫혔다는 신호
     const cleanup = () => {
