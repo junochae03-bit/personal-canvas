@@ -3816,6 +3816,28 @@ coffee shop, latte art"></textarea>
   </div>
 </div>
 
+<!-- 🎯 와일드카드 확장값 → 캐릭터 슬롯에 직접 적용 (라이트박스 ℹ 정보의 📌 버튼에서 호출) -->
+<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="xlApplyTitle" id="xlApplyModal">
+  <div class="modal" style="max-width:520px;width:100%;display:flex;flex-direction:column;max-height:88vh">
+    <h3 id="xlApplyTitle">🎯 캐릭터에 적용 <span class="en">Apply to Character</span></h3>
+    <div class="modal-body" style="overflow-y:auto;padding:14px 18px">
+      <div style="font-size:11.5px;color:var(--t3);margin-bottom:10px;line-height:1.55">와일드카드 확장값 한 줄을 <b>선택한 캐릭터의 액션·의상·자세</b>에 부어넣어요. 기존 액션은 보존하고 뒤에 누적됩니다.</div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:4px;font-weight:600">저장될 태그</div>
+      <div id="xlApplyPreview" style="background:var(--card);border:1.5px solid var(--b1);border-radius:5px;padding:8px 11px;font-size:12px;color:var(--t1);line-height:1.5;margin-bottom:12px;max-height:90px;overflow-y:auto;white-space:pre-wrap;word-break:break-word"></div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:4px;font-weight:600">적용할 캐릭터 슬롯</div>
+      <div id="xlApplySlotList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);margin-bottom:6px;cursor:pointer">
+        <input type="checkbox" id="xlApplyAlsoSave" style="width:auto"> 📌 템플릿으로도 저장 (다른 캐릭터에서 재사용)
+      </label>
+      <input type="text" class="inp" id="xlApplySaveName" placeholder="템플릿 이름 (위 체크 시)" maxlength="60" style="display:none">
+    </div>
+    <div class="modal-foot" style="padding:12px 18px;border-top:1.5px solid var(--b1);display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn ghost" id="xlApplyCancel" type="button">취소</button>
+      <button class="btn primary" id="xlApplyConfirm" type="button">🎯 적용</button>
+    </div>
+  </div>
+</div>
+
 <!-- 📌 캐릭터 템플릿 저장 모달 — 와일드카드/랜덤이 적용된 결과를 골라 이름 짓고 저장 -->
 <div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="charTplSaveTitle" id="charTplSaveModal">
   <div class="modal" style="max-width:560px;width:100%;display:flex;flex-direction:column;max-height:88vh">
@@ -13212,6 +13234,99 @@ async function deleteCharTpl(tplId){
   await saveCharTemplates();
 }
 
+// 🎯 와일드카드 확장값 → 캐릭터 슬롯 직접 적용 모달
+function openXlApplyModal(combined, img){
+  const modal = document.getElementById('xlApplyModal');
+  const preview = document.getElementById('xlApplyPreview');
+  const slotList = document.getElementById('xlApplySlotList');
+  const saveChk = document.getElementById('xlApplyAlsoSave');
+  const nameInp = document.getElementById('xlApplySaveName');
+  if(!modal || !slotList) return;
+  preview.textContent = combined;
+  const chars = state.characters || [];
+  if(!chars.length){
+    slotList.innerHTML = '<div style="color:var(--t3);font-size:12px;font-style:italic;padding:10px;text-align:center;background:var(--card);border:1.5px solid var(--b1);border-radius:5px">캐릭터 슬롯이 없음 — "📌 템플릿으로 저장" 체크해서 저장만 가능</div>';
+    saveChk.checked = true; saveChk.disabled = true;
+    nameInp.style.display = '';
+  } else {
+    saveChk.checked = false; saveChk.disabled = false;
+    nameInp.style.display = 'none';
+    slotList.innerHTML = chars.map((c, i) => {
+      const label = c.name || `슬롯 ${i+1}`;
+      const cur = (c.action || '').slice(0, 50) || '(액션 비어있음)';
+      return `<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--card);border:1.5px solid var(--b1);border-radius:5px;cursor:pointer">
+        <input type="radio" name="xlApplySlot" value="${i}" ${i===0?'checked':''} style="margin:0">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;color:var(--t1);font-size:12.5px">캐릭터 #${i+1} ${esc(label)}</div>
+          <div style="color:var(--t3);font-size:11px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(c.action||'')}">현재 액션: ${esc(cur)}</div>
+        </div>
+      </label>`;
+    }).join('');
+  }
+  // 이름 기본값 — 이미지 라벨
+  nameInp.value = img?.label || `${new Date().toLocaleDateString()} 조합`;
+  modal.dataset.combined = combined;
+  modal.dataset.imgId = String(img?.id || '');
+  modal.classList.add('open');
+}
+function closeXlApplyModal(){
+  const modal = document.getElementById('xlApplyModal');
+  if(modal){ modal.classList.remove('open'); delete modal.dataset.combined; delete modal.dataset.imgId; }
+}
+async function confirmXlApply(){
+  const modal = document.getElementById('xlApplyModal');
+  if(!modal) return;
+  const combined = modal.dataset.combined || '';
+  if(!combined){ toast('적용할 태그가 없음', 'warning'); return; }
+  const saveChk = document.getElementById('xlApplyAlsoSave');
+  const chars = state.characters || [];
+  const messages = [];
+  // 1. 캐릭터 슬롯에 즉시 적용
+  if(chars.length){
+    const sel = modal.querySelector('input[name="xlApplySlot"]:checked');
+    const idx = sel ? parseInt(sel.value, 10) : 0;
+    if(state.characters[idx]){
+      const c = state.characters[idx];
+      const prev = (c.action || '').trim();
+      c.action = prev ? dedupePromptTags(`${prev}, ${combined}`) : combined;
+      if(typeof renderCharacters === 'function') renderCharacters();
+      saveSettingsDebounced();
+      messages.push(`🎯 캐릭터 #${idx+1}의 액션·의상·자세에 적용 (${c.action.length}자)`);
+      // 적용된 카드 펼침 + 강조
+      setTimeout(() => {
+        const body = document.querySelector(`#charList [data-body="${idx}"]`);
+        if(body) body.classList.add('open');
+        const ta = document.querySelector(`#charList textarea[data-act="action"][data-idx="${idx}"]`);
+        if(ta){
+          if(ta.value !== c.action) ta.value = c.action;
+          ta.scrollIntoView({block:'center', behavior:'smooth'});
+          ta.style.transition = 'box-shadow .3s';
+          ta.style.boxShadow = '0 0 0 2px var(--acc)';
+          setTimeout(() => { ta.style.boxShadow = ''; }, 1200);
+        }
+      }, 60);
+    }
+  }
+  // 2. 옵션: 템플릿으로도 저장
+  if(saveChk?.checked){
+    const name = (document.getElementById('xlApplySaveName').value || '').trim().slice(0, 60);
+    if(!name){ toast('템플릿 이름을 입력하세요', 'warning'); return; }
+    state.charTemplates = state.charTemplates || [];
+    state.charTemplates.unshift({
+      id: _uid(), name, ts: Date.now(),
+      action: combined, appearance: '', neg: '', prompt: '',
+      fromImg: parseInt(modal.dataset.imgId, 10) || null,
+      kind: 'expansion',
+    });
+    state.charTemplates = state.charTemplates.slice(0, 100);
+    await saveCharTemplates();
+    messages.push(`📌 "${name}" 저장됨 (총 ${state.charTemplates.length}개)`);
+  }
+  closeXlApplyModal();
+  if(messages.length) toast(messages.join(' · '), 'success', {timeoutMs: 5000});
+  else toast('적용 대상이 없음 — 캐릭터 추가 또는 저장 옵션 체크', 'warning');
+}
+
 // 🃏 expansionLog 의 "출력값들만" 콤마로 합쳐 한 줄로 → 캐릭터 템플릿에 부어넣기 좋게.
 //   ⚠ 콤보 와일드카드(value 안에 또 다른 __token__ 이 들어있는 경우)는 중복 합산 방지 위해 제외.
 //      예: __nlc__ → "1boy, __nl__, __bd__" 같은 콤보. 그 아래 __nl__ 등이 실제 최종값이라 이미 풀려있음.
@@ -22442,6 +22557,16 @@ function wireMiscEvents(){
   document.getElementById('pvHistoryModal')?.addEventListener('click', e => {
     if(e.target.id === 'pvHistoryModal') closePvHistoryModal();
   });
+  // 🎯 와일드카드 확장값 적용 모달 — 취소/적용/배경/체크박스 토글
+  document.getElementById('xlApplyCancel')?.addEventListener('click', closeXlApplyModal);
+  document.getElementById('xlApplyConfirm')?.addEventListener('click', confirmXlApply);
+  document.getElementById('xlApplyModal')?.addEventListener('click', e => {
+    if(e.target.id === 'xlApplyModal') closeXlApplyModal();
+  });
+  document.getElementById('xlApplyAlsoSave')?.addEventListener('change', e => {
+    document.getElementById('xlApplySaveName').style.display = e.target.checked ? '' : 'none';
+  });
+
   // 📌 캐릭터 템플릿 저장 모달 — 취소/저장/배경 닫기
   document.getElementById('charTplSaveCancel')?.addEventListener('click', closeCharTplSaveModal);
   document.getElementById('charTplSaveConfirm')?.addEventListener('click', confirmCharTplSave);
@@ -23910,25 +24035,10 @@ async function init(){
     const xl = _lbCurrent.meta?.expansionLog;
     if(!xl){ toast('확장 로그가 없는 이미지', 'warning'); return; }
     if(act === 'xl-save-tpl'){
-      // 📌 와일드카드 확장값들만 한 줄로 합쳐 캐릭터 템플릿으로 저장 — 다른 캐릭터에서 재사용
+      // 📌 와일드카드 확장값들만 합쳐 → 모달로 캐릭터 슬롯 선택 + 즉시 적용 (+ 옵션 저장)
       const combined = combineExpansionValues(xl);
       if(!combined){ toast('합칠 확장값이 없음', 'warning'); return; }
-      const defaultName = _lbCurrent.label || `${new Date().toLocaleDateString()} 조합`;
-      const name = prompt(`📌 캐릭터 템플릿 이름:\n\n저장될 내용 (액션·의상·자세 → ${combined.length}자):\n${combined.slice(0, 180)}${combined.length > 180 ? '…' : ''}`, defaultName);
-      if(name == null) return;   // 취소
-      const trimmed = String(name).trim().slice(0, 60);
-      if(!trimmed){ toast('이름이 비어있음', 'warning'); return; }
-      state.charTemplates = state.charTemplates || [];
-      state.charTemplates.unshift({
-        id: _uid(), name: trimmed, ts: Date.now(),
-        action: combined, appearance: '', neg: '', prompt: '',
-        fromImg: _lbCurrent.id || null,
-        kind: 'expansion',   // 출처 표시
-      });
-      state.charTemplates = state.charTemplates.slice(0, 100);
-      saveCharTemplates().then(() => {
-        toast(`📌 "${trimmed}" 저장됨 — 캐릭터 슬롯의 📌 템플릿 메뉴에서 불러오세요 (총 ${state.charTemplates.length}개)`, 'success', {timeoutMs: 5000});
-      });
+      openXlApplyModal(combined, _lbCurrent);
     } else if(act === 'xl-copy'){
       const txt = formatExpansionLogText(xl, _lbCurrent);
       navigator.clipboard?.writeText(txt).then(
