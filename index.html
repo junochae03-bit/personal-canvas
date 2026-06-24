@@ -13212,6 +13212,27 @@ async function deleteCharTpl(tplId){
   await saveCharTemplates();
 }
 
+// 🃏 expansionLog 의 "출력값들만" 콤마로 합쳐 한 줄로 → 캐릭터 템플릿에 부어넣기 좋게.
+//   ⚠ 콤보 와일드카드(value 안에 또 다른 __token__ 이 들어있는 경우)는 중복 합산 방지 위해 제외.
+//      예: __nlc__ → "1boy, __nl__, __bd__" 같은 콤보. 그 아래 __nl__ 등이 실제 최종값이라 이미 풀려있음.
+//   결과는 dedupePromptTags 로 중복 제거.
+function combineExpansionValues(xl){
+  if(!xl) return '';
+  const parts = [];
+  // 와일드카드 — 콤보(값에 __x__ 포함) 는 제외, 최종 잎 노드만
+  for(const w of (xl.wildcards || [])){
+    if(!w?.value) continue;
+    if(/__[a-z0-9_]+__/i.test(w.value)) continue;   // 콤보 스킵
+    parts.push(w.value);
+  }
+  // 동적 선택 ||A|B|C|| — 모두 잎 노드 (NAI 동적이라 콤보 없음)
+  for(const c of (xl.choices || [])){ if(c?.value) parts.push(c.value); }
+  // RC 카테고리
+  for(const r of (xl.rc || [])){ if(r?.value) parts.push(r.value); }
+  const joined = parts.filter(Boolean).join(', ');
+  return (typeof dedupePromptTags === 'function') ? dedupePromptTags(joined) : joined;
+}
+
 // 🃏 확장 로그(expansionLog)를 사람이 읽기 좋은 텍스트로 변환 — 복사·메모용
 function formatExpansionLogText(xl, img){
   const lines = [];
@@ -14422,9 +14443,10 @@ async function showLightboxAt(idx){
       const items = xl.choices.map(c => `<div style="margin-left:6px"><code style="color:var(--acc)">||${esc((c.options||[]).join('|'))}||</code> → ${esc(c.value)}${c.source && c.source !== 'prompt' ? ` <span class="muted">(${esc(c.source)})</span>` : ''}</div>`).join('');
       rows.push(`<div style="margin-top:4px"><b>🎲 동적 선택</b>${items}</div>`);
     }
-    const actBar = `<div style="display:flex;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid var(--b1)">
-      <button type="button" data-act="xl-copy" class="btn ghost" style="padding:3px 8px;font-size:11px" title="확장 결과를 클립보드에 텍스트로 복사">📋 복사</button>
-      <button type="button" data-act="xl-download" class="btn ghost" style="padding:3px 8px;font-size:11px" title="확장 결과를 JSON 파일로 다운로드 — 따로 보관">💾 저장</button>
+    const actBar = `<div style="display:flex;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid var(--b1);flex-wrap:wrap">
+      <button type="button" data-act="xl-save-tpl" class="btn primary" style="padding:3px 9px;font-size:11px" title="와일드카드 확장값들만 한 줄로 조합 → 캐릭터 템플릿으로 저장. 다른 캐릭터 슬롯에서 📌 메뉴로 불러와 똑같은 결과 재현">📌 캐릭터 템플릿으로 저장</button>
+      <button type="button" data-act="xl-copy" class="btn ghost" style="padding:3px 8px;font-size:11px" title="확장 결과 trace 를 클립보드에 텍스트로 복사">📋 trace 복사</button>
+      <button type="button" data-act="xl-download" class="btn ghost" style="padding:3px 8px;font-size:11px" title="전체 데이터를 JSON 파일로 다운로드">💾 JSON</button>
     </div>`;
     lines.push(`<div class="lb-prompt" data-xl-block>${rows.join('')}${actBar}</div>`);
   }
@@ -23887,7 +23909,27 @@ async function init(){
     if(!act || !_lbCurrent) return;
     const xl = _lbCurrent.meta?.expansionLog;
     if(!xl){ toast('확장 로그가 없는 이미지', 'warning'); return; }
-    if(act === 'xl-copy'){
+    if(act === 'xl-save-tpl'){
+      // 📌 와일드카드 확장값들만 한 줄로 합쳐 캐릭터 템플릿으로 저장 — 다른 캐릭터에서 재사용
+      const combined = combineExpansionValues(xl);
+      if(!combined){ toast('합칠 확장값이 없음', 'warning'); return; }
+      const defaultName = _lbCurrent.label || `${new Date().toLocaleDateString()} 조합`;
+      const name = prompt(`📌 캐릭터 템플릿 이름:\n\n저장될 내용 (액션·의상·자세 → ${combined.length}자):\n${combined.slice(0, 180)}${combined.length > 180 ? '…' : ''}`, defaultName);
+      if(name == null) return;   // 취소
+      const trimmed = String(name).trim().slice(0, 60);
+      if(!trimmed){ toast('이름이 비어있음', 'warning'); return; }
+      state.charTemplates = state.charTemplates || [];
+      state.charTemplates.unshift({
+        id: _uid(), name: trimmed, ts: Date.now(),
+        action: combined, appearance: '', neg: '', prompt: '',
+        fromImg: _lbCurrent.id || null,
+        kind: 'expansion',   // 출처 표시
+      });
+      state.charTemplates = state.charTemplates.slice(0, 100);
+      saveCharTemplates().then(() => {
+        toast(`📌 "${trimmed}" 저장됨 — 캐릭터 슬롯의 📌 템플릿 메뉴에서 불러오세요 (총 ${state.charTemplates.length}개)`, 'success', {timeoutMs: 5000});
+      });
+    } else if(act === 'xl-copy'){
       const txt = formatExpansionLogText(xl, _lbCurrent);
       navigator.clipboard?.writeText(txt).then(
         () => toast(`📋 확장 결과 복사됨 (${(xl.wildcards?.length||0)+(xl.choices?.length||0)}항목)`, 'success'),
