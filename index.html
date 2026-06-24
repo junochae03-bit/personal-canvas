@@ -13172,30 +13172,38 @@ async function confirmCharTplSave(){
 //   appearance/neg/prompt 필드는 보존 (사용자가 캐릭터 본체 설정 잃지 않게).
 function applyCharTplToSlot(tplId, charIdx){
   const tpl = (state.charTemplates || []).find(t => t.id === tplId);
-  if(!tpl){ toast('템플릿을 찾을 수 없음', 'error'); return; }
-  if(!state.characters[charIdx]){ toast('캐릭터 슬롯이 없음', 'error'); return; }
+  if(!tpl){ toast('템플릿을 찾을 수 없음 — 새로고침(Ctrl+Shift+R) 후 다시 시도', 'error'); return; }
+  if(!state.characters[charIdx]){ toast(`캐릭터 슬롯 #${charIdx+1}이 없음 — 캐릭터 카드를 먼저 추가하세요`, 'error'); return; }
   const c = state.characters[charIdx];
   // 모든 텍스트 합치고 중복 정리 — 와일드카드·랜덤 확장된 결과를 한 줄로
   const joined = [tpl.action, tpl.appearance, tpl.prompt].map(s => (s || '').trim()).filter(Boolean).join(', ');
+  if(!joined){ toast(`'${tpl.name}' 템플릿이 비어있음 — 저장된 내용 없음`, 'warning'); console.warn('[charTpl] empty template', tpl); return; }
   const cleaned = (typeof dedupePromptTags === 'function') ? dedupePromptTags(joined) : joined;
   // 기존 action 이 있으면 뒤에 이어붙임(쉼표 구분, 중복 제거) — 누적 사용 자연스럽게
   const prev = (c.action || '').trim();
+  const before = c.action;
   c.action = prev ? dedupePromptTags(`${prev}, ${cleaned}`) : cleaned;
+  console.log('[charTpl] 적용', {tplName: tpl.name, charIdx, before, after: c.action, deltaChars: c.action.length - (before||'').length});
   if(typeof renderCharacters === 'function') renderCharacters();
   saveSettingsDebounced();
   // 적용된 카드를 자동으로 펼치고 action textarea 로 스크롤 → 사용자가 즉시 확인
+  // + textarea .value 도 강제 동기화 (혹시 renderCharacters 가 덜 갱신해도 안전망)
   setTimeout(() => {
     const body = document.querySelector(`#charList [data-body="${charIdx}"]`);
     if(body){ body.classList.add('open'); }
     const ta = document.querySelector(`#charList textarea[data-act="action"][data-idx="${charIdx}"]`);
     if(ta){
+      if(ta.value !== c.action){ ta.value = c.action; }   // 안전망 — DOM 갱신 누락 방지
       ta.scrollIntoView({block:'center', behavior:'smooth'});
       ta.style.transition = 'box-shadow .3s';
       ta.style.boxShadow = '0 0 0 2px var(--acc)';
       setTimeout(() => { ta.style.boxShadow = ''; }, 1200);
+    } else {
+      console.warn('[charTpl] action textarea 못 찾음', `#charList textarea[data-act="action"][data-idx="${charIdx}"]`);
     }
   }, 60);
-  toast(`📌 "${tpl.name}" → 캐릭터 ${charIdx+1} 액션·의상·자세에 적용 (정리됨)`, 'success');
+  const lenInfo = before ? `${(before||'').length} → ${c.action.length}자` : `${c.action.length}자 추가`;
+  toast(`📌 "${tpl.name}" → 캐릭터 ${charIdx+1} 액션·의상·자세에 적용 (${lenInfo})`, 'success');
 }
 
 // 템플릿 삭제
@@ -13255,9 +13263,9 @@ function openCharTplPickerPopover(anchorBtn, charIdx){
   setTimeout(() => document.addEventListener('click', _charTplOutsideClick), 0);
   // 행 클릭 → 적용 / 휴지통 → 삭제
   pop.addEventListener('click', async e => {
+    e.stopPropagation();   // 외부 클릭 핸들러 race 방지
     const delBtn = e.target.closest('[data-tpl-del]');
     if(delBtn){
-      e.stopPropagation();
       const id = delBtn.dataset.tplDel;
       const t = (state.charTemplates||[]).find(x => x.id === id);
       if(!t) return;
@@ -13268,8 +13276,9 @@ function openCharTplPickerPopover(anchorBtn, charIdx){
       return;
     }
     const row = e.target.closest('.ctp-row');
-    if(!row) return;
+    if(!row){ console.log('[charTpl] click 시 row 찾기 실패', e.target); return; }
     const id = row.dataset.tplId;
+    console.log('[charTpl] row 클릭 → 적용', {tplId: id, charIdx});
     applyCharTplToSlot(id, charIdx);
     closeCharTplPickerPopover();
   });
