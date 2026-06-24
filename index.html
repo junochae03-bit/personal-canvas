@@ -13212,6 +13212,37 @@ async function deleteCharTpl(tplId){
   await saveCharTemplates();
 }
 
+// 🃏 확장 로그(expansionLog)를 사람이 읽기 좋은 텍스트로 변환 — 복사·메모용
+function formatExpansionLogText(xl, img){
+  const lines = [];
+  const head = [];
+  if(img?.label) head.push(`라벨: ${img.label}`);
+  if(img?.meta?.seed != null) head.push(`시드: ${img.meta.seed}`);
+  if(img?.id != null) head.push(`#${img.id}`);
+  lines.push(`[${new Date().toLocaleString()}] 와일드카드 확장 결과 ${head.length ? '· '+head.join(' · ') : ''}`);
+  if(xl.wildcards?.length){
+    lines.push('', '🃏 와일드카드');
+    for(const w of xl.wildcards){
+      const src = w.source && w.source !== 'prompt' ? ` (${w.source})` : '';
+      lines.push(`  ${w.token} → ${w.value}${src}`);
+    }
+  }
+  if(xl.choices?.length){
+    lines.push('', '🎲 동적 선택 ||A|B|C||');
+    for(const c of xl.choices){
+      const src = c.source && c.source !== 'prompt' ? ` (${c.source})` : '';
+      lines.push(`  ||${(c.options||[]).join('|')}|| → ${c.value}${src}`);
+    }
+  }
+  if(xl.rc?.length){
+    lines.push('', '🎲 RC 카테고리');
+    for(const r of xl.rc){
+      lines.push(`  ${r.cat || ''} → ${r.value || ''}`);
+    }
+  }
+  return lines.join('\n');
+}
+
 // 📌 캐릭터 슬롯에 템플릿 적용 popover — 버튼 옆에 떠다니는 목록
 let _charTplPopoverEl = null;
 function closeCharTplPickerPopover(){
@@ -14379,6 +14410,7 @@ async function showLightboxAt(idx){
   }
   // 🃏 와일드카드·||A|B|C||·RC 카테고리 해결 로그 — "이 토큰이 이 값으로 풀렸다" 매핑.
   //    옛 이미지(필드 없음)는 표시 안 함. 빈 그룹은 행 자체 생략.
+  //    📋 복사 / 💾 다운로드 버튼 — 마음에 든 조합을 따로 보관 (메모·재생성 참고)
   const xl = m.expansionLog;
   if(xl && (xl.wildcards?.length || xl.choices?.length || xl.rc?.length)){
     const rows = [];
@@ -14390,7 +14422,11 @@ async function showLightboxAt(idx){
       const items = xl.choices.map(c => `<div style="margin-left:6px"><code style="color:var(--acc)">||${esc((c.options||[]).join('|'))}||</code> → ${esc(c.value)}${c.source && c.source !== 'prompt' ? ` <span class="muted">(${esc(c.source)})</span>` : ''}</div>`).join('');
       rows.push(`<div style="margin-top:4px"><b>🎲 동적 선택</b>${items}</div>`);
     }
-    lines.push(`<div class="lb-prompt">${rows.join('')}</div>`);
+    const actBar = `<div style="display:flex;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid var(--b1)">
+      <button type="button" data-act="xl-copy" class="btn ghost" style="padding:3px 8px;font-size:11px" title="확장 결과를 클립보드에 텍스트로 복사">📋 복사</button>
+      <button type="button" data-act="xl-download" class="btn ghost" style="padding:3px 8px;font-size:11px" title="확장 결과를 JSON 파일로 다운로드 — 따로 보관">💾 저장</button>
+    </div>`;
+    lines.push(`<div class="lb-prompt" data-xl-block>${rows.join('')}${actBar}</div>`);
   }
   // 🎴 캐릭터별 프롬프트 — V4 는 base prompt 와 분리 저장. 프리셋 외형·액션 내용을 여기서 노출.
   if(Array.isArray(m.charPrompts) && m.charPrompts.length){
@@ -23846,6 +23882,32 @@ async function init(){
   // 메타 패널 자체 탭하면 닫기 — 배경 탭 → close 핸들러로 안 가게 stopPropagation
   $('lbMeta').addEventListener('click', e => {
     e.stopPropagation();
+    // 🃏 확장 로그 — 📋 복사 / 💾 다운로드
+    const act = e.target?.closest?.('[data-act^="xl-"]')?.dataset?.act;
+    if(!act || !_lbCurrent) return;
+    const xl = _lbCurrent.meta?.expansionLog;
+    if(!xl){ toast('확장 로그가 없는 이미지', 'warning'); return; }
+    if(act === 'xl-copy'){
+      const txt = formatExpansionLogText(xl, _lbCurrent);
+      navigator.clipboard?.writeText(txt).then(
+        () => toast(`📋 확장 결과 복사됨 (${(xl.wildcards?.length||0)+(xl.choices?.length||0)}항목)`, 'success'),
+        () => toast('복사 실패 — 다운로드 사용해 보세요', 'error'),
+      );
+    } else if(act === 'xl-download'){
+      const data = {
+        _meta: {app:'NAI Studio', kind:'expansionLog', exported: new Date().toISOString()},
+        image: {id: _lbCurrent.id, label: _lbCurrent.label || '', seed: _lbCurrent.meta?.seed},
+        prompt: _lbCurrent.meta?.prompt || '',
+        expansionLog: xl,
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `expansion_${_lbCurrent.id || Date.now()}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 500);
+      toast('💾 expansion_*.json 저장됨', 'success');
+    }
   });
   // 📁 EXIF 복원 — 라이트박스에서 즉시 폼 적용
   $('lbExifApply').addEventListener('click', async () => {
