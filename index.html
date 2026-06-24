@@ -8535,6 +8535,8 @@ async function doSelectiveBackup(){
       seed_blocklist: await DB.getFlag('seed_blocklist'),
       seed_blocklist_auto: await DB.getFlag('seed_blocklist_auto'),
       tpl_fav_only: await DB.getFlag('tpl_fav_only'),
+      liked_seed_auto: await DB.getFlag('liked_seed_auto'),
+      char_templates: await DB.getFlag('char_templates'),
     };
     parts.push('settings');
   }
@@ -8778,6 +8780,8 @@ async function doSelectiveRestore(){
         if(Array.isArray(f.seed_blocklist)){ state.seedBlocklist = f.seed_blocklist; await DB.setFlag('seed_blocklist', f.seed_blocklist); }
         if(typeof f.seed_blocklist_auto === 'boolean'){ state.seedBlocklistAuto = f.seed_blocklist_auto; await DB.setFlag('seed_blocklist_auto', f.seed_blocklist_auto); }
         if(typeof f.tpl_fav_only === 'boolean'){ state._tplFavOnly = f.tpl_fav_only; await DB.setFlag('tpl_fav_only', f.tpl_fav_only); }
+        if(typeof f.liked_seed_auto === 'boolean'){ state.likedSeedAuto = f.liked_seed_auto; await DB.setFlag('liked_seed_auto', f.liked_seed_auto); }
+        if(Array.isArray(f.char_templates)){ state.charTemplates = f.char_templates; await DB.setFlag('char_templates', f.char_templates); }
       }
       restored.push('설정');
     }
@@ -13163,18 +13167,35 @@ async function confirmCharTplSave(){
 }
 
 // 캐릭터 슬롯에 템플릿 적용 — i 인덱스 슬롯에 부어넣고 UI 새로고침
+// 📌 캐릭터 슬롯에 템플릿 적용 — 액션·의상·자세 필드(c.action) 에만 정리된 한 줄로 부어넣음
+//   합치는 순서: action → appearance → prompt (와일드카드 확장된 모든 토큰 망라). dedupe 로 중복 제거.
+//   appearance/neg/prompt 필드는 보존 (사용자가 캐릭터 본체 설정 잃지 않게).
 function applyCharTplToSlot(tplId, charIdx){
   const tpl = (state.charTemplates || []).find(t => t.id === tplId);
   if(!tpl){ toast('템플릿을 찾을 수 없음', 'error'); return; }
   if(!state.characters[charIdx]){ toast('캐릭터 슬롯이 없음', 'error'); return; }
   const c = state.characters[charIdx];
-  c.appearance = tpl.appearance || '';
-  c.action = tpl.action || '';
-  c.neg = tpl.neg || '';
-  c.prompt = tpl.prompt || '';
+  // 모든 텍스트 합치고 중복 정리 — 와일드카드·랜덤 확장된 결과를 한 줄로
+  const joined = [tpl.action, tpl.appearance, tpl.prompt].map(s => (s || '').trim()).filter(Boolean).join(', ');
+  const cleaned = (typeof dedupePromptTags === 'function') ? dedupePromptTags(joined) : joined;
+  // 기존 action 이 있으면 뒤에 이어붙임(쉼표 구분, 중복 제거) — 누적 사용 자연스럽게
+  const prev = (c.action || '').trim();
+  c.action = prev ? dedupePromptTags(`${prev}, ${cleaned}`) : cleaned;
   if(typeof renderCharacters === 'function') renderCharacters();
   saveSettingsDebounced();
-  toast(`📌 "${tpl.name}" 캐릭터 ${charIdx+1}에 적용됨`, 'success');
+  // 적용된 카드를 자동으로 펼치고 action textarea 로 스크롤 → 사용자가 즉시 확인
+  setTimeout(() => {
+    const body = document.querySelector(`#charList [data-body="${charIdx}"]`);
+    if(body){ body.classList.add('open'); }
+    const ta = document.querySelector(`#charList textarea[data-act="action"][data-idx="${charIdx}"]`);
+    if(ta){
+      ta.scrollIntoView({block:'center', behavior:'smooth'});
+      ta.style.transition = 'box-shadow .3s';
+      ta.style.boxShadow = '0 0 0 2px var(--acc)';
+      setTimeout(() => { ta.style.boxShadow = ''; }, 1200);
+    }
+  }, 60);
+  toast(`📌 "${tpl.name}" → 캐릭터 ${charIdx+1} 액션·의상·자세에 적용 (정리됨)`, 'success');
 }
 
 // 템플릿 삭제
@@ -13202,15 +13223,17 @@ function openCharTplPickerPopover(anchorBtn, charIdx){
   pop.dataset.charIdx = String(charIdx);
   pop.style.cssText = 'position:absolute;background:var(--panel);border:1.5px solid var(--b2);border-radius:6px;padding:5px;min-width:240px;max-width:340px;max-height:340px;overflow-y:auto;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.3)';
   if(!tpls.length){
-    pop.innerHTML = '<div style="padding:14px;text-align:center;color:var(--t3);font-size:12px;font-style:italic;line-height:1.6">저장된 템플릿이 없어요<br><span style="font-size:11px">미리보기에서 라이트박스(🔍) 열고 📌 템플릿 버튼으로 저장</span></div>';
+    pop.innerHTML = '<div style="padding:14px;text-align:center;color:var(--t3);font-size:12px;font-style:italic;line-height:1.6">📭 저장된 템플릿 0개<br><span style="font-size:11px">미리보기 이미지 클릭 → 라이트박스 → ⋯ 더보기 → 📌 템플릿</span></div>';
   } else {
-    pop.innerHTML = `<div style="padding:6px 10px;font-size:11px;color:var(--t3);border-bottom:1px solid var(--b1)">📌 클릭하면 캐릭터 ${charIdx+1}에 적용</div>` +
+    pop.innerHTML = `<div style="padding:6px 10px;font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1);background:rgba(162,90,31,.06)">📌 ${tpls.length}개 저장됨 — 클릭 시 <b style="color:var(--acc)">캐릭터 ${charIdx+1}의 액션·의상·자세</b>에 적용</div>` +
       tpls.map(t => {
-        const preview = (t.appearance || t.prompt || '').slice(0, 50);
+        // 합쳐서 보여줘야 사용자가 실제 들어갈 내용을 알 수 있음
+        const joined = [t.action, t.appearance, t.prompt].filter(Boolean).join(', ');
+        const preview = joined.slice(0, 60);
         return `<div class="ctp-row" data-tpl-id="${esc(t.id)}" style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--b1);cursor:pointer">
           <div style="flex:1;min-width:0">
             <div style="font-weight:700;color:var(--t1);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.name)}</div>
-            <div style="color:var(--t3);font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(preview)}">${esc(preview)}</div>
+            <div style="color:var(--t3);font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(joined)}">${esc(preview)}</div>
           </div>
           <button type="button" data-tpl-del="${esc(t.id)}" title="삭제" style="background:transparent;border:none;color:var(--t3);cursor:pointer;padding:3px 6px;font-size:13px">🗑</button>
         </div>`;
@@ -23729,7 +23752,7 @@ async function init(){
     // 📌 캐릭터 템플릿 복원
     const tpls = await DB.getFlag('char_templates');
     if(Array.isArray(tpls)) state.charTemplates = tpls;
-  } catch(_){}
+  } catch(e){ console.warn('[boot] flags/templates 복원 실패', e); }
   // 🔄 마이그레이션: 갤러리 ⭐ → ❤️ (한 번만, 옛 사용자의 fav 데이터를 liked 로 승격)
   try {
     const done = await DB.getFlag('migration_fav2liked_v1');
