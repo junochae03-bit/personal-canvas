@@ -2436,6 +2436,7 @@ mark{
               <button class="iconbtn sec-util-btn" id="tagSuggestBtn" title="💡 좋아요 기반 태그 추천 — ❤️ 표시한 이미지들에서 현재 프롬프트와 자주 같이 쓰인 태그를 제안 (클릭으로 추가)">💡</button>
               <div class="preset-more-menu ph-menu" id="tagSuggestMenu" style="display:none;left:auto;right:0;min-width:280px;max-width:380px;max-height:340px;overflow-y:auto"></div>
             </span>
+            <button class="iconbtn sec-util-btn" id="likedTagAutoBtn" type="button" title="❤️🎲 좋아요 태그 자동 — 1회: 매번 랜덤 (생성마다 다른 태그) · 2회: 현재 픽 고정 · 3회: 끄기" aria-pressed="false">❤️🎲</button>
           </span>
           <span class="caret">▾</span>
         </div>
@@ -5167,6 +5168,9 @@ const state = {
   likedSeedAuto: false,      // ❤️ 좋아요 시드 자동 가중 픽
   likedSeedRate: 0.3,        // 좋아요 시드 픽 확률 (0~1)
   charTemplates: [],         // 📌 와일드카드/랜덤 확장된 결과 → 캐릭터 템플릿. [{id,name,ts,prompt,appearance,action,neg,fromImg}]
+  likedTagAutoMode: 'off',   // ❤️🎲 자동 좋아요 태그 모드: 'off' | 'random' (매번 랜덤) | 'fixed' (현재 픽 고정)
+  likedTagFixed: [],         // fixed 모드 시 고정된 태그들 (random 마지막 픽 또는 사용자 명시)
+  likedTagAutoN: 3,          // 한 번에 추가할 좋아요 태그 개수
   workflows: [],          // 💾 [{id, name, ts, thumb, data}] — 워크플로우 스냅샷 슬롯
   wildcards: [],          // 🃏 [{name, options:[{text,weight}], locked, lockedIdx}] — 프롬프트 __name__ 치환
   wildcardPanelOpen: false,   // 🃏 와일드카드 패널 토글 (프롬프트 헤더의 🃏 버튼)
@@ -6222,8 +6226,10 @@ function buildGenBody(opts){
       }
     : {wc: undefined, rc: undefined};
   const mainCb = mkLog('prompt');
+  // ❤️🎲 자동 좋아요 태그 — 와일드카드 확장 전에 프롬프트에 주입 (NAI 직전 단계)
+  const promptWithLiked = (typeof _maybeInjectLikedTagsSync === 'function') ? _maybeInjectLikedTagsSync(opts.prompt || '') : (opts.prompt || '');
   let expandedPrompt = expandRandomChoices(
-    expandWildcards(opts.prompt || '', _resolveWildcard, undefined, mainCb.wc),
+    expandWildcards(promptWithLiked, _resolveWildcard, undefined, mainCb.wc),
     undefined, mainCb.rc
   );
 
@@ -13101,6 +13107,7 @@ async function afterImage(blob, q){
   try { await refreshPreviewHistory(); } catch(e){ _swallow(e, 'pv:history'); }
   try { renderPvInline(); } catch(e){ _swallow(e, 'pv:inline'); }
   try { refreshLikedSeedPool(); } catch(e){ _swallow(e, 'liked:seed:pool'); }
+  try { if(state.likedTagAutoMode === 'random') refreshLikedTagPool(); } catch(e){ _swallow(e, 'liked:tag:pool'); }
 }
 
 // 🎯 좋아요 시드 풀 캐시 — randomSeed() 가중 픽에 사용. 동기 호출 가능하도록 결과를 window._likedSeedPool 에 저장.
@@ -13147,6 +13154,67 @@ async function computeLikedTagSuggestions(currentPrompt, topN = 12){
     }
   }
   return [...counts.entries()].sort((a,b) => b[1] - a[1]).slice(0, topN).map(([tag, n]) => ({tag, n}));
+}
+
+// ❤️🎲 좋아요 태그 풀 캐시 — top 24개 {tag, n}. 부팅 / 토글 ON / afterImage 시 빌드.
+async function refreshLikedTagPool(){
+  try { window._likedTagPoolCache = await computeLikedTagSuggestions('', 24); }
+  catch(_){ window._likedTagPoolCache = []; }
+}
+// 풀에서 N개 무작위 (가중치 = 빈도). 캐시 비어있으면 비동기 빌드 후 그래도 빈 배열 반환.
+function _pickFromLikedPool(n = 3){
+  const pool = window._likedTagPoolCache || [];
+  if(!pool.length) return [];
+  const weighted = [];
+  for(const s of pool) for(let i=0;i<Math.min(s.n, 8);i++) weighted.push(s.tag);
+  for(let i=weighted.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [weighted[i],weighted[j]]=[weighted[j],weighted[i]]; }
+  const out = [];
+  for(const t of weighted){ if(!out.includes(t)){ out.push(t); if(out.length>=n) break; } }
+  return out;
+}
+async function pickLikedTagsNow(n = 3){
+  await refreshLikedTagPool();
+  return _pickFromLikedPool(n);
+}
+
+// ❤️🎲 토글 버튼 UI 동기화 — 모드별 색상·라벨
+function _refreshLikedTagAutoBtnUI(){
+  const btn = document.getElementById('likedTagAutoBtn');
+  if(!btn) return;
+  const mode = state.likedTagAutoMode || 'off';
+  btn.classList.remove('act');
+  btn.style.color = ''; btn.style.borderColor = '';
+  btn.setAttribute('aria-pressed', String(mode !== 'off'));
+  if(mode === 'random'){
+    btn.textContent = '❤️🎲';
+    btn.classList.add('act');
+    btn.style.color = '#e25b6f'; btn.style.borderColor = 'rgba(226,91,111,.5)';
+    btn.title = '❤️🎲 매번 랜덤 모드 (1/3) — 클릭으로 🔒 고정 모드로 전환';
+  } else if(mode === 'fixed'){
+    btn.textContent = '❤️🔒';
+    btn.classList.add('act');
+    btn.style.color = '#d6a050'; btn.style.borderColor = 'rgba(214,160,80,.5)';
+    const fixed = (state.likedTagFixed || []).join(', ');
+    btn.title = `🔒 고정 모드 (2/3) — [${fixed.slice(0,80)}${fixed.length>80?'…':''}] · 클릭으로 끄기`;
+  } else {
+    btn.textContent = '❤️🎲';
+    btn.title = '❤️🎲 좋아요 태그 자동 (OFF) — 1회: 매번 랜덤 · 2회: 현재 픽 고정 · 3회: 끄기';
+  }
+}
+
+// ❤️🎲 생성 직전 프롬프트에 자동 좋아요 태그 적용 (sync — buildGenBody 안에서 호출)
+// random: 매 호출마다 새로 픽(캐시 풀 사용) / fixed: state.likedTagFixed 그대로 / off: 변경 없음
+function _maybeInjectLikedTagsSync(prompt){
+  const mode = state.likedTagAutoMode || 'off';
+  if(mode === 'off') return prompt;
+  let tags = [];
+  if(mode === 'fixed') tags = state.likedTagFixed || [];
+  else if(mode === 'random') tags = _pickFromLikedPool(state.likedTagAutoN || 3);
+  if(!tags.length) return prompt;
+  const lower = (prompt || '').toLowerCase();
+  const fresh = tags.filter(t => !lower.includes(t.toLowerCase()));
+  if(!fresh.length) return prompt;
+  return (prompt && prompt.trim()) ? `${prompt.trim()}, ${fresh.join(', ')}` : fresh.join(', ');
 }
 
 // 🎨 프롬프트 가중치 미세 흔들기 — X.YY::tag:: 형식만 ±0.1 (0.5~1.5 클램프). 변형 탐색용.
@@ -23536,6 +23604,34 @@ function wireWildcardEvents(){
   }
   _wireHistoryMenu('promptHistoryBtn', 'promptHistoryMenu', 'promptHistory', 'prompt', '프롬프트');
   _wireHistoryMenu('negHistoryBtn', 'negHistoryMenu', 'negPromptHistory', 'negPrompt', '네거티브');
+  // ❤️🎲 자동 좋아요 태그 — 3상태 토글 (off → random → fixed → off)
+  $('likedTagAutoBtn')?.addEventListener('click', async () => {
+    const btn = $('likedTagAutoBtn');
+    const cur = state.likedTagAutoMode || 'off';
+    const next = cur === 'off' ? 'random' : cur === 'random' ? 'fixed' : 'off';
+    state.likedTagAutoMode = next;
+    if(next === 'random'){
+      await refreshLikedTagPool();
+      if(!(window._likedTagPoolCache||[]).length){
+        toast('❤️ 좋아요한 이미지가 없어 풀이 비어있음 — 라이트박스에서 ❤️ 먼저 표시', 'warning', {timeoutMs:6000});
+      }
+    } else if(next === 'fixed'){
+      // 현재 픽한 태그를 고정. random 모드에서 마지막에 픽한 게 없으면 지금 한 번 픽해서 고정.
+      if(!state.likedTagFixed?.length){
+        const picked = await pickLikedTagsNow(state.likedTagAutoN || 3);
+        state.likedTagFixed = picked;
+      }
+    } else if(next === 'off'){
+      state.likedTagFixed = [];
+    }
+    saveSettingsDebounced();
+    try { await DB.setFlag('liked_tag_auto_mode', state.likedTagAutoMode); await DB.setFlag('liked_tag_fixed', state.likedTagFixed || []); } catch(_){}
+    _refreshLikedTagAutoBtnUI();
+    if(next === 'random') toast('❤️🎲 매번 랜덤 — 생성마다 좋아요 태그 ' + (state.likedTagAutoN||3) + '개 자동 추가', 'success', {timeoutMs:4500});
+    else if(next === 'fixed') toast(`🔒 고정 — [${state.likedTagFixed.slice(0,3).join(', ')}${state.likedTagFixed.length>3?'…':''}] 매번 사용`, 'success', {timeoutMs:5000});
+    else toast('자동 좋아요 태그 OFF', 'info');
+  });
+  _refreshLikedTagAutoBtnUI();
   // 💡 좋아요 기반 태그 추천 메뉴
   $('tagSuggestBtn')?.addEventListener('click', async () => {
     const btn = $('tagSuggestBtn');
@@ -24029,6 +24125,13 @@ async function init(){
     const likedAuto = await DB.getFlag('liked_seed_auto');
     state.likedSeedAuto = !!likedAuto;
     if(state.likedSeedAuto) refreshLikedSeedPool().catch(()=>{});
+    // ❤️🎲 자동 좋아요 태그 모드 복원
+    const tagMode = await DB.getFlag('liked_tag_auto_mode');
+    if(tagMode === 'random' || tagMode === 'fixed') state.likedTagAutoMode = tagMode;
+    const tagFixed = await DB.getFlag('liked_tag_fixed');
+    if(Array.isArray(tagFixed)) state.likedTagFixed = tagFixed;
+    if(state.likedTagAutoMode !== 'off') refreshLikedTagPool().catch(()=>{});
+    setTimeout(() => { if(typeof _refreshLikedTagAutoBtnUI === 'function') _refreshLikedTagAutoBtnUI(); }, 100);
     // 📌 캐릭터 템플릿 복원
     const tpls = await DB.getFlag('char_templates');
     if(Array.isArray(tpls)) state.charTemplates = tpls;
