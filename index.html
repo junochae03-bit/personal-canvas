@@ -372,8 +372,15 @@ body.focus-mode::after{content:'🌙 포커스 모드 · F로 해제';position:f
 
 /* PREVIEW PANE — 미리보기 영역 */
 /* 🕓 출력물 히스토리 사이드 — 최근 4장 세로 스택, 클릭하면 메인에 갈아끼움 */
-.pv-history{width:124px;flex:0 0 124px;background:var(--card);border-left:1.5px solid var(--b1);display:flex;flex-direction:column;padding:8px;gap:6px;overflow:hidden}
-.pv-history-title{font-size:11px;font-weight:700;color:var(--t3);padding:2px 4px 4px;flex-shrink:0;letter-spacing:.3px}
+.pv-history{width:124px;flex:0 0 124px;background:var(--card);border-left:1.5px solid var(--b1);display:flex;flex-direction:column;padding:8px;gap:6px;overflow:hidden;transition:width .22s ease, flex-basis .22s ease, padding .22s ease}
+.pv-history.collapsed{width:24px;flex:0 0 24px;padding:6px 0;gap:0}
+.pv-history.collapsed .pv-h-label{display:none}
+.pv-history.collapsed .pv-history-list{display:none}
+.pv-history.collapsed .pv-history-title{justify-content:center;padding:2px 0;writing-mode:vertical-rl;transform:rotate(180deg)}
+.pv-history-title{font-size:11px;font-weight:700;color:var(--t3);padding:2px 4px 4px;flex-shrink:0;letter-spacing:.3px;display:flex;align-items:center;justify-content:space-between;gap:4px}
+.pv-h-toggle{background:transparent;border:none;color:var(--t3);cursor:pointer;font-size:11px;padding:2px 4px;border-radius:3px;line-height:1;font-family:inherit}
+.pv-h-toggle:hover{color:var(--acc);background:var(--bg)}
+.pv-history.collapsed .pv-h-toggle{transform:rotate(180deg);writing-mode:horizontal-tb}
 .pv-history-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1;min-height:0}
 .pv-h-card{position:relative;background:var(--bg);border:1.5px solid var(--b1);border-radius:5px;overflow:hidden;cursor:pointer;transition:border-color .12s, transform .12s;aspect-ratio:1}
 .pv-h-card:hover{border-color:var(--acc);transform:scale(1.02)}
@@ -644,20 +651,27 @@ body.focus-mode::after{content:'🌙 포커스 모드 · F로 해제';position:f
 .gallery-grid.compact .g-thumb{max-height:none;border:1.5px solid var(--b1);border-radius:6px}
 .gallery-grid.compact .g-thumb img{aspect-ratio:1}
 .gallery-grid.compact .g-head{display:none}
-/* 📱 삼성 갤러리 스타일 — 날짜별 그룹 + 정사각 썸네일 타이트 그리드 (라벨 없음, 탭=뷰어) */
-.gallery-grid.samsung{gap:3px;padding:8px;grid-template-columns:repeat(auto-fill,minmax(calc(var(--gal-cell) * .62),1fr))}
-.gallery-grid.samsung .g-item{background:transparent;border:none;box-shadow:none;border-radius:0}
-.gallery-grid.samsung .g-thumb{max-height:none;border:none;border-radius:0;overflow:hidden}
-.gallery-grid.samsung .g-thumb img{aspect-ratio:1;border-radius:0}
+/* 📱 삼성 OneUI 7 갤러리 스타일 (2026) — 날짜별 그룹 + 정사각 썸네일 타이트 그리드 */
+.gallery-grid.samsung{gap:2px;padding:4px 4px 16px;grid-template-columns:repeat(auto-fill,minmax(calc(var(--gal-cell) * .55),1fr));background:var(--bg)}
+.gallery-grid.samsung .g-item{background:transparent;border:none;box-shadow:none;border-radius:0;position:relative}
+.gallery-grid.samsung .g-thumb{max-height:none;border:none;border-radius:0;overflow:hidden;background:#000}
+.gallery-grid.samsung .g-thumb img{aspect-ratio:1;border-radius:0;transition:transform .18s ease, filter .18s ease}
 .gallery-grid.samsung .g-item:hover{box-shadow:none}
-.gallery-grid.samsung .g-item:hover .g-thumb img{filter:brightness(.9)}
+.gallery-grid.samsung .g-item:hover .g-thumb img{transform:scale(1.03)}
+.gallery-grid.samsung .g-item:active .g-thumb img{transform:scale(.97);filter:brightness(.85)}
 .gallery-grid.samsung .g-head{display:none}
 .gallery-grid.samsung .g-thumb .g-album-btn,.gallery-grid.samsung .g-thumb .open-lb,.gallery-grid.samsung .g-thumb .g-exif-btn,.gallery-grid.samsung .g-thumb .g-textedit{display:none !important}
-/* 날짜 구분 헤더 — 전체 폭, sticky */
-.samsung-date-sep{grid-column:1/-1;padding:14px 4px 6px;font-size:14px;font-weight:700;color:var(--t1);position:sticky;top:0;background:linear-gradient(var(--bg) 70%,transparent);z-index:3;display:flex;align-items:baseline;gap:8px}
-.samsung-date-sep .sds-count{font-size:11.5px;font-weight:400;color:var(--t3);font-family:var(--mono)}
-.samsung-date-sep:first-child{padding-top:4px}
-@media(max-width:768px){.gallery-grid.samsung{gap:2px;padding:5px;grid-template-columns:repeat(auto-fill,minmax(calc(var(--gal-cell) * .42),1fr))}.samsung-date-sep{font-size:13px;padding:10px 3px 5px}}
+/* OneUI 좋아요/다운로드 배지 — 작은 흰 원 */
+.gallery-grid.samsung .g-item .g-fav,.gallery-grid.samsung .g-item .g-like,.gallery-grid.samsung .g-item .g-dislike{width:22px;height:22px;font-size:11px;border-radius:50%}
+.gallery-grid.samsung .g-item .g-dl-badge{padding:1px 5px;font-size:10px;background:rgba(0,0,0,.62);color:#fff;border:none;font-family:var(--mono);font-weight:700;border-radius:8px;bottom:4px;right:4px}
+.gallery-grid.samsung .g-item.liked{box-shadow:none}
+.gallery-grid.samsung .g-item.liked::after{content:'❤️';position:absolute;bottom:4px;left:4px;font-size:13px;text-shadow:0 1px 2px rgba(0,0,0,.6);pointer-events:none;z-index:2}
+/* 날짜 구분 헤더 — 굵고 큼, OneUI 느낌 */
+.samsung-date-sep{grid-column:1/-1;padding:20px 8px 10px;font-size:17px;font-weight:700;color:var(--t1);position:sticky;top:0;background:linear-gradient(180deg, var(--bg) 70%, transparent);z-index:3;display:flex;align-items:baseline;gap:10px;letter-spacing:-0.2px}
+.samsung-date-sep .sds-count{font-size:12.5px;font-weight:500;color:var(--t3);font-family:inherit;letter-spacing:0}
+.samsung-date-sep:first-child{padding-top:10px}
+@media(max-width:768px){.gallery-grid.samsung{gap:1.5px;padding:3px 3px 12px;grid-template-columns:repeat(4,1fr)}.samsung-date-sep{font-size:14.5px;padding:14px 6px 7px;gap:7px}.samsung-date-sep .sds-count{font-size:11px}}
+@media(min-width:1200px){.gallery-grid.samsung{grid-template-columns:repeat(auto-fill,minmax(calc(var(--gal-cell) * .48),1fr))}}
 /* 컴팩트 모드는 오버레이 아이콘 완전 숨김 (위쪽 규칙에서 처리됨) */
 /* 전체 펼침 모드 */
 .gallery-grid.all-expanded .g-thumb{max-height:560px;border-bottom:1.5px solid var(--b1)}
@@ -2716,7 +2730,10 @@ mark{
         </div>
         <!-- 🕓 출력물 히스토리 — 최근 생성된 4장, 클릭하면 그 이미지로 갈아끼움 -->
         <aside id="pvHistory" class="pv-history" aria-label="최근 출력물">
-          <div class="pv-history-title">🕓 최근</div>
+          <div class="pv-history-title">
+            <span class="pv-h-label">🕓 최근</span>
+            <button type="button" id="pvHistToggle" class="pv-h-toggle" title="최근 패널 접기/펴기" aria-pressed="false">◀</button>
+          </div>
           <div class="pv-history-list" id="pvHistoryList"></div>
         </aside>
         </div>
@@ -5190,18 +5207,30 @@ const sleep = ms => new Promise(r=>setTimeout(r,ms));
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 const fmtBytes = n => n<1024?n+'B':n<1048576?(n/1024).toFixed(1)+'KB':n<1073741824?(n/1048576).toFixed(1)+'MB':(n/1073741824).toFixed(2)+'GB';
 const fmtDate = ts => { const d=new Date(ts); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
-// 📱 삼성 갤러리 날짜 그룹 — 같은 날이면 같은 key. label 은 오늘/어제/날짜.
-const _samsungDateKey = ts => { const d = new Date(ts || 0); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
+// 📱 삼성 갤러리 (2026 OneUI 스타일) 날짜 그룹.
+//   오늘 / 어제 / 이번 주(2~6일전, 요일) / M월 D일(올해) / YYYY년 M월(올해 외 같은 달) / YYYY (그 외)
+//   같은 그룹은 같은 key.
+const _samsungDateKey = ts => {
+  const d = new Date(ts || 0);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const that = new Date(d); that.setHours(0,0,0,0);
+  const diffDays = Math.round((today - that) / 86400000);
+  if(diffDays === 0) return 'today';
+  if(diffDays === 1) return 'yesterday';
+  if(diffDays >= 2 && diffDays <= 6) return `wk-${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;   // 이번주 = 일별 그룹
+  return `d-${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;   // 그 외 = 일별
+};
 const _samsungDateLabel = ts => {
   const d = new Date(ts || 0);
   const today = new Date(); today.setHours(0,0,0,0);
   const that = new Date(d); that.setHours(0,0,0,0);
   const diffDays = Math.round((today - that) / 86400000);
+  const wd = ['일','월','화','수','목','금','토'][d.getDay()];
   if(diffDays === 0) return '오늘';
   if(diffDays === 1) return '어제';
-  const wd = ['일','월','화','수','목','금','토'][d.getDay()];
-  if(d.getFullYear() === today.getFullYear()) return `${d.getMonth()+1}월 ${d.getDate()}일 (${wd})`;
-  return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}. (${wd})`;
+  if(diffDays >= 2 && diffDays <= 6) return `${diffDays}일 전 · ${wd}요일`;
+  if(d.getFullYear() === today.getFullYear()) return `${d.getMonth()+1}월 ${d.getDate()}일 ${wd}요일`;
+  return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 ${wd}요일`;
 };
 const blobToDataURL = blob => new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); });
 const dataURLtoBlob = url => fetch(url).then(r => {
@@ -13110,6 +13139,20 @@ async function afterImage(blob, q){
   try { if(state.likedTagAutoMode === 'random') refreshLikedTagPool(); } catch(e){ _swallow(e, 'liked:tag:pool'); }
 }
 
+// ❤️🎲 좋아요 시드 자동 토글 버튼 UI 동기화
+function _refreshLikedSeedBtnUI(){
+  const btn = document.getElementById('likedSeedBtn');
+  if(!btn) return;
+  const on = !!state.likedSeedAuto;
+  btn.classList.toggle('act', on);
+  btn.style.color = on ? '#e25b6f' : '';
+  btn.style.borderColor = on ? 'rgba(226,91,111,.5)' : '';
+  btn.style.background = on ? 'rgba(226,91,111,.12)' : '';
+  btn.title = on
+    ? '❤️🎲 자동 ON — 매 생성마다 좋아요 시드에서 랜덤 픽 · 클릭으로 OFF'
+    : '❤️🎲 좋아요 시드 자동 — 매 생성마다 다른 좋아요 시드 사용 (토글)';
+}
+
 // 🎯 좋아요 시드 풀 캐시 — randomSeed() 가중 픽에 사용. 동기 호출 가능하도록 결과를 window._likedSeedPool 에 저장.
 async function refreshLikedSeedPool(){
   try {
@@ -20449,21 +20492,28 @@ function wireTopbarAndFormEvents(){
 
   // Seed buttons
   $('randSeedBtn').addEventListener('click', () => $('seed').value = randomSeed());
-  // ❤️🎲 좋아요 표시한 이미지의 시드 중에서 랜덤 선택 — 검증된 시드만 사용.
-  //   동일 시드 여러 번 사용해도 가중치 균등 (Set 으로 중복 제거).
+  // ❤️🎲 좋아요 시드 자동 모드 — 토글. ON 시 매 생성마다 좋아요 풀에서 무작위 픽 (시드 입력란은 비움).
+  //   옛 '1회 픽 → 입력란에 박힘' 동작은 결과적으로 시드 고정이라 사용자 의도(매번 랜덤)와 어긋남.
   $('likedSeedBtn')?.addEventListener('click', async () => {
-    try {
-      const imgs = await DB.getAllImagesForStats();
-      const seeds = [...new Set(imgs.filter(i => i.liked && i.meta?.seed != null).map(i => i.meta.seed))];
-      if(!seeds.length){
+    state.likedSeedAuto = !state.likedSeedAuto;
+    if(state.likedSeedAuto){
+      state.likedSeedRate = 1.0;   // 100% — 매번 풀에서 픽
+      await refreshLikedSeedPool();
+      const poolSize = (window._likedSeedPool || []).length;
+      if(!poolSize){
+        state.likedSeedAuto = false;
         toast('❤️ 좋아요 표시한 이미지가 아직 없어요 — 라이트박스에서 ❤️ 먼저 표시', 'warning', {timeoutMs: 6000});
-        return;
+      } else {
+        $('seed').value = '';   // 빈 시드 → parseSeedInput → randomSeed() 호출 → 풀에서 픽
+        $('seed').dispatchEvent(new Event('input', {bubbles:true}));
+        toast(`❤️🎲 좋아요 시드 자동 ON — 풀 ${poolSize}개에서 매 생성마다 랜덤 픽`, 'success', {timeoutMs: 5000});
       }
-      const picked = seeds[Math.floor(Math.random() * seeds.length)];
-      $('seed').value = picked;
-      saveSettingsDebounced();
-      toast(`❤️ 좋아요 시드 ${picked} 선택됨 (전체 ${seeds.length}개 중)`, 'success');
-    } catch(e){ toast(`좋아요 시드 조회 실패 — ${e.message||e}`, 'error'); }
+    } else {
+      toast('좋아요 시드 자동 OFF — 일반 랜덤 시드', 'info');
+    }
+    saveSettingsDebounced();
+    try { await DB.setFlag('liked_seed_auto', state.likedSeedAuto); } catch(_){}
+    _refreshLikedSeedBtnUI();
   });
   $('seedClearBtn')?.addEventListener('click', () => { $('seed').value = ''; $('seed').dispatchEvent(new Event('input',{bubbles:true})); });
   $('lockSeedBtn').addEventListener('click', () => {
@@ -22707,6 +22757,23 @@ function wireLightboxEvents(){
 // wireMiscEvents — Inpaint, storage, XYZ, global drop, keyboard shortcuts
 // ───────────────────────────────────────────────────────────
 function wireMiscEvents(){
+  // 🕓 최근 사이드 패널 접기/펴기 — localStorage 영속
+  const _applyPvHistCollapsed = (on) => {
+    const aside = document.getElementById('pvHistory');
+    const btn = document.getElementById('pvHistToggle');
+    if(aside) aside.classList.toggle('collapsed', !!on);
+    if(btn){ btn.textContent = on ? '▶' : '◀'; btn.setAttribute('aria-pressed', String(!!on)); }
+    // 펼친 직후 자동 채움 N 재계산 위해 새로고침
+    if(!on && typeof refreshPreviewHistory === 'function') refreshPreviewHistory().catch(()=>{});
+  };
+  try { _applyPvHistCollapsed(localStorage.getItem('nai_pv_hist_col') === '1'); } catch(_){}
+  document.getElementById('pvHistToggle')?.addEventListener('click', e => {
+    e.stopPropagation();
+    const aside = document.getElementById('pvHistory');
+    const next = !aside?.classList.contains('collapsed');
+    _applyPvHistCollapsed(next);
+    try { localStorage.setItem('nai_pv_hist_col', next ? '1' : '0'); } catch(_){}
+  });
   // 🕓 최근 20장 모달 — 닫기 버튼 + 배경 클릭 닫기
   document.getElementById('pvHistoryClose')?.addEventListener('click', closePvHistoryModal);
   document.getElementById('pvHistoryModal')?.addEventListener('click', e => {
@@ -24125,6 +24192,9 @@ async function init(){
     const likedAuto = await DB.getFlag('liked_seed_auto');
     state.likedSeedAuto = !!likedAuto;
     if(state.likedSeedAuto) refreshLikedSeedPool().catch(()=>{});
+    // ❤️🎲 좋아요 시드 자동 — rate 강제 1.0 (이전 30% 옵션 제거), 토글 버튼 UI 동기화
+    if(state.likedSeedAuto) state.likedSeedRate = 1.0;
+    setTimeout(() => { if(typeof _refreshLikedSeedBtnUI === 'function') _refreshLikedSeedBtnUI(); }, 100);
     // ❤️🎲 자동 좋아요 태그 모드 복원
     const tagMode = await DB.getFlag('liked_tag_auto_mode');
     if(tagMode === 'random' || tagMode === 'fixed') state.likedTagAutoMode = tagMode;
