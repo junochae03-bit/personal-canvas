@@ -2647,7 +2647,7 @@ mark{
               <button class="btn ghost" id="clearOutputDirBtn" style="padding:6px 10px;font-size:11px">해제</button>
             </div>
             <div style="font-size:10.5px;color:var(--t3);margin-top:4px;line-height:1.55">
-              설정 시 생성 이미지를 <b style="color:var(--blue)">이 폴더에 자동 저장</b> (Chrome/Edge 전용 · 갤러리 DB에도 함께 저장)
+              설정 시 <b style="color:var(--blue)">⬇ 다운로드 버튼으로 받은 이미지만</b> 이 폴더로 (Chrome/Edge 전용 · 생성된 모든 이미지가 폴더로 쏟아지지 않음)
             </div>
           </div>
           <div class="field" style="margin-bottom:7px">
@@ -13098,10 +13098,8 @@ async function _saveImageWithSideEffects(blob, fname, label, prompt, meta){
   const id = await DB.saveImage(blob, fname, label, prompt, meta);
   // 🪟 팝업 미리보기 창에 새 이미지 브로드캐스트 — 열려있을 때만
   try { _popoutBroadcastImage(blob, {label, fname, meta}); } catch(e){ _swallow(e, 'popout:broadcast'); }
-  // 📂 출력 폴더가 설정돼 있으면 파일로도 저장
-  if(state.outputDirHandle){
-    try { await writeImageToOutputDir(blob, fname); } catch(e){ _swallow(e, 'outputDir:write'); }
-  }
+  // 📂 출력 폴더는 더 이상 자동 저장 안 함 (생성된 모든 이미지가 폴더로 쏟아지는 문제) —
+  //    사용자가 ⬇ 다운로드 버튼 누른 이미지만 폴더로 들어가도록 변경됨.
   // 📁 선택된 앨범에 자동 추가
   const targetAlbumId = $('targetAlbum')?.value || '';
   if(targetAlbumId && id != null){
@@ -21097,10 +21095,19 @@ function wireGenerationAndPresetEvents(){
   });
   $('downloadBtn').addEventListener('click', async () => {
     if(!state.lastImage) return;
-    const a = document.createElement('a');
-    a.href = state.lastImage.url;
-    a.download = `nai_${Date.now()}.png`;
-    a.click();
+    const fname = `nai_${Date.now()}.png`;
+    // 📂 출력 폴더가 설정돼 있으면 그쪽으로 (브라우저 다운로드 다이얼로그 안 뜸)
+    let savedToDir = false;
+    if(state.outputDirHandle){
+      try { savedToDir = await writeImageToOutputDir(state.lastImage.blob, fname); } catch(e){ _swallow(e, 'pv:dl:outputDir'); }
+    }
+    if(!savedToDir){
+      const a = document.createElement('a');
+      a.href = state.lastImage.url;
+      a.download = fname;
+      a.click();
+    }
+    if(savedToDir) toast(`📂 출력 폴더로 저장됨: ${fname}`, 'success');
     // 📥 다운로드 기록 — 저장된 이미지면 DB 마킹 (갤러리 배지 / 라이트박스 상태)
     const sid = state.lastImage.savedId;
     if(sid != null){
@@ -22387,11 +22394,20 @@ function wireLightboxEvents(){
   });
   $('lbDownload').addEventListener('click', async () => {
     if(!_lbCurrent) return;
-    const url = URL.createObjectURL(_lbCurrent.blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = _lbCurrent.fname || `nai_${_lbCurrent.id}.png`;
-    a.click();
+    const fname = _lbCurrent.fname || `nai_${_lbCurrent.id}.png`;
+    // 📂 출력 폴더가 설정돼 있으면 그쪽으로 (브라우저 다운로드 다이얼로그 안 뜸)
+    let savedToDir = false;
+    let url = null;
+    if(state.outputDirHandle){
+      try { savedToDir = await writeImageToOutputDir(_lbCurrent.blob, fname); } catch(e){ _swallow(e, 'lb:dl:outputDir'); }
+    }
+    if(!savedToDir){
+      url = URL.createObjectURL(_lbCurrent.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fname;
+      a.click();
+    }
     // 📥 DB 에 다운로드 기록 — downloaded(true) + count++ + downloadedAt(now)
     let count = (_lbCurrent.downloadCount || 0) + 1;
     try {
@@ -22400,18 +22416,18 @@ function wireLightboxEvents(){
       _lbCurrent.downloaded = true;
     } catch(e){ _swallow(e, 'lb:download:record'); }
     // ✅ 토스트 + 영구 상태 갱신 (✓ 받음 · n회)
-    try { toast(`⬇ 저장됨: ${a.download}${count>1?` (${count}회째)`:''}`, 'success'); } catch(_){}
+    try { toast(`${savedToDir?'📂 폴더':'⬇'} 저장됨: ${fname}${count>1?` (${count}회째)`:''}`, 'success'); } catch(_){}
     _refreshLbDownloadUI();
     // 🐛 fix: 1초 후 revoke 는 사용자가 다운로드 다이얼로그 늦게 확인하면 URL 죽음 (특히 Safari)
     //   대신 페이지 visibility change(블러)일 때 revoke — 다이얼로그가 떴다 닫혔다는 신호
     const cleanup = () => {
-      URL.revokeObjectURL(url);
+      if(url) URL.revokeObjectURL(url);
       window.removeEventListener('focus', cleanup);
       window.removeEventListener('pagehide', cleanup);
     };
-    // 안전망: 60초 후에도 cleanup (메모리 보호)
-    setTimeout(cleanup, 60000);
-    setTimeout(() => {
+    // 안전망: 60초 후에도 cleanup (메모리 보호) — 폴더 저장 모드는 url 없음
+    if(url) setTimeout(cleanup, 60000);
+    if(url) setTimeout(() => {
       window.addEventListener('focus', cleanup, {once: true});
       window.addEventListener('pagehide', cleanup, {once: true});
     }, 500);
