@@ -467,6 +467,8 @@ body.focus-mode::after{content:'🌙 포커스 모드 · F로 해제';position:f
 .gb-chip-dislike[aria-pressed="true"]{background:#8a6630;border-color:#8a6630}
 .gb-chip-trash[aria-pressed="true"]{background:#7a6149;border-color:#7a6149}
 .gb-chip-stats{border-color:rgba(58,99,152,.4);color:var(--blue)}
+.gb-chip-dl{border-color:rgba(93,138,48,.4);color:#5d8a30}
+.gb-chip-dl[aria-pressed="true"]{background:#5d8a30;border-color:#5d8a30;color:#fff8ec}
 .gb-emptytrash{font-size:11.5px;padding:5px 10px}
 .gb-actions-row .gb-select{border-color:rgba(58,99,152,.4)}
 .gb-actions-row .gb-comic{border-color:rgba(214,160,80,.45);color:var(--acc)}
@@ -642,6 +644,20 @@ body.focus-mode::after{content:'🌙 포커스 모드 · F로 해제';position:f
 .gallery-grid.compact .g-thumb{max-height:none;border:1.5px solid var(--b1);border-radius:6px}
 .gallery-grid.compact .g-thumb img{aspect-ratio:1}
 .gallery-grid.compact .g-head{display:none}
+/* 📱 삼성 갤러리 스타일 — 날짜별 그룹 + 정사각 썸네일 타이트 그리드 (라벨 없음, 탭=뷰어) */
+.gallery-grid.samsung{gap:3px;padding:8px;grid-template-columns:repeat(auto-fill,minmax(calc(var(--gal-cell) * .62),1fr))}
+.gallery-grid.samsung .g-item{background:transparent;border:none;box-shadow:none;border-radius:0}
+.gallery-grid.samsung .g-thumb{max-height:none;border:none;border-radius:0;overflow:hidden}
+.gallery-grid.samsung .g-thumb img{aspect-ratio:1;border-radius:0}
+.gallery-grid.samsung .g-item:hover{box-shadow:none}
+.gallery-grid.samsung .g-item:hover .g-thumb img{filter:brightness(.9)}
+.gallery-grid.samsung .g-head{display:none}
+.gallery-grid.samsung .g-thumb .g-album-btn,.gallery-grid.samsung .g-thumb .open-lb,.gallery-grid.samsung .g-thumb .g-exif-btn,.gallery-grid.samsung .g-thumb .g-textedit{display:none !important}
+/* 날짜 구분 헤더 — 전체 폭, sticky */
+.samsung-date-sep{grid-column:1/-1;padding:14px 4px 6px;font-size:14px;font-weight:700;color:var(--t1);position:sticky;top:0;background:linear-gradient(var(--bg) 70%,transparent);z-index:3;display:flex;align-items:baseline;gap:8px}
+.samsung-date-sep .sds-count{font-size:11.5px;font-weight:400;color:var(--t3);font-family:var(--mono)}
+.samsung-date-sep:first-child{padding-top:4px}
+@media(max-width:768px){.gallery-grid.samsung{gap:2px;padding:5px;grid-template-columns:repeat(auto-fill,minmax(calc(var(--gal-cell) * .42),1fr))}.samsung-date-sep{font-size:13px;padding:10px 3px 5px}}
 /* 컴팩트 모드는 오버레이 아이콘 완전 숨김 (위쪽 규칙에서 처리됨) */
 /* 전체 펼침 모드 */
 .gallery-grid.all-expanded .g-thumb{max-height:560px;border-bottom:1.5px solid var(--b1)}
@@ -2753,12 +2769,14 @@ mark{
             <button class="gb-chip gb-chip-dislike" id="galDislikeToggle" type="button" title="👎 별로 표시한 이미지만" aria-pressed="false">👎 <span class="gb-chip-cnt" id="galDislikeCount">0</span></button>
             <button class="gb-chip gb-chip-trash" id="galTrashToggle" type="button" title="🗑 휴지통 (7일 보관)" aria-pressed="false">🗑 <span class="gb-chip-cnt" id="galTrashCount">0</span></button>
             <button class="gb-chip gb-chip-stats" id="galStatsBtn" type="button" title="📊 통계 — 좋아요 많은 시드·프롬·모델">📊 통계</button>
+            <button class="gb-chip gb-chip-dl" id="galDownloadedToggle" type="button" title="⬇ 다운로드 기록 — 받은 적 있는 이미지만 보기" aria-pressed="false">⬇ 기록 <span class="gb-chip-cnt" id="galDownloadedCount">0</span></button>
             <button class="btn danger gb-emptytrash" id="galEmptyTrashBtn" type="button" title="휴지통의 모든 이미지를 즉시 영구 삭제 (복원 불가)" style="display:none">휴지통 비우기</button>
           </div>
           <!-- Row 3: 보기 프리셋 + 액션 -->
           <div class="gb-row gb-actions-row">
             <div class="gv-toggle" id="galleryView" title="보기 프리셋 — 클릭으로 정렬·필터 자동 설정">
-              <button data-gv="recent" class="act" title="모든 이미지를 최신순 평면 그리드로 (기본)">🕒 최신순 <span class="en">Recent</span></button>
+              <button data-gv="samsung" class="act" title="📱 날짜별 정사각 그리드 (삼성 갤러리 스타일 · 기본)">📅 날짜별 <span class="en">Date</span></button>
+              <button data-gv="recent" title="모든 이미지를 최신순 평면 그리드 (라벨 카드)">🕒 최신순 <span class="en">Recent</span></button>
               <button data-gv="session" title="📂 세션별로 그룹화해서 표시 (세션 헤더 노출)">📂 세션별 <span class="en">Sessions</span></button>
               <button data-gv="liked" title="❤️ 좋아요한 이미지만 최신순 평면 (보관함)">❤️ 좋아요 <span class="en">Liked</span></button>
               <button data-gv="album" title="👥 캐릭터·사용자 앨범별 그룹">👥 캐릭터 <span class="en">By Character</span></button>
@@ -3816,24 +3834,27 @@ coffee shop, latte art"></textarea>
   </div>
 </div>
 
-<!-- 🎯 와일드카드 확장값 → 캐릭터 슬롯에 직접 적용 (라이트박스 ℹ 정보의 📌 버튼에서 호출) -->
+<!-- 📌 와일드카드 확장값 → 캐릭터 템플릿으로 저장 (라이트박스 ℹ 정보의 📌 버튼에서 호출) -->
 <div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="xlApplyTitle" id="xlApplyModal">
   <div class="modal" style="max-width:520px;width:100%;display:flex;flex-direction:column;max-height:88vh">
-    <h3 id="xlApplyTitle">🎯 캐릭터에 적용 <span class="en">Apply to Character</span></h3>
+    <h3 id="xlApplyTitle">📌 템플릿으로 저장 <span class="en">Save as Template</span></h3>
     <div class="modal-body" style="overflow-y:auto;padding:14px 18px">
-      <div style="font-size:11.5px;color:var(--t3);margin-bottom:10px;line-height:1.55">와일드카드 확장값 한 줄을 <b>선택한 캐릭터의 액션·의상·자세</b>에 부어넣어요. 기존 액션은 보존하고 뒤에 누적됩니다.</div>
+      <div style="font-size:11.5px;color:var(--t3);margin-bottom:10px;line-height:1.55">와일드카드 확장값을 <b>템플릿으로 저장</b>해요. 이후 아무 캐릭터 슬롯의 📌 메뉴에서 불러와 똑같은 결과를 재현할 수 있습니다.</div>
       <div style="font-size:11px;color:var(--t3);margin-bottom:4px;font-weight:600">저장될 태그</div>
       <div id="xlApplyPreview" style="background:var(--card);border:1.5px solid var(--b1);border-radius:5px;padding:8px 11px;font-size:12px;color:var(--t1);line-height:1.5;margin-bottom:12px;max-height:90px;overflow-y:auto;white-space:pre-wrap;word-break:break-word"></div>
-      <div style="font-size:11px;color:var(--t3);margin-bottom:4px;font-weight:600">적용할 캐릭터 슬롯</div>
-      <div id="xlApplySlotList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);margin-bottom:6px;cursor:pointer">
-        <input type="checkbox" id="xlApplyAlsoSave" style="width:auto"> 📌 템플릿으로도 저장 (다른 캐릭터에서 재사용)
+      <div style="font-size:11px;color:var(--t3);margin-bottom:4px;font-weight:600">템플릿 이름 <span style="color:var(--red)">*</span></div>
+      <input type="text" class="inp" id="xlApplySaveName" placeholder="예: 루키아 격렬 조합 — 필수" maxlength="60" style="margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);margin-bottom:8px;cursor:pointer">
+        <input type="checkbox" id="xlApplyAlsoApply" style="width:auto"> 🎯 지금 캐릭터 슬롯에도 바로 적용 (선택)
       </label>
-      <input type="text" class="inp" id="xlApplySaveName" placeholder="템플릿 이름 (위 체크 시)" maxlength="60" style="display:none">
+      <div id="xlApplySlotWrap" style="display:none">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:4px;font-weight:600">적용할 캐릭터 슬롯</div>
+        <div id="xlApplySlotList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
+      </div>
     </div>
     <div class="modal-foot" style="padding:12px 18px;border-top:1.5px solid var(--b1);display:flex;justify-content:flex-end;gap:8px">
       <button class="btn ghost" id="xlApplyCancel" type="button">취소</button>
-      <button class="btn primary" id="xlApplyConfirm" type="button">🎯 적용</button>
+      <button class="btn primary" id="xlApplyConfirm" type="button">📌 저장</button>
     </div>
   </div>
 </div>
@@ -5165,6 +5186,19 @@ const sleep = ms => new Promise(r=>setTimeout(r,ms));
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 const fmtBytes = n => n<1024?n+'B':n<1048576?(n/1024).toFixed(1)+'KB':n<1073741824?(n/1048576).toFixed(1)+'MB':(n/1073741824).toFixed(2)+'GB';
 const fmtDate = ts => { const d=new Date(ts); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+// 📱 삼성 갤러리 날짜 그룹 — 같은 날이면 같은 key. label 은 오늘/어제/날짜.
+const _samsungDateKey = ts => { const d = new Date(ts || 0); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
+const _samsungDateLabel = ts => {
+  const d = new Date(ts || 0);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const that = new Date(d); that.setHours(0,0,0,0);
+  const diffDays = Math.round((today - that) / 86400000);
+  if(diffDays === 0) return '오늘';
+  if(diffDays === 1) return '어제';
+  const wd = ['일','월','화','수','목','금','토'][d.getDay()];
+  if(d.getFullYear() === today.getFullYear()) return `${d.getMonth()+1}월 ${d.getDate()}일 (${wd})`;
+  return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}. (${wd})`;
+};
 const blobToDataURL = blob => new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); });
 const dataURLtoBlob = url => fetch(url).then(r => {
   if(!r.ok) throw new Error('dataURL fetch failed: ' + r.status);
@@ -13234,24 +13268,20 @@ async function deleteCharTpl(tplId){
   await saveCharTemplates();
 }
 
-// 🎯 와일드카드 확장값 → 캐릭터 슬롯 직접 적용 모달
+// 📌 와일드카드 확장값 → 템플릿 저장 모달 (기본). 옵션으로 캐릭터 슬롯에 즉시 적용.
 function openXlApplyModal(combined, img){
   const modal = document.getElementById('xlApplyModal');
   const preview = document.getElementById('xlApplyPreview');
   const slotList = document.getElementById('xlApplySlotList');
-  const saveChk = document.getElementById('xlApplyAlsoSave');
+  const slotWrap = document.getElementById('xlApplySlotWrap');
+  const applyChk = document.getElementById('xlApplyAlsoApply');
   const nameInp = document.getElementById('xlApplySaveName');
-  if(!modal || !slotList) return;
+  if(!modal || !nameInp) return;
   preview.textContent = combined;
+  // 캐릭터 슬롯 목록 (옵션 적용용)
   const chars = state.characters || [];
-  if(!chars.length){
-    slotList.innerHTML = '<div style="color:var(--t3);font-size:12px;font-style:italic;padding:10px;text-align:center;background:var(--card);border:1.5px solid var(--b1);border-radius:5px">캐릭터 슬롯이 없음 — "📌 템플릿으로 저장" 체크해서 저장만 가능</div>';
-    saveChk.checked = true; saveChk.disabled = true;
-    nameInp.style.display = '';
-  } else {
-    saveChk.checked = false; saveChk.disabled = false;
-    nameInp.style.display = 'none';
-    slotList.innerHTML = chars.map((c, i) => {
+  if(slotList){
+    slotList.innerHTML = chars.length ? chars.map((c, i) => {
       const label = c.name || `슬롯 ${i+1}`;
       const cur = (c.action || '').slice(0, 50) || '(액션 비어있음)';
       return `<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--card);border:1.5px solid var(--b1);border-radius:5px;cursor:pointer">
@@ -13261,13 +13291,17 @@ function openXlApplyModal(combined, img){
           <div style="color:var(--t3);font-size:11px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(c.action||'')}">현재 액션: ${esc(cur)}</div>
         </div>
       </label>`;
-    }).join('');
+    }).join('') : '<div style="color:var(--t3);font-size:11.5px;font-style:italic;padding:8px">캐릭터 슬롯이 없습니다 (저장만 됨)</div>';
   }
+  // 옵션 체크박스 초기화 (기본 OFF — 템플릿 저장이 주목적)
+  if(applyChk){ applyChk.checked = false; applyChk.disabled = !chars.length; }
+  if(slotWrap) slotWrap.style.display = 'none';
   // 이름 기본값 — 이미지 라벨
   nameInp.value = img?.label || `${new Date().toLocaleDateString()} 조합`;
   modal.dataset.combined = combined;
   modal.dataset.imgId = String(img?.id || '');
   modal.classList.add('open');
+  setTimeout(() => { nameInp.focus(); nameInp.select(); }, 50);
 }
 function closeXlApplyModal(){
   const modal = document.getElementById('xlApplyModal');
@@ -13277,54 +13311,34 @@ async function confirmXlApply(){
   const modal = document.getElementById('xlApplyModal');
   if(!modal) return;
   const combined = modal.dataset.combined || '';
-  if(!combined){ toast('적용할 태그가 없음', 'warning'); return; }
-  const saveChk = document.getElementById('xlApplyAlsoSave');
-  const chars = state.characters || [];
+  if(!combined){ toast('저장할 태그가 없음', 'warning'); return; }
+  const name = (document.getElementById('xlApplySaveName').value || '').trim().slice(0, 60);
+  if(!name){ toast('템플릿 이름을 입력하세요', 'warning'); document.getElementById('xlApplySaveName').focus(); return; }
   const messages = [];
-  // 1. 캐릭터 슬롯에 즉시 적용
-  if(chars.length){
+  // 1. (주목적) 템플릿으로 저장
+  state.charTemplates = state.charTemplates || [];
+  const newTpl = {
+    id: _uid(), name, ts: Date.now(),
+    action: combined, appearance: '', neg: '', prompt: '',
+    fromImg: parseInt(modal.dataset.imgId, 10) || null,
+    kind: 'expansion',
+  };
+  state.charTemplates.unshift(newTpl);
+  state.charTemplates = state.charTemplates.slice(0, 100);
+  await saveCharTemplates();
+  messages.push(`📌 "${name}" 저장됨 (총 ${state.charTemplates.length}개)`);
+  // 2. (옵션) 캐릭터 슬롯에도 즉시 적용
+  const applyChk = document.getElementById('xlApplyAlsoApply');
+  if(applyChk?.checked){
     const sel = modal.querySelector('input[name="xlApplySlot"]:checked');
     const idx = sel ? parseInt(sel.value, 10) : 0;
     if(state.characters[idx]){
-      const c = state.characters[idx];
-      const prev = (c.action || '').trim();
-      c.action = prev ? dedupePromptTags(`${prev}, ${combined}`) : combined;
-      if(typeof renderCharacters === 'function') renderCharacters();
-      saveSettingsDebounced();
-      messages.push(`🎯 캐릭터 #${idx+1}의 액션·의상·자세에 적용 (${c.action.length}자)`);
-      // 적용된 카드 펼침 + 강조
-      setTimeout(() => {
-        const body = document.querySelector(`#charList [data-body="${idx}"]`);
-        if(body) body.classList.add('open');
-        const ta = document.querySelector(`#charList textarea[data-act="action"][data-idx="${idx}"]`);
-        if(ta){
-          if(ta.value !== c.action) ta.value = c.action;
-          ta.scrollIntoView({block:'center', behavior:'smooth'});
-          ta.style.transition = 'box-shadow .3s';
-          ta.style.boxShadow = '0 0 0 2px var(--acc)';
-          setTimeout(() => { ta.style.boxShadow = ''; }, 1200);
-        }
-      }, 60);
+      applyCharTplToSlot(newTpl.id, idx);   // 기존 적용 로직 재사용 (자동 펼침·강조 포함)
     }
   }
-  // 2. 옵션: 템플릿으로도 저장
-  if(saveChk?.checked){
-    const name = (document.getElementById('xlApplySaveName').value || '').trim().slice(0, 60);
-    if(!name){ toast('템플릿 이름을 입력하세요', 'warning'); return; }
-    state.charTemplates = state.charTemplates || [];
-    state.charTemplates.unshift({
-      id: _uid(), name, ts: Date.now(),
-      action: combined, appearance: '', neg: '', prompt: '',
-      fromImg: parseInt(modal.dataset.imgId, 10) || null,
-      kind: 'expansion',
-    });
-    state.charTemplates = state.charTemplates.slice(0, 100);
-    await saveCharTemplates();
-    messages.push(`📌 "${name}" 저장됨 (총 ${state.charTemplates.length}개)`);
-  }
   closeXlApplyModal();
-  if(messages.length) toast(messages.join(' · '), 'success', {timeoutMs: 5000});
-  else toast('적용 대상이 없음 — 캐릭터 추가 또는 저장 옵션 체크', 'warning');
+  // applyCharTplToSlot 가 자체 토스트를 띄우므로, 저장 메시지만 별도로
+  if(!applyChk?.checked) toast(messages.join(' · ') + ' — 캐릭터 슬롯의 📌 메뉴에서 불러오세요', 'success', {timeoutMs: 5000});
 }
 
 // 🃏 expansionLog 의 "출력값들만" 콤마로 합쳐 한 줄로 → 캐릭터 템플릿에 부어넣기 좋게.
@@ -13813,7 +13827,9 @@ async function loadGallery(){
   const isVault = (viewMode === 'vault');
   const likeOnly = isVault || !!state._galLikeOnly;
   const dislikeOnly = !isVault && !!state._galDislikeOnly;
+  const downloadedOnly = !isVault && !!state._galDownloadedOnly;   // ⬇ 다운로드 기록만
   grid.classList.toggle('gallery-trash-mode', trashMode);
+  grid.classList.toggle('samsung', viewMode === 'samsung');   // 📱 삼성 스타일 정사각 그리드
   // 🚀 perf: 세션별 IDB 조회를 병렬화 (이전엔 N개 세션 = N회 순차 RTT).
   //   필터로 빠른 세션은 즉시 건너뛰고, 나머지만 Promise.all 로 동시 조회.
   const targetSessions = selSesId != null ? sessions.filter(s => s.id === selSesId) : sessions;
@@ -13827,6 +13843,7 @@ async function loadGallery(){
     if(trashMode) filtered = filtered.filter(i => typeof i.deletedAt === 'number' && i.deletedAt > 0);
     if(likeOnly) filtered = filtered.filter(i => i.liked || i.fav);   // 옛 fav 도 포함
     if(dislikeOnly) filtered = filtered.filter(i => i.disliked);
+    if(downloadedOnly) filtered = filtered.filter(i => i.downloaded);   // ⬇ 받은 적 있는 것만
     if(selWork) filtered = filtered.filter(matchesWork);
     if(search){
       filtered = filtered.filter(i => {
@@ -13961,6 +13978,23 @@ async function loadGallery(){
         for(const it of unsorted) tokens.push({type:'img', img: it.img, sesId: it.sesId});
       }
     }
+  } else if(viewMode === 'samsung'){
+    // 📱 삼성 갤러리 — 날짜별 그룹 헤더 + 정사각 썸네일. 최신순 강제.
+    allImages.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    let curKey = null;
+    let groupItems = [];   // 현재 그룹 누적 (헤더 카운트용 lookahead 회피)
+    const flushHeader = (key, label) => {
+      const cnt = allImages.filter(a => _samsungDateKey(a.ts) === key).length;
+      tokens.push(`<div class="samsung-date-sep"><span>${esc(label)}</span><span class="sds-count">${cnt}장</span></div>`);
+    };
+    for(const item of allImages){
+      const key = _samsungDateKey(item.ts);
+      if(key !== curKey){
+        curKey = key;
+        flushHeader(key, _samsungDateLabel(item.ts));
+      }
+      tokens.push({type:'img', img: item.img, sesId: item.sesId});
+    }
   } else {
     // 세션 헤더는 sortKey === 'session' 일 때만 — 그 외(new/old/seed/model/label/vault)는 이미지만 평평하게.
     const showSessionHeader = (sortKey === 'session');
@@ -14001,6 +14035,8 @@ async function loadGallery(){
   _galImgOrder = tokens.filter(t => t && t.type === 'img').map(t => ({id: t.img.id, sid: t.sesId}));
   // 청크 렌더 시작 (applySelStyles는 청크마다 자동 호출됨)
   renderGalleryTokens(grid, tokens);
+  // 🔢 필터 칩 카운트 갱신 (비차단) — 갤러리 볼 때마다 최신
+  refreshGalleryChipCounts().catch(e => _swallow(e, 'gal:chipCounts'));
 }
 let _galImgOrder = [];   // loadGallery 가 채우는 전체 이미지 순서 (라이트박스 nav 용)
 let _albumThumbUrls = [];   // 앨범 헤더 썸네일 ObjectURL 추적 (누수 방지)
@@ -14013,6 +14049,24 @@ async function refreshGallerySize(){
   // 모바일 하단 네비 갤러리 배지 동기화
   const mb = $('mnGalleryBadge');
   if(mb){ mb.textContent = total; mb.classList.toggle('show', total > 0); }
+  // 🔢 필터 칩 카운트 — 좋아요·별로·다운로드·휴지통 (비차단)
+  refreshGalleryChipCounts().catch(e => _swallow(e, 'gal:chipCounts'));
+}
+
+// 🔢 갤러리 필터 칩의 숫자 배지 갱신 — 전체 이미지 1회 스캔 (휴지통 제외 데이터)
+async function refreshGalleryChipCounts(){
+  let imgs = [];
+  try { imgs = await DB.getAllImagesForStats(); } catch(_){ return; }
+  let liked = 0, disliked = 0, downloaded = 0;
+  for(const i of imgs){
+    if(i.liked || i.fav) liked++;
+    if(i.disliked) disliked++;
+    if(i.downloaded) downloaded++;
+  }
+  const set = (id, n) => { const el = document.getElementById(id); if(el) el.textContent = n.toLocaleString(); };
+  set('galLikeCount', liked);
+  set('galDislikeCount', disliked);
+  set('galDownloadedCount', downloaded);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -21518,13 +21572,14 @@ function wireGalleryEvents(){
   //   session → viewMode=detail + sort=session (세션 그룹화)
   //   liked   → viewMode=vault (좋아요만 평면 — likeOnly 자동 + sort=new)
   //   album   → viewMode=album (캐릭터·사용자 앨범)
-  function _presetToView(p){ return p === 'session' ? 'detail' : p === 'liked' ? 'vault' : p === 'album' ? 'album' : 'detail'; }
+  function _presetToView(p){ return p === 'samsung' ? 'samsung' : p === 'session' ? 'detail' : p === 'liked' ? 'vault' : p === 'album' ? 'album' : 'detail'; }
   function _presetToSort(p){ return p === 'session' ? 'session' : 'new'; }
   function _migrateLegacyGv(v){
+    if(v === 'samsung') return 'samsung';
     if(v === 'detail' || v === 'compact') return 'recent';
     if(v === 'vault') return 'liked';
     if(['recent','session','liked','album'].includes(v)) return v;
-    return 'recent';
+    return 'samsung';   // 기본값 — 삼성 갤러리 스타일
   }
   function _applyGalleryPreset(preset, opts){
     const grid = $('galleryGrid');
@@ -22078,6 +22133,11 @@ function wireGalleryEvents(){
       } catch(err){ _swallow(err, 'gallery:textedit'); toast('편집기 열기 실패', 'error'); }
       return;
     }
+    // 📱 삼성 모드 — 썸네일이 항상 보이므로 클릭 즉시 라이트박스 (펼침 단계 없음)
+    if($('galleryGrid')?.classList.contains('samsung')){
+      openLightbox(id, sid);
+      return;
+    }
     // 🔍 카드 클릭 — 접힌 상태면 펼치기만, 펼친 상태면 라이트박스로 이동.
     //   헤더(.g-head)는 항상 펼침/접힘 토글로 동작.
     const isHeadClick = !!e.target.closest('.g-head');
@@ -22461,6 +22521,7 @@ function wireLightboxEvents(){
     b.setAttribute('aria-pressed', String(!!state._galDislikeOnly));
     b.style.color = state._galDislikeOnly ? '#b54338' : 'var(--t3)';
     b.style.borderColor = state._galDislikeOnly ? '#b54338' : 'var(--b1)';
+    if(state._galDislikeOnly){ _clearDownloadedFilter(); }
     // 별로 + 좋아요 동시 필터 의미 없음 — 좋아요 해제
     if(state._galDislikeOnly && state._galLikeOnly){
       state._galLikeOnly = false;
@@ -22469,6 +22530,14 @@ function wireLightboxEvents(){
     }
     loadGallery();
   });
+  // ⬇ 다운로드 필터 해제 헬퍼 — 다른 필터 켤 때 호출
+  const _clearDownloadedFilter = () => {
+    if(state._galDownloadedOnly){
+      state._galDownloadedOnly = false;
+      const x = $('galDownloadedToggle');
+      if(x){ x.classList.remove('act'); x.setAttribute('aria-pressed','false'); }
+    }
+  };
   // 갤러리 ❤️ 좋아요 필터 토글 (옛 ⭐ 필터를 대체)
   $('galLikeToggle')?.addEventListener('click', () => {
     state._galLikeOnly = !state._galLikeOnly;
@@ -22477,6 +22546,7 @@ function wireLightboxEvents(){
     b.setAttribute('aria-pressed', String(!!state._galLikeOnly));
     b.style.color = state._galLikeOnly ? '#e25b6f' : 'var(--t3)';
     b.style.borderColor = state._galLikeOnly ? '#e25b6f' : 'var(--b1)';
+    if(state._galLikeOnly){ _clearDownloadedFilter(); }
     if(state._galLikeOnly && state._galDislikeOnly){
       state._galDislikeOnly = false;
       const db = $('galDislikeToggle');
@@ -22484,13 +22554,30 @@ function wireLightboxEvents(){
     }
     loadGallery();
   });
+  // ⬇ 다운로드 기록만 보기 토글 — 받은 적 있는 이미지만
+  $('galDownloadedToggle')?.addEventListener('click', () => {
+    state._galDownloadedOnly = !state._galDownloadedOnly;
+    const b = $('galDownloadedToggle');
+    b.classList.toggle('act', state._galDownloadedOnly);
+    b.setAttribute('aria-pressed', String(!!state._galDownloadedOnly));
+    // 다른 단독 필터와 상호 배타 (좋아요·별로·휴지통)
+    if(state._galDownloadedOnly){
+      for(const [flag, id] of [['_galLikeOnly','galLikeToggle'],['_galDislikeOnly','galDislikeToggle'],['_galTrashMode','galTrashToggle']]){
+        if(state[flag]){ state[flag] = false; const x=$(id); if(x){ x.classList.remove('act'); x.setAttribute('aria-pressed','false'); x.style.color=''; x.style.borderColor=''; } }
+      }
+      const emptyBtn = $('galEmptyTrashBtn'); if(emptyBtn) emptyBtn.style.display = 'none';
+    }
+    loadGallery();
+    if(state._galDownloadedOnly) toast('⬇ 다운로드 기록 — 받은 적 있는 이미지만', 'info');
+  });
   // 갤러리 🗑 휴지통 모드 토글
   $('galTrashToggle')?.addEventListener('click', () => {
     state._galTrashMode = !state._galTrashMode;
     $('galTrashToggle').classList.toggle('act', state._galTrashMode);
     $('galTrashToggle').setAttribute('aria-pressed', String(!!state._galTrashMode));
-    // 휴지통 모드면 좋아요·별로 필터 자동 해제
+    // 휴지통 모드면 좋아요·별로·다운로드 필터 자동 해제
     if(state._galTrashMode){
+      _clearDownloadedFilter();
       if(state._galLikeOnly){ state._galLikeOnly = false; const b=$('galLikeToggle'); if(b){ b.classList.remove('act'); b.setAttribute('aria-pressed','false'); b.style.color='var(--t3)'; b.style.borderColor='var(--b1)'; } }
       if(state._galDislikeOnly){ state._galDislikeOnly = false; const b=$('galDislikeToggle'); if(b){ b.classList.remove('act'); b.setAttribute('aria-pressed','false'); b.style.color='var(--t3)'; b.style.borderColor='var(--b1)'; } }
     }
@@ -22563,8 +22650,9 @@ function wireMiscEvents(){
   document.getElementById('xlApplyModal')?.addEventListener('click', e => {
     if(e.target.id === 'xlApplyModal') closeXlApplyModal();
   });
-  document.getElementById('xlApplyAlsoSave')?.addEventListener('change', e => {
-    document.getElementById('xlApplySaveName').style.display = e.target.checked ? '' : 'none';
+  document.getElementById('xlApplyAlsoApply')?.addEventListener('change', e => {
+    const wrap = document.getElementById('xlApplySlotWrap');
+    if(wrap) wrap.style.display = e.target.checked ? '' : 'none';
   });
 
   // 📌 캐릭터 템플릿 저장 모달 — 취소/저장/배경 닫기
@@ -23976,12 +24064,12 @@ async function init(){
 
   // 갤러리 보기 프리셋 복원 — 레거시 detail/compact/vault 자동 마이그레이션
   const _legacyGv = (() => { try { return localStorage.getItem('nai_gv'); } catch(_){ return null; } })();
-  const savedPreset = (typeof window._migrateLegacyGv === 'function') ? window._migrateLegacyGv(_legacyGv) : 'recent';
+  const savedPreset = (typeof window._migrateLegacyGv === 'function') ? window._migrateLegacyGv(_legacyGv) : 'samsung';
   if(typeof window._applyGalleryPreset === 'function'){
     window._applyGalleryPreset(savedPreset, {skipReload: true});
   } else {
     // 폴백 (안전망) — 함수 미정의 환경
-    $('galleryGrid').dataset.view = 'detail';
+    $('galleryGrid').dataset.view = 'samsung';
     $('galleryGrid').dataset.preset = 'recent';
   }
   // 🔍 갤러리·프리셋 줌 복원
