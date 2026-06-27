@@ -9205,12 +9205,15 @@ async function pickOutputDirectory(){
   }
   try {
     const handle = await window.showDirectoryPicker({mode: 'readwrite'});
+    // 선택 직후 권한 확정 — 이번 세션 동안 granted 유지
+    try { await handle.requestPermission({mode: 'readwrite'}); } catch(_){}
     state.outputDirHandle = handle;
     state.outputDirName = handle.name;
     state._outputDirWarned = false;
+    state._outputDirRepickShown = false;
     await DB.setFlag('output_dir_handle', handle);
     updateOutputDirUI();
-    toast(`📂 출력 폴더: "${handle.name}"`, 'success');
+    toast(`📂 출력 폴더: "${handle.name}" — 이번 세션 저장 준비됨`, 'success');
   } catch(e){
     if(e.name === 'AbortError') return;
     toast(`폴더 선택 실패 — ${e.message||e}\nChrome·Edge 만 지원해요. Safari·Firefox 에서는 매번 다운로드 폴더에 저장됩니다`, 'error');
@@ -9252,17 +9255,10 @@ async function writeImageToOutputDir(blob, filename){
   try {
     const perm = await ensureOutputDirPermission();
     if(perm !== 'granted'){
-      // 권한 거부 시 한 세션에 한 번만 명확한 안내 (반복 토스트 폭격 방지)
-      if(!state._outputDirWarned){
-        state._outputDirWarned = true;
-        const reason = perm === 'denied' ? '권한 거부됨'
-          : perm === 'prompt' ? '권한 미부여(브라우저 차단 가능)'
-          : '권한 만료';
-        toast(`📂 폴더 저장 비활성화 — ${reason}. 설정에서 폴더를 다시 선택하면 복구됩니다 (갤러리 DB엔 정상 저장)`, 'warning');
-      }
+      // 권한 끊김 — 폴더 재선택 유도 (새로고침마다 권한이 'prompt'로 리셋되는 정상 동작)
+      _promptRepickOutputDir(perm === 'denied' ? '권한이 거부되었습니다' : '권한 재허용이 필요합니다');
       return false;
     }
-    // 권한 복구된 경우 경고 플래그도 리셋 → 향후 다시 끊기면 알릴 수 있게
     state._outputDirWarned = false;
     // 파일명 중복 처리: 같은 이름 있으면 _2, _3 ... 자동 부여
     let safeName = filename;
@@ -9270,7 +9266,6 @@ async function writeImageToOutputDir(blob, filename){
     while(true){
       try {
         await state.outputDirHandle.getFileHandle(safeName, {create: false});
-        // 존재함 → 다음 후보
         n++;
         safeName = filename.replace(/(\.[^.]+)?$/, (_, ext) => `_${n}${ext||''}`);
         if(n > 999) break;
@@ -9285,12 +9280,34 @@ async function writeImageToOutputDir(blob, filename){
     await w.close();
     return true;
   } catch(e){
-    console.warn('[OutputDir write failed]', e);
-    if(!state._outputDirWarned){
+    console.warn('[OutputDir write failed]', e?.name, e);
+    // NotAllowedError / 권한 만료 류 → 재선택 유도, 그 외는 에러 상세 노출
+    if(e?.name === 'NotAllowedError' || e?.name === 'SecurityError'){
+      _promptRepickOutputDir('폴더 접근 권한이 만료됨');
+    } else if(!state._outputDirWarned){
       state._outputDirWarned = true;
-      toast(`폴더 저장 실패 — ${e.message||e} (갤러리 DB엔 정상 저장)`, 'warning');
+      toast(`📂 폴더 저장 실패 [${e?.name||'Error'}] — ${e.message||e}\n브라우저 다운로드로 대신 받습니다`, 'warning', {timeoutMs: 7000});
     }
     return false;
+  }
+}
+
+// 📂 권한 끊김 시 — 폴더 재선택 안내 (세션당 1회 모달). 사용자가 다시 선택하면 권한 복구.
+function _promptRepickOutputDir(reason){
+  if(state._outputDirRepickShown) return;
+  state._outputDirRepickShown = true;
+  const name = state.outputDirName || '출력 폴더';
+  if(typeof confirmDialog === 'function'){
+    confirmDialog(
+      `📂 "${name}" 저장 권한이 필요합니다.\n사유: ${reason}\n\n새로고침하면 폴더 권한이 초기화되는 건 브라우저 보안 정책상 정상입니다.\n\n[확인] 을 누르고 폴더를 다시 선택하면 이번 세션 동안 저장됩니다.\n(취소하면 이미지는 브라우저 다운로드 폴더로 받습니다)`,
+      async () => {
+        state._outputDirRepickShown = false;
+        await pickOutputDirectory();
+      },
+      '폴더 권한 재허용',
+    );
+  } else {
+    toast(`📂 폴더 권한 필요 — 설정에서 폴더 다시 선택 (${reason})`, 'warning', {timeoutMs: 7000});
   }
 }
 
