@@ -5722,6 +5722,24 @@ const DB = {
       req.onerror = () => res([]);
     });
   },
+  // 🚀 단일 이미지 1건만 primary key 로 조회 — 라이트박스 prev/next 용.
+  //    세션 전체 blob 을 로드하는 getSessionImages 대신 1건만 읽어 넘김 지연 제거.
+  //    캐시에 이미 있으면(같은 세션을 본 적 있음) IDB 안 거치고 즉시 반환.
+  async getImage(id){
+    if(!this.db) return null;
+    if(this._imgCache){
+      for(const arr of this._imgCache.values()){
+        const f = arr.find(i => i.id === id);
+        if(f) return f;
+      }
+    }
+    return new Promise(res => {
+      const tx = this.tx(this.IMG, 'readonly');
+      const req = tx.objectStore(this.IMG).get(id);
+      req.onsuccess = () => res(req.result || null);
+      req.onerror = () => res(null);
+    });
+  },
   // 🗑 모든 휴지통 이미지 수집 (세션 무관) — 휴지통 뷰용.
   async getAllTrashed(){
     if(!this.db) return [];
@@ -14649,6 +14667,45 @@ let _lbIdx = -1;
 let _lbJustOpened = false;   // 🛡 라이트박스 막 열린 직후 — 배경 click 닫기 무시 (빠른 더블탭 보호)
 let _lbWasDragged = false;   // 🛡 드래그 직후 합성 click — 닫기 무시 (마우스로 이미지·배경 끌어 움직였을 때)
 
+// 🚀 라이트박스 prev/next 프리로드 캐시 — id → {url, img}. 현재±2 만 유지, 그 밖은 revoke.
+//    넘김 시 이미 디코딩된 이웃을 즉시 보여줘서 지연 제거.
+const _lbCache = new Map();
+let _lbCacheSeq = 0;   // 비동기 프리로드 경합 방지용 토큰
+async function _lbGetCached(id, sid){
+  let entry = _lbCache.get(id);
+  if(entry && entry.url) return entry;
+  const img = await DB.getImage(id);
+  if(!img || !img.blob) return null;
+  const url = URL.createObjectURL(img.blob);
+  entry = {url, img};
+  _lbCache.set(id, entry);
+  return entry;
+}
+function _lbPreload(idx){
+  // 현재 idx 기준 ±2 프리로드, 그 밖은 정리
+  const keep = new Set();
+  for(let d = -2; d <= 2; d++){
+    const r = _lbList[idx + d];
+    if(r) keep.add(r.id);
+  }
+  // 멀리 있는 캐시 revoke
+  for(const [id, e] of _lbCache){
+    if(!keep.has(id)){ try { URL.revokeObjectURL(e.url); } catch(_){} _lbCache.delete(id); }
+  }
+  // 이웃(±1 먼저, ±2 그 다음) 비동기 프리로드 + 디코드 워밍
+  for(const d of [1, -1, 2, -2]){
+    const r = _lbList[idx + d];
+    if(!r || _lbCache.has(r.id)) continue;
+    _lbGetCached(r.id, r.sid).then(e => {
+      if(e){ const im = new Image(); im.decoding = 'async'; im.src = e.url; im.decode?.().catch(()=>{}); }
+    }).catch(()=>{});
+  }
+}
+function _lbClearCache(){
+  for(const [id, e] of _lbCache){ try { URL.revokeObjectURL(e.url); } catch(_){} }
+  _lbCache.clear();
+}
+
 async function openLightbox(imgId, sessionId){
   // 🛡 빠른 더블 클릭 시 두 번째 click 이 라이트박스 배경으로 떨어져 닫히는 사고 방지 — 280ms 동안 닫기 무시
   _lbJustOpened = true;
@@ -14675,24 +14732,26 @@ async function showLightboxAt(idx){
   _lbIdx = idx;
   _lbSetMore(false);   // 📱 이미지 전환 시 더보기 시트 접기 (이미지 영역 최대 유지)
   const ref = _lbList[idx];
-  // 🛡 세션이 통째로 삭제됐거나 이미지가 없으면 안전하게 종료 (예전 _lbCurrent 유지 안 함).
-  let imgs = [];
-  try { imgs = await DB.getSessionImages(ref.sid, {includeTrashed: true}); }
-  catch(e){ _swallow(e, 'lb:fetch'); toast('이미지 로드 실패', 'warning'); return; }
-  const img = imgs.find(i => i.id === ref.id);
-  if(!img || !img.blob){
+  const seq = ++_lbCacheSeq;   // 경합 토큰 — 빠른 연속 넘김 시 늦게 온 응답 무시
+  // 🚀 단일 이미지만 조회(+캐시) — 세션 전체 blob 로드 안 함
+  let entry = null;
+  try { entry = await _lbGetCached(ref.id, ref.sid); }
+  catch(e){ _swallow(e, 'lb:fetch'); }
+  if(seq !== _lbCacheSeq) return;   // 그새 더 넘어갔으면 이 프레임 폐기
+  if(!entry || !entry.img || !entry.img.blob){
     toast('이미지를 찾을 수 없어요 (삭제됐을 수 있음)', 'warning');
-    // 다음 가능 항목으로 자동 이동 — 무한 루프 방지 위해 1회만
     _lbList.splice(idx, 1);
     if(_lbList.length === 0){ closeLightbox(); return; }
     return showLightboxAt(Math.min(idx, _lbList.length - 1));
   }
-  // 이전 URL 해제
-  const prevImg = $('lbImg');
-  if(prevImg && prevImg.dataset.url) URL.revokeObjectURL(prevImg.dataset.url);
+  const img = entry.img;
   _lbCurrent = img;
-  const url = URL.createObjectURL(img.blob);
+  // 캐시된 URL 을 그대로 사용 (revoke 는 _lbPreload 가 캐시 evict 시 처리)
+  const url = entry.url;
+  const prevImg = $('lbImg');
   if(prevImg){ prevImg.src = url; prevImg.dataset.url = url; }
+  // 🚀 이웃 프리로드 — 다음/이전 넘김을 즉시로
+  _lbPreload(idx);
   // ❤️ 좋아요 / 👎 별로 버튼 상태 동기화 + ✏️ 수정 버튼 노출 (👎 일 때만)
   _refreshLbLikeDislikeUI();
   // 📥 다운로드 상태 — 받은 적 있으면 '✓ 받음 · n회'
@@ -14910,7 +14969,10 @@ function _lbSetMore(open){
 }
 
 function closeLightbox(){
-  if($('lbImg').dataset.url) URL.revokeObjectURL($('lbImg').dataset.url);
+  // 🚀 프리로드 캐시 일괄 해제 (lbImg.dataset.url 도 캐시 소속이라 여기서 정리)
+  $('lbImg').dataset.url = '';
+  $('lbImg').removeAttribute('src');
+  _lbClearCache();
   // 🖥 순수 전체화면 모드였다면 같이 해제 + Fullscreen API 종료
   exitPureView();
   _lbSetMore(false);   // 📱 더보기 시트 접기
