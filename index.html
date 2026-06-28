@@ -552,9 +552,14 @@ body.focus-mode::after{content:'🌙 포커스 모드 · F로 해제';position:f
 .gal-zoom .iconbtn:active{transform:scale(.9)}
 .gal-zoom .iconbtn:disabled{opacity:.3;cursor:not-allowed}
 .gal-zoom .gz-ind{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--t2);min-width:24px;text-align:center;padding:0 4px;letter-spacing:.04em;user-select:none}
-.gallery-grid{--gal-cell:220px;flex:1;padding:16px;overflow-y:auto;display:grid;gap:12px;align-content:start;background:var(--bg);grid-template-columns:repeat(auto-fill,minmax(var(--gal-cell),1fr));grid-auto-rows:min-content;transition:none}
+.gallery-grid{--gal-cell:220px;flex:1;padding:16px;overflow-y:auto;display:grid;gap:12px;align-content:start;background:var(--bg);grid-template-columns:repeat(auto-fill,minmax(var(--gal-cell),1fr));grid-auto-rows:min-content;transition:none;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scroll-behavior:auto}
 .gallery-grid.compact{grid-template-columns:repeat(auto-fill,minmax(calc(var(--gal-cell) * .68),1fr));gap:10px}
 .g-item{background:var(--card);border:1.5px solid var(--b1);border-radius:8px;overflow:hidden;cursor:pointer;transition:border-color .15s,box-shadow .15s;display:flex;flex-direction:column}
+/* 🚀 스크롤 성능 — 썸네일이 항상 보이는 모드에서만 content-visibility (자리 정확히 확보해 스크롤바 안정). */
+.gallery-grid.samsung .g-item{content-visibility:auto;contain-intrinsic-size:auto calc(var(--gal-cell) * .55)}
+.gallery-grid:not(.samsung) .g-item.expanded{content-visibility:auto;contain-intrinsic-size:auto calc(var(--gal-cell) + 40px)}
+/* 썸네일 이미지 디코딩 비용 — GPU 레이어 분리로 스크롤 시 repaint 최소화 */
+.g-thumb img{transform:translateZ(0)}
 .g-item:hover{border-color:var(--acc);box-shadow:0 6px 16px rgba(74,52,20,.15)}
 .g-thumb{max-height:0;overflow:hidden;transition:max-height .25s ease;position:relative}
 .g-item.expanded .g-thumb{max-height:560px;border-bottom:1.5px solid var(--b1)}
@@ -13743,6 +13748,8 @@ function materializeToken(t){
 function renderGalleryTokens(grid, tokens){
   // 이전 observer 정리
   if(_galObserver){ _galObserver.disconnect(); _galObserver = null; }
+  // 🧹 직전 렌더의 ObjectURL 일괄 해제 — grid.innerHTML 교체로 옛 카드는 곧 폐기됨 (메모리 누수 차단)
+  _revokeGalUrls();
   if(!tokens.length){
     const search = ($('gallerySearch')?.value || '').trim();
     const filterVal = $('galleryFilter')?.value;
@@ -13815,8 +13822,14 @@ function _removeCardWithUrl(card){
   if(u && u.startsWith('blob:')){ try { URL.revokeObjectURL(u); } catch(_){} }
   card.remove();
 }
+const _galUrls = new Set();   // 🧹 갤러리 카드 ObjectURL 추적 — 재렌더 시 일괄 해제 (메모리 누수 방지)
+function _revokeGalUrls(){
+  for(const u of _galUrls){ try { URL.revokeObjectURL(u); } catch(_){} }
+  _galUrls.clear();
+}
 function renderGalleryItemHtml(img, sesId){
   const url = URL.createObjectURL(img.blob);
+  _galUrls.add(url);
   const m = img.meta || {};
   // 📛 파일명 우선순위: 사용자 라벨 > 시드 > 날짜시간
   const label = (img.label && String(img.label).trim())
