@@ -658,6 +658,23 @@ body.focus-mode::after{content:'🌙 포커스 모드 · F로 해제';position:f
 .gallery-grid.compact .g-thumb{max-height:none;border:1.5px solid var(--b1);border-radius:6px}
 .gallery-grid.compact .g-thumb img{aspect-ratio:1}
 .gallery-grid.compact .g-head{display:none}
+/* 📚 IP 앨범 커버 그리드 (삼성 갤러리 앨범 탭 스타일) */
+.gallery-grid.ipalbums{gap:16px 14px;padding:16px 14px 24px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));align-content:start;background:var(--bg)}
+.ipa-card{cursor:pointer;display:flex;flex-direction:column;gap:7px}
+.ipa-cover{position:relative;width:100%;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--card);box-shadow:0 2px 8px rgba(74,52,20,.12);transition:transform .14s ease, box-shadow .14s ease}
+.ipa-card:hover .ipa-cover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(74,52,20,.22)}
+.ipa-card:active .ipa-cover{transform:scale(.97)}
+.ipa-cover img{width:100%;height:100%;object-fit:cover;display:block}
+.ipa-cover .ipa-noimg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:38px;opacity:.4}
+.ipa-cover .ipa-count{position:absolute;right:8px;bottom:8px;background:rgba(20,14,4,.72);color:#fff;font-size:11.5px;font-weight:700;font-family:var(--mono);padding:2px 9px;border-radius:11px;backdrop-filter:blur(3px)}
+.ipa-name{font-size:14px;font-weight:700;color:var(--t1);padding:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.2px}
+/* 📚 앨범 열린 상태 상단 뒤로가기 바 */
+.ipa-back-bar{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:12px 6px 14px;cursor:pointer;position:sticky;top:0;background:linear-gradient(180deg,var(--bg) 78%,transparent);z-index:4;user-select:none}
+.ipa-back-bar:hover .ipa-back-title{color:var(--acc)}
+.ipa-back-arrow{font-size:28px;line-height:.7;color:var(--t1);font-weight:300}
+.ipa-back-title{font-size:18px;font-weight:700;color:var(--t1);letter-spacing:-0.3px}
+.ipa-back-count{font-size:12.5px;color:var(--t3)}
+@media(max-width:768px){.gallery-grid.ipalbums{gap:12px 10px;padding:10px 10px 18px;grid-template-columns:repeat(3,1fr)}.ipa-name{font-size:12.5px}.ipa-cover{border-radius:10px}.ipa-back-title{font-size:15.5px}}
 /* 📱 삼성 OneUI 7 갤러리 스타일 (2026) — 날짜별 그룹 + 정사각 썸네일 타이트 그리드 */
 .gallery-grid.samsung{gap:2px;padding:4px 4px 16px;grid-template-columns:repeat(auto-fill,minmax(calc(var(--gal-cell) * .55),1fr));background:var(--bg)}
 .gallery-grid.samsung .g-item{background:transparent;border:none;box-shadow:none;border-radius:0;position:relative}
@@ -2843,7 +2860,7 @@ mark{
             <div class="gv-toggle" id="galleryView" title="보기 프리셋 — 클릭으로 정렬·필터 자동 설정">
               <button data-gv="samsung" class="act" title="📱 날짜별 정사각 그리드 (삼성 갤러리 스타일 · 기본)">📅 날짜별 <span class="en">Date</span></button>
               <button data-gv="recent" title="모든 이미지를 최신순 평면 그리드 (라벨 카드)">🕒 최신순 <span class="en">Recent</span></button>
-              <button data-gv="session" title="📂 세션별로 그룹화해서 표시 (세션 헤더 노출)">📂 세션별 <span class="en">Sessions</span></button>
+              <button data-gv="ipalbum" title="📚 작품(IP)별 앨범 — 같은 작품 소속을 앨범으로 묶음. 탭하면 그 앨범 열림 (삼성 갤러리 앨범 스타일)">📚 앨범 <span class="en">Albums</span></button>
               <button data-gv="liked" title="❤️ 좋아요한 이미지만 최신순 평면 (보관함)">❤️ 좋아요 <span class="en">Liked</span></button>
               <button data-gv="album" title="👥 캐릭터·사용자 앨범별 그룹">👥 캐릭터 <span class="en">By Character</span></button>
             </div>
@@ -5256,6 +5273,19 @@ const sleep = ms => new Promise(r=>setTimeout(r,ms));
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 const fmtBytes = n => n<1024?n+'B':n<1048576?(n/1024).toFixed(1)+'KB':n<1073741824?(n/1048576).toFixed(1)+'MB':(n/1073741824).toFixed(2)+'GB';
 const fmtDate = ts => { const d=new Date(ts); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+// 📚 이미지의 IP(작품) 그룹 — meta.characters[0] 의 prefix(작품명). 없으면 '기타'.
+//    getCharGroup: '블리치_루키아' → '블리치', '[원신]푸리나' → '원신'.
+function _imgIpGroup(item){
+  // item 은 {img,...} 래퍼이거나 raw 이미지 레코드 둘 다 가능
+  const meta = item?.img?.meta || item?.meta || {};
+  const chars = meta.characters || [];
+  for(const c of chars){
+    const g = (typeof getCharGroup === 'function') ? getCharGroup(c) : '기타';
+    if(g && g !== '기타') return g;
+  }
+  return '기타';
+}
+
 // 📱 삼성 갤러리 (2026 OneUI 스타일) 날짜 그룹.
 //   오늘 / 어제 / 이번 주(2~6일전, 요일) / M월 D일(올해) / YYYY년 M월(올해 외 같은 달) / YYYY (그 외)
 //   같은 그룹은 같은 key.
@@ -14030,7 +14060,11 @@ async function loadGallery(){
   const dislikeOnly = !isVault && !!state._galDislikeOnly;
   const downloadedOnly = !isVault && !!state._galDownloadedOnly;   // ⬇ 다운로드 기록만
   grid.classList.toggle('gallery-trash-mode', trashMode);
-  grid.classList.toggle('samsung', viewMode === 'samsung');   // 📱 삼성 스타일 정사각 그리드
+  // 📚 IP 앨범 — 앨범 커버 그리드(닫힘) / 그 앨범 이미지 날짜 그리드(열림)
+  const ipAlbumOpen = (viewMode === 'ipalbum') && !!state._galIpAlbumOpen;
+  const samsungLike = (viewMode === 'samsung') || ipAlbumOpen;   // 정사각 날짜 그리드
+  grid.classList.toggle('samsung', samsungLike);   // 📱 삼성 스타일 정사각 그리드
+  grid.classList.toggle('ipalbums', viewMode === 'ipalbum' && !ipAlbumOpen);   // 앨범 커버 그리드
   // 🚀 perf: 세션별 IDB 조회를 병렬화 (이전엔 N개 세션 = N회 순차 RTT).
   //   필터로 빠른 세션은 즉시 건너뛰고, 나머지만 Promise.all 로 동시 조회.
   const targetSessions = selSesId != null ? sessions.filter(s => s.id === selSesId) : sessions;
@@ -14046,6 +14080,8 @@ async function loadGallery(){
     if(dislikeOnly) filtered = filtered.filter(i => i.disliked);
     if(downloadedOnly) filtered = filtered.filter(i => i.downloaded);   // ⬇ 받은 적 있는 것만
     if(selWork) filtered = filtered.filter(matchesWork);
+    // 📚 IP 앨범이 열려있으면 그 작품 소속 이미지만
+    if(ipAlbumOpen) filtered = filtered.filter(i => _imgIpGroup(i) === state._galIpAlbumOpen);
     if(search){
       filtered = filtered.filter(i => {
         const t = (i.prompt||'') + ' ' + (i.label||'') + ' ' + (i.meta?.prompt||'') + ' ' + (i.meta?.characters||[]).join(' ') + ' ' + (i.meta?.sceneLabel||'') + ' ' + (i.meta?.sceneCharPreset||'') + ' ' + (i.meta?.seed!=null?i.meta.seed:'');
@@ -14179,11 +14215,49 @@ async function loadGallery(){
         for(const it of unsorted) tokens.push({type:'img', img: it.img, sesId: it.sesId});
       }
     }
-  } else if(viewMode === 'samsung'){
+  } else if(viewMode === 'ipalbum' && !ipAlbumOpen){
+    // 📚 IP 앨범 커버 그리드 (닫힘 상태) — 작품별로 묶어 커버 카드 표시 (삼성 앨범 스타일)
+    const ipMap = new Map();   // ip → {items, cover, latest}
+    for(const item of allImages){
+      const ip = _imgIpGroup(item);
+      if(!ipMap.has(ip)) ipMap.set(ip, {items: [], cover: null, latest: 0});
+      const g = ipMap.get(ip);
+      g.items.push(item);
+      if((item.ts||0) > g.latest){ g.latest = item.ts||0; g.cover = item.img; }
+    }
+    // 정렬 — 장수 많은 순, '기타(미분류)' 는 항상 마지막
+    const ips = [...ipMap.keys()].sort((a, b) => {
+      if(a === '기타') return 1; if(b === '기타') return -1;
+      return ipMap.get(b).items.length - ipMap.get(a).items.length;
+    });
+    for(const ip of ips){
+      const g = ipMap.get(ip);
+      let coverHtml;
+      if(g.cover?.blob){
+        const u = URL.createObjectURL(g.cover.blob);
+        _albumThumbUrls.push(u);
+        coverHtml = `<img src="${u}" alt="${esc(ip)}" loading="lazy" decoding="async">`;
+      } else {
+        coverHtml = `<div class="ipa-noimg">📁</div>`;
+      }
+      const displayIp = ip === '기타' ? '미분류' : ip;
+      tokens.push(`<div class="ipa-card" data-act="open-ipalbum" data-ip="${esc(ip)}" title="${esc(displayIp)} 앨범 열기">
+        <div class="ipa-cover">${coverHtml}<span class="ipa-count">${g.items.length.toLocaleString()}</span></div>
+        <div class="ipa-name">${esc(displayIp)}</div>
+      </div>`);
+    }
+    if(!ips.length){
+      tokens.push(`<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--t3);font-size:13px">아직 작품(IP) 정보가 있는 이미지가 없어요<br><span style="font-size:11.5px">캐릭터 이름을 <b>작품_캐릭터</b> 또는 <b>[작품]캐릭터</b> 형식으로 쓰면 자동 분류됩니다</span></div>`);
+    }
+  } else if(samsungLike){
     // 📱 삼성 갤러리 — 날짜별 그룹 헤더 + 정사각 썸네일. 최신순 강제.
+    //   📚 IP 앨범이 열린 상태면 상단에 ← 뒤로 헤더
     allImages.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    if(ipAlbumOpen){
+      const ipName = state._galIpAlbumOpen === '기타' ? '미분류' : state._galIpAlbumOpen;
+      tokens.push(`<div class="ipa-back-bar" data-act="close-ipalbum"><span class="ipa-back-arrow">‹</span><span class="ipa-back-title">${esc(ipName)}</span><span class="ipa-back-count">${allImages.length.toLocaleString()}장</span></div>`);
+    }
     let curKey = null;
-    let groupItems = [];   // 현재 그룹 누적 (헤더 카운트용 lookahead 회피)
     const flushHeader = (key, label) => {
       const cnt = allImages.filter(a => _samsungDateKey(a.ts) === key).length;
       tokens.push(`<div class="samsung-date-sep"><span>${esc(label)}</span><span class="sds-count">${cnt}장</span></div>`);
@@ -21903,13 +21977,15 @@ function wireGalleryEvents(){
   //   session → viewMode=detail + sort=session (세션 그룹화)
   //   liked   → viewMode=vault (좋아요만 평면 — likeOnly 자동 + sort=new)
   //   album   → viewMode=album (캐릭터·사용자 앨범)
-  function _presetToView(p){ return p === 'samsung' ? 'samsung' : p === 'session' ? 'detail' : p === 'liked' ? 'vault' : p === 'album' ? 'album' : 'detail'; }
+  function _presetToView(p){ return p === 'samsung' ? 'samsung' : p === 'ipalbum' ? 'ipalbum' : p === 'session' ? 'detail' : p === 'liked' ? 'vault' : p === 'album' ? 'album' : 'detail'; }
   function _presetToSort(p){ return p === 'session' ? 'session' : 'new'; }
   function _migrateLegacyGv(v){
     if(v === 'samsung') return 'samsung';
+    if(v === 'ipalbum') return 'ipalbum';
+    if(v === 'session') return 'ipalbum';   // 세션별 → IP 앨범으로 대체
     if(v === 'detail' || v === 'compact') return 'recent';
     if(v === 'vault') return 'liked';
-    if(['recent','session','liked','album'].includes(v)) return v;
+    if(['recent','liked','album'].includes(v)) return v;
     return 'samsung';   // 기본값 — 삼성 갤러리 스타일
   }
   function _applyGalleryPreset(preset, opts){
@@ -21920,6 +21996,8 @@ function wireGalleryEvents(){
     grid.classList.remove('compact');   // compact 모드 폐지 (줌 컨트롤로 대체)
     grid.dataset.view = view;
     grid.dataset.preset = preset;
+    // 📚 다른 보기로 가면 IP 앨범 열린 상태 리셋 (커버 그리드부터 다시)
+    if(preset !== 'ipalbum') state._galIpAlbumOpen = null;
     try { localStorage.setItem('nai_gv', preset); } catch(e){ _swallow(e, 'lsSet:galView'); }
     // 정렬 셀렉트와 동기화 (사용자가 동일 페이지에서 정렬 셀렉트 보면 일관)
     const sortSel = $('gallerySort');
@@ -22246,6 +22324,21 @@ function wireGalleryEvents(){
   });
   $('purgeGalBtn').addEventListener('click', () => $('clearGalBtn').click());
   $('galleryGrid').addEventListener('click', async e => {
+    // 📚 IP 앨범 커버 클릭 → 그 앨범 열기
+    const ipaCard = e.target.closest('[data-act="open-ipalbum"]');
+    if(ipaCard){
+      state._galIpAlbumOpen = ipaCard.dataset.ip;
+      await loadGallery();
+      $('galleryGrid')?.scrollTo({top:0});
+      return;
+    }
+    // 📚 IP 앨범 뒤로가기 → 앨범 목록으로
+    if(e.target.closest('[data-act="close-ipalbum"]')){
+      state._galIpAlbumOpen = null;
+      await loadGallery();
+      $('galleryGrid')?.scrollTo({top:0});
+      return;
+    }
     // 🗂 앨범 헤더 토글 (펼치기/접기) — 내부 버튼 클릭은 제외
     const albumHdr = e.target.closest('[data-act="toggle-album"]');
     if(albumHdr && !e.target.closest('button, [data-no-toggle]')){
