@@ -947,6 +947,47 @@ body.focus-mode::after{content:'🌙 포커스 모드 · F로 해제';position:f
 #lightbox #lbMoreToggle{display:flex;color:var(--acc);border-color:rgba(214,160,80,.5)}
 #lightbox:not(.lb-more-open) .lb-actions .lb-2nd{display:none}
 #lightbox.lb-more-open .lb-actions{background:rgba(20,14,4,.06);border-radius:8px;padding:6px}
+/* ═══════ 📱 삼성 갤러리 스타일 라이트박스 — 하단 필름스트립 + 접이식 하단 액션바 ═══════ */
+#lightbox.lb-samsung{flex-direction:column;justify-content:flex-start;padding:0;background:rgba(12,8,3,.97)}
+/* 이미지 — 상단~필름스트립 위 사이를 채움 */
+#lightbox.lb-samsung .lb-img{max-width:96vw;max-height:calc(100vh - 188px);margin:auto;border-radius:0;box-shadow:none}
+/* 우상단 닫기 */
+#lightbox.lb-samsung .lb-close-top{position:absolute;top:max(12px,env(safe-area-inset-top,0)) ;right:14px;z-index:8;width:40px;height:40px;border-radius:50%;background:rgba(20,14,4,.55);color:#fff8ec;border:1.5px solid rgba(255,255,255,.18);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;backdrop-filter:blur(4px)}
+#lightbox.lb-samsung .lb-close-top:hover{background:rgba(20,14,4,.85)}
+#lightbox:not(.lb-samsung) .lb-close-top{display:none}
+/* 🎞 필름스트립 — 하단 액션바 바로 위 */
+#lightbox.lb-samsung .lb-strip{position:absolute;left:0;right:0;bottom:72px;height:64px;display:flex;gap:5px;align-items:center;padding:6px 12px;overflow-x:auto;overflow-y:hidden;background:linear-gradient(0deg, rgba(12,8,3,.9), rgba(12,8,3,.5));scrollbar-width:thin;z-index:6;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+#lightbox.lb-samsung .lb-strip::-webkit-scrollbar{height:5px}
+#lightbox.lb-samsung .lb-strip::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:3px}
+.lb-strip-thumb{flex:0 0 auto;width:52px;height:52px;border-radius:5px;overflow:hidden;cursor:pointer;border:2px solid transparent;opacity:.55;transition:opacity .12s, border-color .12s, transform .12s;background:#000}
+.lb-strip-thumb img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.lb-strip-thumb:hover{opacity:.85}
+.lb-strip-thumb.act{opacity:1;border-color:#fff;transform:scale(1.08)}
+/* 하단 액션바 — 가로, 접힘 기본 */
+#lightbox.lb-samsung .lb-actions{position:absolute;left:0;right:0;bottom:0;top:auto;flex-direction:row;flex-wrap:nowrap;justify-content:space-around;gap:2px;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0));background:rgba(12,8,3,.92);overflow-x:auto;z-index:7}
+#lightbox.lb-samsung .lb-act-btn{flex:0 0 auto;min-width:54px;background:transparent;border:none;color:#e8dcc8}
+#lightbox.lb-samsung .lb-act-btn:hover{color:#fff;background:rgba(255,255,255,.08)}
+#lightbox.lb-samsung .lb-act-btn .lb-act-ico{font-size:17px}
+/* 접힘: lb-2nd 숨김. ⋯ 누르면 액션바가 위로 펼쳐지며 전체 표시 (스크롤) */
+#lightbox.lb-samsung:not(.lb-more-open) .lb-actions .lb-2nd{display:none}
+#lightbox.lb-samsung.lb-more-open .lb-actions{flex-wrap:wrap;justify-content:center;max-height:42vh;overflow-y:auto;border-top:1.5px solid rgba(255,255,255,.12)}
+#lightbox.lb-samsung.lb-more-open .lb-strip{display:none}
+#lightbox.lb-samsung.lb-more-open .lb-img{max-height:calc(100vh - 46vh)}
+#lightbox.lb-samsung #lbMoreToggle{color:var(--acc)}
+#lightbox.lb-samsung.lb-more-open #lbMoreToggle .lb-act-ico{transform:rotate(90deg)}
+/* 정보 패널은 상단에서 내려오게 */
+#lightbox.lb-samsung .lb-meta{left:50%;top:auto;bottom:148px;transform:translateX(-50%);max-width:min(560px,92vw);max-height:46vh}
+/* 카운터 위치 — 상단 좌측(닫기와 겹치지 않게 중앙 유지) */
+#lightbox.lb-samsung .lb-counter{top:max(16px,env(safe-area-inset-top,0))}
+/* 필름스트립 숨김(이미지 1장뿐일 때) */
+#lightbox.lb-samsung.lb-single .lb-strip{display:none}
+#lightbox.lb-samsung.lb-single .lb-img{max-height:calc(100vh - 116px)}
+@media(max-width:880px){
+  #lightbox.lb-samsung .lb-strip{height:56px;bottom:66px}
+  .lb-strip-thumb{width:46px;height:46px}
+  #lightbox.lb-samsung .lb-act-btn{min-width:46px}
+  #lightbox.lb-samsung .lb-img{max-height:calc(100vh - 170px)}
+}
 /* ⟨⟩ 내비게이션 — 작고 반투명해서 이미지·UI를 가리지 않게 */
 .lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(20,14,4,.32);color:#fff8ec;border:1px solid rgba(255,255,255,.10);width:36px;height:54px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:all .15s;font-weight:300;z-index:5;user-select:none;opacity:.35;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 .lb-nav:hover{background:rgba(20,14,4,.78);border-color:rgba(255,255,255,.35);opacity:1;transform:translateY(-50%) scale(1.08)}
@@ -3101,38 +3142,39 @@ mark{
   <div class="pos-cells" id="posCells"></div>
 </div>
 
-<!-- LIGHTBOX — 확대 보기 -->
-<div id="lightbox">
+<!-- LIGHTBOX — 확대 보기 (삼성 갤러리 스타일: 하단 필름스트립 + 접이식 액션바) -->
+<div id="lightbox" class="lb-samsung">
   <img class="lb-img" id="lbImg" alt="라이트박스 — 갤러리 이미지 확대 뷰">
   <button class="lb-nav lb-nav-prev" id="lbPrev" title="이전 (←)">⟨</button>
   <button class="lb-nav lb-nav-next" id="lbNext" title="다음 (→)">⟩</button>
   <div class="lb-counter" id="lbCounter"></div>
   <div class="lb-meta" id="lbMeta"></div>
+  <!-- 🎞 하단 썸네일 필름스트립 — 다른 이미지로 바로 이동 -->
+  <div class="lb-strip" id="lbStrip"></div>
   <div class="lb-actions">
+    <!-- 기본 노출 (삼성 스타일 핵심 액션) — 좋아요·다운·정보·더보기 -->
+    <button class="iconbtn lb-act-btn lb-primary" id="lbLike" title="❤️ 좋아요" aria-pressed="false"><span class="lb-act-ico">♡</span><span class="lb-act-lbl">좋아요</span></button>
     <button class="iconbtn lb-act-btn lb-primary" id="lbDownload" title="다운로드 (Download)"><span class="lb-act-ico">⬇</span><span class="lb-act-lbl">다운</span></button>
-    <button class="iconbtn lb-act-btn lb-primary" id="lbReuse" title="모든 파라미터 복원 (Reuse all)"><span class="lb-act-ico">↻</span><span class="lb-act-lbl">복원</span></button>
+    <button class="iconbtn lb-act-btn lb-primary" id="lbInfoBtn" title="ℹ 상세정보 펼치기/접기 (메타·프롬프트)" aria-pressed="false"><span class="lb-act-ico">ℹ</span><span class="lb-act-lbl">정보</span></button>
+    <button class="iconbtn lb-act-btn lb-primary" id="lbDelete" title="🗑 휴지통으로 이동 (7일 보관 후 자동 영구 삭제)" style="color:var(--red);border-color:rgba(181,67,56,.3)"><span class="lb-act-ico">🗑</span><span class="lb-act-lbl">휴지통</span></button>
+    <button class="iconbtn lb-act-btn lb-primary lb-more-toggle" id="lbMoreToggle" type="button" title="더 많은 액션 (More)" aria-expanded="false"><span class="lb-act-ico">⋯</span><span class="lb-act-lbl">더보기</span></button>
+    <!-- 접힘 (⋯ 눌러야 펼쳐짐) -->
+    <button class="iconbtn lb-act-btn lb-2nd" id="lbReuse" title="모든 파라미터 복원 (Reuse all)"><span class="lb-act-ico">↻</span><span class="lb-act-lbl">복원</span></button>
+    <button class="iconbtn lb-act-btn lb-2nd" id="lbDislike" title="👎 별로 — 통계에서 자주 실패하는 시드·프롬·모델·캐릭터·토큰 추적" aria-pressed="false"><span class="lb-act-ico">👎</span><span class="lb-act-lbl">별로</span></button>
     <button class="iconbtn lb-act-btn lb-2nd" id="lbExifApply" title="📁 EXIF 복원 — 이 이미지의 메타로 폼 채우기" style="border-color:rgba(58,99,152,.4);color:var(--blue)"><span class="lb-act-ico">📁</span><span class="lb-act-lbl">EXIF</span></button>
     <button class="iconbtn lb-act-btn lb-2nd" id="lbSeedOnly" title="🌱 시드만 가져오기 (Seed only)"><span class="lb-act-ico">🌱</span><span class="lb-act-lbl">시드</span></button>
-    <div style="height:1px;background:var(--b1);margin:2px 0"></div>
     <button class="iconbtn lb-act-btn lb-2nd" id="lbEnhance" title="✨ Enhance — 디테일업 (img2img, 약한 강도)"><span class="lb-act-ico">✨</span><span class="lb-act-lbl">향상</span></button>
     <button class="iconbtn lb-act-btn lb-2nd" id="lbUpscale" title="⬆ 4배 업스케일 (해상도 ×4, 비용 ↑)"><span class="lb-act-ico">⬆</span><span class="lb-act-lbl">4배</span></button>
-    <button class="iconbtn lb-act-btn lb-primary" id="lbTextEdit" title="🅣 텍스트·말풍선 편집 — 이미지 위에 글자/말풍선 추가" style="border-color:rgba(214,160,80,.4);color:var(--acc)"><span class="lb-act-ico">🅣</span><span class="lb-act-lbl">텍스트</span></button>
-    <div style="height:1px;background:var(--b1);margin:2px 0"></div>
+    <button class="iconbtn lb-act-btn lb-2nd" id="lbTextEdit" title="🅣 텍스트·말풍선 편집 — 이미지 위에 글자/말풍선 추가" style="border-color:rgba(214,160,80,.4);color:var(--acc)"><span class="lb-act-ico">🅣</span><span class="lb-act-lbl">텍스트</span></button>
     <button class="iconbtn lb-act-btn lb-2nd" id="lbI2I" title="→ I2I로 보내기 (Send to I2I)"><span class="lb-act-ico">→I</span><span class="lb-act-lbl">I2I</span></button>
     <button class="iconbtn lb-act-btn lb-2nd" id="lbVibe" title="→ Vibe 참조로 사용 (Send to Vibe)"><span class="lb-act-ico">→V</span><span class="lb-act-lbl">Vibe</span></button>
     <button class="iconbtn lb-act-btn lb-2nd" id="lbExtractTags" title="📋 이 이미지의 태그를 도감에 추출"><span class="lb-act-ico">📋</span><span class="lb-act-lbl">태그</span></button>
-    <button class="iconbtn lb-act-btn lb-2nd" id="lbSaveTpl" title="📌 와일드카드/랜덤이 적용된 캐릭터 결과를 템플릿으로 저장 — 다른 캐릭터 슬롯에서 불러올 수 있음" style="border-color:rgba(214,160,80,.4);color:var(--acc)"><span class="lb-act-ico">📌</span><span class="lb-act-lbl">템플릿</span></button>
-    <div style="height:1px;background:var(--b1);margin:2px 0"></div>
-    <button class="iconbtn lb-act-btn lb-primary" id="lbInfoBtn" title="ℹ 상세정보 펼치기/접기 (메타·프롬프트)" aria-pressed="false"><span class="lb-act-ico">ℹ</span><span class="lb-act-lbl">정보</span></button>
-    <button class="iconbtn lb-act-btn lb-primary" id="lbLike" title="❤️ 좋아요 — 마음에 든 결과물 표시 + 통계 집계 + ❤️🎲 시드 풀에 추가" aria-pressed="false"><span class="lb-act-ico">♡</span><span class="lb-act-lbl">좋아요</span></button>
-    <button class="iconbtn lb-act-btn lb-primary" id="lbDislike" title="👎 별로 — 깨지거나 의도와 다른 결과. 통계에서 자주 실패하는 시드·프롬·모델·캐릭터·토큰 추적" aria-pressed="false"><span class="lb-act-ico">👎</span><span class="lb-act-lbl">별로</span></button>
-    <button class="iconbtn lb-act-btn" id="lbEditPrompt" title="✏️ 이 이미지 프롬프트 → 편집화면 + 자주 실패하는 toxic 토큰 강조" style="display:none;border-color:rgba(181,67,56,.4)"><span class="lb-act-ico">✏️</span><span class="lb-act-lbl">수정</span></button>
-    <button class="iconbtn lb-act-btn lb-primary" id="lbRestore" title="↺ 휴지통에서 복원" style="display:none;color:var(--green);border-color:rgba(93,138,48,.4)"><span class="lb-act-ico">↺</span><span class="lb-act-lbl">복원</span></button>
-    <button class="iconbtn lb-act-btn lb-primary" id="lbDelete" title="🗑 휴지통으로 이동 (7일 보관 후 자동 영구 삭제)" style="color:var(--red);border-color:rgba(181,67,56,.3)"><span class="lb-act-ico">🗑</span><span class="lb-act-lbl">휴지통</span></button>
-    <button class="iconbtn lb-act-btn lb-primary lb-more-toggle" id="lbMoreToggle" type="button" title="더 많은 액션 (More)" aria-expanded="false"><span class="lb-act-ico">⋯</span><span class="lb-act-lbl">더보기</span></button>
-    <button class="iconbtn lb-act-btn lb-2nd" id="lbPure" title="🖥 순수 전체화면 — 모든 UI 숨김 + 브라우저 chrome 까지 가림 (ESC 또는 화면 한 번 탭으로 복귀)"><span class="lb-act-ico">🖥</span><span class="lb-act-lbl">전체</span></button>
-    <button class="iconbtn lb-act-btn" id="lbClose" title="닫기 (Close)"><span class="lb-act-ico">✕</span><span class="lb-act-lbl">닫기</span></button>
+    <button class="iconbtn lb-act-btn lb-2nd" id="lbSaveTpl" title="📌 와일드카드/랜덤이 적용된 캐릭터 결과를 템플릿으로 저장" style="border-color:rgba(214,160,80,.4);color:var(--acc)"><span class="lb-act-ico">📌</span><span class="lb-act-lbl">템플릿</span></button>
+    <button class="iconbtn lb-act-btn lb-2nd" id="lbEditPrompt" title="✏️ 이 이미지 프롬프트 → 편집화면 + 자주 실패하는 toxic 토큰 강조" style="display:none;border-color:rgba(181,67,56,.4)"><span class="lb-act-ico">✏️</span><span class="lb-act-lbl">수정</span></button>
+    <button class="iconbtn lb-act-btn lb-2nd" id="lbRestore" title="↺ 휴지통에서 복원" style="display:none;color:var(--green);border-color:rgba(93,138,48,.4)"><span class="lb-act-ico">↺</span><span class="lb-act-lbl">복원</span></button>
+    <button class="iconbtn lb-act-btn lb-2nd" id="lbPure" title="🖥 순수 전체화면 — 모든 UI 숨김 (ESC 또는 화면 한 번 탭으로 복귀)"><span class="lb-act-ico">🖥</span><span class="lb-act-lbl">전체</span></button>
   </div>
+  <button class="lb-close-top" id="lbClose" title="닫기 (Close · Esc)">✕</button>
 </div>
 
 <!-- CONFIRM MODAL — 확인 창 -->
@@ -14724,6 +14766,7 @@ async function openLightbox(imgId, sessionId){
     _lbList = [{id: imgId, sid: sessionId}];
     _lbIdx = 0;
   }
+  _clearLbStrip();   // 🎞 새 리스트 — 필름스트립 재구축 강제
   await showLightboxAt(_lbIdx);
 }
 
@@ -14839,7 +14882,8 @@ async function showLightboxAt(idx){
   if(window._lbResetZoom) window._lbResetZoom();  // 이미지 전환 시 줌도 리셋
   // 카운터·내비 버튼 상태
   const counter = $('lbCounter');
-  if(_lbList.length > 1){
+  const multi = _lbList.length > 1;
+  if(multi){
     counter.classList.add('show');
     counter.textContent = `${idx + 1} / ${_lbList.length}`;
     $('lbPrev').classList.toggle('disabled', idx === 0);
@@ -14851,7 +14895,69 @@ async function showLightboxAt(idx){
     $('lbPrev').style.display = 'none';
     $('lbNext').style.display = 'none';
   }
+  // 🎞 삼성 필름스트립 — 이미지 1장뿐이면 숨김
+  $('lightbox').classList.toggle('lb-single', !multi);
+  _renderLbStrip(idx);
   $('lightbox').classList.add('open');
+}
+
+// 🎞 라이트박스 하단 필름스트립 렌더 — 현재 idx 강조, 클릭 시 이동. 캐시 URL 재사용.
+function _renderLbStrip(activeIdx){
+  const strip = document.getElementById('lbStrip');
+  if(!strip || _lbList.length <= 1) { if(strip) strip.innerHTML = ''; return; }
+  // 이미 그려져 있고 같은 리스트면 활성 표시만 갱신 (재생성 비용 회피)
+  const sameCount = strip.childElementCount === _lbList.length;
+  if(sameCount){
+    [...strip.children].forEach((el, i) => el.classList.toggle('act', i === activeIdx));
+  } else {
+    // 새로 그림 — 썸네일은 캐시에 있으면 그 URL, 없으면 비동기 로드 후 채움
+    strip.innerHTML = _lbList.map((ref, i) =>
+      `<div class="lb-strip-thumb${i===activeIdx?' act':''}" data-idx="${i}" title="${i+1}/${_lbList.length}"></div>`
+    ).join('');
+    [...strip.children].forEach((el, i) => {
+      const ref = _lbList[i];
+      const cached = _lbCache.get(ref.id);
+      if(cached?.url){ el.innerHTML = `<img src="${cached.url}" alt="" loading="lazy">`; }
+      else {
+        // 화면에 들어올 때만 로드 — IntersectionObserver
+        _lbStripObserve(el, ref);
+      }
+    });
+  }
+  // 활성 썸네일이 보이도록 스크롤
+  const act = strip.querySelector('.lb-strip-thumb.act');
+  if(act) act.scrollIntoView({inline:'center', block:'nearest', behavior:'smooth'});
+}
+let _lbStripObserver = null;
+function _lbStripObserve(el, ref){
+  if(!_lbStripObserver){
+    _lbStripObserver = new IntersectionObserver(entries => {
+      for(const e of entries){
+        if(!e.isIntersecting) continue;
+        const node = e.target;
+        _lbStripObserver.unobserve(node);
+        const id = parseInt(node.dataset.id, 10), sid = parseInt(node.dataset.sid, 10);
+        DB.getImage(id).then(img => {
+          if(img?.blob && node.isConnected){
+            const url = URL.createObjectURL(img.blob);
+            node.dataset.thumbUrl = url;   // strip 정리 시 revoke
+            node.innerHTML = `<img src="${url}" alt="">`;
+          }
+        }).catch(()=>{});
+      }
+    }, {root: document.getElementById('lbStrip'), rootMargin: '200px'});
+  }
+  el.dataset.id = ref.id; el.dataset.sid = ref.sid;
+  _lbStripObserver.observe(el);
+}
+function _clearLbStrip(){
+  const strip = document.getElementById('lbStrip');
+  if(strip){
+    // 옵저버로 만든 thumb URL 만 revoke (캐시 URL 은 _lbClearCache 가 처리)
+    strip.querySelectorAll('[data-thumb-url]').forEach(n => { try { URL.revokeObjectURL(n.dataset.thumbUrl); } catch(_){} });
+    strip.innerHTML = '';
+  }
+  if(_lbStripObserver){ _lbStripObserver.disconnect(); _lbStripObserver = null; }
 }
 
 function lbNext(){ if(_lbIdx < _lbList.length - 1) showLightboxAt(_lbIdx + 1); }
@@ -14973,6 +15079,7 @@ function closeLightbox(){
   $('lbImg').dataset.url = '';
   $('lbImg').removeAttribute('src');
   _lbClearCache();
+  _clearLbStrip();
   // 🖥 순수 전체화면 모드였다면 같이 해제 + Fullscreen API 종료
   exitPureView();
   _lbSetMore(false);   // 📱 더보기 시트 접기
@@ -22432,6 +22539,14 @@ function wireLightboxEvents(){
   // ⟨ / ⟩ 내비게이션 버튼
   $('lbPrev').addEventListener('click', e => { e.stopPropagation(); lbPrev(); });
   $('lbNext').addEventListener('click', e => { e.stopPropagation(); lbNext(); });
+  // 🎞 필름스트립 썸네일 클릭 → 해당 이미지로 이동
+  $('lbStrip')?.addEventListener('click', e => {
+    e.stopPropagation();
+    const t = e.target.closest('.lb-strip-thumb');
+    if(!t) return;
+    const i = parseInt(t.dataset.idx, 10);
+    if(!isNaN(i) && i !== _lbIdx) showLightboxAt(i);
+  });
   // 📱 ⋯ 더보기 시트 토글 (모바일 — 핵심 6개 ↔ 전체 액션)
   $('lbMoreToggle')?.addEventListener('click', e => {
     e.stopPropagation();
