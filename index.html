@@ -2705,14 +2705,17 @@ mark{
           </div>
 
           <div class="field" style="margin-bottom:10px;padding:8px 10px;background:rgba(58,99,152,.06);border:1.5px solid rgba(58,99,152,.25);border-radius:5px">
-            <span class="lbl" style="color:var(--blue);font-weight:700">📂 출력 폴더 <span class="en">Output Folder</span></span>
-            <div class="row" style="gap:5px;align-items:stretch;margin-top:4px">
-              <input id="outputDirDisplay" class="inp tiny mono" readonly placeholder="기본: 다운로드 폴더" style="flex:1;font-size:11.5px">
-              <button class="btn ghost" id="pickOutputDirBtn" style="padding:6px 10px;font-size:11px">📁 선택</button>
+            <span class="lbl" style="color:var(--blue);font-weight:700">📂 다운로드 위치 <span class="en">Download Location</span></span>
+            <div style="font-size:10.5px;color:var(--t2);margin:4px 0 6px;line-height:1.55">
+              기본은 <b>브라우저 다운로드 폴더</b>예요 (브라우저 설정에서 한 번만 지정하면 끝 · 권한·오류 없음).
+            </div>
+            <div class="row" style="gap:5px;align-items:stretch;margin-top:2px">
+              <input id="outputDirDisplay" class="inp tiny mono" readonly placeholder="브라우저 다운로드 폴더 (기본)" style="flex:1;font-size:11.5px">
+              <button class="btn ghost" id="pickOutputDirBtn" style="padding:6px 10px;font-size:11px">📁 폴더 지정</button>
               <button class="btn ghost" id="clearOutputDirBtn" style="padding:6px 10px;font-size:11px">해제</button>
             </div>
-            <div style="font-size:10.5px;color:var(--t3);margin-top:4px;line-height:1.55">
-              설정 시 <b style="color:var(--blue)">⬇ 다운로드 버튼으로 받은 이미지만</b> 이 폴더로 (Chrome/Edge 전용 · 생성된 모든 이미지가 폴더로 쏟아지지 않음)
+            <div style="font-size:10.5px;color:var(--t3);margin-top:5px;line-height:1.55">
+              ⚠ <b>특정 폴더 직접 저장</b>(Chrome/Edge)은 브라우저 보안상 <b>새로고침할 때마다 권한을 다시 받아야</b> 해요. 권한이 풀리면 자동으로 브라우저 다운로드 폴더로 받아집니다(오류 아님). 번거로우면 지정하지 말고 기본 그대로 쓰세요.
             </div>
           </div>
           <div class="field" style="margin-bottom:7px">
@@ -9307,7 +9310,6 @@ async function pickOutputDirectory(){
     state.outputDirHandle = handle;
     state.outputDirName = handle.name;
     state._outputDirWarned = false;
-    state._outputDirRepickShown = false;
     await DB.setFlag('output_dir_handle', handle);
     updateOutputDirUI();
     toast(`📂 출력 폴더: "${handle.name}" — 이번 세션 저장 준비됨`, 'success');
@@ -9352,8 +9354,11 @@ async function writeImageToOutputDir(blob, filename){
   try {
     const perm = await ensureOutputDirPermission();
     if(perm !== 'granted'){
-      // 권한 끊김 — 폴더 재선택 유도 (새로고침마다 권한이 'prompt'로 리셋되는 정상 동작)
-      _promptRepickOutputDir(perm === 'denied' ? '권한이 거부되었습니다' : '권한 재허용이 필요합니다');
+      // 권한 끊김 — 모달로 막지 않고 조용히 브라우저 다운로드로 폴백 (세션당 1회만 안내)
+      if(!state._outputDirWarned){
+        state._outputDirWarned = true;
+        toast('📂 폴더 권한이 풀려서 이번엔 브라우저 다운로드 폴더로 받아요 (설정에서 폴더 다시 선택하면 복구)', 'info', {timeoutMs: 6000});
+      }
       return false;
     }
     state._outputDirWarned = false;
@@ -9378,33 +9383,12 @@ async function writeImageToOutputDir(blob, filename){
     return true;
   } catch(e){
     console.warn('[OutputDir write failed]', e?.name, e);
-    // NotAllowedError / 권한 만료 류 → 재선택 유도, 그 외는 에러 상세 노출
-    if(e?.name === 'NotAllowedError' || e?.name === 'SecurityError'){
-      _promptRepickOutputDir('폴더 접근 권한이 만료됨');
-    } else if(!state._outputDirWarned){
+    // 어떤 실패든 모달로 막지 않고 조용히 브라우저 다운로드로 폴백 (세션당 1회만 안내)
+    if(!state._outputDirWarned){
       state._outputDirWarned = true;
-      toast(`📂 폴더 저장 실패 [${e?.name||'Error'}] — ${e.message||e}\n브라우저 다운로드로 대신 받습니다`, 'warning', {timeoutMs: 7000});
+      toast('📂 폴더 저장이 안 돼서 브라우저 다운로드 폴더로 받아요 (설정에서 폴더 다시 선택하면 복구)', 'info', {timeoutMs: 6000});
     }
     return false;
-  }
-}
-
-// 📂 권한 끊김 시 — 폴더 재선택 안내 (세션당 1회 모달). 사용자가 다시 선택하면 권한 복구.
-function _promptRepickOutputDir(reason){
-  if(state._outputDirRepickShown) return;
-  state._outputDirRepickShown = true;
-  const name = state.outputDirName || '출력 폴더';
-  if(typeof confirmDialog === 'function'){
-    confirmDialog(
-      `📂 "${name}" 저장 권한이 필요합니다.\n사유: ${reason}\n\n새로고침하면 폴더 권한이 초기화되는 건 브라우저 보안 정책상 정상입니다.\n\n[확인] 을 누르고 폴더를 다시 선택하면 이번 세션 동안 저장됩니다.\n(취소하면 이미지는 브라우저 다운로드 폴더로 받습니다)`,
-      async () => {
-        state._outputDirRepickShown = false;
-        await pickOutputDirectory();
-      },
-      '폴더 권한 재허용',
-    );
-  } else {
-    toast(`📂 폴더 권한 필요 — 설정에서 폴더 다시 선택 (${reason})`, 'warning', {timeoutMs: 7000});
   }
 }
 
