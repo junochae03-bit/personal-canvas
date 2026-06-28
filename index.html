@@ -465,6 +465,8 @@ body.focus-mode::after{content:'🌙 포커스 모드 · F로 해제';position:f
 .gb-search-row .gb-reload{flex-shrink:0;padding:6px 10px;height:36px}
 .gb-search-row .gb-info{margin-left:auto;font-size:11.5px;color:var(--t3);font-family:var(--mono);white-space:nowrap}
 .gb-filters-row .gb-sel{padding:6px 10px;font-size:12.5px;max-width:170px;flex-shrink:0}
+/* 정렬이 현재 보기에서 무시될 때 — 회색 + 비활성 (혼란 방지) */
+.gb-sel.gb-sel-off{opacity:.45;cursor:not-allowed}
 .gb-chip{display:inline-flex;align-items:center;gap:5px;background:var(--card);border:1.5px solid var(--b1);color:var(--t2);padding:6px 11px;font-size:12.5px;font-weight:600;border-radius:16px;cursor:pointer;font-family:inherit;line-height:1;transition:all .12s;white-space:nowrap;flex-shrink:0}
 .gb-chip:hover{border-color:var(--b2);color:var(--t1)}
 .gb-chip-cnt{font-family:var(--mono);font-size:11px;color:var(--t3);background:var(--bg);padding:2px 6px;border-radius:10px;min-width:18px;text-align:center}
@@ -2819,15 +2821,15 @@ mark{
               <option value="all">📂 모든 세션</option>
               <!-- 세션 옵션들은 loadGallery에서 동적 채움 -->
             </select>
-            <select id="gallerySort" class="inp gb-sel" title="정렬 방식 — 앨범 보기에서는 무시">
-              <option value="new">🕒 최신순 (기본)</option>
-              <option value="session">📂 세션별</option>
+            <select id="gallerySort" class="inp gb-sel" title="정렬 방식 — 🕒 최신순 보기에서만 적용">
+              <option value="new">🕒 최신순</option>
               <option value="old">⏳ 오래된순</option>
-              <option value="liked">❤️ 좋아요 우선</option>
               <option value="seed_asc">🌱 시드 ↑</option>
               <option value="seed_desc">🌱 시드 ↓</option>
               <option value="model">🎨 모델별</option>
-              <option value="label">🔤 라벨 가나다순</option>
+              <option value="label">🔤 라벨순</option>
+              <!-- 세션별/좋아요는 보기 프리셋(아래)로 대체 — 중복 제거 -->
+              <option value="session" hidden>📂 세션별</option>
             </select>
             <button class="gb-chip gb-chip-like" id="galLikeToggle" type="button" title="❤️ 좋아요만 보기" aria-pressed="false">❤️ <span class="gb-chip-cnt" id="galLikeCount">0</span></button>
             <button class="gb-chip gb-chip-dislike" id="galDislikeToggle" type="button" title="👎 별로 표시한 이미지만" aria-pressed="false">👎 <span class="gb-chip-cnt" id="galDislikeCount">0</span></button>
@@ -21789,7 +21791,12 @@ function wireGalleryEvents(){
   // 🔀 정렬 변경 + 영속화 (localStorage)
   const sortSel = $('gallerySort');
   if(sortSel){
-    try { sortSel.value = localStorage.getItem('nai_gal_sort') || 'new'; } catch(_){}
+    try {
+      const saved = localStorage.getItem('nai_gal_sort') || 'new';
+      // 제거된 옵션('liked' 등) 저장 호환 — 매칭 안 되면 최신순으로
+      sortSel.value = saved;
+      if(sortSel.selectedIndex < 0 || !sortSel.value) sortSel.value = 'new';
+    } catch(_){ sortSel.value = 'new'; }
     state._gallerySort = sortSel.value;
     sortSel.addEventListener('change', () => {
       state._gallerySort = sortSel.value;
@@ -21921,10 +21928,23 @@ function wireGalleryEvents(){
       state._gallerySort = sort;
       try { localStorage.setItem('nai_gal_sort', sort); } catch(e){ _swallow(e, 'lsSet:galSort'); }
     }
+    // 🧹 정렬은 '최신순'(평면 라벨) 보기에서만 자유 적용 — 날짜별·세션별·좋아요·캐릭터는
+    //    자체 정렬/그룹화를 강제하므로 셀렉트를 비활성(회색)해서 "바꿔도 안 변함" 혼란 제거.
+    if(sortSel){
+      const sortApplies = (preset === 'recent');
+      sortSel.disabled = !sortApplies;
+      sortSel.classList.toggle('gb-sel-off', !sortApplies);
+      sortSel.title = sortApplies
+        ? '정렬 방식 — 시드·모델·라벨 등'
+        : '정렬은 🕒 최신순 보기에서만 변경 가능 (날짜별·세션별·좋아요·캐릭터는 자체 정렬)';
+    }
     // 📁 앨범 전체 펼침/접기 — album view에서만 노출
     const showAlb = (preset === 'album') ? '' : 'none';
     if($('galAlbumsExpandAll')) $('galAlbumsExpandAll').style.display = showAlb;
     if($('galAlbumsCollapseAll')) $('galAlbumsCollapseAll').style.display = showAlb;
+    // ⤢ 전체 펼침 — 카드 접힘이 있는 detail(최신순/세션별) 보기에서만 의미 있음.
+    //   날짜별·좋아요·캐릭터는 썸네일이 항상 보여 no-op → 숨김.
+    if($('galExpandAll')) $('galExpandAll').style.display = (view === 'detail') ? '' : 'none';
     if(!opts?.skipReload) loadGallery();
   }
   $('galleryView').addEventListener('click', e => {
