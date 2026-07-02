@@ -4328,112 +4328,6 @@ function countRandomCombinations(text){
   return list.reduce((acc, x) => acc * Math.max(1, x.options.length), 1);
 }
 
-// 가중치 기반 랜덤 선택 — js/pure/randomChoice.mjs 인라인 미러 (lint 동기화 검사 대상).
-function pickWeightedOption(options, rng){
-  if(!Array.isArray(options) || options.length === 0) return null;
-  const random = (typeof rng === 'function') ? rng : Math.random;
-  const total = options.reduce((s, o) => s + Math.max(0, Number(o?.weight) || 0), 0);
-  if(total <= 0){
-    return options[Math.floor(random() * options.length)];
-  }
-  const target = random() * total;
-  let acc = 0;
-  for(const o of options){
-    acc += Math.max(0, Number(o?.weight) || 0);
-    if(target < acc) return o;
-  }
-  return options[options.length - 1];
-}
-
-// 🎥 카메라 앵글 토큰 — 단독 옵션이면 경고 (다른 체위·표정과 모순 자주 발생).
-const CAMERA_ANGLE_TOKENS = [
-  /^from above$/i, /^from below$/i, /^from side$/i, /^from front$/i,
-  /\blow angle\b/i, /\bhigh angle\b/i, /\bdutch angle\b/i,
-  /^bird'?s[-\s]?eye view$/i, /^worm'?s[-\s]?eye view$/i,
-  /^pov$/i, /^point of view$/i, /\bforeshortening\b/i,
-  /^wide shot$/i, /^close[-\s]?up$/i, /^medium shot$/i,
-  /^full body$/i, /^cowboy shot$/i, /^upper body$/i, /^lower body$/i,
-];
-function hasCameraAngle(optionText){
-  if(!optionText || typeof optionText !== 'string') return false;
-  const tokens = optionText.split(',').map(t => t.trim()).filter(Boolean);
-  return tokens.some(tok => {
-    const m = tok.match(/^-?\d+(?:\.\d+)?::([\s\S]*?)::$/);
-    const body = (m ? m[1] : tok).trim();
-    return CAMERA_ANGLE_TOKENS.some(re => re.test(body));
-  });
-}
-
-// 📚 카테고리 자동 분류 휴리스틱 — 임포트 시 옵션 내용을 분석해 라벨 자동 추측.
-// 사용자 컨텍스트(NSFW 야쓰 템플릿) + 일반 NAI 카테고리 양쪽 커버.
-// 매칭 규칙: 한 옵션의 콤마 split 토큰이 키워드(부분일치)와 만나면 점수 +1.
-// 점수 가장 높은 라벨 채택. 동률 시 사전 순서.
-const RC_CATEGORY_HEURISTICS = [
-  {label: '🎬 체위',      keywords: ['missionary','cowgirl position','doggystyle','sex from behind','mating press','full nelson','piledriver','amazon position','standing sex','reverse cowgirl','prone bone','top-down bottom-up','suspended congress','folded','upright straddle','m legs','v arms']},
-  {label: '😈 야쓰 종류',  keywords: ['happy sex','rough sex','rape','implied sex','stealth sex','consensual','dubcon','noncon']},
-  {label: '😢 표정',      keywords: ['tears','crying','aroused','ahegao','torogao','fucked silly','wide-eyed','biting own lip','glaring','smile','naughty face','seductive smile','disgust','annoyed','dazed','exhausted','mind break','licking lips','clenched teeth']},
-  {label: '👁 눈 모양',    keywords: ['heart-shaped pupils','rolled-up eyes','crazy eyes','asymmetrical eyes','heterochromia','empty eyes','closed eyes','half-closed eyes']},
-  {label: '💋 키스',      keywords: ['imminent kiss','after kiss','french kiss','forced kiss','tongue out','kiss']},
-  {label: '💦 침',        keywords: ['saliva','drooling','saliva trail','saliva drip']},
-  {label: '💢 절정',      keywords: ['orgasm','female orgasm','forced orgasm','mutual orgasm']},
-  {label: '🐱 종족',      keywords: ['horse girl','cat girl','demon girl','fox girl','elf','dark elf','dragon girl','rabbit girl','wolf girl','android','angel','fallen angel','fairy','vampire','cow girl','draph','erune','kyuubi','sheep girl','hume','dryad','human','snake girl']},
-  {label: '👧 여성 타입',   keywords: ['loli','oppai loli','mature female','mature woman','young adult','teenager','milf']},
-  {label: '🍒 가슴 크기',   keywords: ['flat chest','small breasts','medium breasts','large breasts','huge breasts','gigantic breasts']},
-  {label: '🧍 체형',       keywords: ['petite','skinny','curvy','plump','fat','thick','slim','muscular','athletic']},
-  {label: '🍑 가슴 상태',   keywords: ['bouncing breasts','hanging breasts','breasts apart','bouncing','breast smother','sideboob']},
-  {label: '🌸 유두',       keywords: ['nipples','nipple slip','inverted nipples','covered nipples','puffy nipples','large areolae']},
-  {label: '🌿 음모',       keywords: ['female pubic hair','pubic hair peek','pubic hair']},
-  {label: '🌐 옷·노출',     keywords: ['nude','clothed female nude male','clothed male nude female','partially nude','topless']},
-  {label: '🍆 삽입',       keywords: ['vaginal','anal','double penetration','deep penetration','covered penetration','penetration']},
-  {label: '💧 사정',       keywords: ['cum in pussy','cum in anal','cum overflow','ejaculation','implied ejaculation','facial','bukkake','cum on body']},
-  {label: '💦 애액',       keywords: ['pussy juice','pussy juice trail','squirting','female ejaculation','wet pussy','dripping']},
-  {label: '🎥 카메라 앵글', keywords: ['from above','from below','from side','from front','low angle','high angle','dutch angle','bird\'s-eye view','worm\'s-eye view','pov','foreshortening','wide shot','close-up','medium shot','full body','cowboy shot','upper body','lower body']},
-  {label: '🏞 배경',       keywords: ['simple background','location','indoors','outdoors','classroom','bedroom','bathroom','beach','park','street','forest','school','office','kitchen','library','hospital','hotel','dungeon','cafe','restaurant']},
-  {label: '💡 조명',       keywords: ['cinematic lighting','soft lighting','dramatic lighting','rim light','backlit','sunset lighting','moonlight','candlelight','volumetric lighting']},
-];
-
-function guessCategoryLabel(options){
-  if(!Array.isArray(options) || options.length === 0) return null;
-  let bestScore = 0, bestLabel = null;
-  for(const heur of RC_CATEGORY_HEURISTICS){
-    let score = 0;
-    for(const opt of options){
-      const txt = String(opt?.text || '').toLowerCase();
-      if(!txt) continue;
-      const body = txt.replace(/-?\d+(?:\.\d+)?::|::/g, ' ');
-      for(const kw of heur.keywords){
-        if(body.includes(kw.toLowerCase())){ score++; break; }
-      }
-    }
-    if(score > bestScore){
-      bestScore = score;
-      bestLabel = heur.label;
-    }
-  }
-  if(bestScore >= Math.max(2, Math.ceil(options.length * 0.3))) return bestLabel;
-  return null;
-}
-
-function compileCategoriesToText(categories){
-  if(!Array.isArray(categories)) return '';
-  const blocks = [];
-  for(const cat of categories){
-    if(!cat || cat.enabled === false) continue;
-    const opts = cat.options || [];
-    if(!opts.length) continue;
-    const tokens = opts.map(o => {
-      const text = String(o?.text || '');
-      const w = Number(o?.weight);
-      if(Number.isFinite(w) && w !== 1.0 && text.trim()){
-        return `${w}::${text}::`;
-      }
-      return text;
-    });
-    blocks.push(`||${tokens.join('|')}||`);
-  }
-  return blocks.join(', ');
-}
-
 // 🎲 시드 상수 — uint32 max. NovelAI seed는 0..0xFFFFFFFF 범위.
 // 동일 로직이 js/pure/seed.mjs 에 있음 (Node 테스트용). 브라우저는 인라인 사용.
 const RAND_SEED_MAX = 0xFFFFFFFF;
@@ -5246,6 +5140,7 @@ const state = {
   galleryTagIndex: [],    // [{tag, count}] — 📋 갤러리 이미지에서 추출한 태그
   outputDirHandle: null,  // 📂 File System Access API 핸들 (Chrome/Edge)
   outputDirName: '',      // 표시용 폴더명
+  _outputDirWarned: false, // 폴더 폴백 안내 세션당 1회 (권한 팝업 반복 억제 게이트 겸용)
   seedHistory: [],        // ⏱ [{seed, ts, fav, note}] — 최근 시드 + 즐겨찾기 (최대 100)
   promptHistory: [],      // 📋 [{text, ts}] — 생성 시 자동 기록된 최근 프롬프트 (최대 30)
   negPromptHistory: [],   // 📋 [{text, ts}] — 생성 시 자동 기록된 최근 네거티브 (최대 30)
@@ -9340,6 +9235,9 @@ async function ensureOutputDirPermission(){
   try {
     let perm = await state.outputDirHandle.queryPermission({mode: 'readwrite'});
     if(perm === 'granted') return 'granted';
+    // 이미 이번 세션에 폴백 안내를 했으면 브라우저 권한 팝업을 다시 띄우지 않음
+    // (사용자가 한 번 무시한 팝업이 다운로드마다 반복되는 것 방지 — 토스트의 [다시 연결]로 복구)
+    if(state._outputDirWarned) return perm;
     // 사용자 제스처 컨텍스트 안에서 호출되어야 함 (대부분 생성 버튼 흐름에서 호출됨)
     perm = await state.outputDirHandle.requestPermission({mode: 'readwrite'});
     return perm;
@@ -9349,16 +9247,20 @@ async function ensureOutputDirPermission(){
   }
 }
 
+// 폴백 안내 — 세션당 1회 토스트 + [다시 연결] 액션 (누르면 폴더 재선택 → 권한 복구)
+function _warnOutputDirFallback(msg){
+  if(state._outputDirWarned) return;
+  state._outputDirWarned = true;
+  toast(msg, 'info', {label: '📁 다시 연결', onClick: () => pickOutputDirectory(), timeoutMs: 8000});
+}
+
 async function writeImageToOutputDir(blob, filename){
   if(!state.outputDirHandle) return false;
   try {
     const perm = await ensureOutputDirPermission();
     if(perm !== 'granted'){
-      // 권한 끊김 — 모달로 막지 않고 조용히 브라우저 다운로드로 폴백 (세션당 1회만 안내)
-      if(!state._outputDirWarned){
-        state._outputDirWarned = true;
-        toast('📂 폴더 권한이 풀려서 이번엔 브라우저 다운로드 폴더로 받아요 (설정에서 폴더 다시 선택하면 복구)', 'info', {timeoutMs: 6000});
-      }
+      // 권한 끊김 — 모달로 막지 않고 조용히 브라우저 다운로드로 폴백
+      _warnOutputDirFallback('📂 폴더 권한이 풀려서 이번엔 브라우저 다운로드 폴더로 받아요');
       return false;
     }
     state._outputDirWarned = false;
@@ -9383,11 +9285,8 @@ async function writeImageToOutputDir(blob, filename){
     return true;
   } catch(e){
     console.warn('[OutputDir write failed]', e?.name, e);
-    // 어떤 실패든 모달로 막지 않고 조용히 브라우저 다운로드로 폴백 (세션당 1회만 안내)
-    if(!state._outputDirWarned){
-      state._outputDirWarned = true;
-      toast('📂 폴더 저장이 안 돼서 브라우저 다운로드 폴더로 받아요 (설정에서 폴더 다시 선택하면 복구)', 'info', {timeoutMs: 6000});
-    }
+    // 어떤 실패든 모달로 막지 않고 조용히 브라우저 다운로드로 폴백
+    _warnOutputDirFallback('📂 폴더 저장이 안 돼서 브라우저 다운로드 폴더로 받아요');
     return false;
   }
 }
@@ -11192,17 +11091,6 @@ function _wcSlugifyName(raw, fallbackIdx){
   return `wc${fallbackIdx || 1}`;
 }
 
-function _wcUniqueName(base){
-  const taken = new Set((state.wildcards || []).map(w => w.name));
-  if(!taken.has(base)) return base;
-  let n = 2;
-  while(taken.has(`${base}_${n}`) && n < 999) n++;
-  return `${base}_${n}`;
-}
-
-// 🃏 RC 카테고리 1개 → 와일드카드 1개 변환·저장.
-//    category.label → wildcard.label (한글 그대로) + wildcard.name 은 ASCII 슬러그.
-//    옵션 {text,weight} 그대로 옮김. 빈 옵션은 생략.
 let _toxicCache = {ts: 0, set: new Set()};
 const TOXIC_TTL_MS = 60000;
 // 공유 토크나이저 — getToxicTokens 의 키 생성과 hint/highlight 의 매칭이 동일해야 함 (가중치 표기 정규화 포함).
@@ -13670,41 +13558,6 @@ function openCharTplPickerPopover(anchorBtn, charIdx){
     applyCharTplToSlot(id, charIdx);
     closeCharTplPickerPopover();
   });
-}
-
-function jitterPromptWeights(prompt){
-  if(!prompt || typeof prompt !== 'string') return prompt;
-  return prompt.replace(/(\d+(?:\.\d+)?)::([^:]+)::/g, (_, w, tag) => {
-    const orig = parseFloat(w);
-    if(!Number.isFinite(orig)) return _;
-    const delta = (Math.random() - 0.5) * 0.2;   // ±0.1
-    const next = Math.max(0.5, Math.min(1.5, Math.round((orig + delta) * 100) / 100));
-    return `${next}::${tag}::`;
-  });
-}
-
-// 🔁 비슷하게 N장 / 🎨 변형 N장 — 현재 폼 상태를 스냅샷으로 N장 큐 추가 (시드 무작위)
-async function enqueueVariants({count = 4, vary = false} = {}){
-  if(!state.lastImage){ toast('먼저 이미지를 생성하세요', 'warning'); return; }
-  if(state.running){ toast('생성 중에는 추가 불가 — ＋추가 버튼 사용', 'warning'); return; }
-  // 큐 비어있으면 생성 시작 흐름 트리거 가능하도록 빌드
-  for(let i = 0; i < count; i++){
-    const snap = snapshotGenState();
-    if(vary && snap.opts){
-      snap.opts.prompt = jitterPromptWeights(snap.opts.prompt || $('prompt').value);
-    }
-    snap.seedLocked = false;            // 시드 무작위 보장
-    snap.seedRaw = String(randomSeed());  // 미리 픽한 시드를 강제 — runOne 의 seed 흐름과 호환
-    state.queue.push({
-      id: _qSeq++,
-      status: 'wait',
-      label: vary ? `변형 ${i+1}` : `비슷 ${i+1}`,
-      snapshot: snap,
-    });
-  }
-  renderQueue();
-  toast(`${vary ? '🎨 변형' : '🔁 비슷하게'} ${count}장 대기열 추가 — 생성 시작 누르세요`, 'success');
-  // 자동 시작은 안 함 (사용자가 ＋ 더 누르거나 폼 수정 여지)
 }
 
 // 🕓 미리보기 탭 우측 히스토리 — 컨테이너 높이에 맞춰 자동 채움 + 마지막 회색 + 카드 → 최근 20장 모달

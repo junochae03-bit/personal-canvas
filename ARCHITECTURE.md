@@ -8,7 +8,7 @@
 
 ```
 personal-canvas/
-├── index.html          (~14k lines)  SPA — HTML 마크업 + 인라인 CSS + 인라인 JS
+├── index.html          (~24k lines)  SPA — HTML 마크업 + 인라인 CSS + 인라인 JS
 ├── sw.js               Service Worker — SWR 캐시 + 새 빌드 감지
 ├── tags-danbooru.json  단부루 태그 사전 (66KB, 지연 로드)
 ├── js/pure/            ★ 순수 모듈 — Node 와 브라우저 양쪽에서 import 가능
@@ -16,7 +16,11 @@ personal-canvas/
 │   ├── prompt.mjs      parseFreePromptTokens / dedupePromptTags / parseSeqInput
 │   ├── chars.mjs       getCharGroup / groupCharsByWork
 │   ├── seed.mjs        randomSeed / parseSeedInput / RAND_SEED_MAX
-│   └── image.mjs       isSmallTier / aspectRatio / snapTo8 / MEGAPIXEL
+│   ├── image.mjs       isSmallTier / aspectRatio / snapTo8 / MEGAPIXEL
+│   ├── korean.mjs      toChosung / isAllChosung / koMatch
+│   ├── naiMeta.mjs     extractNaiFields / sanitizeCharacters (NAI EXIF 메타 정규화)
+│   ├── randomChoice.mjs expandRandomChoices / listRandomChoices / countRandomCombinations
+│   └── wildcards.mjs   extractWildcardNames / parseWildcardFile / pickWildcardLine / expandWildcards
 ├── test/pure.test.mjs  Node 내장 test runner (TZ=UTC 고정)
 └── tools/lint.mjs      외부 의존 0 자체 lint
 ```

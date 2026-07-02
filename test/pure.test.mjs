@@ -13,7 +13,7 @@ import { RAND_SEED_MAX, randomSeed, parseSeedInput } from '../js/pure/seed.mjs';
 import { MEGAPIXEL, isSmallTier, aspectRatio, snapTo8 } from '../js/pure/image.mjs';
 import { toChosung, isAllChosung, koMatch, highlightMatch } from '../js/pure/korean.mjs';
 import { pickFirst, sanitizeCharacter, sanitizeCharacters, extractNaiFields } from '../js/pure/naiMeta.mjs';
-import { expandRandomChoices, listRandomChoices, countRandomCombinations, hasCameraAngle, pickWeightedOption, guessCategoryLabel, compileCategoriesToText } from '../js/pure/randomChoice.mjs';
+import { expandRandomChoices, listRandomChoices, countRandomCombinations } from '../js/pure/randomChoice.mjs';
 import { WILDCARD_NAME_RE, extractWildcardNames, parseWildcardFile, pickWildcardLine, expandWildcards } from '../js/pure/wildcards.mjs';
 
 // ────────────── utils ──────────────
@@ -431,103 +431,6 @@ test('countRandomCombinations: 옵션 수 곱', () => {
   assert.equal(countRandomCombinations('||A|B|C|D|E||'), 5);
   assert.equal(countRandomCombinations('no patterns'), 1);
   assert.equal(countRandomCombinations(''), 1);
-});
-
-test('hasCameraAngle: 단독 카메라 앵글 감지', () => {
-  assert.equal(hasCameraAngle('from above'), true);
-  assert.equal(hasCameraAngle('from below'), true);
-  assert.equal(hasCameraAngle('low angle, indoors'), true);
-  assert.equal(hasCameraAngle('pov'), true);
-});
-test('hasCameraAngle: 다른 토큰과 결합된 건 안전 (false)', () => {
-  assert.equal(hasCameraAngle('sex from behind'), false);
-  assert.equal(hasCameraAngle('cat girl'), false);
-  assert.equal(hasCameraAngle('smile'), false);
-});
-test('hasCameraAngle: 가중치 표기 안 본문 검사', () => {
-  assert.equal(hasCameraAngle('2::from above::'), true);
-  assert.equal(hasCameraAngle('1.5::low angle::'), true);
-});
-test('hasCameraAngle: null/빈 입력 안전', () => {
-  assert.equal(hasCameraAngle(''), false);
-  assert.equal(hasCameraAngle(null), false);
-  assert.equal(hasCameraAngle(undefined), false);
-});
-
-test('pickWeightedOption: 균등 분포 (모두 weight 1)', () => {
-  const opts = [{text:'A', weight:1}, {text:'B', weight:1}];
-  assert.equal(pickWeightedOption(opts, () => 0).text, 'A');
-  assert.equal(pickWeightedOption(opts, () => 0.99).text, 'B');
-});
-test('pickWeightedOption: 가중치 비례 선택', () => {
-  // A=1, B=3 → A 25%, B 75%. rng=0.2 → A, rng=0.5 → B
-  const opts = [{text:'A', weight:1}, {text:'B', weight:3}];
-  assert.equal(pickWeightedOption(opts, () => 0.2).text, 'A');
-  assert.equal(pickWeightedOption(opts, () => 0.5).text, 'B');
-  assert.equal(pickWeightedOption(opts, () => 0.99).text, 'B');
-});
-test('pickWeightedOption: 모두 weight 0 → 균등 fallback', () => {
-  const opts = [{text:'A', weight:0}, {text:'B', weight:0}, {text:'C', weight:0}];
-  assert.equal(pickWeightedOption(opts, () => 0).text, 'A');
-  assert.equal(pickWeightedOption(opts, () => 0.99).text, 'C');
-});
-test('pickWeightedOption: 빈 옵션 text 그대로 (사용 안 함 의미)', () => {
-  const opts = [{text:'A', weight:1}, {text:'', weight:1}];
-  assert.equal(pickWeightedOption(opts, () => 0.99).text, '');
-});
-test('pickWeightedOption: 비배열·빈 배열 → null', () => {
-  assert.equal(pickWeightedOption([]), null);
-  assert.equal(pickWeightedOption(null), null);
-  assert.equal(pickWeightedOption('x'), null);
-});
-
-test('guessCategoryLabel: 종족 키워드 매칭', () => {
-  const opts = [{text:'horse girl'}, {text:'cat girl'}, {text:'fox girl'}, {text:'elf'}];
-  assert.equal(guessCategoryLabel(opts), '🐱 종족');
-});
-test('guessCategoryLabel: 체위 키워드 매칭', () => {
-  const opts = [{text:'missionary'}, {text:'cowgirl position'}, {text:'doggystyle'}];
-  assert.equal(guessCategoryLabel(opts), '🎬 체위');
-});
-test('guessCategoryLabel: 가중치 옵션도 매칭', () => {
-  const opts = [{text:'2::angel::'}, {text:'2::fallen angel::'}, {text:'vampire'}];
-  assert.equal(guessCategoryLabel(opts), '🐱 종족');
-});
-test('guessCategoryLabel: 콤마 포함 옵션 (표정)', () => {
-  const opts = [
-    {text:'tears, crying, closed eyes'},
-    {text:'aroused, smile'},
-    {text:'ahegao'},
-  ];
-  assert.equal(guessCategoryLabel(opts), '😢 표정');
-});
-test('guessCategoryLabel: 약한 매칭은 null', () => {
-  const opts = [{text:'foo'}, {text:'bar'}, {text:'baz'}];
-  assert.equal(guessCategoryLabel(opts), null);
-});
-test('guessCategoryLabel: 빈/비배열 → null', () => {
-  assert.equal(guessCategoryLabel([]), null);
-  assert.equal(guessCategoryLabel(null), null);
-});
-
-test('compileCategoriesToText: 활성 카테고리만 ||A|B|C|| 로 직렬화', () => {
-  const cats = [
-    {enabled: true, options: [{text:'A', weight:1}, {text:'B', weight:1}]},
-    {enabled: false, options: [{text:'X', weight:1}]},
-    {enabled: true, options: [{text:'P', weight:1}, {text:'Q', weight:1.5}]},
-  ];
-  assert.equal(compileCategoriesToText(cats), '||A|B||, ||P|1.5::Q::||');
-});
-test('compileCategoriesToText: 빈 옵션 그대로 인코딩', () => {
-  const cats = [{enabled: true, options: [{text:'A', weight:1}, {text:'', weight:1}]}];
-  assert.equal(compileCategoriesToText(cats), '||A|||');
-});
-test('compileCategoriesToText: 옵션 없는 카테고리 생략', () => {
-  const cats = [
-    {enabled: true, options: []},
-    {enabled: true, options: [{text:'A', weight:1}]},
-  ];
-  assert.equal(compileCategoriesToText(cats), '||A||');
 });
 
 // ────────────── wildcards ──────────────
